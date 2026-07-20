@@ -28,7 +28,7 @@ class LayoutSettings:
     spacing_mm: float = 3
     margin_mm: float = 3
     dpi: int = 300
-    fast_png: bool = True
+    png_compression_level: int = 1
     worker_threads: int = 8
 
 
@@ -152,17 +152,26 @@ def generate_layout(
     if progress:
         progress("保存 PNG", 0, canvas_width * canvas_height, filename)
     saving_started = perf_counter()
+    output_path = output_dir / filename
     canvas.save(
-        output_dir / filename,
+        output_path,
         dpi=(settings.dpi, settings.dpi),
-        compress_level=0 if settings.fast_png else 6,
+        compress_level=settings.png_compression_level,
     )
     saving_seconds = perf_counter() - saving_started
     canvas.close()
+    file_size_bytes = output_path.stat().st_size
     return {
         "filename": filename,
         "width_px": canvas_width,
         "height_px": canvas_height,
+        "width_mm": round(canvas_width * 25.4 / settings.dpi, 1),
+        "height_mm": round(canvas_height * 25.4 / settings.dpi, 1),
+        "file_size_bytes": file_size_bytes,
+        "png_compression_level": settings.png_compression_level,
+        "output_megabytes_per_second": round(
+            file_size_bytes / 1_000_000 / max(saving_seconds, 0.001), 1
+        ),
         "placements": [asdict(item) for _, item in planned],
         "timings_seconds": {
             "reading": round(reading_seconds, 3),

@@ -10,6 +10,7 @@ def test_default_settings_are_print_ready() -> None:
     settings = LayoutSettings()
     assert settings.media_width_mm == 600
     assert settings.dpi == 300
+    assert settings.png_compression_level == 1
 
 
 def test_versions_are_compared_numerically() -> None:
