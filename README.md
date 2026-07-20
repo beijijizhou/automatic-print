@@ -56,6 +56,23 @@ pyinstaller --noconfirm --windowed --name AutomaticPrint automatic_print/__main_
 
 The executable will be created under `dist/AutomaticPrint/`.
 
+## Windows releases and updates
+
+Production computers should install `AutomaticPrint-Setup.exe` from GitHub
+Releases. They do not need Python, Git, or the source repository.
+
+To prepare a tested release:
+
+1. Update `automatic_print/__init__.py` with the approved version.
+2. Commit the approved source.
+3. Create and push a matching tag such as `v0.2.0`.
+4. The Windows workflow builds the app and installer, then attaches it to a new
+   GitHub Release.
+
+The installed app checks for a newer approved Release in the background. Updates
+are never installed silently: the user chooses whether to open the installer
+download page.
+
 ## Output
 
 Each run creates a timestamped job folder containing:

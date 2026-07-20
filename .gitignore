@@ -8,7 +8,7 @@ __pycache__/
 venv/
 dist/
 build/
-*.spec
 .DS_Store
 Thumbs.db
 output/
+installer-dist/

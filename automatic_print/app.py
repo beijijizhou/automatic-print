@@ -13,9 +13,11 @@ from PySide6.QtCore import (
     QStandardPaths,
     QThread,
     QTimer,
+    QUrl,
     Signal,
     Slot,
 )
+from PySide6.QtGui import QDesktopServices
 from PySide6.QtWidgets import (
     QApplication,
     QCheckBox,
@@ -35,7 +37,9 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
+from . import __version__
 from .layout import LayoutSettings, discover_images, generate_layout
+from .updater import UpdateInfo, fetch_latest_release, version_tuple
 
 
 class GenerateWorker(QObject):
@@ -81,6 +85,18 @@ class GenerateWorker(QObject):
         self.finished.emit(str(self.output), print_image)
 
 
+class UpdateWorker(QObject):
+    finished = Signal(object)
+    failed = Signal(str)
+
+    @Slot()
+    def run(self) -> None:
+        try:
+            self.finished.emit(fetch_latest_release())
+        except Exception as error:
+            self.failed.emit(str(error))
+
+
 class MainWindow(QMainWindow):
     def __init__(self) -> None:
         super().__init__()
@@ -88,6 +104,9 @@ class MainWindow(QMainWindow):
         self.resize(720, 470)
         self.thread: QThread | None = None
         self.worker: GenerateWorker | None = None
+        self.update_thread: QThread | None = None
+        self.update_worker: UpdateWorker | None = None
+        self.update_is_silent = True
         self.started_at: float | None = None
         self.stage_started_at: float | None = None
         self.current_stage = ""
@@ -157,6 +176,13 @@ class MainWindow(QMainWindow):
         self.run_log.setPlaceholderText("Copyable timing details will appear here")
         self.generate_button = QPushButton("Generate one PNG print image")
         self.generate_button.clicked.connect(self.generate)
+        self.version_label = QLabel(f"Version {__version__}")
+        self.check_update_button = QPushButton("Check for updates")
+        self.check_update_button.clicked.connect(lambda: self.check_for_updates(False))
+        version_row = QHBoxLayout()
+        version_row.addWidget(self.version_label)
+        version_row.addStretch()
+        version_row.addWidget(self.check_update_button)
 
         layout = QVBoxLayout()
         layout.addLayout(form)
@@ -166,9 +192,11 @@ class MainWindow(QMainWindow):
         layout.addWidget(self.current_file)
         layout.addWidget(self.run_log)
         layout.addWidget(self.generate_button)
+        layout.addLayout(version_row)
         container = QWidget()
         container.setLayout(layout)
         self.setCentralWidget(container)
+        QTimer.singleShot(2500, lambda: self.check_for_updates(True))
 
     @staticmethod
     def _double_box(value: float, minimum: float, maximum: float) -> QDoubleSpinBox:
@@ -373,6 +401,61 @@ class MainWindow(QMainWindow):
     def clear_worker(self) -> None:
         self.thread = None
         self.worker = None
+
+    def check_for_updates(self, silent: bool) -> None:
+        if self.update_thread is not None:
+            return
+        self.update_is_silent = silent
+        self.check_update_button.setEnabled(False)
+        self.check_update_button.setText("Checking…")
+        self.update_thread = QThread(self)
+        self.update_worker = UpdateWorker()
+        self.update_worker.moveToThread(self.update_thread)
+        self.update_thread.started.connect(self.update_worker.run)
+        self.update_worker.finished.connect(self.update_check_finished)
+        self.update_worker.failed.connect(self.update_check_failed)
+        self.update_worker.finished.connect(self.update_thread.quit)
+        self.update_worker.failed.connect(self.update_thread.quit)
+        self.update_thread.finished.connect(self.update_worker.deleteLater)
+        self.update_thread.finished.connect(self.update_thread.deleteLater)
+        self.update_thread.finished.connect(self.clear_update_worker)
+        self.update_thread.start()
+
+    @Slot(object)
+    def update_check_finished(self, update: UpdateInfo) -> None:
+        if version_tuple(update.version) > version_tuple(__version__):
+            answer = QMessageBox.question(
+                self,
+                "Update available",
+                f"Automatic Print {update.version} is available.\n\n"
+                f"Current version: {__version__}\n\n"
+                "Open the installer download page now?",
+                QMessageBox.Yes | QMessageBox.No,
+            )
+            if answer == QMessageBox.Yes:
+                QDesktopServices.openUrl(QUrl(update.download_url))
+        elif not self.update_is_silent:
+            QMessageBox.information(
+                self,
+                "No updates",
+                f"Automatic Print {__version__} is the latest version.",
+            )
+
+    @Slot(str)
+    def update_check_failed(self, message: str) -> None:
+        if not self.update_is_silent:
+            QMessageBox.warning(
+                self,
+                "Update check failed",
+                f"Could not check for updates.\n\n{message}",
+            )
+
+    @Slot()
+    def clear_update_worker(self) -> None:
+        self.update_thread = None
+        self.update_worker = None
+        self.check_update_button.setEnabled(True)
+        self.check_update_button.setText("Check for updates")
 
 
 def run() -> int:
