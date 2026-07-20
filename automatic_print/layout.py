@@ -8,6 +8,11 @@ from typing import Callable, Iterable
 
 from PIL import Image
 
+try:
+    import pyvips
+except (ImportError, OSError):  # Pillow remains a safe fallback for old installs.
+    pyvips = None
+
 
 SUPPORTED_EXTENSIONS = {
     ".png",
@@ -20,6 +25,10 @@ SUPPORTED_EXTENSIONS = {
     ".bmp",
 }
 ProgressCallback = Callable[[str, int, int, str], None]
+
+
+def png_engine_name() -> str:
+    return "libvips" if pyvips is not None else "Pillow（兼容模式）"
 
 
 @dataclass(frozen=True)
@@ -86,6 +95,78 @@ def _prepare_image(item: tuple[Path, Placement], dpi: int) -> tuple[Image.Image,
     return image, placement
 
 
+def _vips_rgba(path: Path, width: int, height: int):
+    """Build a lazy, exactly-sized 8-bit RGBA libvips image."""
+    image = pyvips.Image.new_from_file(str(path), access="sequential")
+    interpretation = str(image.interpretation)
+
+    # Convert colour-managed formats such as CMYK before interpreting band 4 as
+    # alpha. Standard RGB/RGBA and greyscale files can be handled directly.
+    if interpretation not in {
+        "srgb",
+        "rgb",
+        "b-w",
+        "grey16",
+        "multiband",
+    }:
+        image = image.colourspace("srgb")
+
+    image = image.thumbnail_image(
+        width,
+        height=height,
+        size="force",
+        no_rotate=True,
+    )
+    if image.format != "uchar":
+        image = image.cast("uchar")
+
+    if image.bands == 1:
+        grey = image[0]
+        image = grey.bandjoin([grey, grey, 255])
+    elif image.bands == 2:
+        grey = image[0]
+        image = grey.bandjoin([grey, grey, image[1]])
+    elif image.bands == 3:
+        image = image.bandjoin(255)
+    elif image.bands > 4:
+        image = image.extract_band(0, n=4)
+
+    return image.copy(interpretation="srgb")
+
+
+def _build_vips_canvas(
+    planned: list[tuple[Path, Placement]],
+    canvas_width: int,
+    canvas_height: int,
+    dpi: int,
+    progress: ProgressCallback | None,
+):
+    canvas = pyvips.Image.black(canvas_width, canvas_height, bands=4).copy(
+        interpretation="srgb"
+    )
+    layers = []
+    x_positions = []
+    y_positions = []
+    total = len(planned)
+    for index, (path, placement) in enumerate(planned, start=1):
+        layers.append(
+            _vips_rgba(path, placement.width_px, placement.height_px)
+        )
+        x_positions.append(placement.x_px)
+        y_positions.append(placement.y_px)
+        if progress:
+            progress("合成图片", index, total, placement.source)
+
+    canvas = canvas.composite(
+        layers,
+        ["over"] * len(layers),
+        x=x_positions,
+        y=y_positions,
+    )
+    pixels_per_mm = dpi / 25.4
+    return canvas.copy(xres=pixels_per_mm, yres=pixels_per_mm)
+
+
 def generate_layout(
     image_paths: Iterable[Path],
     output_dir: Path,
@@ -129,23 +210,25 @@ def generate_layout(
         raise ValueError("没有可供排版的图片。")
 
     canvas_height = y + row_height + margin
-    canvas = Image.new("RGBA", (canvas_width, canvas_height), (0, 0, 0, 0))
-
-    # Decode and resize source images in parallel. Results are consumed in layout
-    # order, so output remains deterministic.
     combining_started = perf_counter()
-    workers = max(1, min(settings.worker_threads, total))
-    with ThreadPoolExecutor(max_workers=workers) as executor:
-        prepared = executor.map(
-            lambda item: _prepare_image(item, settings.dpi), planned
+    if pyvips is not None:
+        canvas = _build_vips_canvas(
+            planned, canvas_width, canvas_height, settings.dpi, progress
         )
-        for index, (image, placement) in enumerate(prepared, start=1):
-            # Placements never overlap, so a direct RGBA copy is equivalent to
-            # alpha compositing here and avoids millions of needless blends.
-            canvas.paste(image, (placement.x_px, placement.y_px))
-            image.close()
-            if progress:
-                progress("合成图片", index, total, placement.source)
+        png_engine = png_engine_name()
+    else:
+        canvas = Image.new("RGBA", (canvas_width, canvas_height), (0, 0, 0, 0))
+        workers = max(1, min(settings.worker_threads, total))
+        with ThreadPoolExecutor(max_workers=workers) as executor:
+            prepared = executor.map(
+                lambda item: _prepare_image(item, settings.dpi), planned
+            )
+            for index, (image, placement) in enumerate(prepared, start=1):
+                canvas.paste(image, (placement.x_px, placement.y_px))
+                image.close()
+                if progress:
+                    progress("合成图片", index, total, placement.source)
+        png_engine = png_engine_name()
     combining_seconds = perf_counter() - combining_started
 
     filename = "print.png"
@@ -153,13 +236,21 @@ def generate_layout(
         progress("保存 PNG", 0, canvas_width * canvas_height, filename)
     saving_started = perf_counter()
     output_path = output_dir / filename
-    canvas.save(
-        output_path,
-        dpi=(settings.dpi, settings.dpi),
-        compress_level=settings.png_compression_level,
-    )
+    if pyvips is not None:
+        canvas.pngsave(
+            str(output_path),
+            compression=settings.png_compression_level,
+            interlace=False,
+        )
+    else:
+        canvas.save(
+            output_path,
+            dpi=(settings.dpi, settings.dpi),
+            compress_level=settings.png_compression_level,
+        )
     saving_seconds = perf_counter() - saving_started
-    canvas.close()
+    if pyvips is None:
+        canvas.close()
     file_size_bytes = output_path.stat().st_size
     return {
         "filename": filename,
@@ -169,6 +260,7 @@ def generate_layout(
         "height_mm": round(canvas_height * 25.4 / settings.dpi, 1),
         "file_size_bytes": file_size_bytes,
         "png_compression_level": settings.png_compression_level,
+        "png_engine": png_engine,
         "output_megabytes_per_second": round(
             file_size_bytes / 1_000_000 / max(saving_seconds, 0.001), 1
         ),

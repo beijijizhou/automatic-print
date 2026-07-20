@@ -1,4 +1,11 @@
-from automatic_print.layout import LayoutSettings, discover_images, mm_to_px
+from PIL import Image
+
+from automatic_print.layout import (
+    LayoutSettings,
+    discover_images,
+    generate_layout,
+    mm_to_px,
+)
 from automatic_print.updater import version_tuple
 
 
@@ -28,3 +35,36 @@ def test_image_discovery_includes_nested_windows_formats(tmp_path) -> None:
         "image.PNG",
         "photo.jfif",
     ]
+
+
+def test_generate_layout_uses_libvips_and_preserves_transparency(tmp_path) -> None:
+    source = tmp_path / "source"
+    output = tmp_path / "output"
+    source.mkdir()
+    image_path = source / "transparent.png"
+    image = Image.new("RGBA", (20, 10), (255, 0, 0, 128))
+    image.save(image_path, dpi=(100, 100))
+
+    result = generate_layout(
+        [image_path],
+        output,
+        LayoutSettings(
+            media_width_mm=20,
+            spacing_mm=0,
+            margin_mm=1,
+            dpi=100,
+            png_compression_level=1,
+        ),
+    )
+
+    assert result["png_engine"] == "libvips"
+    with Image.open(output / "print.png") as generated:
+        assert generated.mode == "RGBA"
+        assert generated.getpixel((0, 0))[3] == 0
+        placement = result["placements"][0]
+        assert generated.getpixel((placement["x_px"], placement["y_px"])) == (
+            255,
+            0,
+            0,
+            128,
+        )

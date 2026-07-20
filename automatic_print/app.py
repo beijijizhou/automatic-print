@@ -43,6 +43,7 @@ from .layout import (
     discover_images,
     discovered_extensions,
     generate_layout,
+    png_engine_name,
 )
 from .updater import UpdateInfo, fetch_latest_release, version_tuple
 
@@ -119,6 +120,7 @@ class MainWindow(QMainWindow):
         self.current_total = 0
         self.current_percent = 0
         self.active_png_compression = 1
+        self.active_png_engine = png_engine_name()
         self.preferences = QSettings("AutomaticPrint", "AutomaticPrint")
         self.clock = QTimer(self)
         self.clock.setInterval(1000)
@@ -278,6 +280,7 @@ class MainWindow(QMainWindow):
         self.generate_button.setEnabled(False)
         self.started_at = time.monotonic()
         self.active_png_compression = settings.png_compression_level
+        self.active_png_engine = png_engine_name()
         self.stage_started_at = self.started_at
         self.current_stage = "正在开始"
         self.current_count = 0
@@ -338,7 +341,7 @@ class MainWindow(QMainWindow):
             remaining = (stage_elapsed / self.current_count) * remaining_items
             estimate = f"本阶段预计还需 {self._duration(remaining)}"
         elif self.current_stage == "保存 PNG":
-            rate_key = f"png_level_{self.active_png_compression}_seconds_per_megapixel"
+            rate_key = self._png_rate_key()
             saved_rate = float(self.preferences.value(rate_key, 0))
             megapixels = self.current_total / 1_000_000
             if saved_rate > 0 and megapixels > 0:
@@ -374,7 +377,7 @@ class MainWindow(QMainWindow):
             print_image["width_px"] * print_image["height_px"] / 1_000_000
         )
         if megapixels > 0:
-            rate_key = f"png_level_{self.active_png_compression}_seconds_per_megapixel"
+            rate_key = self._png_rate_key()
             self.preferences.setValue(
                 rate_key, timings["saving_png"] / megapixels
             )
@@ -399,6 +402,7 @@ class MainWindow(QMainWindow):
             f"输出：{print_image['width_px']} × {print_image['height_px']} 像素 | "
             f"实际长度 {print_image['height_mm'] / 1000:.2f}米 | "
             f"文件大小 {self._file_size(print_image['file_size_bytes'])} | "
+            f"保存引擎 {print_image['png_engine']} | "
             f"PNG 压缩等级 {print_image['png_compression_level']} | "
             f"平均输出 {print_image['output_megabytes_per_second']:.1f} MB/s"
         )
@@ -420,6 +424,13 @@ class MainWindow(QMainWindow):
         if size_bytes >= 1_000_000_000:
             return f"{size_bytes / 1_000_000_000:.2f} GB"
         return f"{size_bytes / 1_000_000:.1f} MB"
+
+    def _png_rate_key(self) -> str:
+        engine = "libvips" if self.active_png_engine == "libvips" else "pillow"
+        return (
+            f"png_{engine}_level_{self.active_png_compression}"
+            "_seconds_per_megapixel"
+        )
 
     @Slot()
     def clear_worker(self) -> None:
