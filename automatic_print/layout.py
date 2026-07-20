@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import asdict, dataclass
+from itertools import groupby
 from pathlib import Path
 from time import perf_counter
 from typing import Callable, Iterable
@@ -141,27 +142,63 @@ def _build_vips_canvas(
     dpi: int,
     progress: ProgressCallback | None,
 ):
-    canvas = pyvips.Image.black(canvas_width, canvas_height, bands=4).copy(
-        interpretation="srgb"
-    )
-    layers = []
-    x_positions = []
-    y_positions = []
+    margin = min(placement.x_px for _, placement in planned)
+    usable_width = canvas_width - (2 * margin)
+    rows = []
     total = len(planned)
-    for index, (path, placement) in enumerate(planned, start=1):
-        layers.append(
-            _vips_rgba(path, placement.width_px, placement.height_px)
-        )
-        x_positions.append(placement.x_px)
-        y_positions.append(placement.y_px)
-        if progress:
-            progress("合成图片", index, total, placement.source)
+    completed = 0
 
-    canvas = canvas.composite(
-        layers,
-        ["over"] * len(layers),
-        x=x_positions,
-        y=y_positions,
+    # Composite only the images that occupy the same shelf row. A single
+    # hundreds-of-layers composite makes every output strip inspect every source
+    # image; row-sized composites keep the streaming pipeline small and local.
+    for row_y, row_items_iter in groupby(planned, key=lambda item: item[1].y_px):
+        row_items = list(row_items_iter)
+        row_height = max(placement.height_px for _, placement in row_items)
+        row_canvas = pyvips.Image.black(
+            usable_width, row_height, bands=4
+        ).copy(interpretation="srgb")
+        layers = []
+        x_positions = []
+        y_positions = []
+        for path, placement in row_items:
+            layers.append(
+                _vips_rgba(path, placement.width_px, placement.height_px)
+            )
+            x_positions.append(placement.x_px - margin)
+            y_positions.append(0)
+            completed += 1
+            if progress:
+                progress("合成图片", completed, total, placement.source)
+        row_canvas = row_canvas.composite(
+            layers,
+            ["over"] * len(layers),
+            x=x_positions,
+            y=y_positions,
+        )
+        rows.append((row_y, row_height, row_canvas))
+
+    _, previous_height, canvas = rows[0]
+    previous_y = rows[0][0]
+    for row_y, row_height, row_canvas in rows[1:]:
+        gap = row_y - (previous_y + previous_height)
+        canvas = canvas.join(
+            row_canvas,
+            "vertical",
+            expand=True,
+            shim=gap,
+            background=[0, 0, 0, 0],
+            align="low",
+        )
+        previous_y = row_y
+        previous_height = row_height
+
+    canvas = canvas.embed(
+        margin,
+        margin,
+        canvas_width,
+        canvas_height,
+        extend="background",
+        background=[0, 0, 0, 0],
     )
     pixels_per_mm = dpi / 25.4
     return canvas.copy(xres=pixels_per_mm, yres=pixels_per_mm)
@@ -263,6 +300,12 @@ def generate_layout(
         "png_engine": png_engine,
         "output_megabytes_per_second": round(
             file_size_bytes / 1_000_000 / max(saving_seconds, 0.001), 1
+        ),
+        "output_megapixels_per_second": round(
+            canvas_width * canvas_height
+            / 1_000_000
+            / max(saving_seconds, 0.001),
+            1,
         ),
         "placements": [asdict(item) for _, item in planned],
         "timings_seconds": {

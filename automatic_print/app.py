@@ -404,7 +404,7 @@ class MainWindow(QMainWindow):
             f"文件大小 {self._file_size(print_image['file_size_bytes'])} | "
             f"保存引擎 {print_image['png_engine']} | "
             f"PNG 压缩等级 {print_image['png_compression_level']} | "
-            f"平均输出 {print_image['output_megabytes_per_second']:.1f} MB/s"
+            f"处理速度 {print_image['output_megapixels_per_second']:.1f} 百万像素/秒"
         )
         self.generate_button.setEnabled(True)
         QMessageBox.information(self, "生成完成", f"PNG 打印图片已保存到：\n{output}")
