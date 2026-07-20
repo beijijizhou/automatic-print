@@ -4,7 +4,7 @@ Windows desktop application for combining a folder of images into print-ready la
 
 ## Current features
 
-- Select a folder containing PNG, TIFF, JPEG, or WebP images
+- Recursively scan a folder for PNG, TIFF, JPEG, JFIF, WebP, or BMP images
 - Set media width, spacing, margins, and DPI
 - Preserve each image's physical print size using its embedded DPI
 - Arrange images with a predictable shelf-layout algorithm

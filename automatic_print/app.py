@@ -38,7 +38,12 @@ from PySide6.QtWidgets import (
 )
 
 from . import __version__
-from .layout import LayoutSettings, discover_images, generate_layout
+from .layout import (
+    LayoutSettings,
+    discover_images,
+    discovered_extensions,
+    generate_layout,
+)
 from .updater import UpdateInfo, fetch_latest_release, version_tuple
 
 
@@ -227,7 +232,15 @@ class MainWindow(QMainWindow):
             return
         images = discover_images(source)
         if not images:
-            QMessageBox.warning(self, "No images", "No supported images were found.")
+            extensions = discovered_extensions(source)
+            found_types = ", ".join(extensions[:15]) if extensions else "no files"
+            QMessageBox.warning(
+                self,
+                "No images",
+                "No supported images were found in this folder or its subfolders.\n\n"
+                f"File types found: {found_types}\n\n"
+                "Supported: PNG, TIFF, JPG, JFIF, WebP, BMP",
+            )
             return
 
         settings = LayoutSettings(

@@ -9,7 +9,16 @@ from typing import Callable, Iterable
 from PIL import Image
 
 
-SUPPORTED_EXTENSIONS = {".png", ".tif", ".tiff", ".jpg", ".jpeg", ".webp"}
+SUPPORTED_EXTENSIONS = {
+    ".png",
+    ".tif",
+    ".tiff",
+    ".jpg",
+    ".jpeg",
+    ".jfif",
+    ".webp",
+    ".bmp",
+}
 ProgressCallback = Callable[[str, int, int, str], None]
 
 
@@ -38,8 +47,14 @@ def mm_to_px(value: float, dpi: int) -> int:
 
 def discover_images(folder: Path) -> list[Path]:
     return sorted(
-        path for path in folder.iterdir()
+        path for path in folder.rglob("*")
         if path.is_file() and path.suffix.lower() in SUPPORTED_EXTENSIONS
+    )
+
+
+def discovered_extensions(folder: Path) -> list[str]:
+    return sorted(
+        {path.suffix.lower() or "(no extension)" for path in folder.rglob("*") if path.is_file()}
     )
 
 
