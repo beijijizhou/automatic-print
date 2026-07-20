@@ -22,7 +22,7 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
-from .layout import LayoutSettings, discover_images, generate_layouts
+from .layout import LayoutSettings, discover_images, generate_layout
 
 
 class MainWindow(QMainWindow):
@@ -41,7 +41,6 @@ class MainWindow(QMainWindow):
         self.width = self._double_box(600, 50, 5000)
         self.spacing = self._double_box(3, 0, 100)
         self.margin = self._double_box(3, 0, 100)
-        self.max_length = self._double_box(2000, 100, 50000)
         self.dpi = QSpinBox()
         self.dpi.setRange(72, 1200)
         self.dpi.setValue(300)
@@ -51,11 +50,10 @@ class MainWindow(QMainWindow):
         form.addRow("Media width (mm)", self.width)
         form.addRow("Image spacing (mm)", self.spacing)
         form.addRow("Outer margin (mm)", self.margin)
-        form.addRow("Maximum file length (mm)", self.max_length)
         form.addRow("Output DPI", self.dpi)
 
         self.status = QLabel("Choose a folder to begin.")
-        generate = QPushButton("Generate print files")
+        generate = QPushButton("Generate one print image")
         generate.clicked.connect(self.generate)
 
         layout = QVBoxLayout()
@@ -95,20 +93,19 @@ class MainWindow(QMainWindow):
             spacing_mm=self.spacing.value(),
             margin_mm=self.margin.value(),
             dpi=self.dpi.value(),
-            max_length_mm=self.max_length.value(),
         )
         base = Path(QStandardPaths.writableLocation(QStandardPaths.DocumentsLocation))
         job_id = datetime.now().strftime("JOB_%Y%m%d_%H%M%S")
         output = base / "Automatic Print" / job_id
         try:
-            pages = generate_layouts(images, output, settings)
+            print_image = generate_layout(images, output, settings)
             manifest = {
                 "job_id": job_id,
                 "created_at": datetime.now().astimezone().isoformat(),
                 "source_folder": str(source),
                 "settings": asdict(settings),
                 "source_count": len(images),
-                "pages": pages,
+                "print_image": print_image,
             }
             (output / "manifest.json").write_text(
                 json.dumps(manifest, indent=2), encoding="utf-8"
@@ -117,8 +114,8 @@ class MainWindow(QMainWindow):
             QMessageBox.critical(self, "Generation failed", str(error))
             return
 
-        self.status.setText(f"Created {len(pages)} file(s) in {output}")
-        QMessageBox.information(self, "Finished", f"Print files created in:\n{output}")
+        self.status.setText(f"Created one print image in {output}")
+        QMessageBox.information(self, "Finished", f"Print image created in:\n{output}")
 
 
 def run() -> int:

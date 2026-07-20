@@ -5,10 +5,10 @@ Windows desktop application for combining a folder of images into print-ready la
 ## Current features
 
 - Select a folder containing PNG, TIFF, JPEG, or WebP images
-- Set media width, spacing, margins, DPI, and maximum output length
+- Set media width, spacing, margins, and DPI
 - Preserve each image's physical print size using its embedded DPI
 - Arrange images with a predictable shelf-layout algorithm
-- Split long jobs into multiple PNG files
+- Combine the entire selected folder into one long PNG image
 - Generate a JSON manifest with source files and placement coordinates
 
 ## Requirements
@@ -53,8 +53,7 @@ Each run creates a timestamped job folder containing:
 ```text
 output/
 └── JOB_YYYYMMDD_HHMMSS/
-    ├── print_001.png
-    ├── print_002.png
+    ├── print.png
     └── manifest.json
 ```
 
