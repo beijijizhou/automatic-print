@@ -73,6 +73,25 @@ The installed app checks for a newer approved Release in the background. Updates
 are never installed silently: the user chooses whether to open the installer
 download page.
 
+## Fast iteration on one Windows test computer
+
+During active development, one designated factory test computer can run the
+source version instead of reinstalling every build.
+
+One-time setup:
+
+1. Install Git for Windows and Python 3.12.
+2. Clone this repository.
+3. Double-click `windows/setup-dev.bat`.
+4. Double-click `windows/run-dev.bat` and keep its terminal open.
+
+For each approved test update, double-click `windows/update-dev.bat`. It pulls
+the latest approved `main` commit and checks dependencies. The development
+launcher detects changed Python files and restarts the app automatically.
+
+Only the designated test computer should use this workflow. Production
+computers should continue using tested GitHub Releases.
+
 ## Output
 
 Each run creates a timestamped job folder containing:
