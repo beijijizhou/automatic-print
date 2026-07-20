@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from concurrent.futures import ThreadPoolExecutor
 from dataclasses import asdict, dataclass
 from pathlib import Path
 from time import perf_counter
@@ -19,6 +20,7 @@ class LayoutSettings:
     margin_mm: float = 3
     dpi: int = 300
     fast_png: bool = True
+    worker_threads: int = 8
 
 
 @dataclass(frozen=True)
@@ -61,6 +63,12 @@ def _normalized_image(
     if image.size != target_size:
         image = image.resize(target_size, Image.Resampling.LANCZOS)
     return image
+
+
+def _prepare_image(item: tuple[Path, Placement], dpi: int) -> tuple[Image.Image, Placement]:
+    path, placement = item
+    image = _normalized_image(path, dpi, (placement.width_px, placement.height_px))
+    return image, placement
 
 
 def generate_layout(
@@ -108,16 +116,21 @@ def generate_layout(
     canvas_height = y + row_height + margin
     canvas = Image.new("RGBA", (canvas_width, canvas_height), (0, 0, 0, 0))
 
-    # Second pass decodes one source image at a time, keeping peak memory lower.
+    # Decode and resize source images in parallel. Results are consumed in layout
+    # order, so output remains deterministic.
     combining_started = perf_counter()
-    for index, (path, placement) in enumerate(planned, start=1):
-        image = _normalized_image(
-            path, settings.dpi, (placement.width_px, placement.height_px)
+    workers = max(1, min(settings.worker_threads, total))
+    with ThreadPoolExecutor(max_workers=workers) as executor:
+        prepared = executor.map(
+            lambda item: _prepare_image(item, settings.dpi), planned
         )
-        canvas.alpha_composite(image, (placement.x_px, placement.y_px))
-        image.close()
-        if progress:
-            progress("Combining images", index, total, path.name)
+        for index, (image, placement) in enumerate(prepared, start=1):
+            # Placements never overlap, so a direct RGBA copy is equivalent to
+            # alpha compositing here and avoids millions of needless blends.
+            canvas.paste(image, (placement.x_px, placement.y_px))
+            image.close()
+            if progress:
+                progress("Combining images", index, total, placement.source)
     combining_seconds = perf_counter() - combining_started
 
     filename = "print.png"

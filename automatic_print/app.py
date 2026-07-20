@@ -113,6 +113,9 @@ class MainWindow(QMainWindow):
         self.dpi = QSpinBox()
         self.dpi.setRange(72, 1200)
         self.dpi.setValue(300)
+        self.worker_threads = QSpinBox()
+        self.worker_threads.setRange(1, 32)
+        self.worker_threads.setValue(8)
         self.fast_png = QCheckBox("Fast PNG (larger file, same image quality)")
         self.fast_png.setChecked(True)
 
@@ -122,6 +125,7 @@ class MainWindow(QMainWindow):
         form.addRow("Image spacing (mm)", self.spacing)
         form.addRow("Outer margin (mm)", self.margin)
         form.addRow("Output DPI", self.dpi)
+        form.addRow("Parallel image workers", self.worker_threads)
         form.addRow("PNG mode", self.fast_png)
 
         default_output = QStandardPaths.writableLocation(QStandardPaths.DesktopLocation)
@@ -204,6 +208,7 @@ class MainWindow(QMainWindow):
             margin_mm=self.margin.value(),
             dpi=self.dpi.value(),
             fast_png=self.fast_png.isChecked(),
+            worker_threads=self.worker_threads.value(),
         )
         base = Path(self.output_location.text().strip())
         if not base.is_dir():
