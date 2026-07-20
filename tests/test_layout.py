@@ -18,6 +18,7 @@ def test_default_settings_are_print_ready() -> None:
     assert settings.media_width_mm == 600
     assert settings.dpi == 300
     assert settings.png_compression_level == 1
+    assert settings.png_engine == "pillow"
 
 
 def test_versions_are_compared_numerically() -> None:
@@ -54,6 +55,7 @@ def test_generate_layout_uses_libvips_and_preserves_transparency(tmp_path) -> No
             margin_mm=1,
             dpi=100,
             png_compression_level=1,
+            png_engine="libvips",
         ),
     )
 

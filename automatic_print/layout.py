@@ -39,6 +39,7 @@ class LayoutSettings:
     margin_mm: float = 3
     dpi: int = 300
     png_compression_level: int = 1
+    png_engine: str = "pillow"
     worker_threads: int = 8
 
 
@@ -248,11 +249,12 @@ def generate_layout(
 
     canvas_height = y + row_height + margin
     combining_started = perf_counter()
-    if pyvips is not None:
+    use_libvips = settings.png_engine == "libvips" and pyvips is not None
+    if use_libvips:
         canvas = _build_vips_canvas(
             planned, canvas_width, canvas_height, settings.dpi, progress
         )
-        png_engine = png_engine_name()
+        png_engine = "libvips"
     else:
         canvas = Image.new("RGBA", (canvas_width, canvas_height), (0, 0, 0, 0))
         workers = max(1, min(settings.worker_threads, total))
@@ -265,7 +267,7 @@ def generate_layout(
                 image.close()
                 if progress:
                     progress("合成图片", index, total, placement.source)
-        png_engine = png_engine_name()
+        png_engine = "Pillow"
     combining_seconds = perf_counter() - combining_started
 
     filename = "print.png"
@@ -273,7 +275,7 @@ def generate_layout(
         progress("保存 PNG", 0, canvas_width * canvas_height, filename)
     saving_started = perf_counter()
     output_path = output_dir / filename
-    if pyvips is not None:
+    if use_libvips:
         canvas.pngsave(
             str(output_path),
             compression=settings.png_compression_level,
@@ -286,7 +288,7 @@ def generate_layout(
             compress_level=settings.png_compression_level,
         )
     saving_seconds = perf_counter() - saving_started
-    if pyvips is None:
+    if not use_libvips:
         canvas.close()
     file_size_bytes = output_path.stat().st_size
     return {

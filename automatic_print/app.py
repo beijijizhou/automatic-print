@@ -122,7 +122,7 @@ class MainWindow(QMainWindow):
         self.current_total = 0
         self.current_percent = 0
         self.active_png_compression = 1
-        self.active_png_engine = png_engine_name()
+        self.active_png_engine = "Pillow"
         self.preferences = QSettings("AutomaticPrint", "AutomaticPrint")
         self.clock = QTimer(self)
         self.clock.setInterval(1000)
@@ -148,6 +148,10 @@ class MainWindow(QMainWindow):
         self.png_compression.addItem("等级 1 — 轻度压缩（推荐）", 1)
         self.png_compression.addItem("等级 0 — 不压缩（文件最大）", 0)
         self.png_compression.addItem("等级 3 — 中度压缩（文件更小）", 3)
+        self.png_engine = QComboBox()
+        self.png_engine.addItem("Pillow — 当前最快（推荐）", "pillow")
+        if png_engine_name() == "libvips":
+            self.png_engine.addItem("libvips — 实验对比", "libvips")
 
         form = QFormLayout()
         form.addRow("图片文件夹", folder_row)
@@ -156,6 +160,7 @@ class MainWindow(QMainWindow):
         form.addRow("外边距（毫米）", self.margin)
         form.addRow("输出 DPI", self.dpi)
         form.addRow("并行处理线程数", self.worker_threads)
+        form.addRow("PNG 保存引擎", self.png_engine)
         form.addRow("PNG 压缩", self.png_compression)
 
         default_output = QStandardPaths.writableLocation(QStandardPaths.DesktopLocation)
@@ -259,6 +264,7 @@ class MainWindow(QMainWindow):
             margin_mm=self.margin.value(),
             dpi=self.dpi.value(),
             png_compression_level=self.png_compression.currentData(),
+            png_engine=self.png_engine.currentData(),
             worker_threads=self.worker_threads.value(),
         )
         base = Path(self.output_location.text().strip())
@@ -282,7 +288,9 @@ class MainWindow(QMainWindow):
         self.generate_button.setEnabled(False)
         self.started_at = time.monotonic()
         self.active_png_compression = settings.png_compression_level
-        self.active_png_engine = png_engine_name()
+        self.active_png_engine = (
+            "libvips" if settings.png_engine == "libvips" else "Pillow"
+        )
         self.stage_started_at = self.started_at
         self.current_stage = "正在开始"
         self.current_count = 0
