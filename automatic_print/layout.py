@@ -99,7 +99,7 @@ def generate_layout(
     margin = mm_to_px(settings.margin_mm, settings.dpi)
     usable_width = canvas_width - (2 * margin)
     if usable_width <= 0:
-        raise ValueError("Margins leave no printable canvas area.")
+        raise ValueError("外边距过大，画布没有可打印区域。")
 
     paths = list(image_paths)
     planned: list[tuple[Path, Placement]] = []
@@ -112,7 +112,7 @@ def generate_layout(
     for index, path in enumerate(paths, start=1):
         width, height = _target_size(path, settings.dpi)
         if width > usable_width:
-            raise ValueError(f"{path.name} is wider than the printable media width.")
+            raise ValueError(f"图片 {path.name} 的宽度超过了材料可打印宽度。")
         if x > margin and x + width > canvas_width - margin:
             x = margin
             y += row_height + spacing
@@ -122,11 +122,11 @@ def generate_layout(
         x += width + spacing
         row_height = max(row_height, height)
         if progress:
-            progress("Reading image sizes", index, total, path.name)
+            progress("读取图片尺寸", index, total, path.name)
     reading_seconds = perf_counter() - reading_started
 
     if not planned:
-        raise ValueError("No images were provided.")
+        raise ValueError("没有可供排版的图片。")
 
     canvas_height = y + row_height + margin
     canvas = Image.new("RGBA", (canvas_width, canvas_height), (0, 0, 0, 0))
@@ -145,12 +145,12 @@ def generate_layout(
             canvas.paste(image, (placement.x_px, placement.y_px))
             image.close()
             if progress:
-                progress("Combining images", index, total, placement.source)
+                progress("合成图片", index, total, placement.source)
     combining_seconds = perf_counter() - combining_started
 
     filename = "print.png"
     if progress:
-        progress("Saving PNG", 0, canvas_width * canvas_height, filename)
+        progress("保存 PNG", 0, canvas_width * canvas_height, filename)
     saving_started = perf_counter()
     canvas.save(
         output_dir / filename,

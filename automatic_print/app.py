@@ -105,7 +105,7 @@ class UpdateWorker(QObject):
 class MainWindow(QMainWindow):
     def __init__(self) -> None:
         super().__init__()
-        self.setWindowTitle("Automatic Print")
+        self.setWindowTitle("自动打印排版")
         self.resize(720, 470)
         self.thread: QThread | None = None
         self.worker: GenerateWorker | None = None
@@ -125,7 +125,7 @@ class MainWindow(QMainWindow):
         self.clock.timeout.connect(self.refresh_timing)
 
         self.folder = QLineEdit()
-        browse = QPushButton("Browse…")
+        browse = QPushButton("选择图片文件夹…")
         browse.clicked.connect(self.choose_folder)
         folder_row = QHBoxLayout()
         folder_row.addWidget(self.folder)
@@ -140,49 +140,49 @@ class MainWindow(QMainWindow):
         self.worker_threads = QSpinBox()
         self.worker_threads.setRange(1, 32)
         self.worker_threads.setValue(8)
-        self.fast_png = QCheckBox("Fast PNG (larger file, same image quality)")
+        self.fast_png = QCheckBox("快速 PNG（文件较大，画质不变）")
         self.fast_png.setChecked(True)
 
         form = QFormLayout()
-        form.addRow("Image folder", folder_row)
-        form.addRow("Media width (mm)", self.width)
-        form.addRow("Image spacing (mm)", self.spacing)
-        form.addRow("Outer margin (mm)", self.margin)
-        form.addRow("Output DPI", self.dpi)
-        form.addRow("Parallel image workers", self.worker_threads)
-        form.addRow("PNG mode", self.fast_png)
+        form.addRow("图片文件夹", folder_row)
+        form.addRow("材料宽度（毫米）", self.width)
+        form.addRow("图片间距（毫米）", self.spacing)
+        form.addRow("外边距（毫米）", self.margin)
+        form.addRow("输出 DPI", self.dpi)
+        form.addRow("并行处理线程数", self.worker_threads)
+        form.addRow("PNG 模式", self.fast_png)
 
         default_output = QStandardPaths.writableLocation(QStandardPaths.DesktopLocation)
         saved_output = self.preferences.value("output_location", default_output, str)
         self.output_location = QLineEdit(saved_output)
-        output_browse = QPushButton("Browse…")
+        output_browse = QPushButton("选择保存位置…")
         output_browse.clicked.connect(self.choose_output_location)
         output_row = QHBoxLayout()
         output_row.addWidget(self.output_location)
         output_row.addWidget(output_browse)
-        form.addRow("Save jobs in", output_row)
+        form.addRow("任务保存位置", output_row)
 
         self.job_path = QLineEdit()
         self.job_path.setReadOnly(True)
-        self.job_path.setPlaceholderText("The new job folder will appear here")
-        form.addRow("New job folder", self.job_path)
+        self.job_path.setPlaceholderText("开始生成后，这里会显示新任务文件夹")
+        form.addRow("本次任务文件夹", self.job_path)
 
         self.progress = QProgressBar()
         self.progress.setRange(0, 100)
         self.progress.setValue(0)
-        self.progress.setFormat("Not started")
-        self.status = QLabel("Choose a folder to begin.")
+        self.progress.setFormat("尚未开始")
+        self.status = QLabel("请选择包含图片的文件夹。")
         self.status.setTextInteractionFlags(Qt.TextSelectableByMouse)
-        self.current_file = QLabel("Current file: —")
+        self.current_file = QLabel("当前文件：—")
         self.current_file.setTextInteractionFlags(Qt.TextSelectableByMouse)
         self.run_log = QPlainTextEdit()
         self.run_log.setReadOnly(True)
         self.run_log.setMaximumHeight(115)
-        self.run_log.setPlaceholderText("Copyable timing details will appear here")
-        self.generate_button = QPushButton("Generate one PNG print image")
+        self.run_log.setPlaceholderText("这里会显示可复制的运行记录和耗时")
+        self.generate_button = QPushButton("生成单张 PNG 打印图片")
         self.generate_button.clicked.connect(self.generate)
-        self.version_label = QLabel(f"Version {__version__}")
-        self.check_update_button = QPushButton("Check for updates")
+        self.version_label = QLabel(f"版本 {__version__}")
+        self.check_update_button = QPushButton("检查更新")
         self.check_update_button.clicked.connect(lambda: self.check_for_updates(False))
         version_row = QHBoxLayout()
         version_row.addWidget(self.version_label)
@@ -212,14 +212,18 @@ class MainWindow(QMainWindow):
         return box
 
     def choose_folder(self) -> None:
-        folder = QFileDialog.getExistingDirectory(self, "Choose image folder")
+        folder = QFileDialog.getExistingDirectory(
+            self, "请选择包含图片的文件夹（无需选择单张图片）"
+        )
         if folder:
             self.folder.setText(folder)
+            count = len(discover_images(Path(folder)))
+            self.status.setText(f"已找到 {count} 张图片，可以开始生成。")
 
     def choose_output_location(self) -> None:
         starting_folder = self.output_location.text().strip()
         folder = QFileDialog.getExistingDirectory(
-            self, "Choose where to save print jobs", starting_folder
+            self, "请选择打印任务的保存位置", starting_folder
         )
         if folder:
             self.output_location.setText(folder)
@@ -228,18 +232,18 @@ class MainWindow(QMainWindow):
     def generate(self) -> None:
         source = Path(self.folder.text().strip())
         if not source.is_dir():
-            QMessageBox.warning(self, "Folder required", "Choose a valid image folder.")
+            QMessageBox.warning(self, "请选择文件夹", "请选择有效的图片文件夹。")
             return
         images = discover_images(source)
         if not images:
             extensions = discovered_extensions(source)
-            found_types = ", ".join(extensions[:15]) if extensions else "no files"
+            found_types = ", ".join(extensions[:15]) if extensions else "没有文件"
             QMessageBox.warning(
                 self,
-                "No images",
-                "No supported images were found in this folder or its subfolders.\n\n"
-                f"File types found: {found_types}\n\n"
-                "Supported: PNG, TIFF, JPG, JFIF, WebP, BMP",
+                "未找到图片",
+                "所选文件夹及其子文件夹中没有找到支持的图片。\n\n"
+                f"实际发现的文件类型：{found_types}\n\n"
+                "支持格式：PNG、TIFF、JPG、JFIF、WebP、BMP",
             )
             return
 
@@ -254,26 +258,26 @@ class MainWindow(QMainWindow):
         base = Path(self.output_location.text().strip())
         if not base.is_dir():
             QMessageBox.warning(
-                self, "Output folder required", "Choose a valid output folder."
+                self, "请选择保存位置", "请选择有效的任务保存位置。"
             )
             return
         self.preferences.setValue("output_location", str(base))
         job_id = datetime.now().strftime("JOB_%Y%m%d_%H%M%S")
         output = base / job_id
         self.job_path.setText(str(output))
-        self.status.setText(f"Found {len(images)} images. Starting…")
-        self.current_file.setText("Current file: —")
+        self.status.setText(f"已找到 {len(images)} 张图片，正在开始…")
+        self.current_file.setText("当前文件：—")
         self.progress.setValue(0)
-        self.progress.setFormat("Starting…")
+        self.progress.setFormat("正在开始…")
         self.run_log.clear()
-        self.run_log.appendPlainText(f"Job: {job_id}")
-        self.run_log.appendPlainText(f"Images: {len(images)}")
-        self.run_log.appendPlainText(f"Output: {output}")
+        self.run_log.appendPlainText(f"任务：{job_id}")
+        self.run_log.appendPlainText(f"图片数量：{len(images)}")
+        self.run_log.appendPlainText(f"输出位置：{output}")
         self.generate_button.setEnabled(False)
         self.started_at = time.monotonic()
         self.active_fast_png = settings.fast_png
         self.stage_started_at = self.started_at
-        self.current_stage = "Starting"
+        self.current_stage = "正在开始"
         self.current_count = 0
         self.current_total = len(images)
         self.current_percent = 0
@@ -296,27 +300,27 @@ class MainWindow(QMainWindow):
     @Slot(str, int, int, str)
     def update_progress(self, stage: str, current: int, total: int, filename: str) -> None:
         # Reading and combining each use 45%; saving the PNG uses the final 10%.
-        if stage == "Reading image sizes":
+        if stage == "读取图片尺寸":
             percent = round((current / total) * 45)
-        elif stage == "Combining images":
+        elif stage == "合成图片":
             percent = 45 + round((current / total) * 45)
         else:
             percent = 95
         if stage != self.current_stage:
             self.stage_started_at = time.monotonic()
-            self.run_log.appendPlainText(f"Started: {stage}")
+            self.run_log.appendPlainText(f"开始：{stage}")
         self.current_stage = stage
         self.current_count = current
         self.current_total = total
         self.current_percent = percent
-        if stage == "Saving PNG":
+        if stage == "保存 PNG":
             self.progress.setRange(0, 0)
-            self.progress.setFormat("Saving PNG…")
+            self.progress.setFormat("正在保存 PNG…")
         else:
             self.progress.setRange(0, 100)
             self.progress.setValue(percent)
             self.progress.setFormat(f"{percent}% — {stage}")
-        self.current_file.setText(f"Current file: {filename}")
+        self.current_file.setText(f"当前文件：{filename}")
         self.refresh_timing()
 
     @Slot()
@@ -325,13 +329,13 @@ class MainWindow(QMainWindow):
         elapsed = now - self.started_at if self.started_at else 0
         stage_elapsed = now - self.stage_started_at if self.stage_started_at else 0
         if (
-            self.current_stage in {"Reading image sizes", "Combining images"}
+            self.current_stage in {"读取图片尺寸", "合成图片"}
             and self.current_count > 0
         ):
             remaining_items = self.current_total - self.current_count
             remaining = (stage_elapsed / self.current_count) * remaining_items
-            estimate = f"This stage about {self._duration(remaining)} left"
-        elif self.current_stage == "Saving PNG":
+            estimate = f"本阶段预计还需 {self._duration(remaining)}"
+        elif self.current_stage == "保存 PNG":
             rate_key = (
                 "fast_png_seconds_per_megapixel"
                 if self.active_fast_png
@@ -342,27 +346,27 @@ class MainWindow(QMainWindow):
             if saved_rate > 0 and megapixels > 0:
                 expected = saved_rate * megapixels
                 remaining = max(0, expected - stage_elapsed)
-                estimate = f"Based on the last job: about {self._duration(remaining)} left"
+                estimate = f"根据上次任务，预计还需 {self._duration(remaining)}"
             else:
-                estimate = "No reliable estimate yet; timing this save"
+                estimate = "暂无可靠预计，正在记录本次保存速度"
         else:
-            estimate = "Calculating…"
+            estimate = "正在计算…"
         stage_progress = (
             self.current_stage
-            if self.current_stage == "Saving PNG"
+            if self.current_stage == "保存 PNG"
             else f"{self.current_stage}: {self.current_count} / {self.current_total}"
         )
         self.status.setText(
             f"{stage_progress}  ·  "
-            f"Stage {self._duration(stage_elapsed)}  ·  "
-            f"Total {self._duration(elapsed)}  ·  {estimate}"
+            f"本阶段 {self._duration(stage_elapsed)}  ·  "
+            f"总计 {self._duration(elapsed)}  ·  {estimate}"
         )
 
     @staticmethod
     def _duration(seconds: float) -> str:
         seconds = max(0, round(seconds))
         minutes, seconds = divmod(seconds, 60)
-        return f"{minutes}m {seconds:02d}s" if minutes else f"{seconds}s"
+        return f"{minutes}分{seconds:02d}秒" if minutes else f"{seconds}秒"
 
     @Slot(str, object)
     def generation_finished(self, output: str, print_image: dict) -> None:
@@ -382,33 +386,33 @@ class MainWindow(QMainWindow):
             )
         self.progress.setRange(0, 100)
         self.progress.setValue(100)
-        self.progress.setFormat("100% — Finished")
+        self.progress.setFormat("100% — 已完成")
         self.status.setText(
-            "Finished — "
-            f"Read {self._duration(timings['reading'])} · "
-            f"Combine {self._duration(timings['combining'])} · "
-            f"Save PNG {self._duration(timings['saving_png'])} · "
-            f"Total {self._duration(timings['total'])}"
+            "已完成 — "
+            f"读取 {self._duration(timings['reading'])} · "
+            f"合成 {self._duration(timings['combining'])} · "
+            f"保存 PNG {self._duration(timings['saving_png'])} · "
+            f"总计 {self._duration(timings['total'])}"
         )
-        self.current_file.setText("Current file: print.png")
+        self.current_file.setText("当前文件：print.png")
         self.run_log.appendPlainText(
-            f"Finished: Read {timings['reading']:.1f}s | "
-            f"Combine {timings['combining']:.1f}s | "
-            f"Save PNG {timings['saving_png']:.1f}s | "
-            f"Total {timings['total']:.1f}s"
+            f"完成：读取 {timings['reading']:.1f}秒 | "
+            f"合成 {timings['combining']:.1f}秒 | "
+            f"保存 PNG {timings['saving_png']:.1f}秒 | "
+            f"总计 {timings['total']:.1f}秒"
         )
         self.generate_button.setEnabled(True)
-        QMessageBox.information(self, "Finished", f"PNG print image created in:\n{output}")
+        QMessageBox.information(self, "生成完成", f"PNG 打印图片已保存到：\n{output}")
 
     @Slot(str)
     def generation_failed(self, message: str) -> None:
         self.clock.stop()
         self.progress.setRange(0, 100)
-        self.progress.setFormat("Failed")
-        self.status.setText("Generation failed.")
-        self.run_log.appendPlainText(f"Failed: {message}")
+        self.progress.setFormat("生成失败")
+        self.status.setText("生成失败。")
+        self.run_log.appendPlainText(f"失败：{message}")
         self.generate_button.setEnabled(True)
-        QMessageBox.critical(self, "Generation failed", message)
+        QMessageBox.critical(self, "生成失败", message)
 
     @Slot()
     def clear_worker(self) -> None:
@@ -420,7 +424,7 @@ class MainWindow(QMainWindow):
             return
         self.update_is_silent = silent
         self.check_update_button.setEnabled(False)
-        self.check_update_button.setText("Checking…")
+        self.check_update_button.setText("正在检查…")
         self.update_thread = QThread(self)
         self.update_worker = UpdateWorker()
         self.update_worker.moveToThread(self.update_thread)
@@ -439,10 +443,10 @@ class MainWindow(QMainWindow):
         if version_tuple(update.version) > version_tuple(__version__):
             answer = QMessageBox.question(
                 self,
-                "Update available",
-                f"Automatic Print {update.version} is available.\n\n"
-                f"Current version: {__version__}\n\n"
-                "Open the installer download page now?",
+                "发现新版本",
+                f"自动打印排版 {update.version} 已发布。\n\n"
+                f"当前版本：{__version__}\n\n"
+                "是否打开安装程序下载页面？",
                 QMessageBox.Yes | QMessageBox.No,
             )
             if answer == QMessageBox.Yes:
@@ -450,8 +454,8 @@ class MainWindow(QMainWindow):
         elif not self.update_is_silent:
             QMessageBox.information(
                 self,
-                "No updates",
-                f"Automatic Print {__version__} is the latest version.",
+                "已经是最新版",
+                f"自动打印排版 {__version__} 已经是最新版本。",
             )
 
     @Slot(str)
@@ -459,8 +463,8 @@ class MainWindow(QMainWindow):
         if not self.update_is_silent:
             QMessageBox.warning(
                 self,
-                "Update check failed",
-                f"Could not check for updates.\n\n{message}",
+                "检查更新失败",
+                f"暂时无法检查更新。\n\n{message}",
             )
 
     @Slot()
@@ -468,7 +472,7 @@ class MainWindow(QMainWindow):
         self.update_thread = None
         self.update_worker = None
         self.check_update_button.setEnabled(True)
-        self.check_update_button.setText("Check for updates")
+        self.check_update_button.setText("检查更新")
 
 
 def run() -> int:
