@@ -49,7 +49,9 @@ from .updater import UpdateInfo, fetch_latest_release, version_tuple
 
 
 class GenerateWorker(QObject):
-    progress = Signal(str, int, int, str)
+    # Python object keeps very large pixel counts intact. Qt's regular int is
+    # signed 32-bit and overflows on long print canvases above 2.1B pixels.
+    progress = Signal(str, int, object, str)
     finished = Signal(str, object)
     failed = Signal(str)
 
@@ -302,7 +304,7 @@ class MainWindow(QMainWindow):
         self.thread.finished.connect(self.clear_worker)
         self.thread.start()
 
-    @Slot(str, int, int, str)
+    @Slot(str, int, object, str)
     def update_progress(self, stage: str, current: int, total: int, filename: str) -> None:
         # Reading and combining each use 45%; saving the PNG uses the final 10%.
         if stage == "读取图片尺寸":
