@@ -2,12 +2,14 @@ from __future__ import annotations
 
 from dataclasses import asdict, dataclass
 from pathlib import Path
-from typing import Iterable
+from time import perf_counter
+from typing import Callable, Iterable
 
 from PIL import Image
 
 
 SUPPORTED_EXTENSIONS = {".png", ".tif", ".tiff", ".jpg", ".jpeg", ".webp"}
+ProgressCallback = Callable[[str, int, int, str], None]
 
 
 @dataclass(frozen=True)
@@ -16,6 +18,7 @@ class LayoutSettings:
     spacing_mm: float = 3
     margin_mm: float = 3
     dpi: int = 300
+    fast_png: bool = True
 
 
 @dataclass(frozen=True)
@@ -61,8 +64,12 @@ def _normalized_image(
 
 
 def generate_layout(
-    image_paths: Iterable[Path], output_dir: Path, settings: LayoutSettings
+    image_paths: Iterable[Path],
+    output_dir: Path,
+    settings: LayoutSettings,
+    progress: ProgressCallback | None = None,
 ) -> dict:
+    total_started = perf_counter()
     output_dir.mkdir(parents=True, exist_ok=True)
     canvas_width = mm_to_px(settings.media_width_mm, settings.dpi)
     spacing = mm_to_px(settings.spacing_mm, settings.dpi)
@@ -77,7 +84,9 @@ def generate_layout(
     row_height = 0
 
     # First pass only reads metadata and calculates the exact required height.
-    for path in paths:
+    reading_started = perf_counter()
+    total = len(paths)
+    for index, path in enumerate(paths, start=1):
         width, height = _target_size(path, settings.dpi)
         if width > usable_width:
             raise ValueError(f"{path.name} is wider than the printable media width.")
@@ -89,6 +98,9 @@ def generate_layout(
         planned.append((path, placement))
         x += width + spacing
         row_height = max(row_height, height)
+        if progress:
+            progress("Reading image sizes", index, total, path.name)
+    reading_seconds = perf_counter() - reading_started
 
     if not planned:
         raise ValueError("No images were provided.")
@@ -97,23 +109,37 @@ def generate_layout(
     canvas = Image.new("RGBA", (canvas_width, canvas_height), (0, 0, 0, 0))
 
     # Second pass decodes one source image at a time, keeping peak memory lower.
-    for path, placement in planned:
+    combining_started = perf_counter()
+    for index, (path, placement) in enumerate(planned, start=1):
         image = _normalized_image(
             path, settings.dpi, (placement.width_px, placement.height_px)
         )
         canvas.alpha_composite(image, (placement.x_px, placement.y_px))
         image.close()
+        if progress:
+            progress("Combining images", index, total, path.name)
+    combining_seconds = perf_counter() - combining_started
 
     filename = "print.png"
+    if progress:
+        progress("Saving PNG", 0, canvas_width * canvas_height, filename)
+    saving_started = perf_counter()
     canvas.save(
         output_dir / filename,
         dpi=(settings.dpi, settings.dpi),
-        compress_level=1,
+        compress_level=0 if settings.fast_png else 6,
     )
+    saving_seconds = perf_counter() - saving_started
     canvas.close()
     return {
         "filename": filename,
         "width_px": canvas_width,
         "height_px": canvas_height,
         "placements": [asdict(item) for _, item in planned],
+        "timings_seconds": {
+            "reading": round(reading_seconds, 3),
+            "combining": round(combining_seconds, 3),
+            "saving_png": round(saving_seconds, 3),
+            "total": round(perf_counter() - total_started, 3),
+        },
     }

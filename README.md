@@ -35,6 +35,16 @@ pip install -r requirements.txt
 python -m automatic_print
 ```
 
+During development, use the auto-reloading launcher instead:
+
+```bash
+python dev.py
+```
+
+Keep that terminal open. When a Python source file changes, the running app closes
+and immediately opens again with the new code. Closing the app yourself stops the
+development launcher.
+
 ## Build a Windows executable
 
 Run these commands on Windows:
