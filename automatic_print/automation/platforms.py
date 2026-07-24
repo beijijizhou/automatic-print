@@ -7,6 +7,12 @@ from dataclasses import dataclass
 class ErpPlatform:
     name: str
     host: str
+    shipping_categories: tuple[str, ...] = ()
+    order_compositions: tuple[str, ...] = (
+        "单项单件",
+        "单项多件",
+        "多项多件",
+    )
 
     @property
     def production_items_url(self) -> str:
@@ -24,9 +30,17 @@ class ErpPlatform:
 
 
 ERP_PLATFORMS = {
-    "Haloo": ErpPlatform("Haloo", "haloopod.merchant.hihumbird.com"),
+    "Haloo": ErpPlatform(
+        "Haloo",
+        "haloopod.merchant.hihumbird.com",
+        ("UPS", "FedEx", "SWIFT", "USPS", "GOFO", "Yanwen"),
+    ),
     "莆田": ErpPlatform("莆田", "putiandiy.merchant.hihumbird.com"),
-    "隆丰": ErpPlatform("隆丰", "longfeng.merchant.hihumbird.com"),
+    "隆丰": ErpPlatform(
+        "隆丰",
+        "longfeng.merchant.hihumbird.com",
+        ("CBT", "非 CBT"),
+    ),
 }
 
 

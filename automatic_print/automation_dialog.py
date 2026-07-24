@@ -37,7 +37,7 @@ from .automation.batch_browser import (
     load_batch_records,
     load_platform_order_status,
 )
-from .automation.platforms import ERP_PLATFORMS
+from .automation.platforms import ERP_PLATFORMS, get_erp_platform
 from .layout import LayoutSettings, discover_images, generate_layout
 
 
@@ -242,12 +242,17 @@ class AutomationDialog(QWidget):
 
         generation_page = QWidget()
         generation_layout = QVBoxLayout(generation_page)
-        generation_intro = QLabel(
+        self.generation_intro = QLabel(
             "从已接单、尚未进入生产中的订单生成生产批次。"
-            "程序会读取并显示 CBT / 非 CBT 数量；最终确认后才生成，"
-            "批次生成后无法撤销。"
+            "最终确认后才生成，批次生成后无法撤销。"
         )
-        generation_intro.setWordWrap(True)
+        self.generation_intro.setWordWrap(True)
+        self.batch_rule_summary = QLabel()
+        self.batch_rule_summary.setWordWrap(True)
+        self.batch_rule_summary.setStyleSheet(
+            "padding: 8px; background: #eef4ff; "
+            "border: 1px solid #9bbcff; font-weight: 600;"
+        )
         self.generation_table = QTableWidget(0, 5)
         self.generation_table.setHorizontalHeaderLabels(
             ["物流分类", "项目", "件数", "订单组成", "操作状态"]
@@ -255,14 +260,15 @@ class AutomationDialog(QWidget):
         self.generation_table.horizontalHeader().setSectionResizeMode(
             QHeaderView.Stretch
         )
-        generation_warning = QLabel(
-            "安全保护：生成前会显示平台、CBT / 非 CBT 数量，"
+        self.generation_warning = QLabel(
+            "安全保护：生成前会显示平台、物流分类和订单组成数量，"
             "并要求最终确认。"
         )
-        generation_warning.setWordWrap(True)
-        generation_layout.addWidget(generation_intro)
+        self.generation_warning.setWordWrap(True)
+        generation_layout.addWidget(self.generation_intro)
+        generation_layout.addWidget(self.batch_rule_summary)
         generation_layout.addWidget(self.generation_table)
-        generation_layout.addWidget(generation_warning)
+        generation_layout.addWidget(self.generation_warning)
 
         management_page = QWidget()
         management_layout = QVBoxLayout(management_page)
@@ -340,6 +346,7 @@ class AutomationDialog(QWidget):
         self.main_tabs.setCurrentIndex(0)
         self.main_tabs.currentChanged.connect(self.main_tab_changed)
         self.platform.currentTextChanged.connect(self.platform_changed)
+        self.show_platform_batch_rules(self.platform.currentData())
 
         layout = QVBoxLayout(self)
         layout.addWidget(QLabel("ERP 平台"))
@@ -365,7 +372,46 @@ class AutomationDialog(QWidget):
         )
         self.cleared_table.setRowCount(0)
         self.cleared_summary.setText(f"{name}：尚未读取生产中数量。")
+        self.show_platform_batch_rules(name)
         self.refresh_current_section()
+
+    def show_platform_batch_rules(self, name: str) -> None:
+        platform = get_erp_platform(name)
+        shipping = platform.shipping_categories
+        compositions = platform.order_compositions
+        if not shipping:
+            self.batch_rule_summary.setText(
+                f"{name}：尚未配置物流分类规则。"
+            )
+            self.generation_table.setRowCount(0)
+            return
+        self.batch_rule_summary.setText(
+            "批次分类优先级：① 先按物流分类 → ② 再按订单组成分类\n"
+            f"物流：{' / '.join(shipping)}\n"
+            f"订单组成：{' / '.join(compositions)}"
+        )
+        self.generation_warning.setText(
+            "安全保护：生成前会显示平台、物流分类和订单组成数量，"
+            "并要求最终确认。"
+        )
+        rows = [
+            (shipping_method, composition)
+            for shipping_method in shipping
+            for composition in compositions
+        ]
+        self.generation_table.setRowCount(len(rows))
+        for row, (shipping_method, composition) in enumerate(rows):
+            values = [
+                shipping_method,
+                "—",
+                "—",
+                composition,
+                "等待读取",
+            ]
+            for column, value in enumerate(values):
+                self.generation_table.setItem(
+                    row, column, QTableWidgetItem(value)
+                )
 
     def main_tab_changed(self, index: int) -> None:
         self.refresh_current_section()

@@ -1,6 +1,7 @@
 import pytest
 
 from automatic_print.automation.longfeng import BatchPreview, ShippingBatchPlan
+from automatic_print.automation.platforms import get_erp_platform
 
 
 def test_batch_preview_confirmation_is_explicit() -> None:
@@ -27,3 +28,21 @@ def test_shipping_plan_splits_cbt_from_all_received_items() -> None:
 def test_shipping_plan_rejects_impossible_counts() -> None:
     with pytest.raises(ValueError):
         ShippingBatchPlan.from_counts(total_count=10, cbt_count=11)
+
+
+def test_haloo_batch_rules_prioritize_shipping_then_composition() -> None:
+    platform = get_erp_platform("Haloo")
+
+    assert platform.shipping_categories == (
+        "UPS",
+        "FedEx",
+        "SWIFT",
+        "USPS",
+        "GOFO",
+        "Yanwen",
+    )
+    assert platform.order_compositions == (
+        "单项单件",
+        "单项多件",
+        "多项多件",
+    )
