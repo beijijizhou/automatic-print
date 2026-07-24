@@ -44,6 +44,7 @@ def test_haloo_batch_rules_prioritize_shipping_then_composition() -> None:
         "USPS",
         "GOFO",
         "Yanwen",
+        "SpeedX",
     )
     assert "CBT" not in platform.shipping_categories
     assert platform.order_compositions == (
@@ -53,7 +54,8 @@ def test_haloo_batch_rules_prioritize_shipping_then_composition() -> None:
     )
     assert platform.shipping_filter_value("SWIFT") == "SWIF"
     assert platform.shipping_filter_value("Yanwen") == "YANW"
-    assert platform.excluded_shipping_categories == ("SPEE",)
+    assert platform.shipping_filter_value("SpeedX") == "SPEE"
+    assert platform.excluded_shipping_categories == ()
 
 
 def test_cbt_rules_belong_only_to_longfeng() -> None:

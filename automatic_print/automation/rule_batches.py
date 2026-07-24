@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from collections import Counter
 
 from .chrome_session import connect_debug_chrome
 from .longfeng import (
@@ -55,43 +56,7 @@ def preview_rule_batch_plan(
             playwright, platform.production_items_url
         )
         page = find_longfeng_page(browser, platform_name)
-        received_count = _all_received_count(page)
-        items = []
-        combinations = [
-            (shipping, composition)
-            for shipping in platform.shipping_categories
-            for composition in platform.order_compositions
-        ]
-        for index, (shipping, composition) in enumerate(
-            combinations, start=1
-        ):
-            report(
-                f"[{index}/{len(combinations)}] 正在读取 "
-                f"{shipping} / {composition}"
-            )
-            items.append(
-                RuleBatchItem(
-                    shipping,
-                    composition,
-                    _filtered_count(
-                        page, shipping, composition, platform
-                    ),
-                )
-            )
-        excluded_items = tuple(
-            RuleBatchItem(
-                shipping,
-                "不生成",
-                _filtered_count(page, shipping, "全部", platform),
-            )
-            for shipping in platform.excluded_shipping_categories
-        )
-        return RuleBatchPlan(
-            platform_name,
-            tuple(items),
-            received_count,
-            excluded_items,
-        )
+        return _preview_plan_from_api(page, platform, report)
 
 
 def generate_rule_batches(
@@ -109,35 +74,7 @@ def generate_rule_batches(
         )
         page = find_longfeng_page(browser, platform.name)
         report("生成前正在重新核对全部分类数量…")
-        actual_items = tuple(
-            RuleBatchItem(
-                item.shipping_method,
-                item.order_composition,
-                _filtered_count(
-                    page,
-                    item.shipping_method,
-                    item.order_composition,
-                    platform,
-                ),
-            )
-            for item in expected_plan.items
-        )
-        actual_excluded = tuple(
-            RuleBatchItem(
-                item.shipping_method,
-                "不生成",
-                _filtered_count(
-                    page, item.shipping_method, "全部", platform
-                ),
-            )
-            for item in expected_plan.excluded_items
-        )
-        actual_plan = RuleBatchPlan(
-            platform.name,
-            actual_items,
-            _all_received_count(page),
-            actual_excluded,
-        )
+        actual_plan = _preview_plan_from_api(page, platform, report)
         if actual_plan != expected_plan:
             raise RuntimeError(
                 "ERP 页面数量已经变化，已停止生成批次。"
@@ -157,6 +94,84 @@ def generate_rule_batches(
             )
             generated += 1
         return generated
+
+
+def _preview_plan_from_api(page, platform, report) -> RuleBatchPlan:
+    report("正在通过 ERP 列表接口一次读取全部已接单生产项…")
+    rows, received_count = _load_all_received_rows(page)
+    composition_names = {
+        "1": "单项单件",
+        "2": "单项多件",
+        "3": "多项多件",
+    }
+    reverse_shipping = {
+        platform.shipping_filter_value(name): name
+        for name in platform.shipping_categories
+    }
+    grouped = Counter()
+    for row in rows:
+        shipping_code = str(row.get("logistics_sorting_code") or "")
+        shipping_name = reverse_shipping.get(shipping_code, shipping_code)
+        composition = composition_names.get(
+            str(row.get("order_composition") or ""),
+            str(row.get("order_composition") or "未知"),
+        )
+        grouped[(shipping_name, composition)] += 1
+    items = tuple(
+        RuleBatchItem(
+            shipping,
+            composition,
+            grouped[(shipping, composition)],
+        )
+        for shipping in platform.shipping_categories
+        for composition in platform.order_compositions
+    )
+    report(
+        f"接口读取完成：{received_count} 项，"
+        f"{sum(1 for item in items if item.item_count)} 个非空分类。"
+    )
+    return RuleBatchPlan(platform.name, items, received_count)
+
+
+def _load_all_received_rows(page) -> tuple[list[dict], int]:
+    _select_received(page)
+    frame = production_frame(page)
+    _select_filter(frame, "物流分拣", "全部")
+    _select_filter(frame, "订单组成", "全部")
+    endpoint = "/production/v1/production/order/item/page"
+    with page.expect_response(
+        lambda response: endpoint in response.url,
+        timeout=15_000,
+    ) as response_info:
+        _run_search(frame)
+    data = response_info.value.json()["data"]
+    rows = data["list"]
+    total = int(data["total"])
+    if len(rows) < total:
+        size_selector = frame.locator(
+            ".ant-pagination-options .ant-select"
+        ).first
+        if size_selector.count() != 1:
+            raise RuntimeError("无法切换 ERP 列表为每页 200 条。")
+        size_selector.click()
+        option = page.locator(".ant-select-item-option:visible").filter(
+            has_text="200 条/页"
+        )
+        if option.count() != 1:
+            raise RuntimeError("ERP 列表中没有“200 条/页”选项。")
+        with page.expect_response(
+            lambda response: endpoint in response.url,
+            timeout=15_000,
+        ) as response_info:
+            option.click()
+        data = response_info.value.json()["data"]
+        rows = data["list"]
+        total = int(data["total"])
+    if len(rows) != total:
+        raise RuntimeError(
+            f"ERP 接口返回 {len(rows)} 项，但总数为 {total}，已停止。"
+        )
+    return rows, total
 
 
 def _filtered_count(

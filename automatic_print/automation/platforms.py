@@ -40,12 +40,20 @@ ERP_PLATFORMS = {
     "Haloo": ErpPlatform(
         "Haloo",
         "haloopod.merchant.hihumbird.com",
-        ("UPS", "FedEx", "SWIFT", "USPS", "GOFO", "Yanwen"),
+        (
+            "UPS",
+            "FedEx",
+            "SWIFT",
+            "USPS",
+            "GOFO",
+            "Yanwen",
+            "SpeedX",
+        ),
         shipping_filter_aliases=(
             ("SWIFT", "SWIF"),
             ("Yanwen", "YANW"),
+            ("SpeedX", "SPEE"),
         ),
-        excluded_shipping_categories=("SPEE",),
     ),
     "莆田": ErpPlatform("莆田", "putiandiy.merchant.hihumbird.com"),
     "隆丰": ErpPlatform(
