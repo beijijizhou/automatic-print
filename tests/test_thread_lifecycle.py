@@ -1,4 +1,10 @@
+from PySide6.QtCore import QCoreApplication
+
 from automatic_print.ui.thread_lifecycle import discard_stopped_thread
+from automatic_print.ui.worker_bridge import (
+    BatchWorkerBridge,
+    MainWindowWorkerBridge,
+)
 
 
 class Owner:
@@ -31,3 +37,10 @@ def test_running_thread_is_preserved() -> None:
     assert not discard_stopped_thread(owner, "thread", "worker")
     assert owner.thread is not None
     assert owner.worker is not None
+
+
+def test_worker_bridges_stay_in_gui_thread() -> None:
+    application = QCoreApplication.instance() or QCoreApplication([])
+
+    assert MainWindowWorkerBridge().thread() is application.thread()
+    assert BatchWorkerBridge().thread() is application.thread()

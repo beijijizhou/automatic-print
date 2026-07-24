@@ -25,13 +25,13 @@ class ThreadActionsMixin:
         worker.moveToThread(self.thread)
         self.thread.started.connect(worker.run)
         queued = Qt.ConnectionType.QueuedConnection
-        worker.progress.connect(self.append_log, queued)
-        worker.progress.connect(self.show_progress_message, queued)
-        worker.batches_loaded.connect(self.batches_finished, queued)
-        worker.status_loaded.connect(self.status_finished, queued)
-        worker.plan_loaded.connect(self.generation_plan_finished, queued)
-        worker.completed.connect(self.action_finished, queued)
-        worker.failed.connect(self.failed, queued)
+        bridge = self.worker_bridge
+        worker.progress.connect(bridge.progress, queued)
+        worker.batches_loaded.connect(bridge.batches_loaded, queued)
+        worker.status_loaded.connect(bridge.status_loaded, queued)
+        worker.plan_loaded.connect(bridge.plan_loaded, queued)
+        worker.completed.connect(bridge.completed, queued)
+        worker.failed.connect(bridge.failed, queued)
         terminal = {
             "list": worker.batches_loaded,
             "list_range": worker.batches_loaded,

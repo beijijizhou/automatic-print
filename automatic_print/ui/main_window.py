@@ -25,6 +25,7 @@ from .generation_actions import GenerationActionsMixin
 from .label_settings import LabelSettingsDialog
 from .preferences import PreferencesMixin
 from .update_actions import UpdateActionsMixin
+from .worker_bridge import MainWindowWorkerBridge
 
 
 class MainWindow(
@@ -39,6 +40,7 @@ class MainWindow(
         self.resize(980, 700)
         self.thread: QThread | None = None
         self.worker = None
+        self.worker_bridge = MainWindowWorkerBridge(self)
         self.update_thread: QThread | None = None
         self.update_worker = None
         self.update_is_silent = True
@@ -50,6 +52,7 @@ class MainWindow(
         self.active_png_compression = 1
         self.active_png_engine = "pillow"
         self.preferences = QSettings("AutomaticPrint", "AutomaticPrint")
+        self._connect_worker_bridge()
         self.clock = QTimer(self)
         self.clock.setInterval(1000)
         self.clock.timeout.connect(self.refresh_timing)
@@ -58,6 +61,14 @@ class MainWindow(
         for label in self.findChildren(QLabel):
             label.setTextInteractionFlags(Qt.TextSelectableByMouse)
         QTimer.singleShot(2500, lambda: self.check_for_updates(True))
+
+    def _connect_worker_bridge(self) -> None:
+        bridge = self.worker_bridge
+        bridge.layout_progress.connect(self.update_progress)
+        bridge.layout_finished.connect(self.generation_finished)
+        bridge.layout_failed.connect(self.generation_failed)
+        bridge.update_finished.connect(self.update_check_finished)
+        bridge.update_failed.connect(self.update_check_failed)
 
     def _build_settings(self) -> None:
         self.folder = QLineEdit(

@@ -19,6 +19,7 @@ from PySide6.QtWidgets import (
 
 from ..automation.platforms import ERP_PLATFORMS
 from ..layout import LayoutSettings
+from ..ui.worker_bridge import BatchWorkerBridge
 from .batch_actions import BatchActionsMixin
 from .generation_actions import GenerationActionsMixin
 from .local_actions import LocalActionsMixin
@@ -45,15 +46,27 @@ class AutomationDialog(
         self.resize(940, 640)
         self.thread = None
         self.worker = None
+        self.worker_bridge = BatchWorkerBridge(self)
         self.records = []
         self.pending_batch_plan = None
         self.preferences = QSettings("AutomaticPrint", "AutomaticPrint")
+        self._connect_worker_bridge()
         self._build_controls()
         self._build_tabs()
         self._build_layout()
         self.platform.currentTextChanged.connect(self.platform_changed)
         self.main_tabs.currentChanged.connect(self.main_tab_changed)
         self.show_platform_batch_rules(self.platform.currentData())
+
+    def _connect_worker_bridge(self) -> None:
+        bridge = self.worker_bridge
+        bridge.progress.connect(self.append_log)
+        bridge.progress.connect(self.show_progress_message)
+        bridge.batches_loaded.connect(self.batches_finished)
+        bridge.status_loaded.connect(self.status_finished)
+        bridge.plan_loaded.connect(self.generation_plan_finished)
+        bridge.completed.connect(self.action_finished)
+        bridge.failed.connect(self.failed)
 
     def _build_controls(self) -> None:
         self.platform = QComboBox()

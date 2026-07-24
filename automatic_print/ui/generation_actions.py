@@ -92,9 +92,10 @@ class GenerationActionsMixin:
         self.worker.moveToThread(self.thread)
         self.thread.started.connect(self.worker.run)
         queued = Qt.ConnectionType.QueuedConnection
-        self.worker.progress.connect(self.update_progress, queued)
-        self.worker.finished.connect(self.generation_finished, queued)
-        self.worker.failed.connect(self.generation_failed, queued)
+        bridge = self.worker_bridge
+        self.worker.progress.connect(bridge.layout_progress, queued)
+        self.worker.finished.connect(bridge.layout_finished, queued)
+        self.worker.failed.connect(bridge.layout_failed, queued)
         self.worker.finished.connect(self.thread.quit)
         self.worker.failed.connect(self.thread.quit)
         self.worker.finished.connect(self.worker.deleteLater)

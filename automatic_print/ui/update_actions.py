@@ -23,11 +23,12 @@ class UpdateActionsMixin:
         self.update_worker.moveToThread(self.update_thread)
         self.update_thread.started.connect(self.update_worker.run)
         queued = Qt.ConnectionType.QueuedConnection
+        bridge = self.worker_bridge
         self.update_worker.finished.connect(
-            self.update_check_finished, queued
+            bridge.update_finished, queued
         )
         self.update_worker.failed.connect(
-            self.update_check_failed, queued
+            bridge.update_failed, queued
         )
         self.update_worker.finished.connect(self.update_thread.quit)
         self.update_worker.failed.connect(self.update_thread.quit)
