@@ -2,6 +2,8 @@ from pathlib import Path
 from zipfile import ZipFile
 
 from automatic_print.automation.batch_downloads import (
+    RemoteBatch,
+    _start_parallel_downloads,
     download_production_images,
     extract_production_archives,
 )
@@ -78,3 +80,85 @@ def test_existing_zip_is_extracted_without_erp_download(
     assert (
         tmp_path / "CBT" / "123456789012" / "design.png"
     ).read_bytes() == b"local zip"
+
+
+def test_three_downloads_are_started_before_files_are_saved(
+    tmp_path: Path,
+) -> None:
+    events = []
+
+    class Download:
+        pass
+
+    class DownloadContext:
+        def __init__(self, page):
+            self.value = Download()
+            self.page = page
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *_args):
+            events.append(f"started:{self.page.pending}")
+
+    class Links:
+        def __init__(self, page, number):
+            self.page = page
+            self.number = number
+
+        def count(self):
+            return 3
+
+        def nth(self, index):
+            assert index == 2
+            self.page.pending = self.number
+            return self
+
+        def click(self):
+            pass
+
+    class Row:
+        def __init__(self, page, number):
+            self.page = page
+            self.number = number
+            self.first = self
+
+        def count(self):
+            return 1
+
+        def inner_text(self):
+            return "生成成功 下载 下载 下载"
+
+        def get_by_text(self, *_args, **_kwargs):
+            return Links(self.page, self.number)
+
+    class Rows:
+        def __init__(self, page):
+            self.page = page
+
+        def filter(self, has_text):
+            return Row(self.page, has_text)
+
+    class Page:
+        pending = ""
+
+        def locator(self, selector):
+            assert selector == "tbody tr"
+            return Rows(self)
+
+        def expect_download(self, timeout):
+            assert timeout == 120_000
+            return DownloadContext(self)
+
+    tasks = [
+        RemoteBatch("批次", f"12345678901{i}", tmp_path)
+        for i in range(3)
+    ]
+    active = _start_parallel_downloads(Page(), tasks, None)
+
+    assert len(active) == 3
+    assert events == [
+        "started:123456789010",
+        "started:123456789011",
+        "started:123456789012",
+    ]
