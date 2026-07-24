@@ -6,6 +6,9 @@ from zipfile import ZipFile
 
 
 ProgressCallback = Callable[[str], None]
+PRODUCTION_IMAGE_EXTENSIONS = {
+    ".png", ".tif", ".tiff", ".jpg", ".jpeg", ".jfif", ".webp", ".bmp"
+}
 
 
 def download_production_images(
@@ -17,21 +20,51 @@ def download_production_images(
 ) -> list[Path]:
     """Download only the production-image export for explicit batch numbers."""
     output_root.mkdir(parents=True, exist_ok=True)
-    rows = page.locator("tbody tr")
+    rows = None
     saved: list[Path] = []
+    archives_to_extract: list[Path] = []
 
     for group_name, batch_numbers in batch_groups.items():
         group_dir = output_root / group_name
         group_dir.mkdir(parents=True, exist_ok=True)
         for batch_number in batch_numbers:
-            existing = list(group_dir.glob(f"{batch_number}_*"))
+            extracted_folder = group_dir / batch_number
+            local_images = (
+                [
+                    path
+                    for path in extracted_folder.rglob("*")
+                    if path.is_file()
+                    and path.suffix.lower() in PRODUCTION_IMAGE_EXTENSIONS
+                ]
+                if extracted_folder.is_dir()
+                else []
+            )
+            if local_images:
+                if progress:
+                    progress(
+                        f"本地已有 {len(local_images)} 张图片，跳过下载 "
+                        f"{group_name} / {batch_number}"
+                    )
+                saved.append(extracted_folder)
+                continue
+            existing = [
+                path
+                for path in group_dir.glob(f"{batch_number}_*")
+                if path.is_file() and path.suffix.lower() == ".zip"
+            ]
             if len(existing) == 1:
                 if progress:
-                    progress(f"已存在，跳过 {group_name} / {batch_number}")
+                    progress(
+                        f"发现本地 ZIP，跳过下载 "
+                        f"{group_name} / {batch_number}"
+                    )
                 saved.append(existing[0])
+                archives_to_extract.append(existing[0])
                 continue
             if len(existing) > 1:
                 raise RuntimeError(f"生产批次 {batch_number} 存在多个下载文件。")
+            if rows is None:
+                rows = page.locator("tbody tr")
             matching_rows = rows.filter(has_text=batch_number)
             if matching_rows.count() != 1:
                 raise RuntimeError(f"无法唯一定位生产批次 {batch_number}。")
@@ -54,9 +87,10 @@ def download_production_images(
             destination = group_dir / f"{batch_number}_{suggested}"
             download.save_as(destination)
             saved.append(destination)
+            archives_to_extract.append(destination)
 
     if extract:
-        extract_production_archives(saved, progress)
+        extract_production_archives(archives_to_extract, progress)
     return saved
 
 
