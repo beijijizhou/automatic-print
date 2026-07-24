@@ -45,6 +45,7 @@ def test_haloo_batch_rules_prioritize_shipping_then_composition() -> None:
         "GOFO",
         "Yanwen",
     )
+    assert "CBT" not in platform.shipping_categories
     assert platform.order_compositions == (
         "单项单件",
         "单项多件",
@@ -52,6 +53,13 @@ def test_haloo_batch_rules_prioritize_shipping_then_composition() -> None:
     )
     assert platform.shipping_filter_value("SWIFT") == "SWIF"
     assert platform.shipping_filter_value("Yanwen") == "YANW"
+
+
+def test_cbt_rules_belong_only_to_longfeng() -> None:
+    assert get_erp_platform("隆丰").shipping_categories == (
+        "CBT",
+        "非 CBT",
+    )
 
 
 def test_rule_batch_plan_counts_only_nonempty_categories() -> None:

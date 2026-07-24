@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import re
 from pathlib import Path
 
 from PySide6.QtCore import (
@@ -23,6 +24,7 @@ from PySide6.QtWidgets import (
     QLineEdit,
     QMessageBox,
     QPlainTextEdit,
+    QProgressBar,
     QPushButton,
     QTableWidget,
     QTableWidgetItem,
@@ -211,6 +213,26 @@ class AutomationDialog(QWidget):
         self.pending_batch_plan: RuleBatchPlan | None = None
         self.preferences = QSettings("AutomaticPrint", "AutomaticPrint")
 
+        self.loading_panel = QWidget()
+        self.loading_panel.setStyleSheet(
+            "QWidget { background: #e8f1ff; border: 1px solid #6f9ee8; "
+            "border-radius: 6px; }"
+            "QLabel { border: none; color: #173f73; font-size: 14px; "
+            "font-weight: 700; }"
+            "QProgressBar { border: 1px solid #8aacdc; border-radius: 3px; "
+            "background: white; min-height: 12px; }"
+            "QProgressBar::chunk { background: #2f74c0; }"
+        )
+        loading_layout = QVBoxLayout(self.loading_panel)
+        self.loading_label = QLabel("正在准备…")
+        self.loading_label.setWordWrap(True)
+        self.loading_bar = QProgressBar()
+        self.loading_bar.setTextVisible(False)
+        self.loading_bar.setRange(0, 0)
+        loading_layout.addWidget(self.loading_label)
+        loading_layout.addWidget(self.loading_bar)
+        self.loading_panel.hide()
+
         self.platform = QComboBox()
         for name in ERP_PLATFORMS:
             self.platform.addItem(name, name)
@@ -392,6 +414,7 @@ class AutomationDialog(QWidget):
         layout = QVBoxLayout(self)
         layout.addWidget(QLabel("ERP 平台"))
         layout.addWidget(self.platform)
+        layout.addWidget(self.loading_panel)
         layout.addWidget(self.main_tabs)
 
     def choose_output(self) -> None:
@@ -433,7 +456,8 @@ class AutomationDialog(QWidget):
             self.generation_table.setRowCount(0)
             return
         self.batch_rule_summary.setText(
-            "批次分类优先级：① 先按物流分类 → ② 再按订单组成分类\n"
+            f"{name} 专用批次规则\n"
+            "分类优先级：① 先按物流分类 → ② 再按订单组成分类\n"
             f"物流：{' / '.join(shipping)}\n"
             f"订单组成：{' / '.join(compositions)}"
         )
@@ -726,11 +750,17 @@ class AutomationDialog(QWidget):
         if self.thread is not None:
             return
         self._set_actions_enabled(False)
+        self.loading_bar.setRange(0, 0)
+        self.loading_label.setText(
+            f"正在处理 {worker.platform_name}，请稍候…"
+        )
+        self.loading_panel.show()
         self.thread = QThread(self)
         self.worker = worker
         worker.moveToThread(self.thread)
         self.thread.started.connect(worker.run)
         worker.progress.connect(self.log.appendPlainText)
+        worker.progress.connect(self.show_progress_message)
         worker.batches_loaded.connect(self.batches_finished)
         worker.status_loaded.connect(self.status_finished)
         worker.plan_loaded.connect(self.generation_plan_finished)
@@ -746,6 +776,20 @@ class AutomationDialog(QWidget):
         if worker.action == "status":
             worker.status_loaded.connect(self.thread.quit)
         self.thread.start()
+
+    @Slot(str)
+    def show_progress_message(self, message: str) -> None:
+        self.loading_label.setText(message)
+        step = re.search(r"\[(\d+)/(\d+)\]", message)
+        if step:
+            current, total = map(int, step.groups())
+            self.loading_bar.setRange(0, total)
+            self.loading_bar.setValue(current)
+            self.loading_bar.setTextVisible(True)
+            self.loading_bar.setFormat(f"{current} / {total}")
+        else:
+            self.loading_bar.setRange(0, 0)
+            self.loading_bar.setTextVisible(False)
 
     @Slot(object)
     def action_finished(self, result: dict) -> None:
@@ -807,4 +851,5 @@ class AutomationDialog(QWidget):
     def clear_worker(self) -> None:
         self.thread = None
         self.worker = None
+        self.loading_panel.hide()
         self._set_actions_enabled(True)
