@@ -165,6 +165,25 @@ class MainWindow(
         container.setLayout(layout)
         self.setCentralWidget(container)
 
+    def has_active_tasks(self) -> bool:
+        return any(
+            (
+                self.thread is not None,
+                self.update_thread is not None,
+                self.automation_home.thread is not None,
+            )
+        )
+
+    def closeEvent(self, event) -> None:
+        if self.has_active_tasks():
+            event.ignore()
+            self.automation_home.loading_label.setText(
+                "任务仍在运行，完成后程序会安全关闭。"
+            )
+            self.automation_home.loading_panel.show()
+            return
+        event.accept()
+
     @staticmethod
     def _box(value, minimum, maximum) -> QDoubleSpinBox:
         box = QDoubleSpinBox()

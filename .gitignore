@@ -13,3 +13,4 @@ Thumbs.db
 output/
 downloads/
 installer-dist/
+.restart-request

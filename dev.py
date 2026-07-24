@@ -10,6 +10,7 @@ from pathlib import Path
 
 PROJECT_ROOT = Path(__file__).resolve().parent
 WATCHED_FOLDER = PROJECT_ROOT / "automatic_print"
+RESTART_REQUEST = PROJECT_ROOT / ".restart-request"
 LOG_FILE = (
     Path.home()
     / "AppData"
@@ -33,6 +34,7 @@ def main() -> int:
     print("Development mode: the app will restart when Python files change.")
 
     while True:
+        RESTART_REQUEST.unlink(missing_ok=True)
         process = subprocess.Popen([sys.executable, "-m", "automatic_print"])
         restart = False
 
@@ -42,11 +44,12 @@ def main() -> int:
             if new_state != state:
                 state = new_state
                 restart = True
-                print("Code changed. Restarting the app…")
-                process.terminate()
+                print("Code changed. Requesting a safe restart…")
+                RESTART_REQUEST.touch()
                 try:
-                    process.wait(timeout=3)
+                    process.wait(timeout=120)
                 except subprocess.TimeoutExpired:
+                    print("Safe restart timed out. Stopping the process.")
                     process.kill()
                     process.wait()
                 break
