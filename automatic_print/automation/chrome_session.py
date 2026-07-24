@@ -101,9 +101,11 @@ def open_authenticated_page(
     browser,
     target_url: str,
     ready_selector: str,
-    login_timeout_ms: int = 600_000,
+    login_timeout_ms: int = 180_000,
+    progress=None,
 ):
     """Open an ERP route, waiting for the user to finish login if required."""
+    report = progress or (lambda _message: None)
     host = urlsplit(target_url).netloc
     exact_pages = [
         page
@@ -137,17 +139,32 @@ def open_authenticated_page(
                 else browser.contexts[0]
             )
             page = host_pages[-1] if host_pages else context.new_page()
-        page.goto(target_url, wait_until="domcontentloaded")
+        report(f"正在打开 {host}…")
+        page.goto(target_url, wait_until="domcontentloaded", timeout=30_000)
 
     deadline = time.monotonic() + (login_timeout_ms / 1000)
+    login_reported = False
     while "/login" in page.url:
+        if not login_reported:
+            report(f"请在已打开的 {host} 页面完成登录…")
+            login_reported = True
         if time.monotonic() >= deadline:
             raise TimeoutError("等待 ERP 登录超时，请登录后重试。")
         page.wait_for_timeout(500)
 
     if urlsplit(target_url).path not in page.url:
-        page.goto(target_url, wait_until="domcontentloaded")
-    page.locator(ready_selector).first.wait_for(
-        state="visible", timeout=30_000
-    )
+        report("登录成功，正在进入生产项管理页面…")
+        page.goto(target_url, wait_until="domcontentloaded", timeout=30_000)
+    report(f"页面已打开，正在等待 ERP 数据区域：{page.url}")
+    try:
+        page.locator(ready_selector).first.wait_for(
+            state="visible", timeout=30_000
+        )
+    except Exception as error:
+        raise RuntimeError(
+            "ERP 页面已打开，但数据区域在 30 秒内没有加载完成。\n"
+            f"当前页面：{page.url}\n"
+            "请确认页面没有验证码、登录提示或错误弹窗。"
+        ) from error
+    report("ERP 数据区域已加载。")
     return page

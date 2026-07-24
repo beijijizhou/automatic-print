@@ -80,7 +80,9 @@ class AutomationWorker(QObject):
                     f"正在刷新 {self.platform_name} 平台状态…"
                 )
                 self.status_loaded.emit(
-                    load_platform_order_status(self.platform_name)
+                    load_platform_order_status(
+                        self.platform_name, self.progress.emit
+                    )
                 )
                 if self.action == "status_and_list":
                     self.progress.emit(

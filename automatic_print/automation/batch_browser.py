@@ -30,7 +30,9 @@ class PlatformOrderStatus:
         return self.production_count == 0
 
 
-def load_platform_order_status(platform_name: str) -> PlatformOrderStatus:
+def load_platform_order_status(
+    platform_name: str, progress=None
+) -> PlatformOrderStatus:
     from playwright.sync_api import sync_playwright
 
     platform = get_erp_platform(platform_name)
@@ -38,7 +40,11 @@ def load_platform_order_status(platform_name: str) -> PlatformOrderStatus:
         browser = connect_debug_chrome(
             playwright, platform.production_items_url
         )
-        page = _production_items_page(browser, platform.production_items_url)
+        page = _production_items_page(
+            browser, platform.production_items_url, progress
+        )
+        if progress:
+            progress("正在读取“已接单”和“生产中”数量…")
         texts = page.locator(".menu-item-title").all_inner_texts()
         return PlatformOrderStatus(
             accepted_count=_menu_count(texts, "已接单"),
@@ -58,11 +64,12 @@ def load_batch_records(platform_name: str) -> list[BatchRecord]:
         return _parse_visible_rows(page)
 
 
-def _production_items_page(browser, url: str):
+def _production_items_page(browser, url: str, progress=None):
     return open_authenticated_page(
         browser,
         url,
         ".menu-item-title",
+        progress=progress,
     )
 
 
