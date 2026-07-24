@@ -2,12 +2,13 @@ from __future__ import annotations
 
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import asdict, dataclass
+from datetime import datetime
 from itertools import groupby
 from pathlib import Path
 from time import perf_counter
 from typing import Callable, Iterable
 
-from PIL import Image
+from PIL import Image, ImageDraw, ImageFont
 
 try:
     import pyvips
@@ -41,15 +42,31 @@ class LayoutSettings:
     png_compression_level: int = 1
     png_engine: str = "pillow"
     worker_threads: int = 8
+    number_images: bool = True
+    number_gap_mm: float = 5
+    number_font_size_mm: float = 10
+    label_text_template: str = "{number}"
+    label_position: str = "bottom"
+    label_offset_x_mm: float = 0
+    label_offset_y_mm: float = 0
+    label_date_format: str = "%Y-%m-%d"
 
 
 @dataclass(frozen=True)
 class Placement:
     source: str
+    sequence_number: int
     x_px: int
     y_px: int
     width_px: int
     height_px: int
+    number_x_px: int
+    number_y_px: int
+    number_width_px: int
+    number_height_px: int
+    row_y_px: int
+    footprint_width_px: int
+    footprint_height_px: int
 
 
 def mm_to_px(value: float, dpi: int) -> int:
@@ -91,7 +108,133 @@ def _normalized_image(
     return image
 
 
-def _prepare_image(item: tuple[Path, Placement], dpi: int) -> tuple[Image.Image, Placement]:
+def _number_font(font_size_px: int) -> ImageFont.FreeTypeFont | ImageFont.ImageFont:
+    font_candidates = (
+        "DejaVuSans-Bold.ttf",
+        "arialbd.ttf",
+        "C:/Windows/Fonts/arialbd.ttf",
+        "C:/Windows/Fonts/Arial.ttf",
+        "/System/Library/Fonts/Supplemental/Arial Bold.ttf",
+        "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf",
+    )
+    for font_path in font_candidates:
+        try:
+            return ImageFont.truetype(font_path, font_size_px)
+        except OSError:
+            continue
+    try:
+        return ImageFont.load_default(size=font_size_px)
+    except TypeError:  # Compatibility with older Pillow releases.
+        return ImageFont.load_default()
+
+
+def _label_badge(text: str, dpi: int, font_size_mm: float) -> Image.Image:
+    font_size_px = max(10, mm_to_px(font_size_mm, dpi))
+    font = _number_font(font_size_px)
+    label = text or " "
+    measuring = ImageDraw.Draw(Image.new("L", (1, 1)))
+    stroke_width = max(1, font_size_px // 25)
+    bounds = measuring.textbbox(
+        (0, 0), label, font=font, stroke_width=stroke_width
+    )
+    padding = max(4, round(font_size_px * 0.28))
+    text_width = bounds[2] - bounds[0]
+    text_height = bounds[3] - bounds[1]
+    badge_width = text_width + (padding * 2)
+    badge_height = text_height + (padding * 2)
+    badge = Image.new("RGBA", (badge_width, badge_height), (255, 255, 255, 235))
+    draw = ImageDraw.Draw(badge)
+    outline_width = max(2, font_size_px // 18)
+    draw.rounded_rectangle(
+        (0, 0, badge_width - 1, badge_height - 1),
+        radius=max(3, badge_height // 5),
+        fill=(255, 255, 255, 235),
+        outline=(0, 0, 0, 255),
+        width=outline_width,
+    )
+    draw.text(
+        (
+            (badge_width - text_width) / 2 - bounds[0],
+            (badge_height - text_height) / 2 - bounds[1],
+        ),
+        label,
+        font=font,
+        fill=(0, 0, 0, 255),
+        stroke_width=stroke_width,
+        stroke_fill=(255, 255, 255, 255),
+    )
+    return badge
+
+
+def _format_label(
+    template: str, number: int, path: Path, created_at: datetime, date_format: str
+) -> str:
+    values = {
+        "number": str(number),
+        "date": created_at.strftime(date_format),
+        "filename": path.name,
+        "stem": path.stem,
+    }
+    try:
+        return template.format_map(values)
+    except (KeyError, ValueError) as error:
+        raise ValueError(
+            "标签文字模板无效。可用字段：{number}、{date}、{filename}、{stem}。"
+        ) from error
+
+
+def _label_layout(
+    image_width: int,
+    image_height: int,
+    label_width: int,
+    label_height: int,
+    position: str,
+    gap: int,
+    offset_x: int,
+    offset_y: int,
+) -> tuple[int, int, int, int, int, int]:
+    if position == "top_left":
+        label_x = offset_x
+        label_y = -gap - label_height + offset_y
+    elif position == "top_right":
+        label_x = image_width - label_width + offset_x
+        label_y = -gap - label_height + offset_y
+    elif position == "bottom_left":
+        label_x = offset_x
+        label_y = image_height + gap + offset_y
+    elif position == "bottom_right":
+        label_x = image_width - label_width + offset_x
+        label_y = image_height + gap + offset_y
+    elif position == "top":
+        label_x = (image_width - label_width) // 2 + offset_x
+        label_y = -gap - label_height + offset_y
+    elif position == "left":
+        label_x = -gap - label_width + offset_x
+        label_y = (image_height - label_height) // 2 + offset_y
+    elif position == "right":
+        label_x = image_width + gap + offset_x
+        label_y = (image_height - label_height) // 2 + offset_y
+    else:
+        label_x = (image_width - label_width) // 2 + offset_x
+        label_y = image_height + gap + offset_y
+
+    min_x = min(0, label_x)
+    min_y = min(0, label_y)
+    max_x = max(image_width, label_x + label_width)
+    max_y = max(image_height, label_y + label_height)
+    return (
+        -min_x,
+        -min_y,
+        label_x - min_x,
+        label_y - min_y,
+        max_x - min_x,
+        max_y - min_y,
+    )
+
+
+def _prepare_image(
+    item: tuple[Path, Placement], dpi: int
+) -> tuple[Image.Image, Placement]:
     path, placement = item
     image = _normalized_image(path, dpi, (placement.width_px, placement.height_px))
     return image, placement
@@ -141,9 +284,18 @@ def _build_vips_canvas(
     canvas_width: int,
     canvas_height: int,
     dpi: int,
+    number_images: bool,
+    number_font_size_mm: float,
+    labels: dict[int, str],
     progress: ProgressCallback | None,
 ):
-    margin = min(placement.x_px for _, placement in planned)
+    margin = min(
+        min(
+            placement.x_px,
+            placement.number_x_px if number_images else placement.x_px,
+        )
+        for _, placement in planned
+    )
     usable_width = canvas_width - (2 * margin)
     rows = []
     total = len(planned)
@@ -152,9 +304,13 @@ def _build_vips_canvas(
     # Composite only the images that occupy the same shelf row. A single
     # hundreds-of-layers composite makes every output strip inspect every source
     # image; row-sized composites keep the streaming pipeline small and local.
-    for row_y, row_items_iter in groupby(planned, key=lambda item: item[1].y_px):
+    for row_y, row_items_iter in groupby(
+        planned, key=lambda item: item[1].row_y_px
+    ):
         row_items = list(row_items_iter)
-        row_height = max(placement.height_px for _, placement in row_items)
+        row_height = max(
+            placement.footprint_height_px for _, placement in row_items
+        )
         row_canvas = pyvips.Image.black(
             usable_width, row_height, bands=4
         ).copy(interpretation="srgb")
@@ -162,11 +318,21 @@ def _build_vips_canvas(
         x_positions = []
         y_positions = []
         for path, placement in row_items:
-            layers.append(
-                _vips_rgba(path, placement.width_px, placement.height_px)
-            )
+            layers.append(_vips_rgba(path, placement.width_px, placement.height_px))
             x_positions.append(placement.x_px - margin)
-            y_positions.append(0)
+            y_positions.append(placement.y_px - row_y)
+            if number_images:
+                badge = _label_badge(
+                    labels[placement.sequence_number], dpi, number_font_size_mm
+                )
+                layers.append(
+                    pyvips.Image.new_from_memory(
+                        badge.tobytes(), badge.width, badge.height, 4, "uchar"
+                    ).copy(interpretation="srgb")
+                )
+                x_positions.append(placement.number_x_px - margin)
+                y_positions.append(placement.number_y_px - row_y)
+                badge.close()
             completed += 1
             if progress:
                 progress("合成图片", completed, total, placement.source)
@@ -216,6 +382,13 @@ def generate_layout(
     canvas_width = mm_to_px(settings.media_width_mm, settings.dpi)
     spacing = mm_to_px(settings.spacing_mm, settings.dpi)
     margin = mm_to_px(settings.margin_mm, settings.dpi)
+    number_gap = mm_to_px(settings.number_gap_mm, settings.dpi)
+    offset_x = mm_to_px(abs(settings.label_offset_x_mm), settings.dpi)
+    if settings.label_offset_x_mm < 0:
+        offset_x = -offset_x
+    offset_y = mm_to_px(abs(settings.label_offset_y_mm), settings.dpi)
+    if settings.label_offset_y_mm < 0:
+        offset_y = -offset_y
     usable_width = canvas_width - (2 * margin)
     if usable_width <= 0:
         raise ValueError("外边距过大，画布没有可打印区域。")
@@ -228,18 +401,74 @@ def generate_layout(
     # First pass only reads metadata and calculates the exact required height.
     reading_started = perf_counter()
     total = len(paths)
+    created_at = datetime.now().astimezone()
+    labels: dict[int, str] = {}
     for index, path in enumerate(paths, start=1):
         width, height = _target_size(path, settings.dpi)
-        if width > usable_width:
+        if settings.number_images:
+            label_text = _format_label(
+                settings.label_text_template,
+                index,
+                path,
+                created_at,
+                settings.label_date_format,
+            )
+            labels[index] = label_text
+            badge = _label_badge(
+                label_text, settings.dpi, settings.number_font_size_mm
+            )
+            number_width, number_height = badge.size
+            badge.close()
+            (
+                image_relative_x,
+                image_relative_y,
+                number_relative_x,
+                number_relative_y,
+                footprint_width,
+                footprint_height,
+            ) = _label_layout(
+                width,
+                height,
+                number_width,
+                number_height,
+                settings.label_position,
+                number_gap,
+                offset_x,
+                offset_y,
+            )
+        else:
+            number_width = number_height = 0
+            image_relative_x = image_relative_y = 0
+            number_relative_x = number_relative_y = 0
+            footprint_width, footprint_height = width, height
+        if footprint_width > usable_width:
             raise ValueError(f"图片 {path.name} 的宽度超过了材料可打印宽度。")
-        if x > margin and x + width > canvas_width - margin:
+        if x > margin and x + footprint_width > canvas_width - margin:
             x = margin
             y += row_height + spacing
             row_height = 0
-        placement = Placement(path.name, x, y, width, height)
+        image_x = x + image_relative_x
+        image_y = y + image_relative_y
+        number_x = x + number_relative_x
+        number_y = y + number_relative_y
+        placement = Placement(
+            path.name,
+            index,
+            image_x,
+            image_y,
+            width,
+            height,
+            number_x,
+            number_y,
+            number_width,
+            number_height,
+            y,
+            footprint_width,
+            footprint_height,
+        )
         planned.append((path, placement))
-        x += width + spacing
-        row_height = max(row_height, height)
+        x += footprint_width + spacing
+        row_height = max(row_height, footprint_height)
         if progress:
             progress("读取图片尺寸", index, total, path.name)
     reading_seconds = perf_counter() - reading_started
@@ -252,7 +481,14 @@ def generate_layout(
     use_libvips = settings.png_engine == "libvips" and pyvips is not None
     if use_libvips:
         canvas = _build_vips_canvas(
-            planned, canvas_width, canvas_height, settings.dpi, progress
+            planned,
+            canvas_width,
+            canvas_height,
+            settings.dpi,
+            settings.number_images,
+            settings.number_font_size_mm,
+            labels,
+            progress,
         )
         png_engine = "libvips"
     else:
@@ -260,11 +496,22 @@ def generate_layout(
         workers = max(1, min(settings.worker_threads, total))
         with ThreadPoolExecutor(max_workers=workers) as executor:
             prepared = executor.map(
-                lambda item: _prepare_image(item, settings.dpi), planned
+                lambda item: _prepare_image(item, settings.dpi),
+                planned,
             )
             for index, (image, placement) in enumerate(prepared, start=1):
                 canvas.paste(image, (placement.x_px, placement.y_px))
                 image.close()
+                if settings.number_images:
+                    badge = _label_badge(
+                        labels[placement.sequence_number],
+                        settings.dpi,
+                        settings.number_font_size_mm,
+                    )
+                    canvas.alpha_composite(
+                        badge, (placement.number_x_px, placement.number_y_px)
+                    )
+                    badge.close()
                 if progress:
                     progress("合成图片", index, total, placement.source)
         png_engine = "Pillow"

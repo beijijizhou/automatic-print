@@ -20,7 +20,10 @@ from PySide6.QtCore import (
 from PySide6.QtGui import QDesktopServices
 from PySide6.QtWidgets import (
     QApplication,
+    QCheckBox,
     QComboBox,
+    QDialog,
+    QDialogButtonBox,
     QDoubleSpinBox,
     QFileDialog,
     QFormLayout,
@@ -105,6 +108,69 @@ class UpdateWorker(QObject):
             self.failed.emit(str(error))
 
 
+class LabelSettingsDialog(QDialog):
+    def __init__(self, parent: QWidget | None = None) -> None:
+        super().__init__(parent)
+        self.setWindowTitle("标签设置")
+        self.setMinimumWidth(520)
+
+        self.text_template = QLineEdit("{number}")
+        self.text_template.setPlaceholderText(
+            "例如：{number}  或  {number} - {date}"
+        )
+        template_help = QLabel(
+            "可用内容：{number} 编号、{date} 日期、"
+            "{filename} 完整文件名、{stem} 不含扩展名的文件名"
+        )
+        template_help.setWordWrap(True)
+
+        self.position = QComboBox()
+        self.position.addItem("图片下方", "bottom")
+        self.position.addItem("图片上方", "top")
+        self.position.addItem("图片左侧", "left")
+        self.position.addItem("图片右侧", "right")
+        self.position.addItem("左上角（图片外）", "top_left")
+        self.position.addItem("右上角（图片外）", "top_right")
+        self.position.addItem("左下角（图片外）", "bottom_left")
+        self.position.addItem("右下角（图片外）", "bottom_right")
+
+        self.font_size = self._box(10, 2, 50)
+        self.gap = self._box(5, 0, 100)
+        self.offset_x = self._box(0, -100, 100)
+        self.offset_y = self._box(0, -100, 100)
+        self.date_format = QLineEdit("%Y-%m-%d")
+        self.date_format.setPlaceholderText("例如：%Y-%m-%d")
+
+        form = QFormLayout()
+        form.addRow("标签文字", self.text_template)
+        form.addRow("", template_help)
+        form.addRow("标签位置", self.position)
+        form.addRow("文字大小（毫米）", self.font_size)
+        form.addRow("与图片距离（毫米）", self.gap)
+        form.addRow("水平微调（毫米）", self.offset_x)
+        form.addRow("垂直微调（毫米）", self.offset_y)
+        form.addRow("日期格式", self.date_format)
+
+        buttons = QDialogButtonBox(
+            QDialogButtonBox.Ok | QDialogButtonBox.Cancel
+        )
+        buttons.accepted.connect(self.accept)
+        buttons.rejected.connect(self.reject)
+        layout = QVBoxLayout(self)
+        layout.addLayout(form)
+        layout.addWidget(buttons)
+
+    @staticmethod
+    def _box(
+        value: float, minimum: float, maximum: float
+    ) -> QDoubleSpinBox:
+        box = QDoubleSpinBox()
+        box.setRange(minimum, maximum)
+        box.setDecimals(1)
+        box.setValue(value)
+        return box
+
+
 class MainWindow(QMainWindow):
     def __init__(self) -> None:
         super().__init__()
@@ -128,7 +194,8 @@ class MainWindow(QMainWindow):
         self.clock.setInterval(1000)
         self.clock.timeout.connect(self.refresh_timing)
 
-        self.folder = QLineEdit()
+        saved_source = self.preferences.value("source_location", "", str)
+        self.folder = QLineEdit(saved_source)
         browse = QPushButton("选择图片文件夹…")
         browse.clicked.connect(self.choose_folder)
         folder_row = QHBoxLayout()
@@ -144,6 +211,14 @@ class MainWindow(QMainWindow):
         self.worker_threads = QSpinBox()
         self.worker_threads.setRange(1, 32)
         self.worker_threads.setValue(8)
+        self.number_images = QCheckBox("为每张图片添加标签")
+        self.number_images.setChecked(True)
+        self.label_settings = LabelSettingsDialog(self)
+        self.label_settings_button = QPushButton("打开标签设置…")
+        self.label_settings_button.clicked.connect(self.label_settings.exec)
+        self.number_images.toggled.connect(
+            self.label_settings_button.setEnabled
+        )
         self.png_compression = QComboBox()
         self.png_compression.addItem("等级 1 — 轻度压缩（推荐）", 1)
         self.png_compression.addItem("等级 0 — 不压缩（文件最大）", 0)
@@ -160,6 +235,8 @@ class MainWindow(QMainWindow):
         form.addRow("外边距（毫米）", self.margin)
         form.addRow("输出 DPI", self.dpi)
         form.addRow("并行处理线程数", self.worker_threads)
+        form.addRow("图片编号", self.number_images)
+        form.addRow("标签文字与位置", self.label_settings_button)
         form.addRow("PNG 保存引擎", self.png_engine)
         form.addRow("PNG 压缩", self.png_compression)
 
@@ -223,11 +300,17 @@ class MainWindow(QMainWindow):
         return box
 
     def choose_folder(self) -> None:
+        starting_folder = self.folder.text().strip()
+        if not Path(starting_folder).is_dir():
+            starting_folder = self.preferences.value("source_location", "", str)
         folder = QFileDialog.getExistingDirectory(
-            self, "请选择包含图片的文件夹（无需选择单张图片）"
+            self,
+            "请选择包含图片的文件夹（无需选择单张图片）",
+            starting_folder,
         )
         if folder:
             self.folder.setText(folder)
+            self.preferences.setValue("source_location", folder)
             count = len(discover_images(Path(folder)))
             self.status.setText(f"已找到 {count} 张图片，可以开始生成。")
 
@@ -245,6 +328,7 @@ class MainWindow(QMainWindow):
         if not source.is_dir():
             QMessageBox.warning(self, "请选择文件夹", "请选择有效的图片文件夹。")
             return
+        self.preferences.setValue("source_location", str(source))
         images = discover_images(source)
         if not images:
             extensions = discovered_extensions(source)
@@ -266,6 +350,16 @@ class MainWindow(QMainWindow):
             png_compression_level=self.png_compression.currentData(),
             png_engine=self.png_engine.currentData(),
             worker_threads=self.worker_threads.value(),
+            number_images=self.number_images.isChecked(),
+            number_gap_mm=self.label_settings.gap.value(),
+            number_font_size_mm=self.label_settings.font_size.value(),
+            label_text_template=self.label_settings.text_template.text(),
+            label_position=self.label_settings.position.currentData(),
+            label_offset_x_mm=self.label_settings.offset_x.value(),
+            label_offset_y_mm=self.label_settings.offset_y.value(),
+            label_date_format=(
+                self.label_settings.date_format.text().strip() or "%Y-%m-%d"
+            ),
         )
         base = Path(self.output_location.text().strip())
         if not base.is_dir():

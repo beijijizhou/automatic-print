@@ -8,6 +8,7 @@ Windows desktop application for combining a folder of images into print-ready la
 - Set media width, spacing, margins, and DPI
 - Preserve each image's physical print size using its embedded DPI
 - Arrange images with a predictable shelf-layout algorithm
+- Add configurable labels beside images using sequence numbers, dates, or filenames
 - Combine the entire selected folder into one long PNG image
 - Stream and save large PNG output with the multithreaded libvips engine
 - Generate a JSON manifest with source files and placement coordinates
