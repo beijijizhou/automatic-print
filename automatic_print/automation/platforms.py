@@ -14,6 +14,7 @@ class ErpPlatform:
         "多项多件",
     )
     shipping_filter_aliases: tuple[tuple[str, str], ...] = ()
+    excluded_shipping_categories: tuple[str, ...] = ()
 
     def shipping_filter_value(self, display_name: str) -> str:
         return dict(self.shipping_filter_aliases).get(
@@ -44,6 +45,7 @@ ERP_PLATFORMS = {
             ("SWIFT", "SWIF"),
             ("Yanwen", "YANW"),
         ),
+        excluded_shipping_categories=("SPEE",),
     ),
     "莆田": ErpPlatform("莆田", "putiandiy.merchant.hihumbird.com"),
     "隆丰": ErpPlatform(

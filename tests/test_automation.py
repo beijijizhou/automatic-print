@@ -53,6 +53,7 @@ def test_haloo_batch_rules_prioritize_shipping_then_composition() -> None:
     )
     assert platform.shipping_filter_value("SWIFT") == "SWIF"
     assert platform.shipping_filter_value("Yanwen") == "YANW"
+    assert platform.excluded_shipping_categories == ("SPEE",)
 
 
 def test_cbt_rules_belong_only_to_longfeng() -> None:
@@ -75,3 +76,15 @@ def test_rule_batch_plan_counts_only_nonempty_categories() -> None:
 
     assert plan.total_items == 20
     assert len(plan.nonempty_items) == 2
+
+
+def test_rule_batch_plan_counts_explicit_logistics_exclusions() -> None:
+    plan = RuleBatchPlan(
+        "Haloo",
+        (RuleBatchItem("UPS", "单项单件", 20),),
+        22,
+        (RuleBatchItem("SPEE", "不生成", 2),),
+    )
+
+    assert plan.excluded_count == 2
+    assert plan.total_items + plan.excluded_count == plan.received_count

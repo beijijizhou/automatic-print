@@ -13,11 +13,14 @@ from PySide6.QtCore import (
     Signal,
     Slot,
 )
-from PySide6.QtGui import QDesktopServices
+from PySide6.QtGui import QColor, QDesktopServices
 from PySide6.QtWidgets import (
     QCheckBox,
     QComboBox,
+    QDialog,
+    QDialogButtonBox,
     QFileDialog,
+    QFormLayout,
     QHeaderView,
     QHBoxLayout,
     QLabel,
@@ -65,6 +68,7 @@ class AutomationWorker(QObject):
         settings: LayoutSettings | None = None,
         sample_limit: int | None = None,
         batch_plan: RuleBatchPlan | None = None,
+        generation_rule: str = "按有面单生成批次规则",
     ) -> None:
         super().__init__()
         self.action = action
@@ -74,6 +78,7 @@ class AutomationWorker(QObject):
         self.settings = settings
         self.sample_limit = sample_limit
         self.batch_plan = batch_plan
+        self.generation_rule = generation_rule
 
     @Slot()
     def run(self) -> None:
@@ -111,7 +116,9 @@ class AutomationWorker(QObject):
                 if self.batch_plan is None:
                     raise RuntimeError("请先读取并确认批次分类数量。")
                 generated = generate_rule_batches(
-                    self.batch_plan, self.progress.emit
+                    self.batch_plan,
+                    self.generation_rule,
+                    self.progress.emit,
                 )
                 self.completed.emit(
                     {
@@ -470,6 +477,10 @@ class AutomationDialog(QWidget):
             for shipping_method in shipping
             for composition in compositions
         ]
+        rows.extend(
+            (shipping_method, "不生成")
+            for shipping_method in platform.excluded_shipping_categories
+        )
         self.generation_table.setRowCount(len(rows))
         for row, (shipping_method, composition) in enumerate(rows):
             values = [
@@ -477,12 +488,17 @@ class AutomationDialog(QWidget):
                 "—",
                 "—",
                 composition,
-                "等待读取",
+                (
+                    "物流无法生成—剔除"
+                    if composition == "不生成"
+                    else "等待读取"
+                ),
             ]
             for column, value in enumerate(values):
-                self.generation_table.setItem(
-                    row, column, QTableWidgetItem(value)
-                )
+                item = QTableWidgetItem(value)
+                if composition == "不生成":
+                    item.setForeground(QColor("#c62828"))
+                self.generation_table.setItem(row, column, item)
 
     def preview_generation_rules(self) -> None:
         self.pending_batch_plan = None
@@ -500,19 +516,33 @@ class AutomationDialog(QWidget):
             (item.shipping_method, item.order_composition): item.item_count
             for item in plan.items
         }
+        excluded_counts = {
+            item.shipping_method: item.item_count
+            for item in plan.excluded_items
+        }
         for row in range(self.generation_table.rowCount()):
             shipping = self.generation_table.item(row, 0).text()
             composition = self.generation_table.item(row, 3).text()
-            count = counts.get((shipping, composition), 0)
+            excluded = composition == "不生成"
+            count = (
+                excluded_counts.get(shipping, 0)
+                if excluded
+                else counts.get((shipping, composition), 0)
+            )
             self.generation_table.setItem(
                 row, 1, QTableWidgetItem(str(count))
             )
-            self.generation_table.setItem(
-                row, 4, QTableWidgetItem(
-                    "可生成" if count else "无订单"
-                )
+            status_item = QTableWidgetItem(
+                "物流无法生成—已剔除"
+                if excluded
+                else ("可生成" if count else "无订单")
             )
-        unmatched = plan.received_count - plan.total_items
+            if excluded:
+                status_item.setForeground(QColor("#c62828"))
+            self.generation_table.setItem(row, 4, status_item)
+        unmatched = (
+            plan.received_count - plan.total_items - plan.excluded_count
+        )
         fully_matched = unmatched == 0
         self.generate_rules_button.setEnabled(
             bool(plan.nonempty_items) and fully_matched
@@ -520,7 +550,8 @@ class AutomationDialog(QWidget):
         summary = (
             self.batch_rule_summary.text()
             + f"\n已接单：{plan.received_count} 项；规则匹配："
-            f"{plan.total_items} 项；"
+            f"{plan.total_items} 项；物流无法生成并剔除："
+            f"{plan.excluded_count} 项；"
             f"{len(plan.nonempty_items)} 个非空分类。"
         )
         if not fully_matched:
@@ -542,7 +573,10 @@ class AutomationDialog(QWidget):
                 self, "没有可生成内容", "请先读取分类数量。"
             )
             return
-        if plan.total_items != plan.received_count:
+        if (
+            plan.total_items + plan.excluded_count
+            != plan.received_count
+        ):
             QMessageBox.critical(
                 self,
                 "分类未完整覆盖",
@@ -554,22 +588,44 @@ class AutomationDialog(QWidget):
             f"{item.item_count} 项"
             for item in plan.nonempty_items
         )
-        answer = QMessageBox.warning(
-            self,
-            "最终确认：生成后无法撤销",
+        dialog = QDialog(self)
+        dialog.setWindowTitle("最终确认：生成后无法撤销")
+        dialog.setMinimumWidth(560)
+        description = QLabel(
             f"平台：{plan.platform_name}\n\n{details}\n\n"
-            f"合计：{plan.total_items} 项\n\n"
-            "确定按照以上分类生成批次吗？",
-            QMessageBox.Yes | QMessageBox.No,
-            QMessageBox.No,
+            f"生成：{plan.total_items} 项\n"
+            f"物流无法生成并剔除：{plan.excluded_count} 项"
         )
-        if answer != QMessageBox.Yes:
+        description.setWordWrap(True)
+        generation_rule = QComboBox()
+        generation_rule.addItems(
+            [
+                "按有面单生成批次规则",
+                "按无面单生成批次规则",
+            ]
+        )
+        form = QFormLayout()
+        form.addRow("ERP 批次生成规则", generation_rule)
+        buttons = QDialogButtonBox(
+            QDialogButtonBox.Ok | QDialogButtonBox.Cancel
+        )
+        buttons.button(QDialogButtonBox.Ok).setText(
+            "确认并生成（不可撤销）"
+        )
+        buttons.accepted.connect(dialog.accept)
+        buttons.rejected.connect(dialog.reject)
+        dialog_layout = QVBoxLayout(dialog)
+        dialog_layout.addWidget(description)
+        dialog_layout.addLayout(form)
+        dialog_layout.addWidget(buttons)
+        if dialog.exec() != QDialog.Accepted:
             return
         self._start_worker(
             AutomationWorker(
                 "generate_rules",
                 plan.platform_name,
                 batch_plan=plan,
+                generation_rule=generation_rule.currentText(),
             )
         )
 
@@ -843,7 +899,10 @@ class AutomationDialog(QWidget):
             enabled
             and self.pending_batch_plan is not None
             and bool(self.pending_batch_plan.nonempty_items)
-            and self.pending_batch_plan.total_items
+            and (
+                self.pending_batch_plan.total_items
+                + self.pending_batch_plan.excluded_count
+            )
             == self.pending_batch_plan.received_count
         )
 

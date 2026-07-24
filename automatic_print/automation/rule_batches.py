@@ -26,6 +26,7 @@ class RuleBatchPlan:
     platform_name: str
     items: tuple[RuleBatchItem, ...]
     received_count: int
+    excluded_items: tuple[RuleBatchItem, ...] = ()
 
     @property
     def total_items(self) -> int:
@@ -34,6 +35,10 @@ class RuleBatchPlan:
     @property
     def nonempty_items(self) -> tuple[RuleBatchItem, ...]:
         return tuple(item for item in self.items if item.item_count > 0)
+
+    @property
+    def excluded_count(self) -> int:
+        return sum(item.item_count for item in self.excluded_items)
 
 
 def preview_rule_batch_plan(
@@ -73,11 +78,26 @@ def preview_rule_batch_plan(
                     ),
                 )
             )
-        return RuleBatchPlan(platform_name, tuple(items), received_count)
+        excluded_items = tuple(
+            RuleBatchItem(
+                shipping,
+                "不生成",
+                _filtered_count(page, shipping, "全部", platform),
+            )
+            for shipping in platform.excluded_shipping_categories
+        )
+        return RuleBatchPlan(
+            platform_name,
+            tuple(items),
+            received_count,
+            excluded_items,
+        )
 
 
 def generate_rule_batches(
-    expected_plan: RuleBatchPlan, progress=None
+    expected_plan: RuleBatchPlan,
+    generation_rule: str,
+    progress=None,
 ) -> int:
     from playwright.sync_api import sync_playwright
 
@@ -102,8 +122,21 @@ def generate_rule_batches(
             )
             for item in expected_plan.items
         )
+        actual_excluded = tuple(
+            RuleBatchItem(
+                item.shipping_method,
+                "不生成",
+                _filtered_count(
+                    page, item.shipping_method, "全部", platform
+                ),
+            )
+            for item in expected_plan.excluded_items
+        )
         actual_plan = RuleBatchPlan(
-            platform.name, actual_items, _all_received_count(page)
+            platform.name,
+            actual_items,
+            _all_received_count(page),
+            actual_excluded,
         )
         if actual_plan != expected_plan:
             raise RuntimeError(
@@ -119,7 +152,9 @@ def generate_rule_batches(
                 f"{item.shipping_method} / {item.order_composition} / "
                 f"{item.item_count} 项"
             )
-            _generate_filtered_batch(page, item, platform)
+            _generate_filtered_batch(
+                page, item, platform, generation_rule
+            )
             generated += 1
         return generated
 
@@ -152,7 +187,9 @@ def _all_received_count(page) -> int:
     return _filtered_result_count(frame)
 
 
-def _generate_filtered_batch(page, item: RuleBatchItem, platform) -> None:
+def _generate_filtered_batch(
+    page, item: RuleBatchItem, platform, generation_rule: str
+) -> None:
     actual_count = _filtered_count(
         page, item.shipping_method, item.order_composition, platform
     )
@@ -171,6 +208,18 @@ def _generate_filtered_batch(page, item: RuleBatchItem, platform) -> None:
     compact_text = dialog.inner_text().replace(" ", "")
     if f"共{item.item_count}项" not in compact_text:
         raise RuntimeError(f"确认窗口数量不一致：{dialog.inner_text()}")
+    selector = dialog.locator(".ant-select").first
+    if selector.count() != 1:
+        raise RuntimeError("无法定位批次生成规则选择框。")
+    selector.click()
+    option = page.locator(".ant-select-item-option:visible").filter(
+        has_text=generation_rule
+    )
+    if option.count() != 1:
+        raise RuntimeError(f"无法选择“{generation_rule}”。")
+    option.click()
+    if generation_rule not in dialog.inner_text():
+        raise RuntimeError(f"批次生成规则没有成功选择为“{generation_rule}”。")
     confirm = dialog.get_by_text("确 定", exact=True)
     if confirm.count() != 1:
         raise RuntimeError("无法唯一定位批次确认按钮。")
