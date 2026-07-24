@@ -85,6 +85,24 @@ if (-not $chrome) {
     Install-WithWinget "Google.Chrome" "Google Chrome"
 }
 
+$projectEnvironment = Join-Path $installRoot ".venv"
+$runningProjectProcesses = Get-CimInstance Win32_Process |
+    Where-Object {
+        $_.ExecutablePath -and
+        $_.ExecutablePath.StartsWith(
+            $projectEnvironment,
+            [System.StringComparison]::OrdinalIgnoreCase
+        )
+    }
+if ($runningProjectProcesses) {
+    Write-Host "Closing the previous Automatic Print development process..."
+    $runningProjectProcesses |
+        ForEach-Object {
+            Stop-Process -Id $_.ProcessId -Force -ErrorAction SilentlyContinue
+        }
+    Start-Sleep -Milliseconds 800
+}
+
 if (Test-Path (Join-Path $installRoot ".git")) {
     Push-Location $installRoot
     try {
@@ -134,4 +152,3 @@ Write-Host "Setup/update finished. Starting Automatic Print..."
 Start-Process -FilePath $venvPython `
     -ArgumentList "dev.py" `
     -WorkingDirectory $installRoot
-
