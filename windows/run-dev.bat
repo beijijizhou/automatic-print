@@ -1,5 +1,6 @@
 @echo off
 setlocal
+set "PYTHONUTF8=1"
 cd /d "%~dp0.."
 
 if not exist ".venv\Scripts\python.exe" (
@@ -16,5 +17,7 @@ echo Keep this window open while testing.
 if errorlevel 1 (
     echo.
     echo Automatic Print stopped with an error.
+    echo Startup log:
+    echo %LOCALAPPDATA%\AutomaticPrint\logs\latest-startup.log
     pause
 )

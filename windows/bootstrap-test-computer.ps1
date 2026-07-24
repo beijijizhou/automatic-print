@@ -149,6 +149,7 @@ if ($LASTEXITCODE -ne 0) {
 
 Write-Host ""
 Write-Host "Setup/update finished. Starting Automatic Print..."
-Start-Process -FilePath $venvPython `
-    -ArgumentList "dev.py" `
+$runScript = Join-Path $installRoot "windows\run-dev.bat"
+Start-Process -FilePath "$env:SystemRoot\System32\cmd.exe" `
+    -ArgumentList "/k", "`"$runScript`"" `
     -WorkingDirectory $installRoot

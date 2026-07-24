@@ -10,6 +10,14 @@ from pathlib import Path
 
 PROJECT_ROOT = Path(__file__).resolve().parent
 WATCHED_FOLDER = PROJECT_ROOT / "automatic_print"
+LOG_FILE = (
+    Path.home()
+    / "AppData"
+    / "Local"
+    / "AutomaticPrint"
+    / "logs"
+    / "latest-startup.log"
+)
 
 
 def snapshot() -> dict[Path, int]:
@@ -44,6 +52,8 @@ def main() -> int:
                 break
 
         if not restart:
+            if process.returncode:
+                print(f"The app stopped unexpectedly. Startup log: {LOG_FILE}")
             return process.returncode or 0
 
 
