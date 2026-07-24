@@ -41,6 +41,7 @@ from PySide6.QtWidgets import (
 )
 
 from . import __version__
+from .automation_dialog import AutomationDialog
 from .layout import (
     LayoutSettings,
     discover_images,
@@ -174,8 +175,8 @@ class LabelSettingsDialog(QDialog):
 class MainWindow(QMainWindow):
     def __init__(self) -> None:
         super().__init__()
-        self.setWindowTitle("自动打印排版")
-        self.resize(720, 470)
+        self.setWindowTitle("ERP 生产批次中心")
+        self.resize(980, 700)
         self.thread: QThread | None = None
         self.worker: GenerateWorker | None = None
         self.update_thread: QThread | None = None
@@ -227,6 +228,7 @@ class MainWindow(QMainWindow):
         self.png_engine.addItem("Pillow — 当前最快（推荐）", "pillow")
         if png_engine_name() == "libvips":
             self.png_engine.addItem("libvips — 实验对比", "libvips")
+        self.load_layout_preferences()
 
         form = QFormLayout()
         form.addRow("图片文件夹", folder_row)
@@ -267,15 +269,16 @@ class MainWindow(QMainWindow):
         self.run_log.setReadOnly(True)
         self.run_log.setMaximumHeight(115)
         self.run_log.setPlaceholderText("这里会显示可复制的运行记录和耗时")
-        self.generate_button = QPushButton("生成单张 PNG 打印图片")
+        self.generate_button = QPushButton("高级：手动生成单张 PNG")
         self.generate_button.clicked.connect(self.generate)
+        self.save_settings_button = QPushButton("保存参数")
+        self.save_settings_button.clicked.connect(self.save_layout_preferences)
         self.version_label = QLabel(f"版本 {__version__}")
         self.check_update_button = QPushButton("检查更新")
         self.check_update_button.clicked.connect(lambda: self.check_for_updates(False))
-        version_row = QHBoxLayout()
-        version_row.addWidget(self.version_label)
-        version_row.addStretch()
-        version_row.addWidget(self.check_update_button)
+        settings_footer = QHBoxLayout()
+        settings_footer.addStretch()
+        settings_footer.addWidget(self.save_settings_button)
 
         layout = QVBoxLayout()
         layout.addLayout(form)
@@ -285,10 +288,26 @@ class MainWindow(QMainWindow):
         layout.addWidget(self.current_file)
         layout.addWidget(self.run_log)
         layout.addWidget(self.generate_button)
-        layout.addLayout(version_row)
+        layout.addLayout(settings_footer)
         container = QWidget()
         container.setLayout(layout)
-        self.setCentralWidget(container)
+        self.settings_dialog = QDialog(self)
+        self.settings_dialog.setWindowTitle("自动排版参数设置")
+        self.settings_dialog.resize(760, 650)
+        settings_layout = QVBoxLayout(self.settings_dialog)
+        settings_layout.addWidget(container)
+
+        self.automation_home = AutomationDialog(self)
+        main_footer = QHBoxLayout()
+        main_footer.addWidget(self.version_label)
+        main_footer.addStretch()
+        main_footer.addWidget(self.check_update_button)
+        main_layout = QVBoxLayout()
+        main_layout.addWidget(self.automation_home)
+        main_layout.addLayout(main_footer)
+        main_container = QWidget()
+        main_container.setLayout(main_layout)
+        self.setCentralWidget(main_container)
         QTimer.singleShot(2500, lambda: self.check_for_updates(True))
 
     @staticmethod
@@ -313,6 +332,95 @@ class MainWindow(QMainWindow):
             self.preferences.setValue("source_location", folder)
             count = len(discover_images(Path(folder)))
             self.status.setText(f"已找到 {count} 张图片，可以开始生成。")
+
+    def open_settings_dialog(self) -> None:
+        self.settings_dialog.show()
+        self.settings_dialog.raise_()
+        self.settings_dialog.activateWindow()
+
+    def load_layout_preferences(self) -> None:
+        self.width.setValue(
+            self.preferences.value("layout/media_width_mm", 600, float)
+        )
+        self.spacing.setValue(
+            self.preferences.value("layout/spacing_mm", 3, float)
+        )
+        self.margin.setValue(
+            self.preferences.value("layout/margin_mm", 3, float)
+        )
+        self.dpi.setValue(self.preferences.value("layout/dpi", 300, int))
+        self.worker_threads.setValue(
+            self.preferences.value("layout/worker_threads", 8, int)
+        )
+        self.number_images.setChecked(
+            self.preferences.value("layout/number_images", True, bool)
+        )
+        self.png_compression.setCurrentIndex(
+            max(
+                0,
+                self.png_compression.findData(
+                    self.preferences.value(
+                        "layout/png_compression_level", 1, int
+                    )
+                ),
+            )
+        )
+        engine_index = self.png_engine.findData(
+            self.preferences.value("layout/png_engine", "pillow", str)
+        )
+        self.png_engine.setCurrentIndex(max(0, engine_index))
+        label = self.label_settings
+        label.text_template.setText(
+            self.preferences.value("label/text_template", "{number}", str)
+        )
+        position_index = label.position.findData(
+            self.preferences.value("label/position", "bottom", str)
+        )
+        label.position.setCurrentIndex(max(0, position_index))
+        label.font_size.setValue(
+            self.preferences.value("label/font_size_mm", 10, float)
+        )
+        label.gap.setValue(
+            self.preferences.value("label/gap_mm", 5, float)
+        )
+        label.offset_x.setValue(
+            self.preferences.value("label/offset_x_mm", 0, float)
+        )
+        label.offset_y.setValue(
+            self.preferences.value("label/offset_y_mm", 0, float)
+        )
+        label.date_format.setText(
+            self.preferences.value("label/date_format", "%Y-%m-%d", str)
+        )
+
+    def save_layout_preferences(self) -> None:
+        values = {
+            "layout/media_width_mm": self.width.value(),
+            "layout/spacing_mm": self.spacing.value(),
+            "layout/margin_mm": self.margin.value(),
+            "layout/dpi": self.dpi.value(),
+            "layout/worker_threads": self.worker_threads.value(),
+            "layout/number_images": self.number_images.isChecked(),
+            "layout/png_compression_level": self.png_compression.currentData(),
+            "layout/png_engine": self.png_engine.currentData(),
+            "label/text_template": self.label_settings.text_template.text(),
+            "label/position": self.label_settings.position.currentData(),
+            "label/font_size_mm": self.label_settings.font_size.value(),
+            "label/gap_mm": self.label_settings.gap.value(),
+            "label/offset_x_mm": self.label_settings.offset_x.value(),
+            "label/offset_y_mm": self.label_settings.offset_y.value(),
+            "label/date_format": (
+                self.label_settings.date_format.text().strip() or "%Y-%m-%d"
+            ),
+        }
+        for key, value in values.items():
+            self.preferences.setValue(key, value)
+        self.preferences.sync()
+        QMessageBox.information(
+            self,
+            "参数已保存",
+            "以后下载生产批次后，会自动使用这些参数排版。",
+        )
 
     def choose_output_location(self) -> None:
         starting_folder = self.output_location.text().strip()
@@ -512,6 +620,9 @@ class MainWindow(QMainWindow):
         )
         self.generate_button.setEnabled(True)
         QMessageBox.information(self, "生成完成", f"PNG 打印图片已保存到：\n{output}")
+        QDesktopServices.openUrl(
+            QUrl.fromLocalFile(str(Path(output).resolve()))
+        )
 
     @Slot(str)
     def generation_failed(self, message: str) -> None:

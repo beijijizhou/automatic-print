@@ -9,6 +9,9 @@ Windows desktop application for combining a folder of images into print-ready la
 - Preserve each image's physical print size using its embedded DPI
 - Arrange images with a predictable shelf-layout algorithm
 - Add configurable labels beside images using sequence numbers, dates, or filenames
+- Preview and generate Longfeng CBT/non-CBT production batches with a final safety confirmation
+- Download and automatically extract production-image archives
+- Process each 12-digit production batch separately to avoid oversized canvases
 - Combine the entire selected folder into one long PNG image
 - Stream and save large PNG output with the multithreaded libvips engine
 - Generate a JSON manifest with source files and placement coordinates
