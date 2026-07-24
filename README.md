@@ -83,7 +83,20 @@ download page.
 During active development, one designated factory test computer can run the
 source version instead of reinstalling every build.
 
-One-time setup:
+### One-command setup and update
+
+Open PowerShell on the test computer and run:
+
+```powershell
+powershell -ExecutionPolicy Bypass -Command "irm https://raw.githubusercontent.com/beijijizhou/automatic-print/main/windows/bootstrap-test-computer.ps1 | iex"
+```
+
+The script installs or checks Git, Python 3.12, and Google Chrome; clones or
+updates the latest `main` source; creates the project virtual environment;
+installs all requirements including Playwright; and starts the development app.
+Run the same command again whenever a new approved change is pushed.
+
+### Manual setup
 
 1. Install Git for Windows and Python 3.12.
 2. Clone this repository.
