@@ -4,6 +4,13 @@ from dataclasses import dataclass
 from collections import Counter
 
 from .chrome_session import connect_debug_chrome
+from .erp_api import (
+    find_batch_rule,
+    generate_filtered_batch,
+    list_all_received_items,
+    list_production_items,
+    production_item_payload,
+)
 from .longfeng import (
     _filtered_result_count,
     _run_search,
@@ -81,6 +88,7 @@ def generate_rule_batches(
                 "请重新读取分类数量并再次确认。"
             )
 
+        rule = find_batch_rule(page, generation_rule)
         generated = 0
         nonempty = expected_plan.nonempty_items
         for index, item in enumerate(nonempty, start=1):
@@ -89,9 +97,7 @@ def generate_rule_batches(
                 f"{item.shipping_method} / {item.order_composition} / "
                 f"{item.item_count} 项"
             )
-            _generate_filtered_batch(
-                page, item, platform, generation_rule
-            )
+            _generate_filtered_batch_api(page, item, platform, rule.id)
             generated += 1
         return generated
 
@@ -134,44 +140,38 @@ def _preview_plan_from_api(page, platform, report) -> RuleBatchPlan:
 
 
 def _load_all_received_rows(page) -> tuple[list[dict], int]:
-    _select_received(page)
-    frame = production_frame(page)
-    _select_filter(frame, "物流分拣", "全部")
-    _select_filter(frame, "订单组成", "全部")
-    endpoint = "/production/v1/production/order/item/page"
-    with page.expect_response(
-        lambda response: endpoint in response.url,
-        timeout=15_000,
-    ) as response_info:
-        _run_search(frame)
-    data = response_info.value.json()["data"]
-    rows = data["list"]
-    total = int(data["total"])
-    if len(rows) < total:
-        size_selector = frame.locator(
-            ".ant-pagination-options .ant-select"
-        ).first
-        if size_selector.count() != 1:
-            raise RuntimeError("无法切换 ERP 列表为每页 200 条。")
-        size_selector.click()
-        option = page.locator(".ant-select-item-option:visible").filter(
-            has_text="200 条/页"
-        )
-        if option.count() != 1:
-            raise RuntimeError("ERP 列表中没有“200 条/页”选项。")
-        with page.expect_response(
-            lambda response: endpoint in response.url,
-            timeout=15_000,
-        ) as response_info:
-            option.click()
-        data = response_info.value.json()["data"]
-        rows = data["list"]
-        total = int(data["total"])
-    if len(rows) != total:
+    return list_all_received_items(page)
+
+
+def _generate_filtered_batch_api(
+    page, item: RuleBatchItem, platform, batch_rule_id: int | str
+) -> None:
+    composition_codes = {
+        "单项单件": "1",
+        "单项多件": "2",
+        "多项多件": "3",
+    }
+    payload = production_item_payload(
+        shipping_codes=(
+            platform.shipping_filter_value(item.shipping_method),
+        ),
+        order_compositions=(composition_codes[item.order_composition],),
+    )
+    current = list_production_items(page, {**payload, "page_size": 1})
+    actual_count = int(current.get("total") or 0)
+    if actual_count != item.item_count:
         raise RuntimeError(
-            f"ERP 接口返回 {len(rows)} 项，但总数为 {total}，已停止。"
+            f"{item.shipping_method} / {item.order_composition} "
+            f"确认时为 {item.item_count} 项，现在为 {actual_count} 项。"
         )
-    return rows, total
+    try:
+        generate_filtered_batch(page, payload, batch_rule_id)
+    except Exception as error:
+        raise RuntimeError(
+            f"{item.shipping_method} / {item.order_composition} "
+            "API 返回不确定结果。为避免重复生成，程序不会自动重试；"
+            "请先刷新批次管理确认结果。"
+        ) from error
 
 
 def _filtered_count(

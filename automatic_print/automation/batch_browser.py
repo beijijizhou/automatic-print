@@ -2,11 +2,13 @@ from __future__ import annotations
 
 import re
 from dataclasses import dataclass
+from datetime import datetime
 from pathlib import Path
 from urllib.parse import urlsplit
 
 from .batch_downloads import download_production_images
 from .chrome_session import connect_debug_chrome, open_authenticated_page
+from .erp_api import list_batches, production_item_count
 from .platforms import get_erp_platform
 
 
@@ -44,11 +46,10 @@ def load_platform_order_status(
             browser, platform.production_items_url, progress
         )
         if progress:
-            progress("正在读取“已接单”和“生产中”数量…")
-        texts = page.locator(".menu-item-title").all_inner_texts()
+            progress("正在通过 ERP API 读取“已接单”和“生产中”数量…")
         return PlatformOrderStatus(
-            accepted_count=_menu_count(texts, "已接单"),
-            production_count=_menu_count(texts, "生产中"),
+            accepted_count=production_item_count(page, "1"),
+            production_count=production_item_count(page, "5"),
         )
 
 
@@ -61,7 +62,7 @@ def load_batch_records(platform_name: str) -> list[BatchRecord]:
             playwright, platform.production_batches_url
         )
         page = _batch_page(browser, platform.production_batches_url)
-        return _parse_visible_rows(page)
+        return _parse_api_rows(page)
 
 
 def _production_items_page(browser, url: str, progress=None):
@@ -152,6 +153,45 @@ def _parse_visible_rows(page) -> list[BatchRecord]:
                 created_at=created.group(0) if created else "",
                 production_images_ready=(
                     text.count("下载") >= 3 and "生成成功" in text
+                ),
+            )
+        )
+    return records
+
+
+def _parse_api_rows(page) -> list[BatchRecord]:
+    records = []
+    visible_text = {
+        match.group(1): text
+        for text in page.locator("tbody tr:visible").all_inner_texts()
+        if (match := re.search(r"\b(\d{12})\b", text))
+    }
+    composition_names = {
+        "1": "单项单件",
+        "2": "单项多件",
+        "3": "多项多件",
+    }
+    for row in list_batches(page):
+        created = row.get("created")
+        created_text = (
+            datetime.fromtimestamp(int(created) / 1000).strftime(
+                "%Y-%m-%d %H:%M:%S"
+            )
+            if created
+            else ""
+        )
+        row_text = visible_text.get(str(row.get("code") or ""), "")
+        records.append(
+            BatchRecord(
+                batch_number=str(row.get("code") or ""),
+                item_count=int(row.get("production_order_item_num") or 0),
+                piece_count=int(row.get("production_piece_num") or 0),
+                batch_type=composition_names.get(
+                    str(row.get("order_composition") or ""), "其他"
+                ),
+                created_at=created_text,
+                production_images_ready=(
+                    row_text.count("下载") >= 3 and "生成成功" in row_text
                 ),
             )
         )
