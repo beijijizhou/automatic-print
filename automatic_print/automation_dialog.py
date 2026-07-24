@@ -296,7 +296,6 @@ class AutomationDialog(QWidget):
         actions.addWidget(self.select_button)
         actions.addWidget(self.download_button)
         actions.addWidget(self.process_button)
-        actions.addWidget(self.settings_button)
 
         generation_page = QWidget()
         generation_layout = QVBoxLayout(generation_page)
@@ -468,6 +467,10 @@ class AutomationDialog(QWidget):
         layout.addWidget(self.platform)
         layout.addWidget(self.loading_panel)
         layout.addWidget(self.main_tabs)
+        bottom_actions = QHBoxLayout()
+        bottom_actions.addStretch()
+        bottom_actions.addWidget(self.settings_button)
+        layout.addLayout(bottom_actions)
 
     def choose_output(self) -> None:
         folder = QFileDialog.getExistingDirectory(
