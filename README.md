@@ -2,6 +2,18 @@
 
 Windows desktop application for combining a folder of images into print-ready layout canvases that can be imported directly into RIIN or another RIP application.
 
+## 测试电脑一键安装或更新
+
+在测试电脑上打开 PowerShell，复制并运行：
+
+```powershell
+powershell -ExecutionPolicy Bypass -Command "irm https://raw.githubusercontent.com/beijijizhou/automatic-print/main/windows/bootstrap-test-computer.ps1 | iex"
+```
+
+同一条命令既可首次安装，也可在以后下载最新代码并更新运行环境。
+它会自动准备 Git、Python 3.12、Google Chrome、Playwright 及项目所需依赖，
+然后启动开发版程序。
+
 ## Current features
 
 - Recursively scan a folder for PNG, TIFF, JPEG, JFIF, WebP, or BMP images
