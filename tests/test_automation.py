@@ -2,6 +2,10 @@ import pytest
 
 from automatic_print.automation.longfeng import BatchPreview, ShippingBatchPlan
 from automatic_print.automation.platforms import get_erp_platform
+from automatic_print.automation.rule_batches import (
+    RuleBatchItem,
+    RuleBatchPlan,
+)
 
 
 def test_batch_preview_confirmation_is_explicit() -> None:
@@ -46,3 +50,20 @@ def test_haloo_batch_rules_prioritize_shipping_then_composition() -> None:
         "单项多件",
         "多项多件",
     )
+    assert platform.shipping_filter_value("SWIFT") == "SWIF"
+    assert platform.shipping_filter_value("Yanwen") == "YANW"
+
+
+def test_rule_batch_plan_counts_only_nonempty_categories() -> None:
+    plan = RuleBatchPlan(
+        "Haloo",
+        (
+            RuleBatchItem("UPS", "单项单件", 12),
+            RuleBatchItem("UPS", "单项多件", 0),
+            RuleBatchItem("FedEx", "单项单件", 8),
+        ),
+        20,
+    )
+
+    assert plan.total_items == 20
+    assert len(plan.nonempty_items) == 2

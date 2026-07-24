@@ -13,6 +13,12 @@ class ErpPlatform:
         "单项多件",
         "多项多件",
     )
+    shipping_filter_aliases: tuple[tuple[str, str], ...] = ()
+
+    def shipping_filter_value(self, display_name: str) -> str:
+        return dict(self.shipping_filter_aliases).get(
+            display_name, display_name
+        )
 
     @property
     def production_items_url(self) -> str:
@@ -34,6 +40,10 @@ ERP_PLATFORMS = {
         "Haloo",
         "haloopod.merchant.hihumbird.com",
         ("UPS", "FedEx", "SWIFT", "USPS", "GOFO", "Yanwen"),
+        shipping_filter_aliases=(
+            ("SWIFT", "SWIF"),
+            ("Yanwen", "YANW"),
+        ),
     ),
     "莆田": ErpPlatform("莆田", "putiandiy.merchant.hihumbird.com"),
     "隆丰": ErpPlatform(

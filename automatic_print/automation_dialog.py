@@ -38,6 +38,11 @@ from .automation.batch_browser import (
     load_platform_order_status,
 )
 from .automation.platforms import ERP_PLATFORMS, get_erp_platform
+from .automation.rule_batches import (
+    RuleBatchPlan,
+    generate_rule_batches,
+    preview_rule_batch_plan,
+)
 from .layout import LayoutSettings, discover_images, generate_layout
 
 
@@ -45,6 +50,7 @@ class AutomationWorker(QObject):
     progress = Signal(str)
     batches_loaded = Signal(object)
     status_loaded = Signal(object)
+    plan_loaded = Signal(object)
     completed = Signal(object)
     failed = Signal(str)
 
@@ -56,6 +62,7 @@ class AutomationWorker(QObject):
         batch_numbers: list[str] | None = None,
         settings: LayoutSettings | None = None,
         sample_limit: int | None = None,
+        batch_plan: RuleBatchPlan | None = None,
     ) -> None:
         super().__init__()
         self.action = action
@@ -64,6 +71,7 @@ class AutomationWorker(QObject):
         self.batch_numbers = batch_numbers or []
         self.settings = settings
         self.sample_limit = sample_limit
+        self.batch_plan = batch_plan
 
     @Slot()
     def run(self) -> None:
@@ -91,6 +99,25 @@ class AutomationWorker(QObject):
                     self.batches_loaded.emit(
                         load_batch_records(self.platform_name)
                     )
+            elif self.action == "preview_rules":
+                self.plan_loaded.emit(
+                    preview_rule_batch_plan(
+                        self.platform_name, self.progress.emit
+                    )
+                )
+            elif self.action == "generate_rules":
+                if self.batch_plan is None:
+                    raise RuntimeError("请先读取并确认批次分类数量。")
+                generated = generate_rule_batches(
+                    self.batch_plan, self.progress.emit
+                )
+                self.completed.emit(
+                    {
+                        "type": "batches_generated",
+                        "platform": self.platform_name,
+                        "generated": generated,
+                    }
+                )
             elif self.action == "download":
                 if self.output is None:
                     raise RuntimeError("请选择下载保存位置。")
@@ -181,6 +208,7 @@ class AutomationDialog(QWidget):
         self.thread: QThread | None = None
         self.worker: AutomationWorker | None = None
         self.records: list[BatchRecord] = []
+        self.pending_batch_plan: RuleBatchPlan | None = None
         self.preferences = QSettings("AutomaticPrint", "AutomaticPrint")
 
         self.platform = QComboBox()
@@ -260,6 +288,18 @@ class AutomationDialog(QWidget):
         self.generation_table.horizontalHeader().setSectionResizeMode(
             QHeaderView.Stretch
         )
+        self.preview_rules_button = QPushButton("读取分类数量")
+        self.preview_rules_button.clicked.connect(
+            self.preview_generation_rules
+        )
+        self.generate_rules_button = QPushButton("确认并生成批次")
+        self.generate_rules_button.setEnabled(False)
+        self.generate_rules_button.clicked.connect(
+            self.confirm_generate_rules
+        )
+        generation_actions = QHBoxLayout()
+        generation_actions.addWidget(self.preview_rules_button)
+        generation_actions.addWidget(self.generate_rules_button)
         self.generation_warning = QLabel(
             "安全保护：生成前会显示平台、物流分类和订单组成数量，"
             "并要求最终确认。"
@@ -268,6 +308,7 @@ class AutomationDialog(QWidget):
         generation_layout.addWidget(self.generation_intro)
         generation_layout.addWidget(self.batch_rule_summary)
         generation_layout.addWidget(self.generation_table)
+        generation_layout.addLayout(generation_actions)
         generation_layout.addWidget(self.generation_warning)
 
         management_page = QWidget()
@@ -362,6 +403,8 @@ class AutomationDialog(QWidget):
             self.preferences.setValue("automation/output_location", folder)
 
     def platform_changed(self, name: str) -> None:
+        self.pending_batch_plan = None
+        self.generate_rules_button.setEnabled(False)
         self.records = []
         self.table.setRowCount(0)
         self.select_button.setText("全选可下载批次")
@@ -377,6 +420,10 @@ class AutomationDialog(QWidget):
 
     def show_platform_batch_rules(self, name: str) -> None:
         platform = get_erp_platform(name)
+        self.batch_rule_summary.setStyleSheet(
+            "padding: 8px; background: #eef4ff; "
+            "border: 1px solid #9bbcff; font-weight: 600;"
+        )
         shipping = platform.shipping_categories
         compositions = platform.order_compositions
         if not shipping:
@@ -412,6 +459,95 @@ class AutomationDialog(QWidget):
                 self.generation_table.setItem(
                     row, column, QTableWidgetItem(value)
                 )
+
+    def preview_generation_rules(self) -> None:
+        self.pending_batch_plan = None
+        self.generate_rules_button.setEnabled(False)
+        self._start_worker(
+            AutomationWorker(
+                "preview_rules", self.platform.currentData()
+            )
+        )
+
+    @Slot(object)
+    def generation_plan_finished(self, plan: RuleBatchPlan) -> None:
+        self.pending_batch_plan = plan
+        counts = {
+            (item.shipping_method, item.order_composition): item.item_count
+            for item in plan.items
+        }
+        for row in range(self.generation_table.rowCount()):
+            shipping = self.generation_table.item(row, 0).text()
+            composition = self.generation_table.item(row, 3).text()
+            count = counts.get((shipping, composition), 0)
+            self.generation_table.setItem(
+                row, 1, QTableWidgetItem(str(count))
+            )
+            self.generation_table.setItem(
+                row, 4, QTableWidgetItem(
+                    "可生成" if count else "无订单"
+                )
+            )
+        unmatched = plan.received_count - plan.total_items
+        fully_matched = unmatched == 0
+        self.generate_rules_button.setEnabled(
+            bool(plan.nonempty_items) and fully_matched
+        )
+        summary = (
+            self.batch_rule_summary.text()
+            + f"\n已接单：{plan.received_count} 项；规则匹配："
+            f"{plan.total_items} 项；"
+            f"{len(plan.nonempty_items)} 个非空分类。"
+        )
+        if not fully_matched:
+            summary += (
+                f"\n⚠ 有 {abs(unmatched)} 项未被规则完整覆盖，"
+                "已禁止生成批次。"
+            )
+            self.batch_rule_summary.setStyleSheet(
+                "padding: 8px; background: #ffebee; "
+                "border: 1px solid #c62828; font-weight: 700; "
+                "color: #b71c1c;"
+            )
+        self.batch_rule_summary.setText(summary)
+
+    def confirm_generate_rules(self) -> None:
+        plan = self.pending_batch_plan
+        if plan is None or not plan.nonempty_items:
+            QMessageBox.warning(
+                self, "没有可生成内容", "请先读取分类数量。"
+            )
+            return
+        if plan.total_items != plan.received_count:
+            QMessageBox.critical(
+                self,
+                "分类未完整覆盖",
+                "规则匹配数量与已接单总数不一致，不能生成批次。",
+            )
+            return
+        details = "\n".join(
+            f"{item.shipping_method} / {item.order_composition}："
+            f"{item.item_count} 项"
+            for item in plan.nonempty_items
+        )
+        answer = QMessageBox.warning(
+            self,
+            "最终确认：生成后无法撤销",
+            f"平台：{plan.platform_name}\n\n{details}\n\n"
+            f"合计：{plan.total_items} 项\n\n"
+            "确定按照以上分类生成批次吗？",
+            QMessageBox.Yes | QMessageBox.No,
+            QMessageBox.No,
+        )
+        if answer != QMessageBox.Yes:
+            return
+        self._start_worker(
+            AutomationWorker(
+                "generate_rules",
+                plan.platform_name,
+                batch_plan=plan,
+            )
+        )
 
     def main_tab_changed(self, index: int) -> None:
         self.refresh_current_section()
@@ -597,9 +733,11 @@ class AutomationDialog(QWidget):
         worker.progress.connect(self.log.appendPlainText)
         worker.batches_loaded.connect(self.batches_finished)
         worker.status_loaded.connect(self.status_finished)
+        worker.plan_loaded.connect(self.generation_plan_finished)
         worker.completed.connect(self.action_finished)
         worker.failed.connect(self.failed)
         worker.batches_loaded.connect(self.thread.quit)
+        worker.plan_loaded.connect(self.thread.quit)
         worker.completed.connect(self.thread.quit)
         worker.failed.connect(self.thread.quit)
         self.thread.finished.connect(worker.deleteLater)
@@ -611,6 +749,17 @@ class AutomationDialog(QWidget):
 
     @Slot(object)
     def action_finished(self, result: dict) -> None:
+        if result["type"] == "batches_generated":
+            self.pending_batch_plan = None
+            self.generate_rules_button.setEnabled(False)
+            self.batch_rule_summary.setText(
+                f"{result['platform']}：已成功生成 "
+                f"{result['generated']} 个分类批次。"
+            )
+            QMessageBox.information(
+                self, "批次生成完成", self.batch_rule_summary.text()
+            )
+            return
         if result["type"] == "downloaded_and_processed":
             mode = "测试小样" if result["test"] else "生产批次"
             self.summary.setText(
@@ -645,6 +794,14 @@ class AutomationDialog(QWidget):
         self.download_button.setEnabled(enabled)
         self.process_button.setEnabled(enabled)
         self.settings_button.setEnabled(enabled)
+        self.preview_rules_button.setEnabled(enabled)
+        self.generate_rules_button.setEnabled(
+            enabled
+            and self.pending_batch_plan is not None
+            and bool(self.pending_batch_plan.nonempty_items)
+            and self.pending_batch_plan.total_items
+            == self.pending_batch_plan.received_count
+        )
 
     @Slot()
     def clear_worker(self) -> None:
