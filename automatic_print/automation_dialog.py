@@ -43,6 +43,7 @@ from .automation.batch_browser import (
     load_platform_order_status,
 )
 from .automation.platforms import ERP_PLATFORMS, get_erp_platform
+from .automation.local_batches import discover_local_batches
 from .automation.rule_batches import (
     RuleBatchPlan,
     generate_rule_batches,
@@ -409,10 +410,54 @@ class AutomationDialog(QWidget):
         cleared_layout.addWidget(self.cleared_summary)
         cleared_layout.addWidget(self.cleared_table)
 
+        local_page = QWidget()
+        local_layout = QVBoxLayout(local_page)
+        local_intro = QLabel(
+            "这里显示已经下载并解压到本机的生产批次。"
+            "刷新和排版只读取本地硬盘，不会访问 ERP。"
+        )
+        local_intro.setWordWrap(True)
+        self.local_summary = QLabel("尚未读取本地生产批次。")
+        self.local_table = QTableWidget(0, 6)
+        self.local_table.setHorizontalHeaderLabels(
+            ["选择", "平台", "批次号", "图片数", "本地更新时间", "文件夹"]
+        )
+        self.local_table.horizontalHeader().setSectionResizeMode(
+            QHeaderView.ResizeToContents
+        )
+        self.local_table.horizontalHeader().setSectionResizeMode(
+            5, QHeaderView.Stretch
+        )
+        self.local_refresh_button = QPushButton("刷新本地文件")
+        self.local_refresh_button.clicked.connect(self.refresh_local_batches)
+        self.local_select_button = QPushButton("全选本地批次")
+        self.local_select_button.clicked.connect(self.select_all_local)
+        self.local_process_button = QPushButton("排版选中的本地批次")
+        self.local_process_button.clicked.connect(
+            self.process_selected_local_batches
+        )
+        self.local_open_button = QPushButton("打开本地文件夹")
+        self.local_open_button.clicked.connect(self.open_local_folder)
+        self.local_test_mode = QCheckBox(
+            "快速测试模式：只处理第一个批次的前 5 张"
+        )
+        self.local_test_mode.setChecked(True)
+        local_actions = QHBoxLayout()
+        local_actions.addWidget(self.local_refresh_button)
+        local_actions.addWidget(self.local_select_button)
+        local_actions.addWidget(self.local_process_button)
+        local_actions.addWidget(self.local_open_button)
+        local_layout.addWidget(local_intro)
+        local_layout.addWidget(self.local_summary)
+        local_layout.addWidget(self.local_table)
+        local_layout.addWidget(self.local_test_mode)
+        local_layout.addLayout(local_actions)
+
         self.main_tabs = QTabWidget()
         self.main_tabs.addTab(accepted_page, "已接单")
         self.main_tabs.addTab(production_page, "生产中")
         self.main_tabs.addTab(cleared_page, "已清单")
+        self.main_tabs.addTab(local_page, "本地文件")
         self.main_tabs.setCurrentIndex(0)
         self.main_tabs.currentChanged.connect(self.main_tab_changed)
         self.platform.currentTextChanged.connect(self.platform_changed)
@@ -635,6 +680,9 @@ class AutomationDialog(QWidget):
     def refresh_current_section(self) -> None:
         if self.thread is not None:
             return
+        if self.main_tabs.currentIndex() == 3:
+            self.refresh_local_batches()
+            return
         action = (
             "status_and_list"
             if self.main_tabs.currentIndex() == 1
@@ -644,6 +692,76 @@ class AutomationDialog(QWidget):
         self._start_worker(
             AutomationWorker(action, self.platform.currentData())
         )
+
+    def refresh_local_batches(self) -> None:
+        root = Path(self.output.text().strip())
+        records = discover_local_batches(root, self.platform.currentData())
+        self.local_table.setRowCount(len(records))
+        self.local_select_button.setText("全选本地批次")
+        for row, record in enumerate(records):
+            self.local_table.setCellWidget(row, 0, QCheckBox())
+            values = [
+                record.platform_name,
+                record.batch_number,
+                str(record.image_count),
+                record.modified_at,
+                str(record.folder),
+            ]
+            for column, value in enumerate(values, start=1):
+                self.local_table.setItem(
+                    row, column, QTableWidgetItem(value)
+                )
+        self.local_summary.setText(
+            f"{self.platform.currentText()}：本地有 {len(records)} 个"
+            "已下载批次，可直接排版，不访问 ERP。"
+        )
+
+    def select_all_local(self) -> None:
+        checkboxes = [
+            self.local_table.cellWidget(row, 0)
+            for row in range(self.local_table.rowCount())
+        ]
+        if not checkboxes:
+            return
+        select_all = not all(box.isChecked() for box in checkboxes)
+        for box in checkboxes:
+            box.setChecked(select_all)
+        self.local_select_button.setText(
+            "取消全选" if select_all else "全选本地批次"
+        )
+
+    def process_selected_local_batches(self) -> None:
+        selected = [
+            self.local_table.item(row, 2).text()
+            for row in range(self.local_table.rowCount())
+            if self.local_table.cellWidget(row, 0).isChecked()
+        ]
+        if not selected:
+            QMessageBox.warning(
+                self, "请选择批次", "请至少选择一个本地生产批次。"
+            )
+            return
+        self._start_worker(
+            AutomationWorker(
+                "process",
+                self.platform.currentData(),
+                output=Path(self.output.text().strip()),
+                batch_numbers=selected,
+                settings=self._current_layout_settings(),
+                sample_limit=(
+                    5 if self.local_test_mode.isChecked() else None
+                ),
+            )
+        )
+
+    def open_local_folder(self) -> None:
+        folder = Path(self.output.text().strip()) / self.platform.currentData()
+        if not folder.is_dir():
+            QMessageBox.warning(
+                self, "找不到文件夹", "当前平台还没有本地下载文件。"
+            )
+            return
+        QDesktopServices.openUrl(QUrl.fromLocalFile(str(folder.resolve())))
 
     @Slot(object)
     def status_finished(self, status) -> None:
@@ -868,6 +986,7 @@ class AutomationDialog(QWidget):
                 f"{len(result['batches'])} 个{mode}排版。"
             )
             QMessageBox.information(self, "自动处理完成", self.summary.text())
+            self.refresh_local_batches()
         else:
             mode = "测试小样" if result["test"] else "生产批次"
             self.summary.setText(
@@ -905,6 +1024,10 @@ class AutomationDialog(QWidget):
             )
             == self.pending_batch_plan.received_count
         )
+        self.local_refresh_button.setEnabled(enabled)
+        self.local_select_button.setEnabled(enabled)
+        self.local_process_button.setEnabled(enabled)
+        self.local_open_button.setEnabled(enabled)
 
     @Slot()
     def clear_worker(self) -> None:
