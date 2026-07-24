@@ -13,6 +13,28 @@ from .worker import AutomationWorker
 
 
 class BatchActionsMixin:
+    def load_batch_range(self) -> None:
+        start = self.range_start.text().strip()
+        end = self.range_end.text().strip()
+        if not (
+            len(start) == 12
+            and start.isdigit()
+            and len(end) == 12
+            and end.isdigit()
+        ):
+            QMessageBox.warning(
+                self, "批次号不正确", "请输入两个完整的 12 位批次号。"
+            )
+            return
+        self._start_worker(
+            AutomationWorker(
+                "list_range",
+                self.platform.currentData(),
+                range_start=start,
+                range_end=end,
+            )
+        )
+
     def choose_output(self) -> None:
         folder = QFileDialog.getExistingDirectory(
             self, "选择生产图保存位置", self.output.text()
@@ -71,6 +93,12 @@ class BatchActionsMixin:
             f"{self.platform.currentText()}：显示 {len(records)} 个最新批次，"
             f"{ready} 个生产图可下载。"
         )
+        if self.range_start.text().strip() and self.range_end.text().strip():
+            for row in range(self.table.rowCount()):
+                box = self.table.cellWidget(row, 0)
+                if box.isEnabled():
+                    box.setChecked(True)
+            self.select_button.setText("取消全选")
 
     def select_all_ready(self) -> None:
         boxes = [

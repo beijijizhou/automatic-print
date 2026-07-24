@@ -8,7 +8,11 @@ from urllib.parse import urlsplit
 
 from .batch_downloads import download_production_images
 from .chrome_session import connect_debug_chrome, open_authenticated_page
-from .erp_api import list_batches, production_item_count
+from .erp_api import (
+    list_batches,
+    list_batches_between,
+    production_item_count,
+)
 from .platforms import get_erp_platform
 
 
@@ -65,6 +69,50 @@ def load_batch_records(platform_name: str) -> list[BatchRecord]:
         return _parse_api_rows(page)
 
 
+def load_batch_records_between(
+    platform_name: str, start_code: str, end_code: str
+) -> list[BatchRecord]:
+    from playwright.sync_api import sync_playwright
+
+    platform = get_erp_platform(platform_name)
+    with sync_playwright() as playwright:
+        browser = connect_debug_chrome(
+            playwright, platform.production_batches_url
+        )
+        page = _batch_page(browser, platform.production_batches_url)
+        rows = list_batches_between(page, start_code, end_code)
+        ready_codes = _search_batch_codes(
+            page, [str(row.get("code") or "") for row in rows]
+        )
+        return _records_from_rows(page, rows, ready_codes)
+
+
+def _search_batch_codes(page, codes: list[str]) -> set[str]:
+    if not codes:
+        return set()
+    search = page.locator("input[placeholder*='批次号']")
+    button = page.get_by_text("搜 索", exact=True)
+    if search.count() != 1 or button.count() != 1:
+        return set()
+    ready = set()
+    for offset in range(0, len(codes), 3):
+        group = codes[offset : offset + 3]
+        search.fill(",".join(group))
+        endpoint = "/production/v1/production/batch/page"
+        with page.expect_response(
+            lambda response: endpoint in response.url,
+            timeout=30_000,
+        ):
+            button.click()
+        page.locator("tbody tr").filter(has_text=group[0]).first.wait_for(
+            state="visible", timeout=10_000
+        )
+        for text in page.locator("tbody tr:visible").all_inner_texts():
+            if text.count("下载") >= 3 and "生成成功" in text:
+                ready.update(code for code in group if code in text)
+    return ready
+
+
 def _production_items_page(browser, url: str, progress=None):
     return open_authenticated_page(
         browser,
@@ -72,17 +120,6 @@ def _production_items_page(browser, url: str, progress=None):
         ".menu-item-title",
         progress=progress,
     )
-
-
-def _menu_count(texts: list[str], label: str) -> int:
-    matches = [
-        re.search(rf"^{re.escape(label)}\s*[（(](\d+)[）)]", text.strip())
-        for text in texts
-    ]
-    counts = [int(match.group(1)) for match in matches if match]
-    if len(counts) != 1:
-        raise RuntimeError(f"无法读取 ERP 平台“{label}”数量。")
-    return counts[0]
 
 
 def download_selected_batches(
@@ -126,40 +163,12 @@ def _batch_page(browser, url: str):
     return open_authenticated_page(browser, url, "th:visible")
 
 
-def _parse_visible_rows(page) -> list[BatchRecord]:
-    records: list[BatchRecord] = []
-    rows = page.locator("tbody tr:visible")
-    for text in rows.all_inner_texts():
-        compact = text.replace(" ", "")
-        batch = re.search(r"\b(\d{12})\b", text)
-        quantities = re.search(r"(\d+)项(\d+)件", compact)
-        created = re.search(r"\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}", text)
-        if not batch or not quantities:
-            continue
-        batch_type = next(
-            (
-                value
-                for value in ("单项单件", "单项多件", "多项多件")
-                if value in text
-            ),
-            "其他",
-        )
-        records.append(
-            BatchRecord(
-                batch_number=batch.group(1),
-                item_count=int(quantities.group(1)),
-                piece_count=int(quantities.group(2)),
-                batch_type=batch_type,
-                created_at=created.group(0) if created else "",
-                production_images_ready=(
-                    text.count("下载") >= 3 and "生成成功" in text
-                ),
-            )
-        )
-    return records
-
-
 def _parse_api_rows(page) -> list[BatchRecord]:
+    return _records_from_rows(page, list_batches(page))
+
+
+def _records_from_rows(page, api_rows, ready_codes=None) -> list[BatchRecord]:
+    ready_codes = ready_codes or set()
     records = []
     visible_text = {
         match.group(1): text
@@ -171,7 +180,7 @@ def _parse_api_rows(page) -> list[BatchRecord]:
         "2": "单项多件",
         "3": "多项多件",
     }
-    for row in list_batches(page):
+    for row in api_rows:
         created = row.get("created")
         created_text = (
             datetime.fromtimestamp(int(created) / 1000).strftime(
@@ -181,6 +190,9 @@ def _parse_api_rows(page) -> list[BatchRecord]:
             else ""
         )
         row_text = visible_text.get(str(row.get("code") or ""), "")
+        ready = (
+            row_text.count("下载") >= 3 and "生成成功" in row_text
+        ) or str(row.get("code") or "") in ready_codes
         records.append(
             BatchRecord(
                 batch_number=str(row.get("code") or ""),
@@ -190,9 +202,7 @@ def _parse_api_rows(page) -> list[BatchRecord]:
                     str(row.get("order_composition") or ""), "其他"
                 ),
                 created_at=created_text,
-                production_images_ready=(
-                    row_text.count("下载") >= 3 and "生成成功" in row_text
-                ),
+                production_images_ready=ready,
             )
         )
     return records

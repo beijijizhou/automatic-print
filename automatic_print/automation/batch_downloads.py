@@ -23,6 +23,31 @@ def download_production_images(
     rows = None
     saved: list[Path] = []
     archives_to_extract: list[Path] = []
+    remote_batch_numbers = []
+    for group_name, batch_numbers in batch_groups.items():
+        group_dir = output_root / group_name
+        for number in batch_numbers:
+            folder = group_dir / number
+            has_images = folder.is_dir() and any(
+                path.is_file()
+                and path.suffix.lower() in PRODUCTION_IMAGE_EXTENSIONS
+                for path in folder.rglob("*")
+            )
+            has_zip = any(group_dir.glob(f"{number}_*.zip"))
+            if not has_images and not has_zip:
+                remote_batch_numbers.append(number)
+    if remote_batch_numbers:
+        search = page.locator("input[placeholder*='批次号']")
+        if search.count() == 1:
+            search.fill(",".join(remote_batch_numbers))
+            button = page.get_by_text("搜 索", exact=True)
+            if button.count() == 1:
+                endpoint = "/production/v1/production/batch/page"
+                with page.expect_response(
+                    lambda response: endpoint in response.url,
+                    timeout=30_000,
+                ):
+                    button.click()
 
     for group_name, batch_numbers in batch_groups.items():
         group_dir = output_root / group_name
@@ -66,6 +91,19 @@ def download_production_images(
             if rows is None:
                 rows = page.locator("tbody tr")
             matching_rows = rows.filter(has_text=batch_number)
+            if matching_rows.count() != 1:
+                search = page.locator("input[placeholder*='批次号']")
+                button = page.get_by_text("搜 索", exact=True)
+                if search.count() == 1 and button.count() == 1:
+                    search.fill(batch_number)
+                    endpoint = "/production/v1/production/batch/page"
+                    with page.expect_response(
+                        lambda response: endpoint in response.url,
+                        timeout=30_000,
+                    ):
+                        button.click()
+                    rows = page.locator("tbody tr")
+                    matching_rows = rows.filter(has_text=batch_number)
             if matching_rows.count() != 1:
                 raise RuntimeError(f"无法唯一定位生产批次 {batch_number}。")
             row = matching_rows.first

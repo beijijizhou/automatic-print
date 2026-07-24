@@ -141,11 +141,7 @@ class AutomationDialog(
         if self.main_tabs.currentIndex() == 3:
             self.refresh_local_batches()
             return
-        action = (
-            "status_and_list"
-            if self.main_tabs.currentIndex() == 1
-            else "status"
-        )
+        action = "list" if self.main_tabs.currentIndex() == 1 else "status"
         self.log.clear()
         self._start_worker(
             AutomationWorker(action, self.platform.currentData())

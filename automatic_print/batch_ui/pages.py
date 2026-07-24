@@ -98,6 +98,17 @@ def build_production_page(owner, output_row: QHBoxLayout) -> QWidget:
     )
     intro.setWordWrap(True)
     owner.summary = QLabel("尚未读取已生成批次。")
+    owner.range_start = QLineEdit()
+    owner.range_start.setPlaceholderText("起始批次号")
+    owner.range_end = QLineEdit()
+    owner.range_end.setPlaceholderText("结束批次号")
+    owner.range_button = QPushButton("读取并选择范围")
+    owner.range_button.clicked.connect(owner.load_batch_range)
+    range_row = QHBoxLayout()
+    range_row.addWidget(owner.range_start)
+    range_row.addWidget(QLabel("至"))
+    range_row.addWidget(owner.range_end)
+    range_row.addWidget(owner.range_button)
     owner.table = _table(
         ["选择", "批次号", "项目", "件数", "类型", "创建时间", "生产图"],
         5,
@@ -126,6 +137,7 @@ def build_production_page(owner, output_row: QHBoxLayout) -> QWidget:
     layout.addWidget(QLabel("下载保存位置"))
     layout.addLayout(output_row)
     layout.addWidget(owner.summary)
+    layout.addLayout(range_row)
     layout.addWidget(owner.table)
     layout.addWidget(owner.test_mode)
     layout.addLayout(actions)

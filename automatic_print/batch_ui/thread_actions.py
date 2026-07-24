@@ -103,6 +103,7 @@ class ThreadActionsMixin:
             self.select_button,
             self.download_button,
             self.process_button,
+            self.range_button,
             self.settings_button,
             self.preview_rules_button,
             self.local_refresh_button,

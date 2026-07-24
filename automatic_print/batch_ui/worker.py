@@ -7,6 +7,7 @@ from PySide6.QtCore import QObject, Signal, Slot
 from ..automation.batch_browser import (
     download_selected_batches,
     load_batch_records,
+    load_batch_records_between,
     load_platform_order_status,
 )
 from ..automation.rule_batches import (
@@ -35,6 +36,8 @@ class AutomationWorker(QObject):
         sample_limit: int | None = None,
         batch_plan: RuleBatchPlan | None = None,
         generation_rule: str = "按有面单生成批次规则",
+        range_start: str = "",
+        range_end: str = "",
     ) -> None:
         super().__init__()
         self.action = action
@@ -45,6 +48,8 @@ class AutomationWorker(QObject):
         self.sample_limit = sample_limit
         self.batch_plan = batch_plan
         self.generation_rule = generation_rule
+        self.range_start = range_start
+        self.range_end = range_end
 
     @Slot()
     def run(self) -> None:
@@ -60,6 +65,15 @@ class AutomationWorker(QObject):
             )
             self.batches_loaded.emit(
                 load_batch_records(self.platform_name)
+            )
+        elif self.action == "list_range":
+            self.progress.emit("正在读取指定范围内的生产批次…")
+            self.batches_loaded.emit(
+                load_batch_records_between(
+                    self.platform_name,
+                    self.range_start,
+                    self.range_end,
+                )
             )
         elif self.action in {"status", "status_and_list"}:
             self.progress.emit(
