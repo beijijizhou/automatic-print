@@ -1,7 +1,7 @@
 import re
 from pathlib import Path
 
-from PySide6.QtCore import QThread, QUrl, Slot
+from PySide6.QtCore import QThread, Qt, QUrl, Slot
 from PySide6.QtGui import QDesktopServices
 from PySide6.QtWidgets import QMessageBox
 
@@ -22,13 +22,14 @@ class ThreadActionsMixin:
         self.worker = worker
         worker.moveToThread(self.thread)
         self.thread.started.connect(worker.run)
-        worker.progress.connect(self.log.appendPlainText)
-        worker.progress.connect(self.show_progress_message)
-        worker.batches_loaded.connect(self.batches_finished)
-        worker.status_loaded.connect(self.status_finished)
-        worker.plan_loaded.connect(self.generation_plan_finished)
-        worker.completed.connect(self.action_finished)
-        worker.failed.connect(self.failed)
+        queued = Qt.ConnectionType.QueuedConnection
+        worker.progress.connect(self.append_log, queued)
+        worker.progress.connect(self.show_progress_message, queued)
+        worker.batches_loaded.connect(self.batches_finished, queued)
+        worker.status_loaded.connect(self.status_finished, queued)
+        worker.plan_loaded.connect(self.generation_plan_finished, queued)
+        worker.completed.connect(self.action_finished, queued)
+        worker.failed.connect(self.failed, queued)
         for signal in (
             worker.batches_loaded,
             worker.plan_loaded,
@@ -42,6 +43,10 @@ class ThreadActionsMixin:
         self.thread.finished.connect(self.thread.deleteLater)
         self.thread.finished.connect(self.clear_worker)
         self.thread.start()
+
+    @Slot(str)
+    def append_log(self, message: str) -> None:
+        self.log.appendPlainText(message)
 
     @Slot(str)
     def show_progress_message(self, message: str) -> None:

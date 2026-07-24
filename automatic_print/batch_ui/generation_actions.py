@@ -1,3 +1,4 @@
+from PySide6.QtCore import Slot
 from PySide6.QtGui import QColor
 from PySide6.QtWidgets import (
     QComboBox,
@@ -71,6 +72,7 @@ class GenerationActionsMixin:
             )
         )
 
+    @Slot(object)
     def generation_plan_finished(self, plan: RuleBatchPlan) -> None:
         self.pending_batch_plan = plan
         counts = {

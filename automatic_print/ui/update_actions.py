@@ -1,4 +1,4 @@
-from PySide6.QtCore import QThread, QUrl, Slot
+from PySide6.QtCore import QThread, Qt, QUrl, Slot
 from PySide6.QtGui import QDesktopServices
 from PySide6.QtWidgets import QMessageBox
 
@@ -18,8 +18,13 @@ class UpdateActionsMixin:
         self.update_worker = UpdateWorker()
         self.update_worker.moveToThread(self.update_thread)
         self.update_thread.started.connect(self.update_worker.run)
-        self.update_worker.finished.connect(self.update_check_finished)
-        self.update_worker.failed.connect(self.update_check_failed)
+        queued = Qt.ConnectionType.QueuedConnection
+        self.update_worker.finished.connect(
+            self.update_check_finished, queued
+        )
+        self.update_worker.failed.connect(
+            self.update_check_failed, queued
+        )
         self.update_worker.finished.connect(self.update_thread.quit)
         self.update_worker.failed.connect(self.update_thread.quit)
         self.update_thread.finished.connect(

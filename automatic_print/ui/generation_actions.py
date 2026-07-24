@@ -4,7 +4,7 @@ import time
 from datetime import datetime
 from pathlib import Path
 
-from PySide6.QtCore import QThread, QUrl, Slot
+from PySide6.QtCore import QThread, Qt, QUrl, Slot
 from PySide6.QtGui import QDesktopServices
 from PySide6.QtWidgets import QMessageBox
 
@@ -86,9 +86,10 @@ class GenerationActionsMixin:
         )
         self.worker.moveToThread(self.thread)
         self.thread.started.connect(self.worker.run)
-        self.worker.progress.connect(self.update_progress)
-        self.worker.finished.connect(self.generation_finished)
-        self.worker.failed.connect(self.generation_failed)
+        queued = Qt.ConnectionType.QueuedConnection
+        self.worker.progress.connect(self.update_progress, queued)
+        self.worker.finished.connect(self.generation_finished, queued)
+        self.worker.failed.connect(self.generation_failed, queued)
         self.worker.finished.connect(self.thread.quit)
         self.worker.failed.connect(self.thread.quit)
         self.thread.finished.connect(self.worker.deleteLater)

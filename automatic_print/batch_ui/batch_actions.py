@@ -1,6 +1,6 @@
 from pathlib import Path
 
-from PySide6.QtCore import Qt
+from PySide6.QtCore import Slot
 from PySide6.QtWidgets import (
     QCheckBox,
     QFileDialog,
@@ -43,6 +43,7 @@ class BatchActionsMixin:
             self.output.setText(folder)
             self.preferences.setValue("automation/output_location", folder)
 
+    @Slot(object)
     def status_finished(self, status) -> None:
         name = self.platform.currentText()
         color = "#c62828" if status.accepted_count else "#2e7d32"
@@ -68,6 +69,7 @@ class BatchActionsMixin:
                 f"{name}：生产中还有 {status.production_count} 个。"
             )
 
+    @Slot(object)
     def batches_finished(self, records: list[BatchRecord]) -> None:
         self.records = records
         self.table.setRowCount(len(records))
