@@ -169,6 +169,13 @@ def _label_badge(text: str, dpi: int, font_size_mm: float) -> Image.Image:
 def _format_label(
     template: str, number: int, path: Path, created_at: datetime, date_format: str
 ) -> str:
+    for chinese, internal in {
+        "{编号}": "{number}",
+        "{日期}": "{date}",
+        "{完整文件名}": "{filename}",
+        "{文件名}": "{stem}",
+    }.items():
+        template = template.replace(chinese, internal)
     values = {
         "number": str(number),
         "date": created_at.strftime(date_format),
@@ -179,7 +186,8 @@ def _format_label(
         return template.format_map(values)
     except (KeyError, ValueError) as error:
         raise ValueError(
-            "标签文字模板无效。可用字段：{number}、{date}、{filename}、{stem}。"
+            "标签文字模板无效。可用内容："
+            "{编号}、{日期}、{完整文件名}、{文件名}。"
         ) from error
 
 

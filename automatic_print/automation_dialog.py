@@ -213,7 +213,7 @@ class AutomationWorker(QObject):
 class AutomationDialog(QWidget):
     def __init__(self, parent=None) -> None:
         super().__init__(parent)
-        self.setWindowTitle("ERP 生产批次中心")
+        self.setWindowTitle("生产批次中心")
         self.resize(940, 640)
         self.thread: QThread | None = None
         self.worker: AutomationWorker | None = None
@@ -368,7 +368,7 @@ class AutomationDialog(QWidget):
         accepted_page = QWidget()
         accepted_layout = QVBoxLayout(accepted_page)
         accepted_intro = QLabel(
-            "显示该 ERP 平台已经接单、但尚未进入生产中的订单。"
+            "显示该生产平台已经接单、但尚未进入生产中的订单。"
             "批次生成功能只在这个区域；生成成功后，批次进入“生产中”。"
         )
         accepted_intro.setWordWrap(True)
@@ -463,7 +463,7 @@ class AutomationDialog(QWidget):
         self.show_platform_batch_rules(self.platform.currentData())
 
         layout = QVBoxLayout(self)
-        layout.addWidget(QLabel("ERP 平台"))
+        layout.addWidget(QLabel("生产平台"))
         layout.addWidget(self.platform)
         layout.addWidget(self.loading_panel)
         layout.addWidget(self.main_tabs)
@@ -471,6 +471,8 @@ class AutomationDialog(QWidget):
         bottom_actions.addStretch()
         bottom_actions.addWidget(self.settings_button)
         layout.addLayout(bottom_actions)
+        for label_widget in self.findChildren(QLabel):
+            label_widget.setTextInteractionFlags(Qt.TextSelectableByMouse)
 
     def choose_output(self) -> None:
         folder = QFileDialog.getExistingDirectory(
@@ -653,7 +655,7 @@ class AutomationDialog(QWidget):
             ]
         )
         form = QFormLayout()
-        form.addRow("ERP 批次生成规则", generation_rule)
+        form.addRow("批次生成规则", generation_rule)
         buttons = QDialogButtonBox(
             QDialogButtonBox.Ok | QDialogButtonBox.Cancel
         )
@@ -994,7 +996,7 @@ class AutomationDialog(QWidget):
             mode = "测试小样" if result["test"] else "生产批次"
             self.summary.setText(
                 f"{result['platform']}：已生成 "
-                f"{len(result['batches'])} 个{mode} PNG。"
+                f"{len(result['batches'])} 个{mode}排版图片。"
             )
             QMessageBox.information(self, "排版完成", self.summary.text())
         output_folder = Path(result["output_folder"])

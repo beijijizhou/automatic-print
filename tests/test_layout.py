@@ -2,10 +2,13 @@ from PIL import Image
 
 from automatic_print.layout import (
     LayoutSettings,
+    _format_label,
     discover_images,
     generate_layout,
     mm_to_px,
 )
+from datetime import datetime
+from pathlib import Path
 from automatic_print.updater import version_tuple
 
 
@@ -26,6 +29,18 @@ def test_default_settings_are_print_ready() -> None:
 
 def test_versions_are_compared_numerically() -> None:
     assert version_tuple("v0.10.0") > version_tuple("0.2.0")
+
+
+def test_chinese_label_template_fields() -> None:
+    text = _format_label(
+        "{编号}－{日期}－{文件名}",
+        7,
+        Path("图片.png"),
+        datetime(2026, 7, 24),
+        "%Y-%m-%d",
+    )
+
+    assert text == "7－2026-07-24－图片"
 
 
 def test_image_discovery_includes_nested_windows_formats(tmp_path) -> None:

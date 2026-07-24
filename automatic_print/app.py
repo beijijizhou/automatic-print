@@ -112,18 +112,20 @@ class UpdateWorker(QObject):
 class LabelSettingsDialog(QDialog):
     def __init__(self, parent: QWidget | None = None) -> None:
         super().__init__(parent)
-        self.setWindowTitle("标签设置")
+        self.setWindowTitle("标签与文字设置")
         self.setMinimumWidth(520)
 
-        self.text_template = QLineEdit("{number}")
+        self.enabled = QCheckBox("为每张图片添加编号或文字标签")
+        self.enabled.setChecked(True)
+        self.text_template = QLineEdit("{编号}")
         self.text_template.setPlaceholderText(
-            "例如：{number}  或  {number} - {date}"
+            "例如：{编号}  或  {编号}－{日期}"
         )
         template_help = QLabel(
-            "可用内容：{number} 编号、{date} 日期、"
-            "{filename} 完整文件名、{stem} 不含扩展名的文件名"
+            "可复制使用：{编号}、{日期}、{完整文件名}、{文件名}"
         )
         template_help.setWordWrap(True)
+        template_help.setTextInteractionFlags(Qt.TextSelectableByMouse)
 
         self.position = QComboBox()
         self.position.addItem("图片下方", "bottom")
@@ -143,6 +145,7 @@ class LabelSettingsDialog(QDialog):
         self.date_format.setPlaceholderText("例如：%Y-%m-%d")
 
         form = QFormLayout()
+        form.addRow("启用标签", self.enabled)
         form.addRow("标签文字", self.text_template)
         form.addRow("", template_help)
         form.addRow("标签位置", self.position)
@@ -175,7 +178,7 @@ class LabelSettingsDialog(QDialog):
 class MainWindow(QMainWindow):
     def __init__(self) -> None:
         super().__init__()
-        self.setWindowTitle("ERP 生产批次中心")
+        self.setWindowTitle("生产批次中心")
         self.resize(980, 700)
         self.thread: QThread | None = None
         self.worker: GenerateWorker | None = None
@@ -212,22 +215,18 @@ class MainWindow(QMainWindow):
         self.worker_threads = QSpinBox()
         self.worker_threads.setRange(1, 32)
         self.worker_threads.setValue(8)
-        self.number_images = QCheckBox("为每张图片添加标签")
-        self.number_images.setChecked(True)
         self.label_settings = LabelSettingsDialog(self)
-        self.label_settings_button = QPushButton("打开标签设置…")
+        self.number_images = self.label_settings.enabled
+        self.label_settings_button = QPushButton("打开标签与文字设置…")
         self.label_settings_button.clicked.connect(self.label_settings.exec)
-        self.number_images.toggled.connect(
-            self.label_settings_button.setEnabled
-        )
         self.png_compression = QComboBox()
         self.png_compression.addItem("等级 1 — 轻度压缩（推荐）", 1)
         self.png_compression.addItem("等级 0 — 不压缩（文件最大）", 0)
         self.png_compression.addItem("等级 3 — 中度压缩（文件更小）", 3)
         self.png_engine = QComboBox()
-        self.png_engine.addItem("Pillow — 当前最快（推荐）", "pillow")
+        self.png_engine.addItem("标准快速模式（推荐）", "pillow")
         if png_engine_name() == "libvips":
-            self.png_engine.addItem("libvips — 实验对比", "libvips")
+            self.png_engine.addItem("大图节省内存模式", "libvips")
         self.load_layout_preferences()
 
         form = QFormLayout()
@@ -235,12 +234,11 @@ class MainWindow(QMainWindow):
         form.addRow("材料宽度（毫米）", self.width)
         form.addRow("图片间距（毫米）", self.spacing)
         form.addRow("外边距（毫米）", self.margin)
-        form.addRow("输出 DPI", self.dpi)
+        form.addRow("输出分辨率", self.dpi)
         form.addRow("并行处理线程数", self.worker_threads)
-        form.addRow("图片编号", self.number_images)
-        form.addRow("标签文字与位置", self.label_settings_button)
-        form.addRow("PNG 保存引擎", self.png_engine)
-        form.addRow("PNG 压缩", self.png_compression)
+        form.addRow("标签与文字", self.label_settings_button)
+        form.addRow("图片保存方式", self.png_engine)
+        form.addRow("图片压缩", self.png_compression)
 
         default_output = QStandardPaths.writableLocation(QStandardPaths.DesktopLocation)
         saved_output = self.preferences.value("output_location", default_output, str)
@@ -269,7 +267,7 @@ class MainWindow(QMainWindow):
         self.run_log.setReadOnly(True)
         self.run_log.setMaximumHeight(115)
         self.run_log.setPlaceholderText("这里会显示可复制的运行记录和耗时")
-        self.generate_button = QPushButton("高级：手动生成单张 PNG")
+        self.generate_button = QPushButton("高级：手动生成单张排版图片")
         self.generate_button.clicked.connect(self.generate)
         self.save_settings_button = QPushButton("保存参数")
         self.save_settings_button.clicked.connect(self.save_layout_preferences)
@@ -308,6 +306,8 @@ class MainWindow(QMainWindow):
         main_container = QWidget()
         main_container.setLayout(main_layout)
         self.setCentralWidget(main_container)
+        for label_widget in self.findChildren(QLabel):
+            label_widget.setTextInteractionFlags(Qt.TextSelectableByMouse)
         QTimer.singleShot(2500, lambda: self.check_for_updates(True))
 
     @staticmethod
@@ -370,9 +370,17 @@ class MainWindow(QMainWindow):
         )
         self.png_engine.setCurrentIndex(max(0, engine_index))
         label = self.label_settings
-        label.text_template.setText(
-            self.preferences.value("label/text_template", "{number}", str)
+        template = self.preferences.value(
+            "label/text_template", "{编号}", str
         )
+        for old, new in {
+            "{number}": "{编号}",
+            "{date}": "{日期}",
+            "{filename}": "{完整文件名}",
+            "{stem}": "{文件名}",
+        }.items():
+            template = template.replace(old, new)
+        label.text_template.setText(template)
         position_index = label.position.findData(
             self.preferences.value("label/position", "bottom", str)
         )
