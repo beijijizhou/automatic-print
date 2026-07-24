@@ -99,7 +99,7 @@ class AutomationDialog(
         self.main_tabs = QTabWidget()
         self.main_tabs.addTab(build_accepted_page(self), "已接单")
         self.main_tabs.addTab(
-            build_production_page(self, self.output_row), "生产中"
+            build_production_page(self, self.output_row), "生产批次"
         )
         self.main_tabs.addTab(build_cleared_page(self), "已清单")
         self.main_tabs.addTab(build_local_page(self), "本地文件")
