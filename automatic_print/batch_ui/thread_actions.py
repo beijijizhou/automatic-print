@@ -6,12 +6,14 @@ from PySide6.QtGui import QDesktopServices
 from PySide6.QtWidgets import QMessageBox
 
 from .worker import AutomationWorker
+from ..ui.thread_lifecycle import discard_stopped_thread
 
 
 class ThreadActionsMixin:
     def _start_worker(self, worker: AutomationWorker) -> None:
         if self.thread is not None:
-            return
+            if not discard_stopped_thread(self, "thread", "worker"):
+                return
         self._set_actions_enabled(False)
         self.loading_bar.setRange(0, 0)
         self.loading_label.setText(
@@ -30,18 +32,22 @@ class ThreadActionsMixin:
         worker.plan_loaded.connect(self.generation_plan_finished, queued)
         worker.completed.connect(self.action_finished, queued)
         worker.failed.connect(self.failed, queued)
-        for signal in (
-            worker.batches_loaded,
-            worker.plan_loaded,
-            worker.completed,
-            worker.failed,
-        ):
-            signal.connect(self.thread.quit)
-        if worker.action == "status":
-            worker.status_loaded.connect(self.thread.quit)
-        self.thread.finished.connect(worker.deleteLater)
-        self.thread.finished.connect(self.thread.deleteLater)
+        terminal = {
+            "list": worker.batches_loaded,
+            "list_range": worker.batches_loaded,
+            "status": worker.status_loaded,
+            "status_and_list": worker.batches_loaded,
+            "preview_rules": worker.plan_loaded,
+            "generate_rules": worker.completed,
+            "download": worker.completed,
+            "process": worker.completed,
+        }[worker.action]
+        terminal.connect(worker.deleteLater)
+        terminal.connect(self.thread.quit)
+        worker.failed.connect(worker.deleteLater)
+        worker.failed.connect(self.thread.quit)
         self.thread.finished.connect(self.clear_worker)
+        self.thread.finished.connect(self.thread.deleteLater)
         self.thread.start()
 
     @Slot(str)

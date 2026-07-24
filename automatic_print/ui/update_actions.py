@@ -5,12 +5,16 @@ from PySide6.QtWidgets import QMessageBox
 from .. import __version__
 from ..updater import UpdateInfo, version_tuple
 from .workers import UpdateWorker
+from .thread_lifecycle import discard_stopped_thread
 
 
 class UpdateActionsMixin:
     def check_for_updates(self, silent: bool) -> None:
         if self.update_thread is not None:
-            return
+            if not discard_stopped_thread(
+                self, "update_thread", "update_worker"
+            ):
+                return
         self.update_is_silent = silent
         self.check_update_button.setEnabled(False)
         self.check_update_button.setText("正在检查…")
@@ -27,11 +31,12 @@ class UpdateActionsMixin:
         )
         self.update_worker.finished.connect(self.update_thread.quit)
         self.update_worker.failed.connect(self.update_thread.quit)
-        self.update_thread.finished.connect(
+        self.update_worker.finished.connect(
             self.update_worker.deleteLater
         )
-        self.update_thread.finished.connect(self.update_thread.deleteLater)
+        self.update_worker.failed.connect(self.update_worker.deleteLater)
         self.update_thread.finished.connect(self.clear_update_worker)
+        self.update_thread.finished.connect(self.update_thread.deleteLater)
         self.update_thread.start()
 
     @Slot(object)

@@ -10,6 +10,7 @@ from PySide6.QtWidgets import QMessageBox
 
 from ..layout import LayoutSettings, discover_images, discovered_extensions
 from .workers import GenerateWorker
+from .thread_lifecycle import discard_stopped_thread
 
 
 class GenerationActionsMixin:
@@ -34,6 +35,10 @@ class GenerationActionsMixin:
         )
 
     def generate(self) -> None:
+        if self.thread is not None and not discard_stopped_thread(
+            self, "thread", "worker"
+        ):
+            return
         source = Path(self.folder.text().strip())
         if not source.is_dir():
             QMessageBox.warning(
@@ -92,9 +97,10 @@ class GenerationActionsMixin:
         self.worker.failed.connect(self.generation_failed, queued)
         self.worker.finished.connect(self.thread.quit)
         self.worker.failed.connect(self.thread.quit)
-        self.thread.finished.connect(self.worker.deleteLater)
-        self.thread.finished.connect(self.thread.deleteLater)
+        self.worker.finished.connect(self.worker.deleteLater)
+        self.worker.failed.connect(self.worker.deleteLater)
         self.thread.finished.connect(self.clear_worker)
+        self.thread.finished.connect(self.thread.deleteLater)
         self.thread.start()
 
     @Slot(str, int, object, str)
