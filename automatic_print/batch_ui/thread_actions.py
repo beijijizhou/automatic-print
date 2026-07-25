@@ -6,7 +6,10 @@ from PySide6.QtGui import QDesktopServices
 from PySide6.QtWidgets import QMessageBox
 
 from .worker import AutomationWorker
-from ..ui.thread_lifecycle import discard_stopped_thread
+from ..ui.thread_lifecycle import (
+    defer_finished_thread_cleanup,
+    discard_stopped_thread,
+)
 
 
 class ThreadActionsMixin:
@@ -47,7 +50,6 @@ class ThreadActionsMixin:
         worker.failed.connect(worker.deleteLater)
         worker.failed.connect(self.thread.quit)
         self.thread.finished.connect(self.clear_worker)
-        self.thread.finished.connect(self.thread.deleteLater)
         self.thread.start()
 
     @Slot(str)
@@ -133,7 +135,6 @@ class ThreadActionsMixin:
 
     @Slot()
     def clear_worker(self) -> None:
-        self.thread = None
-        self.worker = None
         self.loading_panel.hide()
         self._set_actions_enabled(True)
+        defer_finished_thread_cleanup(self, "thread", "worker")

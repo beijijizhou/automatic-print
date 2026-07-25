@@ -7,18 +7,13 @@ import sys
 import time
 from pathlib import Path
 
+from automatic_print.crash_logging import latest_log_path
+
 
 PROJECT_ROOT = Path(__file__).resolve().parent
 WATCHED_FOLDER = PROJECT_ROOT / "automatic_print"
 RESTART_REQUEST = PROJECT_ROOT / ".restart-request"
-LOG_FILE = (
-    Path.home()
-    / "AppData"
-    / "Local"
-    / "AutomaticPrint"
-    / "logs"
-    / "latest-startup.log"
-)
+LOG_FILE = latest_log_path()
 
 
 def snapshot() -> dict[Path, int]:

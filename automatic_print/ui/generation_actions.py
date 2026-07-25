@@ -10,7 +10,10 @@ from PySide6.QtWidgets import QMessageBox
 
 from ..layout import LayoutSettings, discover_images, discovered_extensions
 from .workers import GenerateWorker
-from .thread_lifecycle import discard_stopped_thread
+from .thread_lifecycle import (
+    defer_finished_thread_cleanup,
+    discard_stopped_thread,
+)
 
 
 class GenerationActionsMixin:
@@ -101,7 +104,6 @@ class GenerationActionsMixin:
         self.worker.finished.connect(self.worker.deleteLater)
         self.worker.failed.connect(self.worker.deleteLater)
         self.thread.finished.connect(self.clear_worker)
-        self.thread.finished.connect(self.thread.deleteLater)
         self.thread.start()
 
     @Slot(str, int, object, str)
@@ -200,5 +202,4 @@ class GenerationActionsMixin:
 
     @Slot()
     def clear_worker(self) -> None:
-        self.thread = None
-        self.worker = None
+        defer_finished_thread_cleanup(self, "thread", "worker")

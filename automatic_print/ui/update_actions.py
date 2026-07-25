@@ -5,7 +5,10 @@ from PySide6.QtWidgets import QMessageBox
 from .. import __version__
 from ..updater import UpdateInfo, version_tuple
 from .workers import UpdateWorker
-from .thread_lifecycle import discard_stopped_thread
+from .thread_lifecycle import (
+    defer_finished_thread_cleanup,
+    discard_stopped_thread,
+)
 
 
 class UpdateActionsMixin:
@@ -37,7 +40,6 @@ class UpdateActionsMixin:
         )
         self.update_worker.failed.connect(self.update_worker.deleteLater)
         self.update_thread.finished.connect(self.clear_update_worker)
-        self.update_thread.finished.connect(self.update_thread.deleteLater)
         self.update_thread.start()
 
     @Slot(object)
@@ -69,7 +71,8 @@ class UpdateActionsMixin:
 
     @Slot()
     def clear_update_worker(self) -> None:
-        self.update_thread = None
-        self.update_worker = None
         self.check_update_button.setEnabled(True)
         self.check_update_button.setText("检查更新")
+        defer_finished_thread_cleanup(
+            self, "update_thread", "update_worker"
+        )
