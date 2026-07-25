@@ -63,3 +63,29 @@ def test_longfeng_prefix_is_removed_once(tmp_path: Path) -> None:
     assert renamed.exists()
     assert prepare_multi_piece_names(tmp_path, "多项多件") == 0
     assert renamed.exists()
+
+
+def test_future_platform_removes_first_segment_once(tmp_path: Path) -> None:
+    save_batch_type(tmp_path, "单项多件")
+    original = tmp_path / "未来平台款号99-BJRCCCQ-1-白色-XL.png"
+    original.touch()
+
+    assert prepare_multi_piece_names(tmp_path, "单项多件") == 1
+    renamed = tmp_path / "BJRCCCQ-1-白色-XL.png"
+    assert renamed.exists()
+    assert prepare_multi_piece_names(tmp_path, "单项多件") == 0
+    assert renamed.exists()
+
+
+def test_legacy_normalized_batch_is_not_renamed_again(
+    tmp_path: Path,
+) -> None:
+    metadata = tmp_path / ".automatic-print-batch.json"
+    metadata.write_text('{"batch_type": "多项多件"}', encoding="utf-8")
+    normalized = tmp_path / "BJRCCCQ-1-白色-XL.png"
+    normalized.touch()
+
+    save_batch_type(tmp_path, "多项多件")
+
+    assert prepare_multi_piece_names(tmp_path, "多项多件") == 0
+    assert normalized.exists()

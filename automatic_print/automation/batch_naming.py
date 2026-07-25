@@ -18,36 +18,36 @@ SOURCE_PREFIX = re.compile(
 def save_batch_type(folder: Path, batch_type: str) -> None:
     if batch_type not in {"单项单件", *MULTI_PIECE_TYPES}:
         return
-    (folder / METADATA_NAME).write_text(
-        json.dumps({"batch_type": batch_type}, ensure_ascii=False, indent=2),
-        encoding="utf-8",
-    )
+    metadata_path = folder / METADATA_NAME
+    existed = metadata_path.is_file()
+    data = _load_metadata(folder)
+    data["batch_type"] = batch_type
+    if batch_type in MULTI_PIECE_TYPES and "names_normalized" not in data:
+        if existed and not has_source_prefix(folder):
+            data["names_normalized"] = True
+        else:
+            data["naming_pending"] = True
+    _save_metadata(folder, data)
 
 
 def load_batch_type(folder: Path) -> str:
-    metadata = folder / METADATA_NAME
-    if not metadata.is_file():
-        return ""
-    try:
-        return str(
-            json.loads(metadata.read_text(encoding="utf-8")).get(
-                "batch_type", ""
-            )
-        )
-    except (OSError, ValueError, TypeError):
-        return ""
+    return str(_load_metadata(folder).get("batch_type", ""))
 
 
 def prepare_multi_piece_names(folder: Path, batch_type: str) -> int:
     if batch_type not in MULTI_PIECE_TYPES:
         return 0
+    metadata = _load_metadata(folder)
+    if metadata.get("names_normalized"):
+        return 0
+    generic = bool(metadata.get("naming_pending"))
     plan = [
         (
             source,
-            source.with_name(SOURCE_PREFIX.sub("", source.name, count=1)),
+            source.with_name(_without_source_prefix(source.name, generic)),
         )
         for source in discover_images(folder)
-        if SOURCE_PREFIX.match(source.name)
+        if _has_removable_prefix(source.name, generic)
     ]
     _validate_rename_plan(plan)
     renamed: list[tuple[Path, Path]] = []
@@ -60,12 +60,42 @@ def prepare_multi_piece_names(folder: Path, batch_type: str) -> int:
             if target.exists() and not source.exists():
                 target.rename(source)
         raise RuntimeError(f"整理多件图片名称失败，已停止：{error}") from error
+    metadata.update(names_normalized=True, naming_pending=False)
+    _save_metadata(folder, metadata)
     return len(renamed)
 
 
 def has_source_prefix(folder: Path) -> bool:
     return any(
         SOURCE_PREFIX.match(image.name) for image in discover_images(folder)
+    )
+
+
+def _has_removable_prefix(name: str, generic: bool) -> bool:
+    return ("-" in name) if generic else bool(SOURCE_PREFIX.match(name))
+
+
+def _without_source_prefix(name: str, generic: bool) -> str:
+    if generic:
+        return name.split("-", 1)[1]
+    return SOURCE_PREFIX.sub("", name, count=1)
+
+
+def _load_metadata(folder: Path) -> dict:
+    path = folder / METADATA_NAME
+    if not path.is_file():
+        return {}
+    try:
+        value = json.loads(path.read_text(encoding="utf-8"))
+        return value if isinstance(value, dict) else {}
+    except (OSError, ValueError, TypeError):
+        return {}
+
+
+def _save_metadata(folder: Path, data: dict) -> None:
+    (folder / METADATA_NAME).write_text(
+        json.dumps(data, ensure_ascii=False, indent=2),
+        encoding="utf-8",
     )
 
 
