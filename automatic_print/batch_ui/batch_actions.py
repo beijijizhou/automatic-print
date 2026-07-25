@@ -147,6 +147,11 @@ class BatchActionsMixin:
         self.preferences.setValue(
             "automation/output_location", self.output.text().strip()
         )
+        batch_types = {
+            record.batch_number: record.batch_type
+            for record in self.records
+            if record.batch_number in selected
+        }
         self._start_worker(
             AutomationWorker(
                 "download",
@@ -155,6 +160,7 @@ class BatchActionsMixin:
                 batch_numbers=selected,
                 settings=self._current_layout_settings(),
                 sample_limit=5 if self.test_mode.isChecked() else None,
+                batch_types=batch_types,
             )
         )
 
@@ -172,6 +178,10 @@ class BatchActionsMixin:
                 output=output,
                 settings=self._current_layout_settings(),
                 sample_limit=5 if self.test_mode.isChecked() else None,
+                batch_types={
+                    record.batch_number: record.batch_type
+                    for record in self.records
+                },
             )
         )
 

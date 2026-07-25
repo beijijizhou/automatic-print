@@ -10,6 +10,13 @@ from ..automation.batch_browser import (
     load_batch_records_between,
     load_platform_order_status,
 )
+from ..automation.batch_naming import (
+    MULTI_PIECE_TYPES,
+    has_cvc_prefix,
+    load_batch_type,
+    prepare_multi_piece_names,
+    save_batch_type,
+)
 from ..automation.rule_batches import (
     RuleBatchPlan,
     generate_rule_batches,
@@ -38,6 +45,7 @@ class AutomationWorker(QObject):
         generation_rule: str = "按有面单生成批次规则",
         range_start: str = "",
         range_end: str = "",
+        batch_types: dict[str, str] | None = None,
     ) -> None:
         super().__init__()
         self.action = action
@@ -50,6 +58,7 @@ class AutomationWorker(QObject):
         self.generation_rule = generation_rule
         self.range_start = range_start
         self.range_end = range_end
+        self.batch_types = batch_types or {}
 
     @Slot()
     def run(self) -> None:
@@ -125,6 +134,7 @@ class AutomationWorker(QObject):
             self.output,
             self.progress.emit,
         )
+        self._save_batch_types()
         self.progress.emit("下载与解压完成，正在自动排版…")
         result = self._process_batches()
         result.update(type="downloaded_and_processed", files=files)
@@ -157,6 +167,23 @@ class AutomationWorker(QObject):
         completed = []
         output_name = "TEST_SAMPLE" if self.sample_limit else "PROCESSED"
         for index, folder in enumerate(folders, start=1):
+            batch_type = (
+                self.batch_types.get(folder.name) or load_batch_type(folder)
+            )
+            if not batch_type and has_cvc_prefix(folder):
+                raise RuntimeError(
+                    f"批次 {folder.name} 包含 CVC 面料前缀，但无法确认"
+                    "是单件还是多件。为避免多件订单被打散，已停止排版。"
+                )
+            if batch_type in MULTI_PIECE_TYPES:
+                self.progress.emit(
+                    f"{folder.name} · 正在整理{batch_type}图片名称"
+                )
+                renamed = prepare_multi_piece_names(folder, batch_type)
+                self.progress.emit(
+                    f"{folder.name} · 图片名称整理完成，"
+                    f"删除 {renamed} 个 CVC 面料前缀"
+                )
             images = discover_images(folder)
             if self.sample_limit:
                 images = images[: self.sample_limit]
@@ -183,3 +210,18 @@ class AutomationWorker(QObject):
             "test": bool(self.sample_limit),
             "output_folder": str(platform_root / output_name),
         }
+
+    def _save_batch_types(self) -> None:
+        platform_root = self.output / self.platform_name
+        for batch_number, batch_type in self.batch_types.items():
+            standard_folder = platform_root / "BATCHES" / batch_number
+            if standard_folder.is_dir():
+                save_batch_type(standard_folder, batch_type)
+                continue
+            folders = [
+                folder
+                for folder in platform_root.rglob(batch_number)
+                if folder.is_dir() and folder.name == batch_number
+            ]
+            if len(folders) == 1:
+                save_batch_type(folders[0], batch_type)
