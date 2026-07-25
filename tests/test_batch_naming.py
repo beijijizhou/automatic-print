@@ -7,6 +7,7 @@ from automatic_print.automation.batch_naming import (
     load_batch_type,
     prepare_multi_piece_names,
     save_batch_type,
+    sort_multi_piece_images,
 )
 
 
@@ -89,3 +90,37 @@ def test_legacy_normalized_batch_is_not_renamed_again(
 
     assert prepare_multi_piece_names(tmp_path, "多项多件") == 0
     assert normalized.exists()
+
+
+def test_same_order_and_color_sorts_sizes_small_to_large() -> None:
+    names = [
+        "B8S9E55-1-T-LSJ-Black-4Xl-NO1-1.png",
+        "B8S9E55-1-T-LSJ-White-M-NO1-1.png",
+        "B8S9E55-1-T-LSJ-Black-XL-NO1-1.png",
+        "B8S9E55-1-T-LSJ-Black-S-NO1-1.png",
+        "B8S9E55-1-T-LSJ-Black-2XL-NO1-1.png",
+    ]
+
+    ordered = sort_multi_piece_images([Path(name) for name in names])
+
+    assert [path.name for path in ordered] == [
+        "B8S9E55-1-T-LSJ-Black-S-NO1-1.png",
+        "B8S9E55-1-T-LSJ-Black-XL-NO1-1.png",
+        "B8S9E55-1-T-LSJ-Black-2XL-NO1-1.png",
+        "B8S9E55-1-T-LSJ-Black-4Xl-NO1-1.png",
+        "B8S9E55-1-T-LSJ-White-M-NO1-1.png",
+    ]
+
+
+def test_repeated_x_sizes_are_sorted_naturally() -> None:
+    names = [
+        Path("ORDER-Black-XXXL-NO1-1.png"),
+        Path("ORDER-Black-L-NO1-1.png"),
+        Path("ORDER-Black-XXL-NO1-1.png"),
+    ]
+
+    assert [path.name for path in sort_multi_piece_images(names)] == [
+        "ORDER-Black-L-NO1-1.png",
+        "ORDER-Black-XXL-NO1-1.png",
+        "ORDER-Black-XXXL-NO1-1.png",
+    ]

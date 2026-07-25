@@ -71,6 +71,58 @@ def has_source_prefix(folder: Path) -> bool:
     )
 
 
+def sort_multi_piece_images(images: list[Path]) -> list[Path]:
+    return sorted(images, key=_production_sort_key)
+
+
+def _production_sort_key(path: Path) -> tuple:
+    parts = path.stem.split("-")
+    size_index = _find_size_index(parts)
+    tokens = []
+    for index, part in enumerate(parts):
+        rank = _size_rank(part) if index == size_index else None
+        tokens.append(
+            (1, rank[0], rank[1]) if rank else (0, part.casefold(), 0)
+        )
+    return (
+        str(path.parent).casefold(),
+        tuple(tokens),
+        path.suffix.casefold(),
+    )
+
+
+def _find_size_index(parts: list[str]) -> int | None:
+    candidates = [
+        index
+        for index, part in enumerate(parts)
+        if _size_rank(part) is not None
+    ]
+    before_number = [
+        index
+        for index in candidates
+        if index + 1 < len(parts)
+        and re.fullmatch(r"NO\d+", parts[index + 1], re.IGNORECASE)
+    ]
+    return (before_number or candidates)[-1] if candidates else None
+
+
+def _size_rank(value: str) -> tuple[int, int] | None:
+    normalized = value.strip().upper()
+    named = {"XXS": 10, "XS": 20, "S": 30, "M": 40, "L": 50}
+    if normalized in named:
+        return 0, named[normalized]
+    xl_number = re.fullmatch(r"(\d*)XL", normalized)
+    if xl_number:
+        count = int(xl_number.group(1) or 1)
+        return 0, 50 + count * 10
+    repeated_x = re.fullmatch(r"(X+)L", normalized)
+    if repeated_x:
+        return 0, 50 + len(repeated_x.group(1)) * 10
+    if re.fullmatch(r"\d+(?:\.\d+)?", normalized):
+        return 1, round(float(normalized) * 100)
+    return None
+
+
 def _has_removable_prefix(name: str, generic: bool) -> bool:
     return ("-" in name) if generic else bool(SOURCE_PREFIX.match(name))
 

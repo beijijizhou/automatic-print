@@ -16,6 +16,7 @@ from ..automation.batch_naming import (
     load_batch_type,
     prepare_multi_piece_names,
     save_batch_type,
+    sort_multi_piece_images,
 )
 from ..automation.rule_batches import (
     RuleBatchPlan,
@@ -185,6 +186,8 @@ class AutomationWorker(QObject):
                     f"删除 {renamed} 个平台来源前缀"
                 )
             images = discover_images(folder)
+            if batch_type in MULTI_PIECE_TYPES:
+                images = sort_multi_piece_images(images)
             if self.sample_limit:
                 images = images[: self.sample_limit]
             destination = platform_root / output_name / folder.name

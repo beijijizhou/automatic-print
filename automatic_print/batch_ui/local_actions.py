@@ -10,14 +10,22 @@ from PySide6.QtWidgets import (
 )
 
 from ..automation.local_batches import discover_local_batches
+from ..automation.batch_naming import (
+    MULTI_PIECE_TYPES,
+    load_batch_type,
+    sort_multi_piece_images,
+)
 from ..layout import discover_images
 from .worker import AutomationWorker
 
 
 def image_name_rows(folder: Path) -> list[tuple[str, str]]:
+    images = discover_images(folder)
+    if load_batch_type(folder) in MULTI_PIECE_TYPES:
+        images = sort_multi_piece_images(images)
     return [
         (image.name, str(image.relative_to(folder)))
-        for image in discover_images(folder)
+        for image in images
     ]
 
 
