@@ -12,7 +12,7 @@ from ..automation.batch_browser import (
 )
 from ..automation.batch_naming import (
     MULTI_PIECE_TYPES,
-    has_cvc_prefix,
+    has_source_prefix,
     load_batch_type,
     prepare_multi_piece_names,
     save_batch_type,
@@ -170,9 +170,9 @@ class AutomationWorker(QObject):
             batch_type = (
                 self.batch_types.get(folder.name) or load_batch_type(folder)
             )
-            if not batch_type and has_cvc_prefix(folder):
+            if not batch_type and has_source_prefix(folder):
                 raise RuntimeError(
-                    f"批次 {folder.name} 包含 CVC 面料前缀，但无法确认"
+                    f"批次 {folder.name} 包含平台来源前缀，但无法确认"
                     "是单件还是多件。为避免多件订单被打散，已停止排版。"
                 )
             if batch_type in MULTI_PIECE_TYPES:
@@ -182,7 +182,7 @@ class AutomationWorker(QObject):
                 renamed = prepare_multi_piece_names(folder, batch_type)
                 self.progress.emit(
                     f"{folder.name} · 图片名称整理完成，"
-                    f"删除 {renamed} 个 CVC 面料前缀"
+                    f"删除 {renamed} 个平台来源前缀"
                 )
             images = discover_images(folder)
             if self.sample_limit:

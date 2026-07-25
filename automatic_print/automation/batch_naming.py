@@ -9,7 +9,10 @@ from ..layout import discover_images
 
 MULTI_PIECE_TYPES = {"单项多件", "多项多件"}
 METADATA_NAME = ".automatic-print-batch.json"
-CVC_PREFIX = re.compile(r"^CVC面料\d+-", re.IGNORECASE)
+SOURCE_PREFIX = re.compile(
+    r"^(?:CVC面料\d+|A\d{7})-",
+    re.IGNORECASE,
+)
 
 
 def save_batch_type(folder: Path, batch_type: str) -> None:
@@ -39,9 +42,12 @@ def prepare_multi_piece_names(folder: Path, batch_type: str) -> int:
     if batch_type not in MULTI_PIECE_TYPES:
         return 0
     plan = [
-        (source, source.with_name(CVC_PREFIX.sub("", source.name, count=1)))
+        (
+            source,
+            source.with_name(SOURCE_PREFIX.sub("", source.name, count=1)),
+        )
         for source in discover_images(folder)
-        if CVC_PREFIX.match(source.name)
+        if SOURCE_PREFIX.match(source.name)
     ]
     _validate_rename_plan(plan)
     renamed: list[tuple[Path, Path]] = []
@@ -57,8 +63,10 @@ def prepare_multi_piece_names(folder: Path, batch_type: str) -> int:
     return len(renamed)
 
 
-def has_cvc_prefix(folder: Path) -> bool:
-    return any(CVC_PREFIX.match(image.name) for image in discover_images(folder))
+def has_source_prefix(folder: Path) -> bool:
+    return any(
+        SOURCE_PREFIX.match(image.name) for image in discover_images(folder)
+    )
 
 
 def _validate_rename_plan(plan: list[tuple[Path, Path]]) -> None:

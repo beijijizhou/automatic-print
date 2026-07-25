@@ -3,7 +3,7 @@ from pathlib import Path
 import pytest
 
 from automatic_print.automation.batch_naming import (
-    has_cvc_prefix,
+    has_source_prefix,
     load_batch_type,
     prepare_multi_piece_names,
     save_batch_type,
@@ -48,7 +48,18 @@ def test_batch_type_metadata_round_trip(tmp_path: Path) -> None:
     assert load_batch_type(tmp_path) == "单项多件"
 
 
-def test_cvc_prefix_is_detected_before_layout(tmp_path: Path) -> None:
+def test_source_prefix_is_detected_before_layout(tmp_path: Path) -> None:
     (tmp_path / "CVC面料00004-BJRCCCQ-1.png").touch()
 
-    assert has_cvc_prefix(tmp_path)
+    assert has_source_prefix(tmp_path)
+
+
+def test_longfeng_prefix_is_removed_once(tmp_path: Path) -> None:
+    original = tmp_path / "A0000007-BJRCCCQ-1-白色-XL-NO1-1.png"
+    original.touch()
+
+    assert prepare_multi_piece_names(tmp_path, "多项多件") == 1
+    renamed = tmp_path / "BJRCCCQ-1-白色-XL-NO1-1.png"
+    assert renamed.exists()
+    assert prepare_multi_piece_names(tmp_path, "多项多件") == 0
+    assert renamed.exists()
