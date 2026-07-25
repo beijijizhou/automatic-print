@@ -7,6 +7,7 @@ from pathlib import Path
 from urllib.parse import urlsplit
 
 from .batch_downloads import download_production_images
+from .batch_exports import ready_production_image_codes
 from .chrome_session import connect_debug_chrome, open_authenticated_page
 from .erp_api import (
     list_batches,
@@ -81,8 +82,11 @@ def load_batch_records_between(
         )
         page = _batch_page(browser, platform.production_batches_url)
         rows = list_batches_between(page, start_code, end_code)
-        ready_codes = _search_batch_codes(
-            page, [str(row.get("code") or "") for row in rows]
+        ready_codes = ready_production_image_codes(page, rows)
+        ready_codes.update(
+            _search_batch_codes(
+                page, [str(row.get("code") or "") for row in rows]
+            )
         )
         return _records_from_rows(page, rows, ready_codes)
 
@@ -164,7 +168,9 @@ def _batch_page(browser, url: str):
 
 
 def _parse_api_rows(page) -> list[BatchRecord]:
-    return _records_from_rows(page, list_batches(page))
+    rows = list_batches(page)
+    ready_codes = ready_production_image_codes(page, rows)
+    return _records_from_rows(page, rows, ready_codes)
 
 
 def _records_from_rows(page, api_rows, ready_codes=None) -> list[BatchRecord]:

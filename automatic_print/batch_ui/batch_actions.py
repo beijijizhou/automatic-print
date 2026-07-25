@@ -9,6 +9,7 @@ from PySide6.QtWidgets import (
 )
 
 from ..automation.batch_browser import BatchRecord
+from ..automation.local_batches import discover_local_batches
 from .worker import AutomationWorker
 
 
@@ -73,10 +74,19 @@ class BatchActionsMixin:
     def batches_finished(self, records: list[BatchRecord]) -> None:
         self.records = records
         self.table.setRowCount(len(records))
+        local_codes = {
+            batch.batch_number
+            for batch in discover_local_batches(
+                Path(self.output.text().strip()),
+                self.platform.currentData(),
+            )
+        }
         ready = 0
         for row, record in enumerate(records):
+            is_local = record.batch_number in local_codes
+            is_ready = record.production_images_ready or is_local
             box = QCheckBox()
-            box.setEnabled(record.production_images_ready)
+            box.setEnabled(is_ready)
             self.table.setCellWidget(row, 0, box)
             values = (
                 record.batch_number,
@@ -84,13 +94,19 @@ class BatchActionsMixin:
                 str(record.piece_count),
                 record.batch_type,
                 record.created_at,
-                "可下载" if record.production_images_ready else "生成中",
+                (
+                    "本地已有"
+                    if is_local
+                    else "可下载"
+                    if is_ready
+                    else "生成中"
+                ),
             )
             for column, value in enumerate(values, start=1):
                 self.table.setItem(
                     row, column, QTableWidgetItem(value)
                 )
-            ready += int(record.production_images_ready)
+            ready += int(is_ready)
         self.summary.setText(
             f"{self.platform.currentText()}：显示 {len(records)} 个最新批次，"
             f"{ready} 个生产图可下载。"
