@@ -114,7 +114,7 @@ def build_production_page(owner, output_row: QHBoxLayout) -> QWidget:
         5,
     )
     owner.refresh_button = QPushButton("刷新批次")
-    owner.refresh_button.clicked.connect(owner.refresh_current_section)
+    owner.refresh_button.clicked.connect(owner.refresh_batches)
     owner.select_button = QPushButton("全选可下载批次")
     owner.select_button.clicked.connect(owner.select_all_ready)
     owner.download_button = QPushButton("一键下载并自动排版")

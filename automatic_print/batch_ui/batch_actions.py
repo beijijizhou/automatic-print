@@ -10,6 +10,7 @@ from PySide6.QtWidgets import (
 
 from ..automation.batch_browser import BatchRecord
 from ..automation.local_batches import discover_local_batches
+from .batch_cache import load_batch_cache, save_batch_cache
 from .worker import AutomationWorker
 
 
@@ -73,6 +74,40 @@ class BatchActionsMixin:
     @Slot(object)
     def batches_finished(self, records: list[BatchRecord]) -> None:
         self.records = records
+        saved_at = ""
+        action = self.worker.action if self.worker is not None else ""
+        if action == "list":
+            saved_at = save_batch_cache(
+                self.preferences,
+                self.platform.currentData(),
+                records,
+            )
+        self._display_batch_records(
+            records, saved_at, select_ready=action == "list_range"
+        )
+
+    def show_cached_batches(self) -> None:
+        records, saved_at = load_batch_cache(
+            self.preferences, self.platform.currentData()
+        )
+        if records:
+            self.records = records
+            self._display_batch_records(records, saved_at, cached=True)
+            return
+        self.records = []
+        self.table.setRowCount(0)
+        self.summary.setText(
+            f"{self.platform.currentText()}：暂无本地批次缓存，"
+            "需要时请点击“刷新批次”。"
+        )
+
+    def _display_batch_records(
+        self,
+        records: list[BatchRecord],
+        saved_at: str = "",
+        cached: bool = False,
+        select_ready: bool = False,
+    ) -> None:
         self.table.setRowCount(len(records))
         local_codes = {
             batch.batch_number
@@ -110,8 +145,13 @@ class BatchActionsMixin:
         self.summary.setText(
             f"{self.platform.currentText()}：显示 {len(records)} 个最新批次，"
             f"{ready} 个生产图可下载。"
+            + (
+                f" 当前为本地缓存，读取时间：{saved_at}。"
+                if cached and saved_at
+                else ""
+            )
         )
-        if self.range_start.text().strip() and self.range_end.text().strip():
+        if select_ready:
             for row in range(self.table.rowCount()):
                 box = self.table.cellWidget(row, 0)
                 if box.isEnabled():
