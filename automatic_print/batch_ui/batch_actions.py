@@ -54,22 +54,6 @@ class BatchActionsMixin:
             f"font-weight:700;'>{status.accepted_count} 个</span>"
             "已接单订单尚未进入生产中。"
         )
-        self.cleared_table.setRowCount(0)
-        if status.cleared:
-            self.cleared_summary.setText(
-                f"{name}：生产中为 0，平台已清单。"
-            )
-            self.cleared_table.setRowCount(1)
-            for column, value in enumerate(
-                [name, "—", "—", "0", "—", "已清单"]
-            ):
-                self.cleared_table.setItem(
-                    0, column, QTableWidgetItem(value)
-                )
-        else:
-            self.cleared_summary.setText(
-                f"{name}：生产中还有 {status.production_count} 个。"
-            )
 
     @Slot(object)
     def batches_finished(self, records: list[BatchRecord]) -> None:

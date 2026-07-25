@@ -30,11 +30,6 @@ class BatchRecord:
 @dataclass(frozen=True)
 class PlatformOrderStatus:
     accepted_count: int
-    production_count: int
-
-    @property
-    def cleared(self) -> bool:
-        return self.production_count == 0
 
 
 def load_platform_order_status(
@@ -51,10 +46,9 @@ def load_platform_order_status(
             browser, platform.production_items_url, progress
         )
         if progress:
-            progress("正在通过 ERP API 读取“已接单”和“生产中”数量…")
+            progress("正在通过 ERP API 读取“已接单”数量…")
         return PlatformOrderStatus(
             accepted_count=production_item_count(page, "1"),
-            production_count=production_item_count(page, "5"),
         )
 
 

@@ -143,18 +143,3 @@ def build_production_page(owner, output_row: QHBoxLayout) -> QWidget:
     layout.addLayout(actions)
     layout.addWidget(owner.log)
     return page
-
-
-def build_cleared_page(owner) -> QWidget:
-    page = QWidget()
-    layout = QVBoxLayout(page)
-    intro = QLabel("该平台所有生产项目均已完成的订单会显示在这里。")
-    intro.setWordWrap(True)
-    owner.cleared_summary = QLabel("尚未读取生产中数量。")
-    owner.cleared_table = _table(
-        ["订单号", "物流", "项目", "件数", "完成时间", "状态"]
-    )
-    layout.addWidget(intro)
-    layout.addWidget(owner.cleared_summary)
-    layout.addWidget(owner.cleared_table)
-    return page

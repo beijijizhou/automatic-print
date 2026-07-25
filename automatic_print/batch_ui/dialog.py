@@ -26,7 +26,6 @@ from .local_actions import LocalActionsMixin
 from .local_page import build_local_page
 from .pages import (
     build_accepted_page,
-    build_cleared_page,
     build_production_page,
 )
 from .thread_actions import ThreadActionsMixin
@@ -114,7 +113,6 @@ class AutomationDialog(
         self.main_tabs.addTab(
             build_production_page(self, self.output_row), "生产批次"
         )
-        self.main_tabs.addTab(build_cleared_page(self), "已清单")
         self.main_tabs.addTab(build_local_page(self), "本地文件")
 
     def _build_layout(self) -> None:
@@ -140,8 +138,6 @@ class AutomationDialog(
         self.accepted_summary.setText(
             f"{name}：尚未读取待生产订单数量。"
         )
-        self.cleared_table.setRowCount(0)
-        self.cleared_summary.setText(f"{name}：尚未读取生产中数量。")
         self.show_platform_batch_rules(name)
         self.refresh_current_section()
 
@@ -151,16 +147,15 @@ class AutomationDialog(
     def refresh_current_section(self) -> None:
         if self.thread is not None:
             return
-        if self.main_tabs.currentIndex() == 3:
+        if self.main_tabs.currentIndex() == 2:
             self.refresh_local_batches()
             return
         if self.main_tabs.currentIndex() == 1:
             self.show_cached_batches()
             return
-        action = "list" if self.main_tabs.currentIndex() == 1 else "status"
         self.log.clear()
         self._start_worker(
-            AutomationWorker(action, self.platform.currentData())
+            AutomationWorker("status", self.platform.currentData())
         )
 
     def refresh_batches(self) -> None:
