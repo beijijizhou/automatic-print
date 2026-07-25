@@ -2,10 +2,23 @@ from pathlib import Path
 
 from PySide6.QtCore import QUrl
 from PySide6.QtGui import QDesktopServices
-from PySide6.QtWidgets import QCheckBox, QMessageBox, QTableWidgetItem
+from PySide6.QtWidgets import (
+    QApplication,
+    QCheckBox,
+    QMessageBox,
+    QTableWidgetItem,
+)
 
 from ..automation.local_batches import discover_local_batches
+from ..layout import discover_images
 from .worker import AutomationWorker
+
+
+def image_name_rows(folder: Path) -> list[tuple[str, str]]:
+    return [
+        (image.name, str(image.relative_to(folder)))
+        for image in discover_images(folder)
+    ]
 
 
 class LocalActionsMixin:
@@ -31,6 +44,56 @@ class LocalActionsMixin:
         self.local_summary.setText(
             f"{self.platform.currentText()}：本地有 {len(records)} 个"
             "已下载批次，可直接排版，不访问生产平台。"
+        )
+        self.filename_table.setRowCount(0)
+        self.filename_summary.setText("选择一个本地批次查看图片名称。")
+        if records:
+            self.local_table.setCurrentCell(0, 1)
+
+    def local_batch_changed(
+        self, row: int, _column: int, _old_row: int, _old_column: int
+    ) -> None:
+        if row < 0 or self.local_table.item(row, 5) is None:
+            return
+        folder = Path(self.local_table.item(row, 5).text())
+        images = image_name_rows(folder)
+        self.filename_table.setRowCount(len(images))
+        for index, (name, relative_path) in enumerate(images, start=1):
+            values = (str(index), name, relative_path)
+            for column, value in enumerate(values):
+                self.filename_table.setItem(
+                    index - 1, column, QTableWidgetItem(value)
+                )
+        batch_number = self.local_table.item(row, 2).text()
+        self.filename_summary.setText(
+            f"批次 {batch_number}：已读取 {len(images)} 个图片名称。"
+        )
+        self.filter_image_names(self.filename_search.text())
+
+    def filter_image_names(self, text: str) -> None:
+        keyword = text.strip().casefold()
+        visible = 0
+        for row in range(self.filename_table.rowCount()):
+            name = self.filename_table.item(row, 1).text()
+            matched = not keyword or keyword in name.casefold()
+            self.filename_table.setRowHidden(row, not matched)
+            visible += int(matched)
+        if keyword:
+            self.filename_summary.setText(f"找到 {visible} 个匹配的图片名称。")
+
+    def copy_image_names(self) -> None:
+        names = [
+            self.filename_table.item(row, 1).text()
+            for row in range(self.filename_table.rowCount())
+        ]
+        if not names:
+            QMessageBox.warning(
+                self, "没有文件名", "请先选择一个包含图片的本地批次。"
+            )
+            return
+        QApplication.clipboard().setText("\n".join(names))
+        self.filename_summary.setText(
+            f"已复制 {len(names)} 个图片文件名。"
         )
 
     def select_all_local(self) -> None:

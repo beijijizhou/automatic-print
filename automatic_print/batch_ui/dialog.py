@@ -23,10 +23,10 @@ from ..ui.worker_bridge import BatchWorkerBridge
 from .batch_actions import BatchActionsMixin
 from .generation_actions import GenerationActionsMixin
 from .local_actions import LocalActionsMixin
+from .local_page import build_local_page
 from .pages import (
     build_accepted_page,
     build_cleared_page,
-    build_local_page,
     build_production_page,
 )
 from .thread_actions import ThreadActionsMixin
