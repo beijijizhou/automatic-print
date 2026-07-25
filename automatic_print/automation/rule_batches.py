@@ -4,6 +4,11 @@ from dataclasses import dataclass
 from collections import Counter
 
 from .chrome_session import connect_debug_chrome
+from .batch_classification import (
+    classify_order_composition,
+    composition_filter,
+    detailed_compositions,
+)
 from .erp_api import (
     find_batch_rule,
     generate_filtered_batch,
@@ -105,11 +110,6 @@ def generate_rule_batches(
 def _preview_plan_from_api(page, platform, report) -> RuleBatchPlan:
     report("正在通过 ERP 列表接口一次读取全部已接单生产项…")
     rows, received_count = _load_all_received_rows(page)
-    composition_names = {
-        "1": "单项单件",
-        "2": "单项多件",
-        "3": "多项多件",
-    }
     reverse_shipping = {
         platform.shipping_filter_value(name): name
         for name in platform.shipping_categories
@@ -118,10 +118,7 @@ def _preview_plan_from_api(page, platform, report) -> RuleBatchPlan:
     for row in rows:
         shipping_code = str(row.get("logistics_sorting_code") or "")
         shipping_name = reverse_shipping.get(shipping_code, shipping_code)
-        composition = composition_names.get(
-            str(row.get("order_composition") or ""),
-            str(row.get("order_composition") or "未知"),
-        )
+        composition = classify_order_composition(row)
         grouped[(shipping_name, composition)] += 1
     items = tuple(
         RuleBatchItem(
@@ -130,7 +127,9 @@ def _preview_plan_from_api(page, platform, report) -> RuleBatchPlan:
             grouped[(shipping, composition)],
         )
         for shipping in platform.shipping_categories
-        for composition in platform.order_compositions
+        for composition in detailed_compositions(
+            platform.order_compositions
+        )
     )
     report(
         f"接口读取完成：{received_count} 项，"
@@ -146,17 +145,17 @@ def _load_all_received_rows(page) -> tuple[list[dict], int]:
 def _generate_filtered_batch_api(
     page, item: RuleBatchItem, platform, batch_rule_id: int | str
 ) -> None:
-    composition_codes = {
-        "单项单件": "1",
-        "单项多件": "2",
-        "多项多件": "3",
-    }
+    composition_code, view_count = composition_filter(
+        item.order_composition
+    )
     payload = production_item_payload(
         shipping_codes=(
             platform.shipping_filter_value(item.shipping_method),
         ),
-        order_compositions=(composition_codes[item.order_composition],),
+        order_compositions=(composition_code,),
     )
+    if view_count is not None:
+        payload["view_count"] = view_count
     current = list_production_items(page, {**payload, "page_size": 1})
     actual_count = int(current.get("total") or 0)
     if actual_count != item.item_count:

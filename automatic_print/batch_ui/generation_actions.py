@@ -12,6 +12,7 @@ from PySide6.QtWidgets import (
 )
 
 from ..automation.platforms import get_erp_platform
+from ..automation.batch_classification import detailed_compositions
 from ..automation.rule_batches import RuleBatchPlan
 from .worker import AutomationWorker
 
@@ -24,7 +25,7 @@ class GenerationActionsMixin:
             "font-weight:600;"
         )
         shipping = platform.shipping_categories
-        compositions = platform.order_compositions
+        compositions = detailed_compositions(platform.order_compositions)
         if not shipping:
             self.batch_rule_summary.setText(
                 f"{name}：尚未配置物流分类规则。"
