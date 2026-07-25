@@ -12,7 +12,10 @@ from PySide6.QtWidgets import (
 )
 
 from ..automation.platforms import get_erp_platform
-from ..automation.batch_classification import detailed_compositions
+from ..automation.batch_classification import (
+    DOUBLE_FACE,
+    detailed_compositions,
+)
 from ..automation.rule_batches import RuleBatchPlan
 from .worker import AutomationWorker
 
@@ -67,6 +70,7 @@ class GenerationActionsMixin:
     def preview_generation_rules(self) -> None:
         self.pending_batch_plan = None
         self.generate_rules_button.setEnabled(False)
+        self.show_platform_batch_rules(self.platform.currentData())
         self._start_worker(
             AutomationWorker(
                 "preview_rules", self.platform.currentData()
@@ -108,6 +112,11 @@ class GenerationActionsMixin:
             plan.received_count - plan.total_items - plan.excluded_count
         )
         matched = unmatched == 0
+        double_face_count = sum(
+            item.item_count
+            for item in plan.items
+            if item.order_composition == DOUBLE_FACE
+        )
         self.generate_rules_button.setEnabled(
             bool(plan.nonempty_items) and matched
         )
@@ -116,6 +125,7 @@ class GenerationActionsMixin:
             + f"\n已接单：{plan.received_count} 项；"
             f"规则匹配：{plan.total_items} 项；"
             f"剔除：{plan.excluded_count} 项。"
+            f"\n单项单件（双面）：{double_face_count} 项。"
             + (
                 ""
                 if matched

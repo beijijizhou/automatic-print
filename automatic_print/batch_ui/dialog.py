@@ -71,7 +71,7 @@ class AutomationDialog(
         self.platform = QComboBox()
         for name in ERP_PLATFORMS:
             self.platform.addItem(name, name)
-        self.platform.setCurrentText("隆丰")
+        self.platform.setCurrentText("Haloo")
         default = (
             Path(
                 QStandardPaths.writableLocation(
