@@ -129,8 +129,11 @@ def build_production_page(owner, output_row: QHBoxLayout) -> QWidget:
         owner.process_button,
     ):
         actions.addWidget(button)
-    owner.test_mode = QCheckBox("快速测试：第一个批次只处理前 5 张")
+    owner.test_mode = QCheckBox(
+        "快速测试：普通模式首批 5 张；合并模式每批 5 张"
+    )
     owner.test_mode.setChecked(True)
+    owner.merge_batches = QCheckBox("合并选中的批次为一个排版文件")
     owner.log = QPlainTextEdit()
     owner.log.setReadOnly(True)
     layout.addWidget(intro)
@@ -140,6 +143,7 @@ def build_production_page(owner, output_row: QHBoxLayout) -> QWidget:
     layout.addLayout(range_row)
     layout.addWidget(owner.table)
     layout.addWidget(owner.test_mode)
+    layout.addWidget(owner.merge_batches)
     layout.addLayout(actions)
     layout.addWidget(owner.log)
     return page

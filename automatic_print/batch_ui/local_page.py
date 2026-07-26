@@ -45,8 +45,13 @@ def build_local_page(owner) -> QWidget:
         owner.local_open_button,
     ):
         actions.addWidget(button)
-    owner.local_test_mode = QCheckBox("快速测试：第一个批次只处理前 5 张")
+    owner.local_test_mode = QCheckBox(
+        "快速测试：普通模式首批 5 张；合并模式每批 5 张"
+    )
     owner.local_test_mode.setChecked(True)
+    owner.local_merge_batches = QCheckBox(
+        "合并选中的批次为一个排版文件"
+    )
     owner.filename_summary = QLabel("选择一个本地批次查看图片名称。")
     owner.filename_search = QLineEdit()
     owner.filename_search.setPlaceholderText("搜索文件名或尺码…")
@@ -63,6 +68,7 @@ def build_local_page(owner) -> QWidget:
     layout.addWidget(owner.local_summary)
     layout.addWidget(owner.local_table)
     layout.addWidget(owner.local_test_mode)
+    layout.addWidget(owner.local_merge_batches)
     layout.addLayout(actions)
     layout.addWidget(QLabel("批次图片名称"))
     layout.addWidget(owner.filename_summary)

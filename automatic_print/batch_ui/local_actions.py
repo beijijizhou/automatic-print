@@ -129,6 +129,11 @@ class LocalActionsMixin:
                 self, "请选择批次", "请至少选择一个本地生产批次。"
             )
             return
+        if self.local_merge_batches.isChecked() and len(selected) < 2:
+            QMessageBox.warning(
+                self, "请选择多个批次", "合并排版请至少选择两个批次。"
+            )
+            return
         self._start_worker(
             AutomationWorker(
                 "process",
@@ -137,6 +142,7 @@ class LocalActionsMixin:
                 batch_numbers=selected,
                 settings=self._current_layout_settings(),
                 sample_limit=5 if self.local_test_mode.isChecked() else None,
+                merge_batches=self.local_merge_batches.isChecked(),
             )
         )
 

@@ -168,6 +168,11 @@ class BatchActionsMixin:
                 self, "请选择批次", "请至少选择一个可下载批次。"
             )
             return
+        if self.merge_batches.isChecked() and len(selected) < 2:
+            QMessageBox.warning(
+                self, "请选择多个批次", "合并排版请至少选择两个批次。"
+            )
+            return
         self.preferences.setValue(
             "automation/output_location", self.output.text().strip()
         )
@@ -185,6 +190,7 @@ class BatchActionsMixin:
                 settings=self._current_layout_settings(),
                 sample_limit=5 if self.test_mode.isChecked() else None,
                 batch_types=batch_types,
+                merge_batches=self.merge_batches.isChecked(),
             )
         )
 
@@ -195,17 +201,29 @@ class BatchActionsMixin:
                 self, "找不到文件夹", "请选择包含已下载生产图的文件夹。"
             )
             return
+        selected = [
+            self.table.item(row, 1).text()
+            for row in range(self.table.rowCount())
+            if self.table.cellWidget(row, 0).isChecked()
+        ]
+        if self.merge_batches.isChecked() and len(selected) < 2:
+            QMessageBox.warning(
+                self, "请选择多个批次", "合并排版请至少选择两个批次。"
+            )
+            return
         self._start_worker(
             AutomationWorker(
                 "process",
                 self.platform.currentData(),
                 output=output,
+                batch_numbers=selected,
                 settings=self._current_layout_settings(),
                 sample_limit=5 if self.test_mode.isChecked() else None,
                 batch_types={
                     record.batch_number: record.batch_type
                     for record in self.records
                 },
+                merge_batches=self.merge_batches.isChecked(),
             )
         )
 

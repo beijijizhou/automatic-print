@@ -83,17 +83,25 @@ class ThreadActionsMixin:
             QMessageBox.information(self, "批次生成完成", text)
             return
         mode = "测试小样" if result["test"] else "生产批次"
+        merged_codes = result.get("merged_batches") or []
+        merged_text = (
+            f"已将 {len(merged_codes)} 个批次合并为一个排版文件。"
+            if merged_codes
+            else ""
+        )
         if result["type"] == "downloaded_and_processed":
             text = (
                 f"{result['platform']}：已下载并解压 "
                 f"{len(result['files'])} 个文件，已完成 "
                 f"{len(result['batches'])} 个{mode}排版。"
+                f"{merged_text}"
             )
             self.refresh_local_batches()
         else:
             text = (
                 f"{result['platform']}：已生成 "
                 f"{len(result['batches'])} 个{mode}排版图片。"
+                f"{merged_text}"
             )
         self.summary.setText(text)
         QMessageBox.information(self, "处理完成", text)
@@ -116,12 +124,14 @@ class ThreadActionsMixin:
             self.select_button,
             self.download_button,
             self.process_button,
+            self.merge_batches,
             self.range_button,
             self.settings_button,
             self.preview_rules_button,
             self.local_refresh_button,
             self.local_select_button,
             self.local_process_button,
+            self.local_merge_batches,
             self.local_open_button,
         ):
             widget.setEnabled(enabled)

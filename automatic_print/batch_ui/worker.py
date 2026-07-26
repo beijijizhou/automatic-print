@@ -10,20 +10,14 @@ from ..automation.batch_browser import (
     load_batch_records_between,
     load_platform_order_status,
 )
-from ..automation.batch_naming import (
-    MULTI_PIECE_TYPES,
-    has_source_prefix,
-    load_batch_type,
-    prepare_multi_piece_names,
-    save_batch_type,
-    sort_multi_piece_images,
-)
+from ..automation.batch_naming import save_batch_type
 from ..automation.rule_batches import (
     RuleBatchPlan,
     generate_rule_batches,
     preview_rule_batch_plan,
 )
-from ..layout import LayoutSettings, discover_images, generate_layout
+from ..layout import LayoutSettings
+from .processing import process_local_batches
 
 
 class AutomationWorker(QObject):
@@ -47,6 +41,7 @@ class AutomationWorker(QObject):
         range_start: str = "",
         range_end: str = "",
         batch_types: dict[str, str] | None = None,
+        merge_batches: bool = False,
     ) -> None:
         super().__init__()
         self.action = action
@@ -60,6 +55,7 @@ class AutomationWorker(QObject):
         self.range_start = range_start
         self.range_end = range_end
         self.batch_types = batch_types or {}
+        self.merge_batches = merge_batches
 
     @Slot()
     def run(self) -> None:
@@ -144,75 +140,16 @@ class AutomationWorker(QObject):
     def _process_batches(self) -> dict:
         if self.output is None or self.settings is None:
             raise RuntimeError("缺少排版位置或排版设置。")
-        platform_root = self.output / self.platform_name
-        folders = sorted(
-            folder
-            for folder in platform_root.rglob("*")
-            if folder.is_dir()
-            and len(folder.name) == 12
-            and folder.name.isdigit()
-            and not {"PROCESSED", "TEST_SAMPLE"}.intersection(folder.parts)
-            and discover_images(folder)
+        return process_local_batches(
+            self.output,
+            self.platform_name,
+            self.batch_numbers,
+            self.batch_types,
+            self.settings,
+            self.sample_limit,
+            self.merge_batches,
+            self.progress.emit,
         )
-        if self.batch_numbers:
-            selected = set(self.batch_numbers)
-            folders = [
-                folder for folder in folders if folder.name in selected
-            ]
-        if not folders:
-            raise RuntimeError(
-                f"没有找到 {self.platform_name} 已解压的生产批次文件夹。"
-            )
-        if self.sample_limit:
-            folders = folders[:1]
-        completed = []
-        output_name = "TEST_SAMPLE" if self.sample_limit else "PROCESSED"
-        for index, folder in enumerate(folders, start=1):
-            batch_type = (
-                self.batch_types.get(folder.name) or load_batch_type(folder)
-            )
-            if not batch_type and has_source_prefix(folder):
-                raise RuntimeError(
-                    f"批次 {folder.name} 包含平台来源前缀，但无法确认"
-                    "是单件还是多件。为避免多件订单被打散，已停止排版。"
-                )
-            if batch_type in MULTI_PIECE_TYPES:
-                self.progress.emit(
-                    f"{folder.name} · 正在整理{batch_type}图片名称"
-                )
-                renamed = prepare_multi_piece_names(folder, batch_type)
-                self.progress.emit(
-                    f"{folder.name} · 图片名称整理完成，"
-                    f"删除 {renamed} 个平台来源前缀"
-                )
-            images = discover_images(folder)
-            if batch_type in MULTI_PIECE_TYPES:
-                images = sort_multi_piece_images(images)
-            if self.sample_limit:
-                images = images[: self.sample_limit]
-            destination = platform_root / output_name / folder.name
-            self.progress.emit(
-                f"[{index}/{len(folders)}] {folder.name}："
-                f"正在排版 {len(images)} 张图片"
-            )
-            result = generate_layout(
-                images,
-                destination,
-                self.settings,
-                lambda stage, current, total, name: self.progress.emit(
-                    f"{folder.name} · {stage} {current}/{total}"
-                )
-                if current == total or current % 50 == 0
-                else None,
-            )
-            completed.append((folder.name, result))
-        return {
-            "type": "processed",
-            "platform": self.platform_name,
-            "batches": completed,
-            "test": bool(self.sample_limit),
-            "output_folder": str(platform_root / output_name),
-        }
 
     def _save_batch_types(self) -> None:
         platform_root = self.output / self.platform_name
