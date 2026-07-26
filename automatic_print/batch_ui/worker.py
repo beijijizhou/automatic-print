@@ -4,6 +4,7 @@ from pathlib import Path
 
 from PySide6.QtCore import QObject, Signal, Slot
 
+from ..cancellation import Cancellation, TaskCancelled
 from ..automation.batch_browser import (
     download_selected_batches,
     load_batch_records,
@@ -27,6 +28,7 @@ class AutomationWorker(QObject):
     plan_loaded = Signal(object)
     completed = Signal(object)
     failed = Signal(str)
+    cancelled = Signal()
 
     def __init__(
         self,
@@ -56,25 +58,41 @@ class AutomationWorker(QObject):
         self.range_end = range_end
         self.batch_types = batch_types or {}
         self.merge_batches = merge_batches
+        self.cancellation = Cancellation()
+
+    def request_cancel(self) -> None:
+        self.cancellation.request()
+
+    def _report(self, message: str) -> None:
+        self.cancellation.check()
+        self.progress.emit(message)
+
+    def _deliver(self, signal, value) -> None:
+        self.cancellation.check()
+        signal.emit(value)
 
     @Slot()
     def run(self) -> None:
         try:
             self._run_action()
+        except TaskCancelled:
+            self.cancelled.emit()
         except Exception as error:
             self.failed.emit(str(error))
 
     def _run_action(self) -> None:
         if self.action == "list":
-            self.progress.emit(
+            self._report(
                 f"正在读取 {self.platform_name} 已生成批次…"
             )
-            self.batches_loaded.emit(
+            self._deliver(
+                self.batches_loaded,
                 load_batch_records(self.platform_name)
             )
         elif self.action == "list_range":
-            self.progress.emit("正在读取指定范围内的生产批次…")
-            self.batches_loaded.emit(
+            self._report("正在读取指定范围内的生产批次…")
+            self._deliver(
+                self.batches_loaded,
                 load_batch_records_between(
                     self.platform_name,
                     self.range_start,
@@ -82,22 +100,25 @@ class AutomationWorker(QObject):
                 )
             )
         elif self.action in {"status", "status_and_list"}:
-            self.progress.emit(
+            self._report(
                 f"正在刷新 {self.platform_name} 平台状态…"
             )
-            self.status_loaded.emit(
+            self._deliver(
+                self.status_loaded,
                 load_platform_order_status(
-                    self.platform_name, self.progress.emit
+                    self.platform_name, self._report
                 )
             )
             if self.action == "status_and_list":
-                self.batches_loaded.emit(
+                self._deliver(
+                    self.batches_loaded,
                     load_batch_records(self.platform_name)
                 )
         elif self.action == "preview_rules":
-            self.plan_loaded.emit(
+            self._deliver(
+                self.plan_loaded,
                 preview_rule_batch_plan(
-                    self.platform_name, self.progress.emit
+                    self.platform_name, self._report
                 )
             )
         elif self.action == "generate_rules":
@@ -106,9 +127,10 @@ class AutomationWorker(QObject):
             count = generate_rule_batches(
                 self.batch_plan,
                 self.generation_rule,
-                self.progress.emit,
+                self._report,
             )
-            self.completed.emit(
+            self._deliver(
+                self.completed,
                 {
                     "type": "batches_generated",
                     "platform": self.platform_name,
@@ -118,7 +140,7 @@ class AutomationWorker(QObject):
         elif self.action == "download":
             self._download_and_process()
         elif self.action == "process":
-            self.completed.emit(self._process_batches())
+            self._deliver(self.completed, self._process_batches())
         else:
             raise RuntimeError(f"未知操作：{self.action}")
 
@@ -129,13 +151,13 @@ class AutomationWorker(QObject):
             self.platform_name,
             self.batch_numbers,
             self.output,
-            self.progress.emit,
+            self._report,
         )
         self._save_batch_types()
-        self.progress.emit("下载与解压完成，正在自动排版…")
+        self._report("下载与解压完成，正在自动排版…")
         result = self._process_batches()
         result.update(type="downloaded_and_processed", files=files)
-        self.completed.emit(result)
+        self._deliver(self.completed, result)
 
     def _process_batches(self) -> dict:
         if self.output is None or self.settings is None:
@@ -148,7 +170,7 @@ class AutomationWorker(QObject):
             self.settings,
             self.sample_limit,
             self.merge_batches,
-            self.progress.emit,
+            self._report,
         )
 
     def _save_batch_types(self) -> None:

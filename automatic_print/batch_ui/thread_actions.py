@@ -24,6 +24,7 @@ class ThreadActionsMixin:
             f"正在处理 {worker.platform_name}，请稍候…"
         )
         self.loading_panel.show()
+        self.stop_button.setEnabled(True)
         self.thread = QThread(self)
         self.worker = worker
         worker.moveToThread(self.thread)
@@ -36,6 +37,7 @@ class ThreadActionsMixin:
         worker.plan_loaded.connect(bridge.plan_loaded, queued)
         worker.completed.connect(bridge.completed, queued)
         worker.failed.connect(bridge.failed, queued)
+        worker.cancelled.connect(bridge.cancelled, queued)
         terminal = {
             "list": worker.batches_loaded,
             "list_range": worker.batches_loaded,
@@ -50,12 +52,15 @@ class ThreadActionsMixin:
         terminal.connect(self.thread.quit)
         worker.failed.connect(worker.deleteLater)
         worker.failed.connect(self.thread.quit)
+        worker.cancelled.connect(worker.deleteLater)
+        worker.cancelled.connect(self.thread.quit)
         self.thread.finished.connect(self.clear_worker)
         self.thread.start()
 
     @Slot(str)
     def append_log(self, message: str) -> None:
-        self.log.appendPlainText(message)
+        if "正在保存大图" not in message:
+            self.log.appendPlainText(message)
 
     @Slot(str)
     def show_progress_message(self, message: str) -> None:
@@ -70,6 +75,23 @@ class ThreadActionsMixin:
         else:
             self.loading_bar.setRange(0, 0)
             self.loading_bar.setTextVisible(False)
+
+    @Slot()
+    def stop_current_task(self) -> None:
+        if self.worker is None:
+            return
+        self.worker.request_cancel()
+        self.stop_button.setEnabled(False)
+        self.loading_label.setText(
+            "正在安全停止；如果正在保存大图，将在当前文件写完后结束…"
+        )
+        self.log.appendPlainText("已请求停止当前处理。")
+
+    @Slot()
+    def task_cancelled(self) -> None:
+        text = "当前处理已安全停止，已经完成的文件会保留。"
+        self.loading_label.setText(text)
+        self.log.appendPlainText(text)
 
     @Slot(object)
     def action_finished(self, result: dict) -> None:
@@ -154,14 +176,15 @@ class ThreadActionsMixin:
             and plan.total_items + plan.excluded_count == plan.received_count
         )
 
+    @Slot()
+    def clear_worker(self) -> None:
+        self.loading_panel.hide()
+        self.stop_button.setEnabled(False)
+        self._set_actions_enabled(True)
+        defer_finished_thread_cleanup(self, "thread", "worker")
+
 
 def _combined_percent(results: list[dict]) -> float:
     baseline = sum(item.get("baseline_height_mm", 0) for item in results)
     saved_mm = sum(item.get("saved_length_m", 0) * 1000 for item in results)
     return saved_mm / baseline * 100 if baseline else 0
-
-    @Slot()
-    def clear_worker(self) -> None:
-        self.loading_panel.hide()
-        self._set_actions_enabled(True)
-        defer_finished_thread_cleanup(self, "thread", "worker")

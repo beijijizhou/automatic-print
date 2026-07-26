@@ -115,11 +115,7 @@ def _render_merged(prepared, destination_root, settings, progress):
         images,
         destination,
         settings,
-        lambda stage, current, total, name: progress(
-            f"合并批次 · {stage} {current}/{total}"
-        )
-        if current == total or current % 50 == 0
-        else None,
+        _layout_progress(progress, "合并批次"),
     )
     return [("合并批次", result)]
 
@@ -135,11 +131,20 @@ def _render_separately(prepared, destination_root, settings, progress):
             images,
             destination_root / folder.name,
             settings,
-            lambda stage, current, count, name: progress(
-                f"{folder.name} · {stage} {current}/{count}"
-            )
-            if current == count or current % 50 == 0
-            else None,
+            _layout_progress(progress, folder.name),
         )
         completed.append((folder.name, result))
     return completed
+
+
+def _layout_progress(progress, prefix):
+    def report(stage, current, total, _name):
+        if stage == "保存图片":
+            progress(
+                f"{prefix} · 正在保存大图 · "
+                f"已写入 {current / 1_000_000:.1f} 兆字节"
+            )
+        elif current == total or current % 50 == 0:
+            progress(f"{prefix} · {stage} {current}/{total}")
+
+    return report

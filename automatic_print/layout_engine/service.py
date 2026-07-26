@@ -9,6 +9,7 @@ from .models import LayoutSettings, ProgressCallback
 from .metrics import saving_metrics
 from .pillow_renderer import build_pillow_canvas
 from .planner import plan_layout
+from .save_progress import monitor_save
 from .vips_renderer import available, build_vips_canvas
 
 
@@ -39,23 +40,22 @@ def generate_layout(
     combining_seconds = perf_counter() - combining_started
 
     filename = "print.png"
-    if progress:
-        progress("保存图片", 0, width * height, filename)
     saving_started = perf_counter()
     output_path = output_dir / filename
-    if use_vips:
-        canvas.pngsave(
-            str(output_path),
-            compression=settings.png_compression_level,
-            interlace=False,
-        )
-    else:
-        canvas.save(
-            output_path,
-            dpi=(settings.dpi, settings.dpi),
-            compress_level=settings.png_compression_level,
-        )
-        canvas.close()
+    with monitor_save(output_path, progress):
+        if use_vips:
+            canvas.pngsave(
+                str(output_path),
+                compression=settings.png_compression_level,
+                interlace=False,
+            )
+        else:
+            canvas.save(
+                output_path,
+                dpi=(settings.dpi, settings.dpi),
+                compress_level=settings.png_compression_level,
+            )
+            canvas.close()
     saving_seconds = perf_counter() - saving_started
     size = output_path.stat().st_size
     result = {

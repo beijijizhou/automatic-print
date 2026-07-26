@@ -7,6 +7,7 @@ class MainWindowWorkerBridge(QObject):
     layout_progress = Signal(str, int, object, str)
     layout_finished = Signal(str, object)
     layout_failed = Signal(str)
+    layout_cancelled = Signal()
     update_finished = Signal(object)
     update_failed = Signal(str)
 
@@ -20,3 +21,4 @@ class BatchWorkerBridge(QObject):
     plan_loaded = Signal(object)
     completed = Signal(object)
     failed = Signal(str)
+    cancelled = Signal()

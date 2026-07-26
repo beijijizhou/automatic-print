@@ -66,6 +66,7 @@ class AutomationDialog(
         bridge.plan_loaded.connect(self.generation_plan_finished)
         bridge.completed.connect(self.action_finished)
         bridge.failed.connect(self.failed)
+        bridge.cancelled.connect(self.task_cancelled)
 
     def _build_controls(self) -> None:
         self.platform = QComboBox()
@@ -103,8 +104,12 @@ class AutomationDialog(
         self.loading_bar = QProgressBar()
         self.loading_bar.setRange(0, 0)
         self.loading_bar.setTextVisible(False)
+        self.stop_button = QPushButton("停止当前处理")
+        self.stop_button.setEnabled(False)
+        self.stop_button.clicked.connect(self.stop_current_task)
         loading.addWidget(self.loading_label)
         loading.addWidget(self.loading_bar)
+        loading.addWidget(self.stop_button)
         self.loading_panel.hide()
 
     def _build_tabs(self) -> None:

@@ -11,6 +11,7 @@ from PySide6.QtWidgets import QMessageBox
 from ..layout import LayoutSettings, discover_images, discovered_extensions
 from ..layout_engine.metrics import saving_text
 from .workers import GenerateWorker
+from .progress_format import duration_text, file_size_text
 from .thread_lifecycle import (
     defer_finished_thread_cleanup,
     discard_stopped_thread,
@@ -83,6 +84,7 @@ class GenerationActionsMixin:
         self.run_log.appendPlainText(f"图片数量：{len(images)}")
         self.run_log.appendPlainText(f"输出位置：{output}")
         self.generate_button.setEnabled(False)
+        self.stop_generation_button.setEnabled(True)
         self.started_at = time.monotonic()
         self.stage_started_at = self.started_at
         self.current_stage = "正在开始"
@@ -102,10 +104,13 @@ class GenerationActionsMixin:
         self.worker.progress.connect(bridge.layout_progress, queued)
         self.worker.finished.connect(bridge.layout_finished, queued)
         self.worker.failed.connect(bridge.layout_failed, queued)
+        self.worker.cancelled.connect(bridge.layout_cancelled, queued)
         self.worker.finished.connect(self.thread.quit)
         self.worker.failed.connect(self.thread.quit)
+        self.worker.cancelled.connect(self.thread.quit)
         self.worker.finished.connect(self.worker.deleteLater)
         self.worker.failed.connect(self.worker.deleteLater)
+        self.worker.cancelled.connect(self.worker.deleteLater)
         self.thread.finished.connect(self.clear_worker)
         self.thread.start()
 
@@ -147,19 +152,39 @@ class GenerationActionsMixin:
         }:
             left = self.current_total - self.current_count
             remaining = stage_elapsed / self.current_count * left
-            estimate = f"本阶段预计还需 {self._duration(remaining)}"
+            estimate = f"本阶段预计还需 {duration_text(remaining)}"
         else:
             estimate = "正在计算…"
+        saving_detail = self._saving_detail()
+        count = (
+            "正在持续写入磁盘"
+            if self.current_stage == "保存图片"
+            else f"{self.current_count}/{self.current_total}"
+        )
         self.status.setText(
-            f"{self.current_stage}：{self.current_count}/{self.current_total}"
-            f" · 本阶段 {self._duration(stage_elapsed)}"
-            f" · 总计 {self._duration(elapsed)} · {estimate}"
+            f"{self.current_stage}：{count}"
+            f" · 本阶段 {duration_text(stage_elapsed)}"
+            f" · 总计 {duration_text(elapsed)} · {estimate}"
+            f"{saving_detail}"
         )
 
-    @staticmethod
-    def _duration(seconds: float) -> str:
-        minutes, seconds = divmod(max(0, round(seconds)), 60)
-        return f"{minutes}分{seconds:02d}秒" if minutes else f"{seconds}秒"
+    def _saving_detail(self) -> str:
+        if self.current_stage != "保存图片":
+            return ""
+        path = Path(self.job_path.text()) / "print.png"
+        size = path.stat().st_size if path.is_file() else 0
+        return f" · 已写入 {file_size_text(size)}"
+
+    @Slot()
+    def stop_generation(self) -> None:
+        if self.worker is None:
+            return
+        self.worker.request_cancel()
+        self.stop_generation_button.setEnabled(False)
+        self.status.setText(
+            "正在安全停止；如果正在保存大图，将在当前文件写完后结束…"
+        )
+        self.run_log.appendPlainText("已请求停止当前排版。")
 
     @Slot(str, object)
     def generation_finished(self, output: str, result: dict) -> None:
@@ -169,20 +194,21 @@ class GenerationActionsMixin:
         self.progress.setValue(100)
         self.progress.setFormat("100% — 已完成")
         self.status.setText(
-            f"已完成 · 读取 {self._duration(timings['reading'])}"
-            f" · 合成 {self._duration(timings['combining'])}"
-            f" · 保存 {self._duration(timings['saving_png'])}"
-            f" · 总计 {self._duration(timings['total'])}"
+            f"已完成 · 读取 {duration_text(timings['reading'])}"
+            f" · 合成 {duration_text(timings['combining'])}"
+            f" · 保存 {duration_text(timings['saving_png'])}"
+            f" · 总计 {duration_text(timings['total'])}"
         )
         self.current_file.setText("当前文件：print.png")
         self.run_log.appendPlainText(
             f"输出：{result['width_px']} × {result['height_px']} 像素"
-            f" | 文件大小 {self._file_size(result['file_size_bytes'])}"
+            f" | 文件大小 {file_size_text(result['file_size_bytes'])}"
         )
         saving = saving_text(result)
         self.run_log.appendPlainText(saving)
         self.status.setText(f"{self.status.text()} · {saving}")
         self.generate_button.setEnabled(True)
+        self.stop_generation_button.setEnabled(False)
         QMessageBox.information(
             self,
             "生成完成",
@@ -200,13 +226,18 @@ class GenerationActionsMixin:
         self.status.setText("生成失败。")
         self.run_log.appendPlainText(f"失败：{message}")
         self.generate_button.setEnabled(True)
+        self.stop_generation_button.setEnabled(False)
         QMessageBox.critical(self, "生成失败", message)
 
-    @staticmethod
-    def _file_size(size: int) -> str:
-        if size >= 1_000_000_000:
-            return f"{size / 1_000_000_000:.2f} 吉字节"
-        return f"{size / 1_000_000:.1f} 兆字节"
+    @Slot()
+    def generation_cancelled(self) -> None:
+        self.clock.stop()
+        self.progress.setRange(0, 100)
+        self.progress.setFormat("已停止")
+        self.status.setText("当前排版已安全停止，已经完成的文件会保留。")
+        self.run_log.appendPlainText("当前排版已安全停止。")
+        self.generate_button.setEnabled(True)
+        self.stop_generation_button.setEnabled(False)
 
     @Slot()
     def clear_worker(self) -> None:

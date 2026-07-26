@@ -68,6 +68,7 @@ class MainWindow(
         bridge.layout_progress.connect(self.update_progress)
         bridge.layout_finished.connect(self.generation_finished)
         bridge.layout_failed.connect(self.generation_failed)
+        bridge.layout_cancelled.connect(self.generation_cancelled)
         bridge.update_finished.connect(self.update_check_finished)
         bridge.update_failed.connect(self.update_check_failed)
 
@@ -145,6 +146,9 @@ class MainWindow(
         self.run_log.setMaximumHeight(115)
         self.generate_button = QPushButton("高级：手动生成单张排版图片")
         self.generate_button.clicked.connect(self.generate)
+        self.stop_generation_button = QPushButton("停止当前排版")
+        self.stop_generation_button.setEnabled(False)
+        self.stop_generation_button.clicked.connect(self.stop_generation)
         save_button = QPushButton("保存参数")
         save_button.clicked.connect(self.save_layout_preferences)
         body = QVBoxLayout()
@@ -156,6 +160,7 @@ class MainWindow(
             self.current_file,
             self.run_log,
             self.generate_button,
+            self.stop_generation_button,
             save_button,
         ):
             body.addWidget(widget)
