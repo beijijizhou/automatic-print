@@ -148,8 +148,26 @@ if ($LASTEXITCODE -ne 0) {
 }
 
 Write-Host ""
-Write-Host "Setup/update finished. Starting Automatic Print..."
+Write-Host "Creating the Haloo Automatic desktop shortcut..."
 $runScript = Join-Path $installRoot "windows\run-dev.bat"
+$iconPath = Join-Path $installRoot "assets\ha-icon.ico"
+$desktop = [Environment]::GetFolderPath(
+    [Environment+SpecialFolder]::Desktop
+)
+$shortcutPath = Join-Path $desktop "Haloo Automatic.lnk"
+$shell = New-Object -ComObject WScript.Shell
+$shortcut = $shell.CreateShortcut($shortcutPath)
+$shortcut.TargetPath = $runScript
+$shortcut.WorkingDirectory = $installRoot
+$shortcut.Description = "Haloo Automatic - POD production center"
+if (Test-Path $iconPath) {
+    $shortcut.IconLocation = "$iconPath,0"
+}
+$shortcut.Save()
+Write-Host "Desktop entry: $shortcutPath"
+
+Write-Host ""
+Write-Host "Setup/update finished. Starting Haloo Automatic..."
 Start-Process -FilePath "$env:SystemRoot\System32\cmd.exe" `
     -ArgumentList "/k", "`"$runScript`"" `
     -WorkingDirectory $installRoot

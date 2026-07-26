@@ -2,7 +2,7 @@
   #define MyAppVersion "0.1.0"
 #endif
 
-#define MyAppName "Automatic Print"
+#define MyAppName "Haloo Automatic"
 #define MyAppPublisher "Automatic Print"
 #define MyAppExeName "AutomaticPrint.exe"
 
@@ -19,6 +19,8 @@ OutputBaseFilename=AutomaticPrint-Setup
 Compression=lzma2
 SolidCompression=yes
 WizardStyle=modern
+SetupIconFile=..\assets\ha-icon.ico
+UninstallDisplayIcon={app}\{#MyAppExeName}
 ArchitecturesAllowed=x64compatible
 ArchitecturesInstallIn64BitMode=x64compatible
 PrivilegesRequired=lowest

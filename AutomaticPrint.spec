@@ -7,7 +7,7 @@ analysis = Analysis(
     [str(project_root / "run_app.py")],
     pathex=[str(project_root)],
     binaries=[],
-    datas=[],
+    datas=[(str(project_root / "assets" / "ha-icon.ico"), "assets")],
     hiddenimports=[],
     hookspath=[],
     hooksconfig={},
@@ -29,6 +29,7 @@ exe = EXE(
     strip=False,
     upx=True,
     console=False,
+    icon=str(project_root / "assets" / "ha-icon.ico"),
 )
 
 bundle = COLLECT(

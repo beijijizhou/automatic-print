@@ -10,13 +10,13 @@ if not exist ".venv\Scripts\python.exe" (
     exit /b 1
 )
 
-echo Starting Automatic Print in auto-reload mode...
+echo Starting Haloo Automatic in auto-reload mode...
 echo Keep this window open while testing.
 ".venv\Scripts\python.exe" dev.py
 
 if errorlevel 1 (
     echo.
-    echo Automatic Print stopped with an error.
+    echo Haloo Automatic stopped with an error.
     echo Startup log:
     echo %LOCALAPPDATA%\AutomaticPrint\logs\latest-startup.log
     pause
