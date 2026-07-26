@@ -120,6 +120,8 @@ class GenerationActionsMixin:
     ) -> None:
         if stage == "读取图片尺寸":
             percent = round(current / total * 45)
+        elif stage == "整理双面图片":
+            percent = 45
         elif stage == "合成图片":
             percent = 45 + round(current / total * 45)
         else:

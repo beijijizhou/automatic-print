@@ -69,7 +69,9 @@ def optimal_ordered_layout(
 def _extend_states(states, item_options, usable_width, gap):
     expanded = []
     for width, height, choices, rotations in states:
-        for choice, (item_width, item_height) in enumerate(item_options):
+        for choice, option in enumerate(item_options):
+            item_width, item_height = option[:2]
+            rotation_cost = option[2] if len(option) > 2 else int(choice > 0)
             new_width = width + gap + item_width
             if new_width <= usable_width:
                 expanded.append(
@@ -77,7 +79,7 @@ def _extend_states(states, item_options, usable_width, gap):
                         new_width,
                         max(height, item_height),
                         choices + (choice,),
-                        rotations + int(choice > 0),
+                        rotations + rotation_cost,
                     )
                 )
     return _pareto_states(expanded)
