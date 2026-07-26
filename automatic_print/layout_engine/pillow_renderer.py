@@ -12,9 +12,18 @@ from .models import LayoutSettings, Placement, ProgressCallback
 
 def _prepare(item: tuple[Path, Placement]):
     path, placement = item
-    return normalized_image(
-        path, (placement.width_px, placement.height_px)
-    ), placement
+    rotated = bool(placement.rotation_degrees)
+    size = (
+        (placement.height_px, placement.width_px)
+        if rotated
+        else (placement.width_px, placement.height_px)
+    )
+    image = normalized_image(path, size)
+    if placement.rotation_degrees == 90:
+        image = image.transpose(Image.Transpose.ROTATE_90)
+    elif placement.rotation_degrees == -90:
+        image = image.transpose(Image.Transpose.ROTATE_270)
+    return image, placement
 
 
 def build_pillow_canvas(

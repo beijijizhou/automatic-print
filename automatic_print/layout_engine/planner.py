@@ -7,7 +7,7 @@ from pathlib import Path
 from .images import target_size
 from .labels import format_label, label_badge, label_layout
 from .models import LayoutSettings, Placement, ProgressCallback, mm_to_px
-from .row_optimizer import optimal_ordered_rows
+from .row_optimizer import optimal_ordered_layout
 
 
 @dataclass(frozen=True)
@@ -24,6 +24,7 @@ class LayoutItem:
     label_height: int
     footprint_width: int
     footprint_height: int
+    rotation_degrees: int
 
 
 def _signed_mm(value: float, dpi: int) -> int:
@@ -43,15 +44,18 @@ def plan_layout(
     if usable_width <= 0:
         raise ValueError("外边距过大，画布没有可打印区域。")
     items, labels = _read_items(paths, settings, progress)
-    for item in items:
-        if item.footprint_width > usable_width:
+    for choices in items:
+        if all(item.footprint_width > usable_width for item in choices):
             raise ValueError(
-                f"图片 {item.path.name} 的宽度超过了材料可打印宽度。"
+                f"图片 {choices[0].path.name} 的宽度超过了材料可打印宽度。"
             )
-    rows = optimal_ordered_rows(
+    rows = optimal_ordered_layout(
         [
-            (item.footprint_width, item.footprint_height)
-            for item in items
+            [
+                (item.footprint_width, item.footprint_height)
+                for item in choices
+            ]
+            for choices in items
         ],
         usable_width,
         spacing,
@@ -78,7 +82,7 @@ def _read_items(paths, settings, progress):
     offset_y = _signed_mm(settings.label_offset_y_mm, settings.dpi)
     for index, path in enumerate(paths, start=1):
         width, height = target_size(path, settings.dpi)
-        values = _label_values(
+        natural = _make_item(
             path,
             index,
             width,
@@ -89,11 +93,60 @@ def _read_items(paths, settings, progress):
             gap,
             offset_x,
             offset_y,
+            0,
         )
-        items.append(LayoutItem(path, index, width, height, *values))
+        choices = [natural]
+        if settings.allow_rotation and width != height:
+            degrees = 90 if settings.rotation_direction == "left" else -90
+            choices.append(
+                _make_item(
+                    path,
+                    index,
+                    height,
+                    width,
+                    settings,
+                    labels,
+                    created_at,
+                    gap,
+                    offset_x,
+                    offset_y,
+                    degrees,
+                )
+            )
+        items.append(choices)
         if progress:
             progress("读取图片尺寸", index, len(paths), path.name)
     return items, labels
+
+
+def _make_item(
+    path,
+    index,
+    width,
+    height,
+    settings,
+    labels,
+    created_at,
+    gap,
+    offset_x,
+    offset_y,
+    rotation_degrees,
+):
+    values = _label_values(
+        path,
+        index,
+        width,
+        height,
+        settings,
+        labels,
+        created_at,
+        gap,
+        offset_x,
+        offset_y,
+    )
+    return LayoutItem(
+        path, index, width, height, *values, rotation_degrees
+    )
 
 
 def _label_values(
@@ -137,8 +190,13 @@ def _label_values(
 def _place_rows(items, rows, margin, spacing):
     planned = []
     y = margin
-    for start, end in rows:
-        row = items[start:end]
+    for start, end, choice_indexes in rows:
+        row = [
+            items[index][choice]
+            for index, choice in zip(
+                range(start, end), choice_indexes, strict=True
+            )
+        ]
         row_height = max(item.footprint_height for item in row)
         x = margin
         for item in row:
@@ -159,6 +217,7 @@ def _place_rows(items, rows, margin, spacing):
                         y,
                         item.footprint_width,
                         item.footprint_height,
+                        item.rotation_degrees,
                     ),
                 )
             )

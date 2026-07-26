@@ -1,4 +1,5 @@
 from automatic_print.layout_engine.row_optimizer import (
+    optimal_ordered_layout,
     optimal_ordered_rows,
 )
 
@@ -26,3 +27,23 @@ def test_optimizer_counts_horizontal_and_vertical_spacing() -> None:
     rows = optimal_ordered_rows(footprints, usable_width=9, spacing=1)
 
     assert rows == [(0, 2), (2, 3)]
+
+
+def test_optimizer_uses_rotation_when_natural_width_does_not_fit() -> None:
+    rows = optimal_ordered_layout(
+        [[(80, 30), (30, 80)]],
+        usable_width=40,
+        spacing=8,
+    )
+
+    assert rows == [(0, 1, (1,))]
+
+
+def test_optimizer_avoids_rotation_when_length_is_equal() -> None:
+    rows = optimal_ordered_layout(
+        [[(30, 30), (30, 30)]],
+        usable_width=40,
+        spacing=8,
+    )
+
+    assert rows == [(0, 1, (0,))]

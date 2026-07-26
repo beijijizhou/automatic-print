@@ -26,6 +26,8 @@ def test_default_settings_are_print_ready() -> None:
     assert settings.number_images is True
     assert settings.number_gap_mm == 5
     assert settings.number_font_size_mm == 10
+    assert settings.allow_rotation is True
+    assert settings.rotation_direction == "left"
 
 
 def test_versions_are_compared_numerically() -> None:
@@ -134,6 +136,36 @@ def test_generate_layout_can_number_images(tmp_path) -> None:
             + second["height_px"]
             + mm_to_px(5, 100)
         )
+
+
+def test_layout_rotates_left_without_stretching(tmp_path) -> None:
+    source = tmp_path / "source"
+    output = tmp_path / "output"
+    source.mkdir()
+    path = source / "wide.png"
+    image = Image.new("RGB", (80, 30), "red")
+    for x in range(40, 80):
+        for y in range(30):
+            image.putpixel((x, y), (0, 0, 255))
+    image.save(path, dpi=(100, 100))
+
+    result = generate_layout(
+        [path],
+        output,
+        LayoutSettings(
+            media_width_mm=12,
+            margin_mm=0,
+            dpi=100,
+            number_images=False,
+        ),
+    )
+
+    placement = result["placements"][0]
+    assert placement["rotation_degrees"] == 90
+    assert (placement["width_px"], placement["height_px"]) == (30, 80)
+    with Image.open(output / "print.png") as generated:
+        assert generated.getpixel((15, 5))[:3] == (0, 0, 255)
+        assert generated.getpixel((15, 75))[:3] == (255, 0, 0)
 
 
 def test_label_positions_stay_outside_image_and_inside_canvas(tmp_path) -> None:

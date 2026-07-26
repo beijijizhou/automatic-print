@@ -48,6 +48,15 @@ class PreferencesMixin:
         self.number_images.setChecked(
             self.preferences.value("layout/number_images", True, bool)
         )
+        self.allow_rotation.setChecked(
+            self.preferences.value("layout/allow_rotation", True, bool)
+        )
+        direction = self.preferences.value(
+            "layout/rotation_direction", "left", str
+        )
+        self.rotation_direction.setCurrentIndex(
+            max(0, self.rotation_direction.findData(direction))
+        )
         compression = self.preferences.value(
             "layout/png_compression_level", 1, int
         )
@@ -115,6 +124,9 @@ class PreferencesMixin:
             "layout/dpi": self.dpi.value(),
             "layout/worker_threads": self.worker_threads.value(),
             "layout/number_images": self.number_images.isChecked(),
+            "layout/allow_rotation": self.allow_rotation.isChecked(),
+            "layout/rotation_direction":
+                self.rotation_direction.currentData(),
             "layout/png_compression_level": self.png_compression.currentData(),
             "layout/png_engine": self.png_engine.currentData(),
             "label/text_template": label.text_template.text(),

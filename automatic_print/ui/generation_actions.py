@@ -27,6 +27,8 @@ class GenerationActionsMixin:
             png_compression_level=self.png_compression.currentData(),
             png_engine=self.png_engine.currentData(),
             worker_threads=self.worker_threads.value(),
+            allow_rotation=self.allow_rotation.isChecked(),
+            rotation_direction=self.rotation_direction.currentData(),
             number_images=self.number_images.isChecked(),
             number_gap_mm=label.gap.value(),
             number_font_size_mm=label.font_size.value(),

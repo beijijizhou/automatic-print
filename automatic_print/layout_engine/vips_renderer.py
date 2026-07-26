@@ -16,15 +16,22 @@ def available() -> bool:
     return pyvips is not None
 
 
-def _rgba(path: Path, width: int, height: int):
+def _rgba(path: Path, width: int, height: int, rotation_degrees: int):
     image = pyvips.Image.new_from_file(str(path), access="sequential")
     if str(image.interpretation) not in {
         "srgb", "rgb", "b-w", "grey16", "multiband"
     }:
         image = image.colourspace("srgb")
-    image = image.thumbnail_image(
-        width, height=height, size="force", no_rotate=True
+    target_width, target_height = (
+        (height, width) if rotation_degrees else (width, height)
     )
+    image = image.thumbnail_image(
+        target_width, height=target_height, size="force", no_rotate=True
+    )
+    if rotation_degrees == 90:
+        image = image.rot("d270")
+    elif rotation_degrees == -90:
+        image = image.rot("d90")
     if image.format != "uchar":
         image = image.cast("uchar")
     if image.bands == 1:
@@ -65,7 +72,12 @@ def build_vips_canvas(
         layers, xs, ys = [], [], []
         for path, placement in items:
             layers.append(
-                _rgba(path, placement.width_px, placement.height_px)
+                _rgba(
+                    path,
+                    placement.width_px,
+                    placement.height_px,
+                    placement.rotation_degrees,
+                )
             )
             xs.append(placement.x_px - margin)
             ys.append(placement.y_px - row_y)

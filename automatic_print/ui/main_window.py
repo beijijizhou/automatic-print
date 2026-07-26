@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from PySide6.QtCore import QSettings, QStandardPaths, QThread, QTimer, Qt
 from PySide6.QtWidgets import (
+    QCheckBox,
     QComboBox,
     QDialog,
     QDoubleSpinBox,
@@ -86,6 +87,11 @@ class MainWindow(
         self.dpi.setRange(72, 1200)
         self.worker_threads = QSpinBox()
         self.worker_threads.setRange(1, 32)
+        self.allow_rotation = QCheckBox("允许旋转以节省材料")
+        self.allow_rotation.setChecked(True)
+        self.rotation_direction = QComboBox()
+        self.rotation_direction.addItem("向左旋转（默认）", "left")
+        self.rotation_direction.addItem("向右旋转", "right")
         self.label_settings = LabelSettingsDialog(self)
         self.number_images = self.label_settings.enabled
         label_button = QPushButton("打开标签与文字设置…")
@@ -107,6 +113,8 @@ class MainWindow(
             ("外边距（毫米）", self.margin),
             ("输出分辨率", self.dpi),
             ("并行处理线程数", self.worker_threads),
+            ("图片旋转", self.allow_rotation),
+            ("旋转方向", self.rotation_direction),
             ("标签与文字", label_button),
             ("图片保存方式", self.png_engine),
             ("图片压缩", self.png_compression),

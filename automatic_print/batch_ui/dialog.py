@@ -176,6 +176,8 @@ class AutomationDialog(
             png_compression_level=window.png_compression.currentData(),
             png_engine=window.png_engine.currentData(),
             worker_threads=window.worker_threads.value(),
+            allow_rotation=window.allow_rotation.isChecked(),
+            rotation_direction=window.rotation_direction.currentData(),
             number_images=window.number_images.isChecked(),
             number_gap_mm=label.gap.value(),
             number_font_size_mm=label.font_size.value(),

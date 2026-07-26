@@ -24,6 +24,8 @@ class LayoutSettings:
     label_offset_x_mm: float = 0
     label_offset_y_mm: float = 0
     label_date_format: str = "%Y-%m-%d"
+    allow_rotation: bool = True
+    rotation_direction: str = "left"
 
 
 @dataclass(frozen=True)
@@ -41,6 +43,7 @@ class Placement:
     row_y_px: int
     footprint_width_px: int
     footprint_height_px: int
+    rotation_degrees: int = 0
 
 
 def mm_to_px(value: float, dpi: int) -> int:
