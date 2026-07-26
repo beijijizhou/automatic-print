@@ -35,9 +35,10 @@ class PreferencesMixin:
         self.settings_dialog.activateWindow()
 
     def load_layout_preferences(self) -> None:
+        self._migrate_layout_defaults()
         values = (
-            (self.width, "layout/media_width_mm", 600, float),
-            (self.spacing, "layout/spacing_mm", 3, float),
+            (self.width, "layout/media_width_mm", 580, float),
+            (self.spacing, "layout/spacing_mm", 8, float),
             (self.margin, "layout/margin_mm", 3, float),
             (self.dpi, "layout/dpi", 300, int),
             (self.worker_threads, "layout/worker_threads", 8, int),
@@ -90,6 +91,20 @@ class PreferencesMixin:
                 "label/date_format", "%Y-%m-%d", str
             )
         )
+
+    def _migrate_layout_defaults(self) -> None:
+        key = "layout/defaults_580_8_applied"
+        if self.preferences.value(key, False, bool):
+            return
+        width = self.preferences.value(
+            "layout/media_width_mm", 600, float
+        )
+        spacing = self.preferences.value("layout/spacing_mm", 3, float)
+        if width == 600:
+            self.preferences.setValue("layout/media_width_mm", 580)
+        if spacing == 3:
+            self.preferences.setValue("layout/spacing_mm", 8)
+        self.preferences.setValue(key, True)
 
     def save_layout_preferences(self) -> None:
         label = self.label_settings

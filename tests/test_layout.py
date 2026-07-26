@@ -18,7 +18,8 @@ def test_mm_to_px_at_254_dpi() -> None:
 
 def test_default_settings_are_print_ready() -> None:
     settings = LayoutSettings()
-    assert settings.media_width_mm == 600
+    assert settings.media_width_mm == 580
+    assert settings.spacing_mm == 8
     assert settings.dpi == 300
     assert settings.png_compression_level == 1
     assert settings.png_engine == "pillow"
