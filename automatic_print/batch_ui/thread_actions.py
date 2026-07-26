@@ -6,6 +6,7 @@ from PySide6.QtGui import QDesktopServices
 from PySide6.QtWidgets import QMessageBox
 
 from .worker import AutomationWorker
+from ..layout_engine.metrics import saving_text
 from ..ui.thread_lifecycle import (
     defer_finished_thread_cleanup,
     discard_stopped_thread,
@@ -89,19 +90,29 @@ class ThreadActionsMixin:
             if merged_codes
             else ""
         )
+        savings = [item[1] for item in result["batches"]]
+        total_saved = sum(item.get("saved_length_m", 0) for item in savings)
+        total_rotated = sum(item.get("rotation_count", 0) for item in savings)
+        saving = saving_text(
+            {
+                "saved_length_m": total_saved,
+                "saved_percent": _combined_percent(savings),
+                "rotation_count": total_rotated,
+            }
+        )
         if result["type"] == "downloaded_and_processed":
             text = (
                 f"{result['platform']}：已下载并解压 "
                 f"{len(result['files'])} 个文件，已完成 "
                 f"{len(result['batches'])} 个{mode}排版。"
-                f"{merged_text}"
+                f"{merged_text}\n{saving}"
             )
             self.refresh_local_batches()
         else:
             text = (
                 f"{result['platform']}：已生成 "
                 f"{len(result['batches'])} 个{mode}排版图片。"
-                f"{merged_text}"
+                f"{merged_text}\n{saving}"
             )
         self.summary.setText(text)
         QMessageBox.information(self, "处理完成", text)
@@ -142,6 +153,12 @@ class ThreadActionsMixin:
             and bool(plan.nonempty_items)
             and plan.total_items + plan.excluded_count == plan.received_count
         )
+
+
+def _combined_percent(results: list[dict]) -> float:
+    baseline = sum(item.get("baseline_height_mm", 0) for item in results)
+    saved_mm = sum(item.get("saved_length_m", 0) * 1000 for item in results)
+    return saved_mm / baseline * 100 if baseline else 0
 
     @Slot()
     def clear_worker(self) -> None:

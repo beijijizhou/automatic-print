@@ -6,6 +6,7 @@ from pathlib import Path
 
 from .images import target_size
 from .labels import format_label, label_badge, label_layout
+from .metrics import basic_ordered_height
 from .models import LayoutSettings, Placement, ProgressCallback, mm_to_px
 from .row_optimizer import optimal_ordered_layout
 
@@ -36,7 +37,7 @@ def plan_layout(
     paths: list[Path],
     settings: LayoutSettings,
     progress: ProgressCallback | None,
-) -> tuple[list[tuple[Path, Placement]], dict[int, str], int, int]:
+) -> tuple[list[tuple[Path, Placement]], dict[int, str], int, int, int]:
     canvas_width = mm_to_px(settings.media_width_mm, settings.dpi)
     spacing = mm_to_px(settings.spacing_mm, settings.dpi)
     margin = mm_to_px(settings.margin_mm, settings.dpi)
@@ -68,7 +69,24 @@ def plan_layout(
         )
         + margin
     )
-    return planned, labels, canvas_width, canvas_height
+    baseline_footprints = [
+        _baseline_choice(choices, usable_width) for choices in items
+    ]
+    baseline_height = (
+        basic_ordered_height(baseline_footprints, usable_width, spacing)
+        + 2 * margin
+    )
+    return planned, labels, canvas_width, canvas_height, baseline_height
+
+
+def _baseline_choice(choices, usable_width):
+    natural = choices[0]
+    if natural.footprint_width <= usable_width:
+        return natural.footprint_width, natural.footprint_height
+    fitting = next(
+        item for item in choices if item.footprint_width <= usable_width
+    )
+    return fitting.footprint_width, fitting.footprint_height
 
 
 def _read_items(paths, settings, progress):

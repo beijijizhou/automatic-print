@@ -6,6 +6,7 @@ from time import perf_counter
 from typing import Iterable
 
 from .models import LayoutSettings, ProgressCallback
+from .metrics import saving_metrics
 from .pillow_renderer import build_pillow_canvas
 from .planner import plan_layout
 from .vips_renderer import available, build_vips_canvas
@@ -24,7 +25,7 @@ def generate_layout(
     total_started = perf_counter()
     output_dir.mkdir(parents=True, exist_ok=True)
     reading_started = perf_counter()
-    planned, labels, width, height = plan_layout(
+    planned, labels, width, height, baseline_height = plan_layout(
         list(image_paths), settings, progress
     )
     reading_seconds = perf_counter() - reading_started
@@ -57,7 +58,7 @@ def generate_layout(
         canvas.close()
     saving_seconds = perf_counter() - saving_started
     size = output_path.stat().st_size
-    return {
+    result = {
         "filename": filename,
         "width_px": width,
         "height_px": height,
@@ -73,6 +74,9 @@ def generate_layout(
             width * height / 1_000_000 / max(saving_seconds, 0.001), 1
         ),
         "placements": [asdict(item) for _, item in planned],
+        "rotation_count": sum(
+            bool(item.rotation_degrees) for _, item in planned
+        ),
         "timings_seconds": {
             "reading": round(reading_seconds, 3),
             "combining": round(combining_seconds, 3),
@@ -80,3 +84,5 @@ def generate_layout(
             "total": round(perf_counter() - total_started, 3),
         },
     }
+    result.update(saving_metrics(baseline_height, height, settings.dpi))
+    return result

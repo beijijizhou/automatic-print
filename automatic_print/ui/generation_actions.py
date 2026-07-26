@@ -9,6 +9,7 @@ from PySide6.QtGui import QDesktopServices
 from PySide6.QtWidgets import QMessageBox
 
 from ..layout import LayoutSettings, discover_images, discovered_extensions
+from ..layout_engine.metrics import saving_text
 from .workers import GenerateWorker
 from .thread_lifecycle import (
     defer_finished_thread_cleanup,
@@ -178,9 +179,14 @@ class GenerationActionsMixin:
             f"输出：{result['width_px']} × {result['height_px']} 像素"
             f" | 文件大小 {self._file_size(result['file_size_bytes'])}"
         )
+        saving = saving_text(result)
+        self.run_log.appendPlainText(saving)
+        self.status.setText(f"{self.status.text()} · {saving}")
         self.generate_button.setEnabled(True)
         QMessageBox.information(
-            self, "生成完成", f"打印图片已保存到：\n{output}"
+            self,
+            "生成完成",
+            f"{saving}\n\n打印图片已保存到：\n{output}",
         )
         QDesktopServices.openUrl(
             QUrl.fromLocalFile(str(Path(output).resolve()))
