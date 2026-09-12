@@ -1,3 +1,4 @@
+import pytest
 from PIL import Image
 
 from automatic_print.layout import LayoutSettings, generate_layout
@@ -9,7 +10,8 @@ def _image(path, width=250, height=100):
     )
 
 
-def test_unused_right_side_is_not_added_to_output(tmp_path) -> None:
+@pytest.mark.parametrize("engine", ["pillow", "libvips"])
+def test_unused_right_side_is_not_added_to_output(tmp_path, engine) -> None:
     path = tmp_path / "image.png"
     _image(path)
 
@@ -23,14 +25,18 @@ def test_unused_right_side_is_not_added_to_output(tmp_path) -> None:
             number_images=False,
             color_block_enabled=False,
             allow_rotation=False,
+            png_engine=engine,
         ),
     )
 
-    assert result["width_px"] == 250
+    assert result["width_px"] == 328
+    placement = result["placements"][0]
+    assert placement["x_px"] == 39
+    assert result["width_px"] - placement["x_px"] - 250 == 39
     assert result["maximum_width_mm"] == 114.3
-    assert result["trimmed_right_mm"] == 50.8
+    assert result["trimmed_right_mm"] == 31.0
     with Image.open(tmp_path / "output" / "print.png") as output:
-        assert output.width == 250
+        assert output.width == 328
 
 
 def test_configured_width_remains_layout_maximum(tmp_path) -> None:
@@ -52,5 +58,5 @@ def test_configured_width_remains_layout_maximum(tmp_path) -> None:
         ),
     )
 
-    assert result["width_px"] == 250
+    assert result["width_px"] == 328
     assert result["height_px"] == 200

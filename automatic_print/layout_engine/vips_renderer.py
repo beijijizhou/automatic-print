@@ -6,7 +6,7 @@ from pathlib import Path
 from PIL import ImageColor
 
 from .labels import label_badge
-from .models import LayoutSettings, Placement, ProgressCallback
+from .models import LayoutSettings, Placement, ProgressCallback, mm_to_px
 
 try:
     import pyvips
@@ -57,7 +57,9 @@ def build_vips_canvas(
     progress: ProgressCallback | None,
 ):
     width, height = canvas_size
-    margin = min(_minimum_x(p, settings) for _, p in planned)
+    left_margin = mm_to_px(settings.left_margin_mm, settings.dpi)
+    right_margin = mm_to_px(settings.right_margin_mm, settings.dpi)
+    top_margin = mm_to_px(settings.margin_mm, settings.dpi)
     rows = []
     completed = 0
     for row_y, items_iter in groupby(
@@ -66,7 +68,7 @@ def build_vips_canvas(
         items = list(items_iter)
         row_height = max(p.footprint_height_px for _, p in items)
         row_canvas = pyvips.Image.black(
-            width - 2 * margin, row_height, bands=4
+            width - left_margin - right_margin, row_height, bands=4
         ).copy(interpretation="srgb")
         layers, xs, ys = [], [], []
         for path, placement in items:
@@ -78,7 +80,7 @@ def build_vips_canvas(
                     placement.rotation_degrees,
                 )
             )
-            xs.append(placement.x_px - margin)
+            xs.append(placement.x_px - left_margin)
             ys.append(placement.y_px - row_y)
             if settings.number_images:
                 badge = label_badge(
@@ -95,7 +97,7 @@ def build_vips_canvas(
                         "uchar",
                     ).copy(interpretation="srgb")
                 )
-                xs.append(placement.number_x_px - margin)
+                xs.append(placement.number_x_px - left_margin)
                 ys.append(placement.number_y_px - row_y)
                 badge.close()
             if settings.color_block_enabled:
@@ -111,7 +113,7 @@ def build_vips_canvas(
                         interpretation="srgb"
                     )
                 )
-                xs.append(placement.color_block_x_px - margin)
+                xs.append(placement.color_block_x_px - left_margin)
                 ys.append(placement.color_block_y_px - row_y)
             completed += 1
             if progress:
@@ -144,19 +146,10 @@ def build_vips_canvas(
         previous_y, previous_height = row_y, row_height
     pixels_per_mm = settings.dpi / 25.4
     return canvas.embed(
-        margin,
-        margin,
+        left_margin,
+        top_margin,
         width,
         height,
         extend="background",
         background=[0, 0, 0, 0],
     ).copy(xres=pixels_per_mm, yres=pixels_per_mm)
-
-
-def _minimum_x(placement, settings):
-    positions = [placement.x_px]
-    if settings.number_images:
-        positions.append(placement.number_x_px)
-    if settings.color_block_enabled:
-        positions.append(placement.color_block_x_px)
-    return min(positions)

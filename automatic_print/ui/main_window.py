@@ -82,9 +82,11 @@ class MainWindow(
         folder_row = QHBoxLayout()
         folder_row.addWidget(self.folder)
         folder_row.addWidget(browse)
-        self.width = self._box(580, 50, 5000)
+        self.width = self._box(450, 50, 5000)
         self.spacing = self._box(8, 0, 100)
         self.margin = self._box(3, 0, 100)
+        self.left_margin = self._box(10, 0, 100)
+        self.right_margin = self._box(10, 0, 100)
         self.dpi = QSpinBox()
         self.dpi.setRange(72, 1200)
         self.worker_threads = QSpinBox()
@@ -115,7 +117,9 @@ class MainWindow(
             ("图片文件夹", folder_row),
             ("排版最大宽度（毫米）", self.width),
             ("图片间距（毫米）", self.spacing),
-            ("外边距（毫米）", self.margin),
+            ("上下边距（毫米）", self.margin),
+            ("左边距（毫米）", self.left_margin),
+            ("右边距（毫米）", self.right_margin),
             ("输出分辨率", self.dpi),
             ("并行处理线程数", self.worker_threads),
             ("图片旋转", self.allow_rotation),

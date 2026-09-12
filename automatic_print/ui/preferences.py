@@ -36,10 +36,13 @@ class PreferencesMixin:
 
     def load_layout_preferences(self) -> None:
         self._migrate_layout_defaults()
+        self._migrate_450_width_and_margins()
         values = (
-            (self.width, "layout/media_width_mm", 580, float),
+            (self.width, "layout/media_width_mm", 450, float),
             (self.spacing, "layout/spacing_mm", 8, float),
             (self.margin, "layout/margin_mm", 3, float),
+            (self.left_margin, "layout/left_margin_mm", 10, float),
+            (self.right_margin, "layout/right_margin_mm", 10, float),
             (self.dpi, "layout/dpi", 300, int),
             (self.worker_threads, "layout/worker_threads", 8, int),
         )
@@ -145,12 +148,29 @@ class PreferencesMixin:
             self.preferences.setValue("layout/spacing_mm", 8)
         self.preferences.setValue(key, True)
 
+    def _migrate_450_width_and_margins(self) -> None:
+        key = "layout/defaults_450_10_10_applied"
+        if self.preferences.value(key, False, bool):
+            return
+        width = self.preferences.value(
+            "layout/media_width_mm", 580, float
+        )
+        if width == 580:
+            self.preferences.setValue("layout/media_width_mm", 450)
+        if not self.preferences.contains("layout/left_margin_mm"):
+            self.preferences.setValue("layout/left_margin_mm", 10)
+        if not self.preferences.contains("layout/right_margin_mm"):
+            self.preferences.setValue("layout/right_margin_mm", 10)
+        self.preferences.setValue(key, True)
+
     def save_layout_preferences(self) -> None:
         label = self.label_settings
         values = {
             "layout/media_width_mm": self.width.value(),
             "layout/spacing_mm": self.spacing.value(),
             "layout/margin_mm": self.margin.value(),
+            "layout/left_margin_mm": self.left_margin.value(),
+            "layout/right_margin_mm": self.right_margin.value(),
             "layout/dpi": self.dpi.value(),
             "layout/worker_threads": self.worker_threads.value(),
             "layout/number_images": self.number_images.isChecked(),

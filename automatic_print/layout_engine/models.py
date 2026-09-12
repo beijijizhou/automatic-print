@@ -9,9 +9,11 @@ ProgressCallback = Callable[[str, int, int, str], None]
 
 @dataclass(frozen=True)
 class LayoutSettings:
-    media_width_mm: float = 580
+    media_width_mm: float = 450
     spacing_mm: float = 8
     margin_mm: float = 3
+    left_margin_mm: float = 10
+    right_margin_mm: float = 10
     dpi: int = 300
     png_compression_level: int = 1
     png_engine: str = "pillow"

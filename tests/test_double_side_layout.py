@@ -29,6 +29,8 @@ def test_double_sides_stay_horizontal_when_that_is_shorter(tmp_path) -> None:
             number_images=False,
             allow_rotation=False,
             color_block_enabled=False,
+            left_margin_mm=0,
+            right_margin_mm=0,
         ),
     )
 
@@ -50,6 +52,8 @@ def test_double_sides_stack_when_horizontal_pair_cannot_fit(tmp_path) -> None:
             number_images=False,
             allow_rotation=False,
             color_block_enabled=False,
+            left_margin_mm=0,
+            right_margin_mm=0,
         ),
     )
 

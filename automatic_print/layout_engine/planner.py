@@ -17,7 +17,9 @@ def plan_layout(
     canvas_width = mm_to_px(settings.media_width_mm, settings.dpi)
     spacing = mm_to_px(settings.spacing_mm, settings.dpi)
     margin = mm_to_px(settings.margin_mm, settings.dpi)
-    usable_width = canvas_width - 2 * margin
+    left_margin = mm_to_px(settings.left_margin_mm, settings.dpi)
+    right_margin = mm_to_px(settings.right_margin_mm, settings.dpi)
+    usable_width = canvas_width - left_margin - right_margin
     if usable_width <= 0:
         raise ValueError("外边距过大，画布没有可打印区域。")
     items, labels = read_items(paths, settings, progress)
@@ -39,7 +41,7 @@ def plan_layout(
     rows = optimal_ordered_layout(
         optimizer_options(units), usable_width, spacing
     )
-    planned = _place_rows(units, rows, margin, spacing)
+    planned = _place_rows(units, rows, left_margin, margin, spacing)
     canvas_height = (
         max(
             placement.row_y_px + placement.footprint_height_px
@@ -51,7 +53,9 @@ def plan_layout(
     baseline_height = (
         basic_ordered_height(baseline, usable_width, spacing) + 2 * margin
     )
-    used_width = min(canvas_width, _used_canvas_width(planned, margin))
+    used_width = min(
+        canvas_width, _used_canvas_width(planned, right_margin)
+    )
     return planned, labels, used_width, canvas_height, baseline_height
 
 
@@ -81,8 +85,8 @@ def _baseline_choice(choices, usable_width):
     return fitting.width, fitting.height
 
 
-def _place_rows(units, rows, margin, spacing):
-    planned, y = [], margin
+def _place_rows(units, rows, left_margin, top_margin, spacing):
+    planned, y = [], top_margin
     for start, end, choice_indexes in rows:
         row = [
             units[index][choice]
@@ -91,7 +95,7 @@ def _place_rows(units, rows, margin, spacing):
             )
         ]
         row_height = max(choice.height for choice in row)
-        x = margin
+        x = left_margin
         for choice in row:
             planned.extend(_place_choice(choice, x, y))
             x += choice.width + spacing

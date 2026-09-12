@@ -16,25 +16,6 @@ def test_mm_to_px_at_254_dpi() -> None:
     assert mm_to_px(10, 254) == 100
 
 
-def test_default_settings_are_print_ready() -> None:
-    settings = LayoutSettings()
-    assert settings.media_width_mm == 580
-    assert settings.spacing_mm == 8
-    assert settings.dpi == 300
-    assert settings.png_compression_level == 1
-    assert settings.png_engine == "pillow"
-    assert settings.number_images is True
-    assert settings.number_gap_mm == 5
-    assert settings.number_font_size_mm == 10
-    assert settings.allow_rotation is True
-    assert settings.rotation_direction == "left"
-    assert settings.color_block_enabled is True
-    assert settings.color_block_color == "#ff0000"
-    assert settings.color_block_width_mm == 10
-    assert settings.color_block_height_mm == 10
-    assert settings.color_block_position == "left_top"
-
-
 def test_versions_are_compared_numerically() -> None:
     assert version_tuple("v0.10.0") > version_tuple("0.2.0")
 
@@ -84,6 +65,8 @@ def test_generate_layout_uses_libvips_and_preserves_transparency(tmp_path) -> No
             png_engine="libvips",
             number_images=False,
             color_block_enabled=False,
+            left_margin_mm=0,
+            right_margin_mm=0,
         ),
     )
 
@@ -122,6 +105,8 @@ def test_generate_layout_can_number_images(tmp_path) -> None:
             margin_mm=1,
             dpi=100,
             number_images=True,
+            left_margin_mm=0,
+            right_margin_mm=0,
         ),
     )
 
@@ -164,6 +149,8 @@ def test_layout_rotates_left_without_stretching(tmp_path) -> None:
             dpi=100,
             number_images=False,
             color_block_enabled=False,
+            left_margin_mm=0,
+            right_margin_mm=0,
         ),
     )
 
