@@ -102,6 +102,8 @@ class GenerationActionsMixin:
     ) -> None:
         if stage == "读取图片尺寸":
             percent = round(current / total * 45)
+        elif stage == "识别膜标签":
+            percent = 45
         elif stage == "整理双面图片":
             percent = 45
         elif stage == "合成图片":
@@ -132,7 +134,7 @@ class GenerationActionsMixin:
             now - self.stage_started_at if self.stage_started_at else 0
         )
         if self.current_count and self.current_stage in {
-            "读取图片尺寸", "合成图片"
+            "读取图片尺寸", "识别膜标签", "合成图片"
         }:
             left = self.current_total - self.current_count
             remaining = stage_elapsed / self.current_count * left

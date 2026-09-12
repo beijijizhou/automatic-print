@@ -71,6 +71,9 @@ class PreferencesMixin:
             max(0, self.png_engine.findData(engine))
         )
         label = self.label_settings
+        label.follow_qr.setChecked(
+            self.preferences.value("label/follow_qr", True, bool)
+        )
         template = self.preferences.value(
             "label/text_template", "{编号}", str
         )
@@ -174,6 +177,7 @@ class PreferencesMixin:
             "layout/png_compression_level": self.png_compression.currentData(),
             "layout/png_engine": self.png_engine.currentData(),
             "label/text_template": label.text_template.text(),
+            "label/follow_qr": label.follow_qr.isChecked(),
             "label/position": label.position.currentData(),
             "label/font_size_mm": label.font_size.value(),
             "label/gap_mm": label.gap.value(),

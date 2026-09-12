@@ -20,6 +20,10 @@ class LabelSettingsDialog(QDialog):
         self.setMinimumWidth(520)
         self.enabled = QCheckBox("为每张图片添加编号或文字标签")
         self.enabled.setChecked(True)
+        self.follow_qr = QCheckBox(
+            "自动识别膜标签二维码，并让文字与二维码水平对齐"
+        )
+        self.follow_qr.setChecked(True)
         self.text_template = QLineEdit("{编号}")
         self.text_template.setPlaceholderText(
             "例如：{编号}  或  {编号}－{日期}"
@@ -29,6 +33,11 @@ class LabelSettingsDialog(QDialog):
         )
         help_label.setWordWrap(True)
         help_label.setTextInteractionFlags(Qt.TextSelectableByMouse)
+        qr_help = QLabel(
+            "识别成功时放在二维码附近，避免另起一行；未识别时自动使用下方设置的位置。"
+        )
+        qr_help.setWordWrap(True)
+        qr_help.setTextInteractionFlags(Qt.TextSelectableByMouse)
         self.position = QComboBox()
         for text, value in (
             ("图片下方", "bottom"),
@@ -49,6 +58,8 @@ class LabelSettingsDialog(QDialog):
         form = QFormLayout()
         for label, widget in (
             ("启用标签", self.enabled),
+            ("二维码自动定位", self.follow_qr),
+            ("", qr_help),
             ("标签文字", self.text_template),
             ("", help_label),
             ("标签位置", self.position),

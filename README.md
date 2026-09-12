@@ -7,7 +7,7 @@ Windows desktop application for combining a folder of images into print-ready la
 在测试电脑上打开 PowerShell，复制并运行：
 
 ```powershell
-powershell -ExecutionPolicy Bypass -Command "irm 'https://raw.githubusercontent.com/beijijizhou/automatic-print/main/windows/bootstrap-test-computer.ps1?v=0.1.51' | iex"
+powershell -ExecutionPolicy Bypass -Command "irm 'https://raw.githubusercontent.com/beijijizhou/automatic-print/main/windows/bootstrap-test-computer.ps1?v=0.1.52' | iex"
 ```
 
 同一条命令既可首次安装，也可在以后下载最新代码并更新运行环境。
@@ -22,6 +22,7 @@ powershell -ExecutionPolicy Bypass -Command "irm 'https://raw.githubusercontent.
 - Preserve each image's physical print size using its embedded DPI
 - Arrange images with a predictable shelf-layout algorithm
 - Add configurable labels beside images using sequence numbers, dates, or filenames
+- Detect QR membrane labels and align text beside them without adding row height
 - Preview and generate Longfeng CBT/non-CBT production batches with a final safety confirmation
 - Download and automatically extract production-image archives
 - Process each 12-digit production batch separately to avoid oversized canvases
@@ -101,7 +102,7 @@ source version instead of reinstalling every build.
 Open PowerShell on the test computer and run:
 
 ```powershell
-powershell -ExecutionPolicy Bypass -Command "irm 'https://raw.githubusercontent.com/beijijizhou/automatic-print/main/windows/bootstrap-test-computer.ps1?v=0.1.51' | iex"
+powershell -ExecutionPolicy Bypass -Command "irm 'https://raw.githubusercontent.com/beijijizhou/automatic-print/main/windows/bootstrap-test-computer.ps1?v=0.1.52' | iex"
 ```
 
 The script installs or checks Git, Python 3.12, and Google Chrome; clones or

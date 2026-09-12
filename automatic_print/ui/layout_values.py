@@ -24,6 +24,7 @@ def settings_from_window(window) -> LayoutSettings:
         label_offset_x_mm=label.offset_x.value(),
         label_offset_y_mm=label.offset_y.value(),
         label_date_format=label.date_format.text().strip() or "%Y-%m-%d",
+        label_follow_qr=label.follow_qr.isChecked(),
         color_block_enabled=block.enabled.isChecked(),
         color_block_color=block.color,
         color_block_width_mm=block.width.value(),

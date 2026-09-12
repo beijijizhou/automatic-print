@@ -11,6 +11,7 @@ def test_default_settings_are_print_ready() -> None:
     assert settings.number_images is True
     assert settings.number_gap_mm == 5
     assert settings.number_font_size_mm == 10
+    assert settings.label_follow_qr is True
     assert settings.allow_rotation is True
     assert settings.rotation_direction == "left"
     assert settings.color_block_enabled is True
