@@ -11,6 +11,7 @@ from PySide6.QtWidgets import QMessageBox
 from ..layout import LayoutSettings, discover_images, discovered_extensions
 from ..layout_engine.metrics import saving_text
 from .workers import GenerateWorker
+from .layout_values import settings_from_window
 from .progress_format import duration_text, file_size_text
 from .thread_lifecycle import (
     defer_finished_thread_cleanup,
@@ -20,26 +21,7 @@ from .thread_lifecycle import (
 
 class GenerationActionsMixin:
     def _layout_settings(self) -> LayoutSettings:
-        label = self.label_settings
-        return LayoutSettings(
-            media_width_mm=self.width.value(),
-            spacing_mm=self.spacing.value(),
-            margin_mm=self.margin.value(),
-            dpi=self.dpi.value(),
-            png_compression_level=self.png_compression.currentData(),
-            png_engine=self.png_engine.currentData(),
-            worker_threads=self.worker_threads.value(),
-            allow_rotation=self.allow_rotation.isChecked(),
-            rotation_direction=self.rotation_direction.currentData(),
-            number_images=self.number_images.isChecked(),
-            number_gap_mm=label.gap.value(),
-            number_font_size_mm=label.font_size.value(),
-            label_text_template=label.text_template.text(),
-            label_position=label.position.currentData(),
-            label_offset_x_mm=label.offset_x.value(),
-            label_offset_y_mm=label.offset_y.value(),
-            label_date_format=label.date_format.text().strip() or "%Y-%m-%d",
-        )
+        return settings_from_window(self)
 
     def generate(self) -> None:
         if self.thread is not None and not discard_stopped_thread(

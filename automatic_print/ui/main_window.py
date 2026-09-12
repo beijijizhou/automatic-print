@@ -23,6 +23,7 @@ from .. import __version__
 from ..automation_dialog import AutomationDialog
 from ..layout import png_engine_name
 from .generation_actions import GenerationActionsMixin
+from .color_block_settings import ColorBlockSettingsDialog
 from .label_settings import LabelSettingsDialog
 from .preferences import PreferencesMixin
 from .update_actions import UpdateActionsMixin
@@ -97,6 +98,9 @@ class MainWindow(
         self.number_images = self.label_settings.enabled
         label_button = QPushButton("打开标签与文字设置…")
         label_button.clicked.connect(self.label_settings.exec)
+        self.color_block_settings = ColorBlockSettingsDialog(self)
+        color_block_button = QPushButton("打开色块设置…")
+        color_block_button.clicked.connect(self.color_block_settings.exec)
         self.png_compression = QComboBox()
         self.png_compression.addItem("等级 1 — 轻度压缩（推荐）", 1)
         self.png_compression.addItem("等级 0 — 不压缩（文件最大）", 0)
@@ -117,6 +121,7 @@ class MainWindow(
             ("图片旋转", self.allow_rotation),
             ("旋转方向", self.rotation_direction),
             ("标签与文字", label_button),
+            ("剪膜机色块", color_block_button),
             ("图片保存方式", self.png_engine),
             ("图片压缩", self.png_compression),
         ):

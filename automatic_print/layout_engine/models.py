@@ -26,6 +26,14 @@ class LayoutSettings:
     label_date_format: str = "%Y-%m-%d"
     allow_rotation: bool = True
     rotation_direction: str = "left"
+    color_block_enabled: bool = True
+    color_block_color: str = "#ff0000"
+    color_block_width_mm: float = 10
+    color_block_height_mm: float = 10
+    color_block_position: str = "top_left"
+    color_block_gap_mm: float = 5
+    color_block_offset_x_mm: float = 0
+    color_block_offset_y_mm: float = 0
 
 
 @dataclass(frozen=True)
@@ -44,6 +52,10 @@ class Placement:
     footprint_width_px: int
     footprint_height_px: int
     rotation_degrees: int = 0
+    color_block_x_px: int = 0
+    color_block_y_px: int = 0
+    color_block_width_px: int = 0
+    color_block_height_px: int = 0
 
 
 def mm_to_px(value: float, dpi: int) -> int:

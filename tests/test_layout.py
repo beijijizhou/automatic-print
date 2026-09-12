@@ -28,6 +28,10 @@ def test_default_settings_are_print_ready() -> None:
     assert settings.number_font_size_mm == 10
     assert settings.allow_rotation is True
     assert settings.rotation_direction == "left"
+    assert settings.color_block_enabled is True
+    assert settings.color_block_color == "#ff0000"
+    assert settings.color_block_width_mm == 10
+    assert settings.color_block_height_mm == 10
 
 
 def test_versions_are_compared_numerically() -> None:
@@ -78,6 +82,7 @@ def test_generate_layout_uses_libvips_and_preserves_transparency(tmp_path) -> No
             png_compression_level=1,
             png_engine="libvips",
             number_images=False,
+            color_block_enabled=False,
         ),
     )
 
@@ -157,6 +162,7 @@ def test_layout_rotates_left_without_stretching(tmp_path) -> None:
             margin_mm=0,
             dpi=100,
             number_images=False,
+            color_block_enabled=False,
         ),
     )
 

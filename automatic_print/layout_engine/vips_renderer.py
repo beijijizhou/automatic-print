@@ -3,6 +3,8 @@ from __future__ import annotations
 from itertools import groupby
 from pathlib import Path
 
+from PIL import ImageColor
+
 from .labels import label_badge
 from .models import LayoutSettings, Placement, ProgressCallback
 
@@ -55,10 +57,7 @@ def build_vips_canvas(
     progress: ProgressCallback | None,
 ):
     width, height = canvas_size
-    margin = min(
-        min(p.x_px, p.number_x_px if settings.number_images else p.x_px)
-        for _, p in planned
-    )
+    margin = min(_minimum_x(p, settings) for _, p in planned)
     rows = []
     completed = 0
     for row_y, items_iter in groupby(
@@ -99,6 +98,21 @@ def build_vips_canvas(
                 xs.append(placement.number_x_px - margin)
                 ys.append(placement.number_y_px - row_y)
                 badge.close()
+            if settings.color_block_enabled:
+                red, green, blue = ImageColor.getrgb(
+                    settings.color_block_color
+                )
+                layers.append(
+                    pyvips.Image.black(
+                        placement.color_block_width_px,
+                        placement.color_block_height_px,
+                        bands=4,
+                    ).new_from_image([red, green, blue, 255]).copy(
+                        interpretation="srgb"
+                    )
+                )
+                xs.append(placement.color_block_x_px - margin)
+                ys.append(placement.color_block_y_px - row_y)
             completed += 1
             if progress:
                 progress(
@@ -137,3 +151,12 @@ def build_vips_canvas(
         extend="background",
         background=[0, 0, 0, 0],
     ).copy(xres=pixels_per_mm, yres=pixels_per_mm)
+
+
+def _minimum_x(placement, settings):
+    positions = [placement.x_px]
+    if settings.number_images:
+        positions.append(placement.number_x_px)
+    if settings.color_block_enabled:
+        positions.append(placement.color_block_x_px)
+    return min(positions)

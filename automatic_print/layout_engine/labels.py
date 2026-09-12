@@ -6,6 +6,7 @@ from pathlib import Path
 from PIL import Image, ImageDraw, ImageFont
 
 from .models import mm_to_px
+from .decorations import combined_footprint, outside_position
 
 
 def _font(size: int):
@@ -99,45 +100,21 @@ def label_layout(
     offset_x: int,
     offset_y: int,
 ) -> tuple[int, int, int, int, int, int]:
-    width, height = image_size
     label_width, label_height = label_size
-    positions = {
-        "top_left": (offset_x, -gap - label_height + offset_y),
-        "top_right": (
-            width - label_width + offset_x,
-            -gap - label_height + offset_y,
-        ),
-        "bottom_left": (offset_x, height + gap + offset_y),
-        "bottom_right": (
-            width - label_width + offset_x,
-            height + gap + offset_y,
-        ),
-        "top": (
-            (width - label_width) // 2 + offset_x,
-            -gap - label_height + offset_y,
-        ),
-        "left": (
-            -gap - label_width + offset_x,
-            (height - label_height) // 2 + offset_y,
-        ),
-        "right": (
-            width + gap + offset_x,
-            (height - label_height) // 2 + offset_y,
-        ),
-        "bottom": (
-            (width - label_width) // 2 + offset_x,
-            height + gap + offset_y,
-        ),
-    }
-    label_x, label_y = positions.get(position, positions["bottom"])
-    min_x, min_y = min(0, label_x), min(0, label_y)
-    max_x = max(width, label_x + label_width)
-    max_y = max(height, label_y + label_height)
+    label_x, label_y = outside_position(
+        image_size, label_size, position, gap, offset_x, offset_y
+    )
+    image_rx, image_ry, footprint_width, footprint_height = (
+        combined_footprint(
+            image_size,
+            [(label_x, label_y, label_width, label_height)],
+        )
+    )
     return (
-        -min_x,
-        -min_y,
-        label_x - min_x,
-        label_y - min_y,
-        max_x - min_x,
-        max_y - min_y,
+        image_rx,
+        image_ry,
+        label_x + image_rx,
+        label_y + image_ry,
+        footprint_width,
+        footprint_height,
     )

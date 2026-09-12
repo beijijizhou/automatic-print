@@ -20,6 +20,7 @@ from PySide6.QtWidgets import (
 from ..automation.platforms import ERP_PLATFORMS
 from ..layout import LayoutSettings
 from ..ui.worker_bridge import BatchWorkerBridge
+from ..ui.layout_values import settings_from_window
 from .batch_actions import BatchActionsMixin
 from .generation_actions import GenerationActionsMixin
 from .local_actions import LocalActionsMixin
@@ -56,6 +57,7 @@ class AutomationDialog(
         self.platform.currentTextChanged.connect(self.platform_changed)
         self.main_tabs.currentChanged.connect(self.main_tab_changed)
         self.show_platform_batch_rules(self.platform.currentData())
+        self.refresh_current_section()
 
     def _connect_worker_bridge(self) -> None:
         bridge = self.worker_bridge
@@ -114,11 +116,11 @@ class AutomationDialog(
 
     def _build_tabs(self) -> None:
         self.main_tabs = QTabWidget()
+        self.main_tabs.addTab(build_local_page(self), "本地排版")
         self.main_tabs.addTab(build_accepted_page(self), "已接单")
         self.main_tabs.addTab(
             build_production_page(self, self.output_row), "生产批次"
         )
-        self.main_tabs.addTab(build_local_page(self), "本地文件")
 
     def _build_layout(self) -> None:
         layout = QVBoxLayout(self)
@@ -152,10 +154,10 @@ class AutomationDialog(
     def refresh_current_section(self) -> None:
         if self.thread is not None:
             return
-        if self.main_tabs.currentIndex() == 2:
+        if self.main_tabs.currentIndex() == 0:
             self.refresh_local_batches()
             return
-        if self.main_tabs.currentIndex() == 1:
+        if self.main_tabs.currentIndex() == 2:
             self.show_cached_batches()
             return
         self.log.clear()
@@ -172,23 +174,4 @@ class AutomationDialog(
         window = self.window()
         if window is None or not hasattr(window, "width"):
             return LayoutSettings(png_engine="libvips")
-        label = window.label_settings
-        return LayoutSettings(
-            media_width_mm=window.width.value(),
-            spacing_mm=window.spacing.value(),
-            margin_mm=window.margin.value(),
-            dpi=window.dpi.value(),
-            png_compression_level=window.png_compression.currentData(),
-            png_engine=window.png_engine.currentData(),
-            worker_threads=window.worker_threads.value(),
-            allow_rotation=window.allow_rotation.isChecked(),
-            rotation_direction=window.rotation_direction.currentData(),
-            number_images=window.number_images.isChecked(),
-            number_gap_mm=label.gap.value(),
-            number_font_size_mm=label.font_size.value(),
-            label_text_template=label.text_template.text(),
-            label_position=label.position.currentData(),
-            label_offset_x_mm=label.offset_x.value(),
-            label_offset_y_mm=label.offset_y.value(),
-            label_date_format=label.date_format.text().strip() or "%Y-%m-%d",
-        )
+        return settings_from_window(window)

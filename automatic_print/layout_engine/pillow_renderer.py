@@ -3,7 +3,7 @@ from __future__ import annotations
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
-from PIL import Image
+from PIL import Image, ImageColor, ImageDraw
 
 from .images import normalized_image
 from .labels import label_badge
@@ -52,6 +52,19 @@ def build_pillow_canvas(
                     (placement.number_x_px, placement.number_y_px),
                 )
                 badge.close()
+            if settings.color_block_enabled:
+                ImageDraw.Draw(canvas).rectangle(
+                    (
+                        placement.color_block_x_px,
+                        placement.color_block_y_px,
+                        placement.color_block_x_px
+                        + placement.color_block_width_px - 1,
+                        placement.color_block_y_px
+                        + placement.color_block_height_px - 1,
+                    ),
+                    fill=ImageColor.getrgb(settings.color_block_color)
+                    + (255,),
+                )
             if progress:
                 progress(
                     "合成图片", index, len(planned), placement.source

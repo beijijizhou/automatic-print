@@ -19,6 +19,15 @@ def build_local_page(owner) -> QWidget:
         "选择批次后会先显示全部图片名称，再进行排版。"
     )
     intro.setWordWrap(True)
+    owner.manual_layout_button = QPushButton(
+        "选择任意本地图片文件夹并排版…"
+    )
+    owner.manual_layout_button.clicked.connect(owner.open_manual_layout)
+    owner.color_block_button = QPushButton("设置剪膜机色块…")
+    owner.color_block_button.clicked.connect(owner.open_color_block_settings)
+    direct_actions = QHBoxLayout()
+    direct_actions.addWidget(owner.manual_layout_button)
+    direct_actions.addWidget(owner.color_block_button)
     owner.local_summary = QLabel("尚未读取本地生产批次。")
     owner.local_table = _table(
         ["选择", "平台", "批次号", "图片数", "本地更新时间", "文件夹"],
@@ -65,6 +74,7 @@ def build_local_page(owner) -> QWidget:
         ["序号", "图片文件名（包含尺码信息）", "相对位置"], 1
     )
     layout.addWidget(intro)
+    layout.addLayout(direct_actions)
     layout.addWidget(owner.local_summary)
     layout.addWidget(owner.local_table)
     layout.addWidget(owner.local_test_mode)

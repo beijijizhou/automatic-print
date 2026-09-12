@@ -100,6 +100,27 @@ class PreferencesMixin:
                 "label/date_format", "%Y-%m-%d", str
             )
         )
+        block = self.color_block_settings
+        block.enabled.setChecked(
+            self.preferences.value("color_block/enabled", True, bool)
+        )
+        block.set_color(
+            self.preferences.value("color_block/color", "#ff0000", str)
+        )
+        position = self.preferences.value(
+            "color_block/position", "top_left", str
+        )
+        block.position.setCurrentIndex(
+            max(0, block.position.findData(position))
+        )
+        for widget, key, default in (
+            (block.width, "color_block/width_mm", 10),
+            (block.height, "color_block/height_mm", 10),
+            (block.gap, "color_block/gap_mm", 5),
+            (block.offset_x, "color_block/offset_x_mm", 0),
+            (block.offset_y, "color_block/offset_y_mm", 0),
+        ):
+            widget.setValue(self.preferences.value(key, default, float))
 
     def _migrate_layout_defaults(self) -> None:
         key = "layout/defaults_580_8_applied"
@@ -137,6 +158,18 @@ class PreferencesMixin:
             "label/offset_y_mm": label.offset_y.value(),
             "label/date_format": label.date_format.text().strip()
             or "%Y-%m-%d",
+            "color_block/enabled":
+                self.color_block_settings.enabled.isChecked(),
+            "color_block/color": self.color_block_settings.color,
+            "color_block/width_mm": self.color_block_settings.width.value(),
+            "color_block/height_mm": self.color_block_settings.height.value(),
+            "color_block/position":
+                self.color_block_settings.position.currentData(),
+            "color_block/gap_mm": self.color_block_settings.gap.value(),
+            "color_block/offset_x_mm":
+                self.color_block_settings.offset_x.value(),
+            "color_block/offset_y_mm":
+                self.color_block_settings.offset_y.value(),
         }
         for key, value in values.items():
             self.preferences.setValue(key, value)

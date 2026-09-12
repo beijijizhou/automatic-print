@@ -105,6 +105,10 @@ def _place_choice(choice, unit_x, row_y):
                     choice.width,
                     choice.height,
                     item.rotation_degrees,
+                    base_x + item.block_rx,
+                    base_y + item.block_ry,
+                    item.block_width,
+                    item.block_height,
                 ),
             )
         )

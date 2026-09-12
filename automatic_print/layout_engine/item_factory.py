@@ -6,6 +6,7 @@ from pathlib import Path
 
 from .images import target_size
 from .labels import format_label, label_badge, label_layout
+from .decorations import combined_footprint, outside_position
 from .models import LayoutSettings, mm_to_px
 
 
@@ -24,6 +25,10 @@ class LayoutItem:
     footprint_width: int
     footprint_height: int
     rotation_degrees: int
+    block_rx: int
+    block_ry: int
+    block_width: int
+    block_height: int
 
 
 def read_items(paths, settings, progress):
@@ -64,8 +69,46 @@ def _make_item(
         path, index, width, height, settings, labels,
         created_at, gap, offset_x, offset_y,
     )
+    image_rx, image_ry, label_rx, label_ry = values[:4]
+    label_width, label_height = values[4:6]
+    label_x, label_y = label_rx - image_rx, label_ry - image_ry
+    block_width = (
+        mm_to_px(settings.color_block_width_mm, settings.dpi)
+        if settings.color_block_enabled else 0
+    )
+    block_height = (
+        mm_to_px(settings.color_block_height_mm, settings.dpi)
+        if settings.color_block_enabled else 0
+    )
+    block_x, block_y = _block_position(
+        (width, height), (block_width, block_height), settings
+    )
+    decorations = [
+        (label_x, label_y, label_width, label_height),
+        (block_x, block_y, block_width, block_height),
+    ]
+    image_rx, image_ry, footprint_width, footprint_height = (
+        combined_footprint((width, height), decorations)
+    )
     return LayoutItem(
-        path, index, width, height, *values, rotation_degrees
+        path, index, width, height, image_rx, image_ry,
+        label_x + image_rx, label_y + image_ry,
+        label_width, label_height, footprint_width, footprint_height,
+        rotation_degrees, block_x + image_rx, block_y + image_ry,
+        block_width, block_height,
+    )
+
+
+def _block_position(image_size, block_size, settings):
+    if not settings.color_block_enabled:
+        return 0, 0
+    return outside_position(
+        image_size,
+        block_size,
+        settings.color_block_position,
+        mm_to_px(settings.color_block_gap_mm, settings.dpi),
+        _signed_mm(settings.color_block_offset_x_mm, settings.dpi),
+        _signed_mm(settings.color_block_offset_y_mm, settings.dpi),
     )
 
 

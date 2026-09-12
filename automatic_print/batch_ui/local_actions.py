@@ -30,6 +30,17 @@ def image_name_rows(folder: Path) -> list[tuple[str, str]]:
 
 
 class LocalActionsMixin:
+    def open_manual_layout(self) -> None:
+        window = self.window()
+        window.choose_folder()
+        window.open_settings_dialog()
+
+    def open_color_block_settings(self) -> None:
+        window = self.window()
+        window.color_block_settings.show()
+        window.color_block_settings.raise_()
+        window.color_block_settings.activateWindow()
+
     def refresh_local_batches(self) -> None:
         records = discover_local_batches(
             Path(self.output.text().strip()), self.platform.currentData()
