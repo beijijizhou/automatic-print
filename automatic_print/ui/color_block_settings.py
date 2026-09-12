@@ -15,12 +15,14 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
+from .setting_preview import SettingPreview
+
 
 class ColorBlockSettingsDialog(QDialog):
     def __init__(self, parent: QWidget | None = None) -> None:
         super().__init__(parent)
         self.setWindowTitle("色块设置")
-        self.setMinimumWidth(480)
+        self.setMinimumWidth(560)
         self.enabled = QCheckBox("为每张图片添加剪膜机识别色块")
         self.enabled.setChecked(True)
         self.color = "#ff0000"
@@ -42,6 +44,9 @@ class ColorBlockSettingsDialog(QDialog):
         note = QLabel(
             "色块始终位于图片左侧并与图片处于同一高度，适配左侧识别器，且不增加材料长度。"
         )
+        note.setWordWrap(True)
+        self.preview = SettingPreview("block", self._preview_values, self)
+        self._connect_preview()
         form = QFormLayout()
         for label, widget in (
             ("启用色块", self.enabled),
@@ -58,11 +63,34 @@ class ColorBlockSettingsDialog(QDialog):
         buttons = QDialogButtonBox(
             QDialogButtonBox.Ok | QDialogButtonBox.Cancel
         )
+        buttons.button(QDialogButtonBox.Ok).setText("确定")
+        buttons.button(QDialogButtonBox.Cancel).setText("取消")
         buttons.accepted.connect(self.accept)
         buttons.rejected.connect(self.reject)
         layout = QVBoxLayout(self)
         layout.addLayout(form)
+        layout.addWidget(self.preview)
         layout.addWidget(buttons)
+
+    def _preview_values(self) -> dict:
+        return {
+            "enabled": self.enabled.isChecked(),
+            "color": self.color,
+            "width": self.width.value(),
+            "height": self.height.value(),
+            "position": self.position.currentData(),
+            "gap": self.gap.value(),
+            "offset_x": self.offset_x.value(),
+            "offset_y": self.offset_y.value(),
+        }
+
+    def _connect_preview(self) -> None:
+        self.enabled.toggled.connect(self.preview.update)
+        self.position.currentIndexChanged.connect(self.preview.update)
+        for box in (
+            self.width, self.height, self.gap, self.offset_x, self.offset_y
+        ):
+            box.valueChanged.connect(self.preview.update)
 
     def choose_color(self) -> None:
         color = QColorDialog.getColor(QColor(self.color), self, "选择色块颜色")
@@ -82,6 +110,8 @@ class ColorBlockSettingsDialog(QDialog):
             f"background:{self.color};color:white;font-weight:700;"
             "min-height:30px;"
         )
+        if hasattr(self, "preview"):
+            self.preview.update()
 
     @staticmethod
     def _box(value, minimum, maximum) -> QDoubleSpinBox:

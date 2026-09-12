@@ -12,6 +12,8 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
+from .setting_preview import SettingPreview
+
 
 class LabelSettingsDialog(QDialog):
     def __init__(self, parent: QWidget | None = None) -> None:
@@ -55,6 +57,8 @@ class LabelSettingsDialog(QDialog):
         self.offset_x = self._box(0, -100, 100)
         self.offset_y = self._box(0, -100, 100)
         self.date_format = QLineEdit("%Y-%m-%d")
+        self.preview = SettingPreview("label", self._preview_values, self)
+        self._connect_preview()
         form = QFormLayout()
         for label, widget in (
             ("启用标签", self.enabled),
@@ -73,11 +77,36 @@ class LabelSettingsDialog(QDialog):
         buttons = QDialogButtonBox(
             QDialogButtonBox.Ok | QDialogButtonBox.Cancel
         )
+        buttons.button(QDialogButtonBox.Ok).setText("确定")
+        buttons.button(QDialogButtonBox.Cancel).setText("取消")
         buttons.accepted.connect(self.accept)
         buttons.rejected.connect(self.reject)
         layout = QVBoxLayout(self)
         layout.addLayout(form)
+        layout.addWidget(self.preview)
         layout.addWidget(buttons)
+
+    def _preview_values(self) -> dict:
+        return {
+            "enabled": self.enabled.isChecked(),
+            "follow_qr": self.follow_qr.isChecked(),
+            "text": self.text_template.text(),
+            "position": self.position.currentData(),
+            "font_size": self.font_size.value(),
+            "gap": self.gap.value(),
+            "offset_x": self.offset_x.value(),
+            "offset_y": self.offset_y.value(),
+            "date_format": self.date_format.text(),
+        }
+
+    def _connect_preview(self) -> None:
+        self.enabled.toggled.connect(self.preview.update)
+        self.follow_qr.toggled.connect(self.preview.update)
+        self.text_template.textChanged.connect(self.preview.update)
+        self.position.currentIndexChanged.connect(self.preview.update)
+        self.date_format.textChanged.connect(self.preview.update)
+        for box in (self.font_size, self.gap, self.offset_x, self.offset_y):
+            box.valueChanged.connect(self.preview.update)
 
     @staticmethod
     def _box(value, minimum, maximum) -> QDoubleSpinBox:
