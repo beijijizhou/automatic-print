@@ -5,7 +5,7 @@ from automatic_print.layout import LayoutSettings, generate_layout
 
 
 @pytest.mark.parametrize("engine", ["pillow", "libvips"])
-def test_red_color_block_is_outside_image_and_exact_size(
+def test_red_color_block_is_same_height_and_exact_size(
     tmp_path, engine
 ) -> None:
     source = tmp_path / "source"
@@ -21,7 +21,7 @@ def test_red_color_block_is_outside_image_and_exact_size(
             dpi=100,
             number_images=False,
             color_block_enabled=True,
-            color_block_position="top_left",
+            color_block_position="left_top",
             color_block_gap_mm=5,
             png_engine=engine,
         ),
@@ -31,10 +31,10 @@ def test_red_color_block_is_outside_image_and_exact_size(
     assert placement["color_block_width_px"] == 39
     assert placement["color_block_height_px"] == 39
     assert (
-        placement["color_block_y_px"]
-        + placement["color_block_height_px"]
-        < placement["y_px"]
+        placement["color_block_y_px"] == placement["y_px"]
     )
+    assert placement["color_block_x_px"] < placement["x_px"]
+    assert placement["footprint_height_px"] == placement["height_px"]
     with Image.open(tmp_path / "output" / "print.png") as output:
         assert output.getpixel(
             (
@@ -69,3 +69,24 @@ def test_color_block_offsets_expand_layout_footprint(tmp_path) -> None:
     assert placement["color_block_x_px"] > (
         placement["x_px"] + placement["width_px"]
     )
+
+
+def test_color_block_realigns_after_image_rotation(tmp_path) -> None:
+    path = tmp_path / "wide.png"
+    Image.new("RGB", (80, 30), "blue").save(path, dpi=(100, 100))
+    result = generate_layout(
+        [path],
+        tmp_path / "output",
+        LayoutSettings(
+            media_width_mm=26,
+            margin_mm=0,
+            dpi=100,
+            number_images=False,
+            color_block_position="left_top",
+        ),
+    )
+
+    placement = result["placements"][0]
+    assert placement["rotation_degrees"] == 90
+    assert placement["color_block_y_px"] == placement["y_px"]
+    assert placement["footprint_height_px"] == placement["height_px"]

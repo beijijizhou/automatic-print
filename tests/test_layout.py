@@ -32,6 +32,7 @@ def test_default_settings_are_print_ready() -> None:
     assert settings.color_block_color == "#ff0000"
     assert settings.color_block_width_mm == 10
     assert settings.color_block_height_mm == 10
+    assert settings.color_block_position == "left_top"
 
 
 def test_versions_are_compared_numerically() -> None:

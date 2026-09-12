@@ -108,8 +108,17 @@ class PreferencesMixin:
             self.preferences.value("color_block/color", "#ff0000", str)
         )
         position = self.preferences.value(
-            "color_block/position", "top_left", str
+            "color_block/position", "left_top", str
         )
+        legacy_positions = {
+            "top_left": "left_top",
+            "top": "left_top",
+            "top_right": "right_top",
+            "bottom_left": "left_bottom",
+            "bottom": "left_bottom",
+            "bottom_right": "right_bottom",
+        }
+        position = legacy_positions.get(position, position)
         block.position.setCurrentIndex(
             max(0, block.position.findData(position))
         )

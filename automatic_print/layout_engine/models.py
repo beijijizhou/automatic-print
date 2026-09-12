@@ -30,7 +30,7 @@ class LayoutSettings:
     color_block_color: str = "#ff0000"
     color_block_width_mm: float = 10
     color_block_height_mm: float = 10
-    color_block_position: str = "top_left"
+    color_block_position: str = "left_top"
     color_block_gap_mm: float = 5
     color_block_offset_x_mm: float = 0
     color_block_offset_y_mm: float = 0

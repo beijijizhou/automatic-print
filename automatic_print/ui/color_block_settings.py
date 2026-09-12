@@ -31,20 +31,20 @@ class ColorBlockSettingsDialog(QDialog):
         self.height = self._box(10, 1, 100)
         self.position = QComboBox()
         for text, value in (
-            ("左上角（图片外）", "top_left"),
-            ("上方居中", "top"),
-            ("右上角（图片外）", "top_right"),
+            ("左侧顶部对齐（默认）", "left_top"),
             ("左侧居中", "left"),
+            ("左侧底部对齐", "left_bottom"),
+            ("右侧顶部对齐", "right_top"),
             ("右侧居中", "right"),
-            ("左下角（图片外）", "bottom_left"),
-            ("下方居中", "bottom"),
-            ("右下角（图片外）", "bottom_right"),
+            ("右侧底部对齐", "right_bottom"),
         ):
             self.position.addItem(text, value)
         self.gap = self._box(5, 0, 100)
         self.offset_x = self._box(0, -100, 100)
         self.offset_y = self._box(0, -100, 100)
-        note = QLabel("基础位置位于图片外侧，微调后仍计入排版占用空间。")
+        note = QLabel(
+            "色块位于图片左右侧并与图片处于同一高度，避免增加材料长度。"
+        )
         form = QFormLayout()
         for label, widget in (
             ("启用色块", self.enabled),
