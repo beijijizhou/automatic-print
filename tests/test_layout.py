@@ -65,8 +65,6 @@ def test_generate_layout_uses_libvips_and_preserves_transparency(tmp_path) -> No
             png_engine="libvips",
             number_images=False,
             color_block_enabled=False,
-            left_margin_mm=0,
-            right_margin_mm=0,
         ),
     )
 
@@ -105,8 +103,6 @@ def test_generate_layout_can_number_images(tmp_path) -> None:
             margin_mm=1,
             dpi=100,
             number_images=True,
-            left_margin_mm=0,
-            right_margin_mm=0,
         ),
     )
 
@@ -149,8 +145,6 @@ def test_layout_rotates_left_without_stretching(tmp_path) -> None:
             dpi=100,
             number_images=False,
             color_block_enabled=False,
-            left_margin_mm=0,
-            right_margin_mm=0,
         ),
     )
 

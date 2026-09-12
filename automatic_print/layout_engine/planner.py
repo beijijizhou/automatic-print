@@ -17,9 +17,7 @@ def plan_layout(
     canvas_width = mm_to_px(settings.media_width_mm, settings.dpi)
     spacing = mm_to_px(settings.spacing_mm, settings.dpi)
     margin = mm_to_px(settings.margin_mm, settings.dpi)
-    left_margin = mm_to_px(settings.left_margin_mm, settings.dpi)
-    right_margin = mm_to_px(settings.right_margin_mm, settings.dpi)
-    usable_width = canvas_width - left_margin - right_margin
+    usable_width = canvas_width
     if usable_width <= 0:
         raise ValueError("外边距过大，画布没有可打印区域。")
     items, labels = read_items(paths, settings, progress)
@@ -41,7 +39,7 @@ def plan_layout(
     rows = optimal_ordered_layout(
         optimizer_options(units), usable_width, spacing
     )
-    planned = _place_rows(units, rows, left_margin, margin, spacing)
+    planned = _place_rows(units, rows, margin, spacing)
     canvas_height = (
         max(
             placement.row_y_px + placement.footprint_height_px
@@ -53,13 +51,11 @@ def plan_layout(
     baseline_height = (
         basic_ordered_height(baseline, usable_width, spacing) + 2 * margin
     )
-    used_width = min(
-        canvas_width, _used_canvas_width(planned, right_margin)
-    )
+    used_width = min(canvas_width, _used_canvas_width(planned))
     return planned, labels, used_width, canvas_height, baseline_height
 
 
-def _used_canvas_width(planned, margin):
+def _used_canvas_width(planned):
     right_edges = []
     for _path, placement in planned:
         right_edges.append(placement.x_px + placement.width_px)
@@ -72,7 +68,7 @@ def _used_canvas_width(planned, margin):
                 placement.color_block_x_px
                 + placement.color_block_width_px
             )
-    return max(right_edges) + margin
+    return max(right_edges)
 
 
 def _baseline_choice(choices, usable_width):
@@ -85,7 +81,7 @@ def _baseline_choice(choices, usable_width):
     return fitting.width, fitting.height
 
 
-def _place_rows(units, rows, left_margin, top_margin, spacing):
+def _place_rows(units, rows, top_margin, spacing):
     planned, y = [], top_margin
     for start, end, choice_indexes in rows:
         row = [
@@ -95,7 +91,7 @@ def _place_rows(units, rows, left_margin, top_margin, spacing):
             )
         ]
         row_height = max(choice.height for choice in row)
-        x = left_margin
+        x = 0
         for choice in row:
             planned.extend(_place_choice(choice, x, y))
             x += choice.width + spacing

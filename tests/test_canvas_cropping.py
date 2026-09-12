@@ -29,14 +29,14 @@ def test_unused_right_side_is_not_added_to_output(tmp_path, engine) -> None:
         ),
     )
 
-    assert result["width_px"] == 328
+    assert result["width_px"] == 250
     placement = result["placements"][0]
-    assert placement["x_px"] == 39
-    assert result["width_px"] - placement["x_px"] - 250 == 39
+    assert placement["x_px"] == 0
+    assert result["width_px"] - placement["x_px"] - 250 == 0
     assert result["maximum_width_mm"] == 114.3
-    assert result["trimmed_right_mm"] == 31.0
+    assert result["trimmed_right_mm"] == 50.8
     with Image.open(tmp_path / "output" / "print.png") as output:
-        assert output.width == 328
+        assert output.width == 250
 
 
 def test_configured_width_remains_layout_maximum(tmp_path) -> None:
@@ -58,5 +58,5 @@ def test_configured_width_remains_layout_maximum(tmp_path) -> None:
         ),
     )
 
-    assert result["width_px"] == 328
+    assert result["width_px"] == 250
     assert result["height_px"] == 200

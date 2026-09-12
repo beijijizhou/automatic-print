@@ -10,8 +10,6 @@ def settings_from_window(window) -> LayoutSettings:
         media_width_mm=window.width.value(),
         spacing_mm=window.spacing.value(),
         margin_mm=window.margin.value(),
-        left_margin_mm=window.left_margin.value(),
-        right_margin_mm=window.right_margin.value(),
         dpi=window.dpi.value(),
         png_compression_level=window.png_compression.currentData(),
         png_engine=window.png_engine.currentData(),

@@ -4,8 +4,6 @@ from automatic_print.layout import LayoutSettings
 def test_default_settings_are_print_ready() -> None:
     settings = LayoutSettings()
     assert settings.media_width_mm == 450
-    assert settings.left_margin_mm == 10
-    assert settings.right_margin_mm == 10
     assert settings.spacing_mm == 8
     assert settings.dpi == 300
     assert settings.png_compression_level == 1

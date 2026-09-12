@@ -83,8 +83,6 @@ def test_color_block_realigns_after_image_rotation(tmp_path) -> None:
             dpi=100,
             number_images=False,
             color_block_position="left_top",
-            left_margin_mm=0,
-            right_margin_mm=0,
         ),
     )
 

@@ -57,8 +57,6 @@ def build_vips_canvas(
     progress: ProgressCallback | None,
 ):
     width, height = canvas_size
-    left_margin = mm_to_px(settings.left_margin_mm, settings.dpi)
-    right_margin = mm_to_px(settings.right_margin_mm, settings.dpi)
     top_margin = mm_to_px(settings.margin_mm, settings.dpi)
     rows = []
     completed = 0
@@ -68,7 +66,7 @@ def build_vips_canvas(
         items = list(items_iter)
         row_height = max(p.footprint_height_px for _, p in items)
         row_canvas = pyvips.Image.black(
-            width - left_margin - right_margin, row_height, bands=4
+            width, row_height, bands=4
         ).copy(interpretation="srgb")
         layers, xs, ys = [], [], []
         for path, placement in items:
@@ -80,7 +78,7 @@ def build_vips_canvas(
                     placement.rotation_degrees,
                 )
             )
-            xs.append(placement.x_px - left_margin)
+            xs.append(placement.x_px)
             ys.append(placement.y_px - row_y)
             if settings.number_images:
                 badge = label_badge(
@@ -97,7 +95,7 @@ def build_vips_canvas(
                         "uchar",
                     ).copy(interpretation="srgb")
                 )
-                xs.append(placement.number_x_px - left_margin)
+                xs.append(placement.number_x_px)
                 ys.append(placement.number_y_px - row_y)
                 badge.close()
             if settings.color_block_enabled:
@@ -113,7 +111,7 @@ def build_vips_canvas(
                         interpretation="srgb"
                     )
                 )
-                xs.append(placement.color_block_x_px - left_margin)
+                xs.append(placement.color_block_x_px)
                 ys.append(placement.color_block_y_px - row_y)
             completed += 1
             if progress:
@@ -146,7 +144,7 @@ def build_vips_canvas(
         previous_y, previous_height = row_y, row_height
     pixels_per_mm = settings.dpi / 25.4
     return canvas.embed(
-        left_margin,
+        0,
         top_margin,
         width,
         height,
