@@ -63,6 +63,11 @@ def generate_layout(
         "width_px": width,
         "height_px": height,
         "width_mm": round(width * 25.4 / settings.dpi, 1),
+        "maximum_width_mm": settings.media_width_mm,
+        "trimmed_right_mm": round(
+            max(0, settings.media_width_mm - width * 25.4 / settings.dpi),
+            1,
+        ),
         "height_mm": round(height * 25.4 / settings.dpi, 1),
         "file_size_bytes": size,
         "png_compression_level": settings.png_compression_level,

@@ -188,6 +188,10 @@ class GenerationActionsMixin:
             f"输出：{result['width_px']} × {result['height_px']} 像素"
             f" | 文件大小 {file_size_text(result['file_size_bytes'])}"
         )
+        if result.get("trimmed_right_mm", 0) > 0:
+            self.run_log.appendPlainText(
+                f"已自动裁去右侧空白 {result['trimmed_right_mm']:.1f} 毫米"
+            )
         saving = saving_text(result)
         self.run_log.appendPlainText(saving)
         self.status.setText(f"{self.status.text()} · {saving}")

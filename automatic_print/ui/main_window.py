@@ -113,7 +113,7 @@ class MainWindow(
         form = QFormLayout()
         for label, widget in (
             ("图片文件夹", folder_row),
-            ("材料宽度（毫米）", self.width),
+            ("排版最大宽度（毫米）", self.width),
             ("图片间距（毫米）", self.spacing),
             ("外边距（毫米）", self.margin),
             ("输出分辨率", self.dpi),

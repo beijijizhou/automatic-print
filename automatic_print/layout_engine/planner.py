@@ -51,7 +51,24 @@ def plan_layout(
     baseline_height = (
         basic_ordered_height(baseline, usable_width, spacing) + 2 * margin
     )
-    return planned, labels, canvas_width, canvas_height, baseline_height
+    used_width = min(canvas_width, _used_canvas_width(planned, margin))
+    return planned, labels, used_width, canvas_height, baseline_height
+
+
+def _used_canvas_width(planned, margin):
+    right_edges = []
+    for _path, placement in planned:
+        right_edges.append(placement.x_px + placement.width_px)
+        if placement.number_width_px:
+            right_edges.append(
+                placement.number_x_px + placement.number_width_px
+            )
+        if placement.color_block_width_px:
+            right_edges.append(
+                placement.color_block_x_px
+                + placement.color_block_width_px
+            )
+    return max(right_edges) + margin
 
 
 def _baseline_choice(choices, usable_width):
