@@ -85,6 +85,9 @@ class MainWindow(
         self.width = self._box(450, 50, 5000)
         self.spacing = self._box(8, 0, 100)
         self.margin = self._box(3, 0, 100)
+        self.margin.setToolTip(
+            "只在整张批次排版图的开头和结尾保留空间，不影响图片之间的距离。"
+        )
         self.dpi = QSpinBox()
         self.dpi.setRange(72, 1200)
         self.worker_threads = QSpinBox()
@@ -115,7 +118,7 @@ class MainWindow(
             ("图片文件夹", folder_row),
             ("排版最大宽度（毫米）", self.width),
             ("图片间距（毫米）", self.spacing),
-            ("上下边距（毫米）", self.margin),
+            ("批次开头与结尾留白（毫米）", self.margin),
             ("输出分辨率", self.dpi),
             ("并行处理线程数", self.worker_threads),
             ("图片旋转", self.allow_rotation),
