@@ -34,16 +34,13 @@ class ColorBlockSettingsDialog(QDialog):
             ("左侧顶部对齐（默认）", "left_top"),
             ("左侧居中", "left"),
             ("左侧底部对齐", "left_bottom"),
-            ("右侧顶部对齐", "right_top"),
-            ("右侧居中", "right"),
-            ("右侧底部对齐", "right_bottom"),
         ):
             self.position.addItem(text, value)
         self.gap = self._box(5, 0, 100)
         self.offset_x = self._box(0, -100, 100)
         self.offset_y = self._box(0, -100, 100)
         note = QLabel(
-            "色块位于图片左右侧并与图片处于同一高度，避免增加材料长度。"
+            "色块始终位于图片左侧并与图片处于同一高度，适配左侧识别器，且不增加材料长度。"
         )
         form = QFormLayout()
         for label, widget in (

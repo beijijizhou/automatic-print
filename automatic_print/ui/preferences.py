@@ -117,10 +117,13 @@ class PreferencesMixin:
         legacy_positions = {
             "top_left": "left_top",
             "top": "left_top",
-            "top_right": "right_top",
+            "top_right": "left_top",
             "bottom_left": "left_bottom",
             "bottom": "left_bottom",
-            "bottom_right": "right_bottom",
+            "bottom_right": "left_bottom",
+            "right_top": "left_top",
+            "right": "left",
+            "right_bottom": "left_bottom",
         }
         position = legacy_positions.get(position, position)
         block.position.setCurrentIndex(
