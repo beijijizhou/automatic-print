@@ -10,7 +10,10 @@ def dual_quality(planned, settings):
     for _, placement in planned:
         p = asdict(placement)
         rows[(p['cut_zone'], p['y_px'])].append(p)
-    paired, singles, rotated = 0, [], 0
+    paired, singles, rotated, embedded = 0, [], 0, 0
+    for members in rows.values():
+        embedded += sum(bool(p['color_block_width_px'] and p['x_px'] <= p['color_block_x_px']
+            and p['color_block_x_px']+p['color_block_width_px'] <= p['x_px']+p['width_px']) for p in members)
     for (zone, _), members in rows.items():
         if zone == '旋转区' or any(p['rotation_degrees'] for p in members):
             rotated += len(members)
@@ -26,7 +29,9 @@ def dual_quality(planned, settings):
                     'reason': '平台文字外置占位，需核对' if external else
                     '需核对图片尺寸、整批刀位及订单/尺码边界'})
     text = f'双排 {paired} 行 · 常规单排 {len(singles)} 张 · 旋转单排 {rotated} 张'
+    text += f' · 刀码内置 {embedded} 张（复用透明空位）'
     if singles:
         text += ' · 未达到全双排预期，请核对单排明细；不通过缩图或跨刀位强行双排'
     return {'paired_rows': paired, 'single_images': singles,
-            'rotated_images': rotated, 'needs_review': bool(singles), 'text': text}
+            'rotated_images': rotated, 'embedded_marks': embedded,
+            'needs_review': bool(singles), 'text': text}

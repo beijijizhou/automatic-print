@@ -11,6 +11,7 @@ from .images import print_dimensions
 from .labels import normalize_machine_number, format_label
 from .output_name import label_output_name, unused_output_path
 from .dual_quality import dual_quality
+from .marker_space import validate_embedded_marks
 from .cut_validation import validate_cut_corridor, validate_canvas_pixels, validate_vips_output
 from .metrics import saving_metrics
 from .order_validation import validate_order_placements
@@ -77,6 +78,8 @@ def generate_layout(
     try:
         order_check = validate_order_placements(paths, planned)
         cut_check = validate_cut_corridor(planned, settings, width)
+        if settings.cutter_mode != 'free':
+            validate_embedded_marks(planned)
     except ValueError as error:
         if not preview_only:
             raise

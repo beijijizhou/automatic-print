@@ -59,5 +59,10 @@ def rotation_marker_item(item, settings):
     block = item.block_rx+shift
     label = item.label_rx+shift
     if block+item.block_width > item.image_rx or (item.label_width and label+item.label_width > item.image_rx):
-        raise ValueError(f'{item.path.name}：旋转区刀码右移后会碰到图片，请增加色块与图片间距。')
+        from .marker_space import can_embed_marker
+        if not can_embed_marker(item.path, item.width, item.height, item.rotation_degrees,
+            (block-item.image_rx, item.block_ry-item.image_ry, item.block_width, item.block_height),
+            (label-item.image_rx, item.label_ry-item.image_ry, item.label_width, item.label_height),
+            (item.platform_rx-item.image_rx, item.platform_ry-item.image_ry, item.platform_width, item.platform_height)):
+            raise ValueError(f'{item.path.name}：旋转区刀码右移后会碰到图片，请增加色块与图片间距。')
     return replace(item, block_rx=block, label_rx=label)
