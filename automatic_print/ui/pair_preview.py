@@ -117,7 +117,14 @@ class PairProductionPreview(ProductionPreview):
             self.update()
             return
         self.refresh_timer.stop()
-        self.loader.request(folder, replace(self.settings_getter(), allow_rotation=False))
+        try:
+            settings = replace(self.settings_getter(), allow_rotation=False)
+        except ValueError as error:
+            self.warning = str(error)
+            self.loading_status.emit(f'参数不安全，禁止输出：{error}')
+            self.update()
+            return
+        self.loader.request(folder, settings)
 
     def closeEvent(self, event):
         self.refresh_timer.stop()

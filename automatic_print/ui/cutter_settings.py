@@ -1,4 +1,5 @@
 from PySide6.QtWidgets import QCheckBox, QComboBox, QDoubleSpinBox, QFormLayout, QLabel, QWidget
+from .printable_width import PrintableWidthPanel
 
 
 class CutterSettingsPanel(QWidget):
@@ -16,6 +17,7 @@ class CutterSettingsPanel(QWidget):
         self.film.addItem("60 厘米膜", 600)
         self.mode = QComboBox()
         self.knife = self._box(300, 1, 599)
+        self.printable = PrintableWidthPanel(preferences, width, self.knife, self)
         self.auto_knife = QCheckBox("按整批图片自动计算统一刀位")
         self.auto_knife.setChecked(preferences.value("cutter/auto_knife", True, bool))
         self.rotation_zone = QCheckBox("省膜时启用独立旋转区（每行一张，换刀一次）")
@@ -32,9 +34,10 @@ class CutterSettingsPanel(QWidget):
         for text, control in (
             ('处理模式', self.quick_mode),
             ("膜规格", self.film), ("生产排版模式", self.mode),
+            ('RIIN 已设置的预留', self.printable),
             ("刀位选择", self.auto_knife),
             ("旋转区域", self.rotation_zone),
-            ("刀位距膜左边（毫米）", self.knife),
+            ("刀位距排版左边（毫米）", self.knife),
             ("刀位两侧安全距离（毫米）", self.safety),
             ("右侧色块基准偏移（毫米）", self.marker_offset), ("", note),
         ):
@@ -48,7 +51,7 @@ class CutterSettingsPanel(QWidget):
         mode = preferences.value("cutter/mode", self.mode.currentData(), str)
         self.mode.setCurrentIndex(max(0, self.mode.findData(mode)))
         for control, key, default in (
-            (self.knife, "knife_mm", self.film.currentData() / 2),
+            (self.knife, "knife_mm", max(1, self.printable.usable_width() / 2)),
             (self.safety, "safety_mm", 3),
             (self.marker_offset, "marker_offset_mm", 0),
         ):
@@ -73,8 +76,8 @@ class CutterSettingsPanel(QWidget):
         for text, value in modes + [("自由排版（不使用固定刀位）", "free")]:
             self.mode.addItem(text, value)
         self.mode.blockSignals(False)
-        self.knife.setMaximum(film - 1)
-        self.knife.setValue(film / 2)
+        self.printable.refresh()
+        self.knife.setValue(max(1, self.printable.usable_width() / 2))
         self._mode_changed()
 
     def _mode_changed(self, *_args):
@@ -101,6 +104,7 @@ class CutterSettingsPanel(QWidget):
                 self.block.offset_y.setValue(0)
 
     def save(self):
+        self.printable.save()
         for key, value in {
             'quick_mode': self.quick_mode.isChecked(),
             "film_mm": self.film.currentData(), "mode": self.mode.currentData(),

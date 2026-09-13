@@ -28,7 +28,8 @@ class BatchSummaryPanel(QGroupBox):
         planned = payload['planned']
         self.show_analysis(payload.get('analysis', {}))
         rotations = sum(bool(p.rotation_degrees) for _, p in planned)
-        self.metrics.setText(self.metrics.text()+f' · 旋转 {rotations} 张')
+        self.metrics.setText(self.metrics.text()+f' · 旋转 {rotations} 张'
+                             f" · 可用宽度 {payload['settings'].media_width_mm:g} 毫米")
         self.progress.setText(payload.get('warning') or '排版已确定，下面显示本批次真实预览。')
 
     def show_analysis(self, report):
@@ -53,3 +54,5 @@ class BatchSummaryPanel(QGroupBox):
                              f" · 节省用膜 {result['saved_length_m']:.3f} 米"
                              f"（{result['saved_percent']:.1f}%） · 旋转 {result['rotation_count']} 张")
         self.progress.setText(f"已完成 · 输出：{Path(output)/result['filename']}")
+        if 'maximum_width_mm' in result:
+            self.metrics.setText(self.metrics.text()+f" · 可用宽度 {result['maximum_width_mm']:g} 毫米")

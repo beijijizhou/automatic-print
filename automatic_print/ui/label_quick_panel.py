@@ -119,6 +119,8 @@ class LabelQuickPanel(QWidget):
                        cutter.knife.valueChanged, cutter.safety.valueChanged,
                        cutter.marker_offset.valueChanged, window.spacing.valueChanged):
             signal.connect(self.preview.schedule_refresh)
+        for control in (cutter.printable.left, cutter.printable.right):
+            control.valueChanged.connect(self.preview.schedule_refresh)
         group = QGroupBox("本批次真实预览 · 分区、刀位、标签与色块")
         self.preview_scroll = QScrollArea()
         self.preview_scroll.setWidgetResizable(True)

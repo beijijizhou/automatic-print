@@ -8,7 +8,7 @@ def settings_from_window(window) -> LayoutSettings:
     label = window.label_settings
     block = window.color_block_settings
     return LayoutSettings(
-        media_width_mm=window.width.value(),
+        media_width_mm=window.cutter_settings.printable.effective_width(),
         spacing_mm=window.spacing.value(),
         margin_mm=window.margin.value(),
         dpi=window.dpi.value(),

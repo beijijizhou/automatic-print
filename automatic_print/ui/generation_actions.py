@@ -42,7 +42,11 @@ class GenerationActionsMixin:
                 self, "请选择保存位置", "请选择有效的任务保存位置。"
             )
             return
-        settings = self._layout_settings()
+        try:
+            settings = self._layout_settings()
+        except ValueError as error:
+            QMessageBox.warning(self, '打印参数不正确', str(error))
+            return
         self.generation_preview.start()
         job_id = datetime.now().strftime("JOB_%Y%m%d_%H%M%S")
         output = base / job_id
