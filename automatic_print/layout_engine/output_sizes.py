@@ -41,6 +41,14 @@ def cutting_report(result):
     parts = result.get('parts') or [result]
     quality = result.get('dual_quality', {})
     review = quality.get('text', '')
+    comparison = result.get('analysis', {}).get('rotation_comparison')
+    if comparison:
+        normal = comparison['normal_m']
+        normal_text = f'{normal:.3f} 米' if normal is not None else '无安全方案'
+        saving = comparison['saved_m']
+        saved_text = f'{saving:.3f} 米' if saving is not None else '无法比较'
+        review += (f"\n并行比较（分段前）：不旋转 {normal_text} · 启用旋转 {comparison['rotation_m']:.3f} 米"
+                   f" · 省膜 {saved_text} · 实际旋转 {comparison['rotated_images']} 张")
     for item in quality.get('single_images', []):
         review += f"\n单排：{item['source']} · 图宽 {item['width_mm']:g} 毫米 · {item['reason']}"
     return ('按文件段号顺序生产，不重新排序。刀位从输出文件最左侧起算，实际膜位置还需加 RIIN 左预留。\n'

@@ -67,6 +67,7 @@ class CutterSettingsPanel(QWidget):
         self.mode.currentIndexChanged.connect(self._mode_changed)
         self.auto_knife.toggled.connect(self._mode_changed)
         self.quick_mode.toggled.connect(self._mode_changed)
+        self.rotation_zone.toggled.connect(self._rotation_requested)
         self._mode_changed()
 
     def _film_changed(self, *_args):
@@ -93,7 +94,7 @@ class CutterSettingsPanel(QWidget):
         for control in (self.knife, self.safety, self.marker_offset):
             control.setEnabled(mode == "dual")
         self.auto_knife.setEnabled(mode == "dual")
-        self.rotation_zone.setEnabled(mode == "dual" and not self.quick_mode.isChecked())
+        self.rotation_zone.setEnabled(mode == "dual")
         self.tail_rotation.setEnabled(mode == 'dual')
         if self.quick_mode.isChecked():
             self.rotation_zone.setChecked(False)
@@ -122,6 +123,11 @@ class CutterSettingsPanel(QWidget):
             "marker_offset_mm": self.marker_offset.value(),
         }.items():
             self.preferences.setValue("cutter/" + key, value)
+
+    def _rotation_requested(self, enabled):
+        if enabled and self.mode.currentData() == 'dual':
+            self.quick_mode.setChecked(False)
+            self.tail_rotation.setChecked(False)
 
     @staticmethod
     def _box(value, minimum, maximum):

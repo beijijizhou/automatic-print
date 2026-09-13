@@ -54,6 +54,19 @@ class BatchSummaryPanel(QGroupBox):
             self.metrics.setText(f"排版长度 {report['height_m']:.3f} 米"
                                  f" · 常规基准 {report['height_m']+saved:.3f} 米"
                                  f" · 节省用膜 {saved:.3f} 米")
+        self._show_comparison(report)
+
+    def _show_comparison(self, report):
+        comparison = report.get('rotation_comparison')
+        if comparison:
+            normal = comparison['normal_m']
+            normal_text = f'{normal:.3f} 米' if normal is not None else '无安全方案'
+            saved = comparison['saved_m']
+            saving = f'{saved:.3f} 米' if saved is not None else '无法比较'
+            self.metrics.setText(self.metrics.text()+
+                f"\n并行比较（分段前）：不旋转 {normal_text} · 启用旋转 {comparison['rotation_m']:.3f} 米"
+                f" · 省膜 {saving} · 实际旋转 {comparison['rotated_images']} 张"
+                '\n可在打印参数取消旋转区，选择常规方案；仅预览不会生成文件。')
 
     def finished(self, output, result):
         if result.get('preview_only'):
@@ -76,6 +89,7 @@ class BatchSummaryPanel(QGroupBox):
             self.cutting.setPlainText(cutting_report(result))
             self.cutting.show()
         self._show_quality(result.get('dual_quality', {}))
+        self._show_comparison(result.get('analysis', {}))
 
     def _show_quality(self, quality):
         if quality:

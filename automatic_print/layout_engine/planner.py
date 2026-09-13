@@ -35,8 +35,8 @@ def plan_layout(
 def _plan_layout(paths, settings, progress, analysis, analysis_ready):
     if settings.cutter_mode != "free":
         if settings.cutter_rotation_zone and settings.cutter_mode == "dual":
-            from .rotation_zones import plan_rotation_zones
-            return plan_rotation_zones(paths, settings, progress, analysis, analysis_ready)
+            from .rotation_compare import compare_rotation
+            return compare_rotation(paths, settings, progress, analysis, analysis_ready)
         if settings.cutter_tail_rotation and settings.cutter_mode == 'dual':
             from .tail_rotation import plan_tail_rotation
             return plan_tail_rotation(paths, settings, progress)
