@@ -47,6 +47,15 @@ def test_saved_folder_does_not_block_startup_and_stale_results_are_ignored(tmp_p
     timer.start()
     try:
         QTest.qWait(250)
+        assert calls == []
+        assert not panel.preview.refresh_timer.isActive()
+        window.spacing.setValue(9)
+        panel.preview.set_overview(False)
+        QTest.qWait(200)
+        assert calls == []  # Startup and editing parameters do not load remembered data.
+        assert window.folder.text() == str(first)
+        panel.read_folder_button.click()
+        QTest.qWait(250)
         assert entered.is_set()
         assert window.isVisible()
         assert ticks  # GUI event loop remains responsive while disk scan is blocked.

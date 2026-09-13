@@ -57,6 +57,8 @@ class PairProductionPreview(ProductionPreview):
             self.schedule_refresh()
 
     def schedule_refresh(self, *_args):
+        if self.source_folder is None and self.path is None:
+            return
         self.refresh_timer.start()
 
     def stop_loading(self):

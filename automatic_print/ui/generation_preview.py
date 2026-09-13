@@ -32,6 +32,7 @@ class GenerationPreviewController(QObject):
         self.panel.summary.start(folder, len(discover_images(Path(folder))))
         self.panel.preview_scroll.verticalScrollBar().setValue(0)
         self.preview.clear_for_generation()
+        self.preview.source_folder = Path(folder)
         self.preview.production_active = True
         self.preview.production_stage = "正在读取整批图片并计算固定刀位…"
         self.panel.manual_rotation.setEnabled(False)

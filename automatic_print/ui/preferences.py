@@ -3,8 +3,6 @@ import re
 
 from PySide6.QtWidgets import QFileDialog, QMessageBox
 
-from ..layout import discover_images
-
 
 class PreferencesMixin:
     def choose_folder(self) -> None:
@@ -15,10 +13,12 @@ class PreferencesMixin:
             self, "请选择包含图片的文件夹（无需选择单张图片）", start
         )
         if folder:
+            unchanged = self.folder.text() == folder
             self.folder.setText(folder)
+            if unchanged:
+                self.generation_preview.preview.use_folder(folder)
             self.preferences.setValue("source_location", folder)
-            count = len(discover_images(Path(folder)))
-            self.status.setText(f"已找到 {count} 张图片，可以开始生成。")
+            self.status.setText('已选择文件夹，正在后台读取图片名称和批次信息…')
 
     def choose_output_location(self) -> None:
         folder = QFileDialog.getExistingDirectory(
