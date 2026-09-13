@@ -7,12 +7,12 @@ Windows desktop application for combining a folder of images into print-ready la
 在测试电脑上打开 PowerShell，复制并运行：
 
 ```powershell
-powershell -ExecutionPolicy Bypass -Command "irm 'https://raw.githubusercontent.com/beijijizhou/automatic-print/main/windows/bootstrap-test-computer.ps1?v=0.1.81' | iex"
+powershell -ExecutionPolicy Bypass -Command "irm 'https://raw.githubusercontent.com/beijijizhou/automatic-print/main/windows/bootstrap-test-computer.ps1?v=0.1.82' | iex"
 ```
 
 同一条命令既可首次安装，也可在以后下载最新代码并更新运行环境。
 
-界面版本显示为“日期 · 当日第几次更新”，例如 `版本 2026-09-13 · 第20次更新`，不再同时堆叠数字版本和发版日期。次数按发布迭代计数，不是打开软件或点击检查更新的次数；同日递增、换日从第01次开始。内部数字版本保留用于更新比较，可在版本文字上悬停查看。
+界面版本显示为“日期 · 当日第几次更新”，例如 `版本 2026-09-13 · 第21次更新`，不再同时堆叠数字版本和发版日期。次数按发布迭代计数，不是打开软件或点击检查更新的次数；同日递增、换日从第01次开始。内部数字版本保留用于更新比较，可在版本文字上悬停查看。
 
 从源码版 0.1.67（2026-09-13）起，主界面的“检查更新”可直接检查主分支代码，确认后自动拉取代码、同步依赖并安全重启，不再要求下载安装包。旧版电脑需先用上面的命令更新一次，之后直接点击按钮即可。排版、保存或后台预览运行时不会执行更新；本地代码有修改时停止更新，不会覆盖。
 
@@ -33,7 +33,7 @@ powershell -ExecutionPolicy Bypass -Command "irm 'https://raw.githubusercontent.
 
 单排图片的色块和标签固定在输出文件最左边缘，不允许独占右分区。右侧色块仅用于真正并排的右图；手动左分区放不下时提示调整刀位或使用单列，不能绕过安全检查。
 
-图片间距默认 5 毫米；已保存的自定义间距继续保留，可在打印参数中修改。
+上下垂直间距默认 5 毫米；固定切膜模式的水平距离由整批刀位、左右分区及色块位置计算，不叠加这 5 毫米。已保存的自定义间距继续保留，可在打印参数中修改。自由排版不使用刀位，界面会单独说明其间距同时用于水平与垂直方向。
 
 主界面增加“分步耗时”：从扫描文件名开始记录各大步骤的秒数、占比及最耗时步骤，支持复制；输出目录保存 `耗时报告.txt`，批次记录保存详细计时。大图延迟计算可能计入安全检查或保存，不能将保存阶段当作纯磁盘耗时。报告/批次记录自身写入和独立缩略图不计入该总时间。
 
@@ -139,7 +139,7 @@ source version instead of reinstalling every build.
 Open PowerShell on the test computer and run:
 
 ```powershell
-powershell -ExecutionPolicy Bypass -Command "irm 'https://raw.githubusercontent.com/beijijizhou/automatic-print/main/windows/bootstrap-test-computer.ps1?v=0.1.81' | iex"
+powershell -ExecutionPolicy Bypass -Command "irm 'https://raw.githubusercontent.com/beijijizhou/automatic-print/main/windows/bootstrap-test-computer.ps1?v=0.1.82' | iex"
 ```
 
 The script installs or checks Git, Python 3.12, and Google Chrome; clones or

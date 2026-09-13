@@ -136,7 +136,7 @@ class MainWindow(
         for label, widget in (
             ("图片文件夹", folder_row),
             ("膜与切膜规则", self.cutter_settings),
-            ("图片间距（毫米）", self.spacing),
+            ("上下垂直间距（毫米）", self.spacing),
             ("批次开头与结尾留白（毫米）", self.margin),
             ("输出分辨率", self.dpi),
             ("并行处理线程数", self.worker_threads),
@@ -149,9 +149,9 @@ class MainWindow(
             ("分段与并行保存", self.segmented_output),
         ):
             form.addRow(label, widget)
-        default = QStandardPaths.writableLocation(
-            QStandardPaths.DesktopLocation
-        )
+        from .spacing_settings import bind_spacing_description
+        bind_spacing_description(form, self)
+        default = QStandardPaths.writableLocation(QStandardPaths.DesktopLocation)
         from .output_location import build_output_location
         output_row = build_output_location(self, default)
         form.addRow("任务保存位置", output_row)
