@@ -57,6 +57,10 @@ class BatchSummaryPanel(QGroupBox):
         self._show_comparison(report)
 
     def _show_comparison(self, report):
+        from ..layout_engine.film_comparison import comparison_text
+        films = comparison_text(report.get('film_comparison'))
+        if films:
+            self.metrics.setText(self.metrics.text()+'\n'+films)
         comparison = report.get('rotation_comparison')
         if comparison:
             normal = comparison['normal_m']

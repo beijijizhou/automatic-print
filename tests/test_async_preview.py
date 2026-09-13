@@ -56,7 +56,11 @@ def test_saved_folder_does_not_block_startup_and_stale_results_are_ignored(tmp_p
         assert calls == []  # Startup and editing parameters do not load remembered data.
         assert window.folder.text() == str(first)
         panel.read_folder_button.click()
-        QTest.qWait(250)
+        # The debounce itself is 250ms; allow bounded scheduler latency on cold startup.
+        for _ in range(100):
+            if entered.is_set():
+                break
+            QTest.qWait(20)
         assert entered.is_set()
         assert window.isVisible()
         assert ticks  # GUI event loop remains responsive while disk scan is blocked.

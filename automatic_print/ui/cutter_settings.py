@@ -28,6 +28,9 @@ class CutterSettingsPanel(QWidget):
         self.safety = self._box(3, 0.1, 30)
         self.marker_offset = self._box(0, 0, 100)
         self.transitions = TransitionSettings(preferences, self)
+        self.compare_films = QCheckBox('计算 45/60 厘米：常规与旋转四方案（额外计算，不保存比较图）')
+        self.compare_films.setChecked(preferences.value('cutter/compare_films', False, bool))
+        self.compare_films.toggled.connect(lambda v: preferences.setValue('cutter/compare_films', v))
         note = QLabel(
             "先选择膜规格，再选择排版模式。固定双列的刀位整批不变；"
             "右侧色块左边缘 = 刀位 + 安全距离 + 色块偏移。"
@@ -43,6 +46,7 @@ class CutterSettingsPanel(QWidget):
             ("旋转区域", self.rotation_zone),
             ('快速末尾旋转', self.tail_rotation),
             ('区域与批次提示', self.transitions),
+            ('膜规格比较', self.compare_films),
             ("刀位距排版左边（毫米）", self.knife),
             ("刀位两侧安全距离（毫米）", self.safety),
             ("右侧色块基准偏移（毫米）", self.marker_offset), ("", note),

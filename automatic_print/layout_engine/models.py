@@ -62,6 +62,9 @@ class LayoutSettings:
     platform_name: str = ''
     platform_gap_mm: float = 2
     platform_font_height_mm: float = 0  # Zero retains automatic QR-height sizing.
+    compare_film_sizes: bool = False
+    riin_left_mm: float = 10
+    riin_right_mm: float = 10
 
 
 @dataclass(frozen=True)

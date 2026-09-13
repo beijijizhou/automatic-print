@@ -41,6 +41,8 @@ def cutting_report(result):
     parts = result.get('parts') or [result]
     quality = result.get('dual_quality', {})
     review = quality.get('text', '')
+    from .film_comparison import comparison_text
+    review += '\n'+comparison_text(result.get('analysis', {}).get('film_comparison'))
     comparison = result.get('analysis', {}).get('rotation_comparison')
     if comparison:
         normal = comparison['normal_m']
@@ -52,5 +54,5 @@ def cutting_report(result):
     for item in quality.get('single_images', []):
         review += f"\n单排：{item['source']} · 图宽 {item['width_mm']:g} 毫米 · {item['reason']}"
     return ('按文件段号顺序生产，不重新排序。刀位从输出文件最左侧起算，实际膜位置还需加 RIIN 左预留。\n'
-            '红色横线表示分段、换刀或批次结束，详见每段说明；不切入图片。刀码不添加旋转偏移。\n\n'
+            '红色横线表示分段或批次结束，区域之间不加横线；不切入图片。刀码不添加旋转偏移。\n\n'
             +review+'\n\n'+'\n\n'.join(cutting_description(part) for part in parts))
