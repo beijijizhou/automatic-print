@@ -6,6 +6,9 @@ from .models import mm_to_px
 
 
 def validate_cut_corridor(planned, settings, canvas_width):
+    if settings.cutter_mode == "single":
+        if any(p.color_block_width_px and p.color_block_x_px != 0 for _, p in planned):
+            raise ValueError("单排色块必须位于输出文件最左边缘，禁止输出。")
     if settings.cutter_mode != "dual":
         return None
     if any(p.cut_knife_x_px is not None for _,p in planned):
@@ -34,6 +37,7 @@ def validate_cut_corridor(planned, settings, canvas_width):
     if not 0 < left < right < canvas_width:
         raise ValueError("整批切割线或安全通道超出输出画布，已停止生成。")
     expected_marker = right+mm_to_px(settings.cutter_marker_offset_mm, settings.dpi)
+    left_rows = {(p.row_y_px, p.y_px) for _, p in planned if p.x_px < knife}
     violations = []
     for path, p in planned:
         for title, x, width in (
@@ -44,6 +48,8 @@ def validate_cut_corridor(planned, settings, canvas_width):
             if width and x < right and x+width > left:
                 violations.append(f"{path.name}：{title}进入整批切割安全通道")
         if p.color_block_width_px:
+            if p.x_px >= knife and (p.row_y_px, p.y_px) not in left_rows:
+                violations.append(f"{path.name}：单排色块不在输出文件最左边缘")
             expected = 0 if p.x_px < knife else expected_marker
             if p.color_block_x_px != expected:
                 violations.append(f"{path.name}：色块未对齐固定分区左边缘")

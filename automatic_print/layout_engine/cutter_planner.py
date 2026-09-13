@@ -34,7 +34,7 @@ def plan_cutter_layout(paths, settings, progress, prepared=None, preserve_sequen
                  settings.dpi, f"整批固定刀位 {settings.cutter_knife_mm:.2f} 毫米")
     solution = solve_groups(groups, lanes, spacing)
     if solution is None:
-        raise ValueError("图片无法安全放入固定分区，请调整刀位或膜规格。")
+        raise ValueError("图片无法安全放入固定分区；单排必须靠左，请启用自动刀位、增大左分区或改用单列。")
     _, plans = solution
     planned, index, y = [], 0, margin
     while index < len(groups):
@@ -129,7 +129,9 @@ def _group_rows(group, lanes, spacing):
         horizontal = _horizontal(group, lanes)
         if horizontal:
             return [horizontal]
-    for lane in lanes:
+    # A vertical/single-image row must be readable by the film's left sensor.
+    # Right-lane placement is only valid with an actual horizontal companion.
+    for lane in lanes[:1]:
         members, y = [], 0
         for item in group:
             member = _member(item, lane, y)
