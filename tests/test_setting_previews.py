@@ -96,7 +96,7 @@ def test_main_label_edits_and_parameter_edits_share_live_preview_state():
     label, block = window.label_settings, window.color_block_settings
     panel.text.setText("{编号}－测试")
     assert label.text_template.text() == "{编号}－测试"
-    assert panel.label_preview.sample_text() == "12－测试"
+    assert panel.preview.sample_text() == "1－测试"
     panel.font_size.setValue(15)
     assert label.font_size.value() == 15
     label.text_template.setText("主界面同步")
@@ -104,7 +104,6 @@ def test_main_label_edits_and_parameter_edits_share_live_preview_state():
     spy = QSignalSpy(block.settings_changed)
     block.set_color("#00ff00")
     assert spy.count() == 1
-    assert panel.block_preview.values()["color"] == "#00ff00"
-    assert not _render(panel.label_preview).isNull()
-    assert not _render(panel.block_preview).isNull()
+    assert panel.preview.settings_getter().color_block_color == "#00ff00"
+    assert not _render(panel.preview).isNull()
     window.close()

@@ -3,13 +3,13 @@ from PySide6.QtWidgets import (
     QHBoxLayout, QLineEdit, QPushButton, QVBoxLayout, QWidget,
 )
 
-from .setting_preview import SettingPreview
+from .production_preview import ProductionPreview
 
 
 class LabelQuickPanel(QWidget):
     """Main-page editing mirrors the canonical print settings, never a copy."""
 
-    def __init__(self, label, block, parent=None):
+    def __init__(self, label, block, parent=None, window=None):
         super().__init__(parent)
         self.label = label
         self.text = QLineEdit(label.text_template.text())
@@ -44,22 +44,18 @@ class LabelQuickPanel(QWidget):
         form.addRow("文字大小（毫米）", self.font_size)
         form.addRow("位置（未识别二维码时）", self.position)
         form.addRow("", toggles)
-        self.label_preview = SettingPreview("label", label._preview_values, self)
-        self.block_preview = SettingPreview("block", block._preview_values, self)
-        label.settings_changed.connect(self.label_preview.update)
-        block.settings_changed.connect(self.block_preview.update)
-        previews = QHBoxLayout()
-        for title, preview in (
-            ("标签实时预览", self.label_preview),
-            ("剪膜机色块实时预览", self.block_preview),
-        ):
-            group = QGroupBox(title)
-            QVBoxLayout(group).addWidget(preview)
-            previews.addWidget(group, 1)
+        self.preview = ProductionPreview(window._layout_settings, self)
+        label.settings_changed.connect(self.preview.refresh)
+        block.settings_changed.connect(self.preview.refresh)
+        window.folder.textChanged.connect(self.preview.use_folder)
+        window.dpi.valueChanged.connect(self.preview.refresh)
+        group = QGroupBox("生产图片样板 · 标签与色块联合预览")
+        QVBoxLayout(group).addWidget(self.preview)
+        self.preview.use_folder(window.folder.text())
         layout = QVBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
         layout.addLayout(form)
-        layout.addLayout(previews)
+        layout.addWidget(group)
 
     def _add_date(self):
         if "{日期}" not in self.text.text():

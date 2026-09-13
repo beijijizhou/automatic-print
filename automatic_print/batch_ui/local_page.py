@@ -77,7 +77,7 @@ def build_local_page(owner) -> QWidget:
     window = owner.window()
     if hasattr(window, "label_settings"):
         owner.label_quick_panel = LabelQuickPanel(
-            window.label_settings, window.color_block_settings, page
+            window.label_settings, window.color_block_settings, page, window=window
         )
         layout.addWidget(owner.label_quick_panel)
     if getattr(owner, "local_only", False):

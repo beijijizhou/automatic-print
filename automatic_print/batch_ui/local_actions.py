@@ -79,6 +79,8 @@ class LocalActionsMixin:
         if row < 0 or self.local_table.item(row, 5) is None:
             return
         folder = Path(self.local_table.item(row, 5).text())
+        if hasattr(self, "label_quick_panel"):
+            self.label_quick_panel.preview.use_folder(folder)
         images = image_name_rows(folder)
         self.filename_table.setRowCount(len(images))
         for index, (name, relative_path) in enumerate(images, start=1):
