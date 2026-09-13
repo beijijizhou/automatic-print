@@ -2,7 +2,7 @@ from PySide6.QtCore import QThread, Qt, QUrl, Slot
 from PySide6.QtGui import QDesktopServices
 from PySide6.QtWidgets import QMessageBox
 
-from .. import __version__
+from .. import __version__, __version_display__
 from ..updater import UpdateInfo, version_tuple
 from .workers import UpdateWorker
 from .thread_lifecycle import (
@@ -48,8 +48,8 @@ class UpdateActionsMixin:
             answer = QMessageBox.question(
                 self,
                 "发现新版本",
-                f"自动打印排版 {update.version} 已发布。\n\n"
-                f"当前版本：{__version__}\n\n"
+                f"自动打印排版 {update.display_version} 已发布。\n\n"
+                f"当前版本：{__version_display__}\n\n"
                 "是否打开安装程序下载页面？",
                 QMessageBox.Yes | QMessageBox.No,
             )
@@ -59,7 +59,7 @@ class UpdateActionsMixin:
             QMessageBox.information(
                 self,
                 "已经是最新版",
-                f"自动打印排版 {__version__} 已经是最新版本。",
+                f"自动打印排版 {__version_display__} 已经是最新版本。",
             )
 
     @Slot(str)

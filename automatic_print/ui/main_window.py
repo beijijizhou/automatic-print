@@ -20,7 +20,7 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
-from .. import __version__
+from .. import __version_display__
 from ..automation_dialog import AutomationDialog
 from ..layout import png_engine_name
 from .generation_actions import GenerationActionsMixin
@@ -200,7 +200,8 @@ class MainWindow(
 
     def _build_home(self) -> None:
         self.automation_home = AutomationDialog(self)
-        self.version_label = QLabel(f"版本 {__version__}")
+        self.version_label = QLabel(f"版本 {__version_display__}")
+        self.version_label.setTextInteractionFlags(Qt.TextSelectableByMouse)
         self.check_update_button = QPushButton("检查更新")
         self.check_update_button.clicked.connect(
             lambda: self.check_for_updates(False)

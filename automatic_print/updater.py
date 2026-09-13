@@ -16,6 +16,11 @@ class UpdateInfo:
     download_url: str
     release_url: str
     notes: str
+    release_date: str = ""
+
+    @property
+    def display_version(self) -> str:
+        return f"{self.version} · 发版日期 {self.release_date or '未知'}"
 
 
 def version_tuple(version: str) -> tuple[int, ...]:
@@ -52,4 +57,5 @@ def fetch_latest_release(timeout: int = 10) -> UpdateInfo:
         download_url=(installer or {}).get("browser_download_url", data["html_url"]),
         release_url=data["html_url"],
         notes=data.get("body") or "No release notes were provided.",
+        release_date=(data.get("published_at") or "")[:10],
     )
