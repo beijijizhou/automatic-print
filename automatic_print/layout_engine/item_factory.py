@@ -15,7 +15,7 @@ from .platform_label import platform_geometry, numbered_template
 from .marker_space import can_embed_marker
 from .rotated_marks import rotated_marks
 from .qr_placement import signed_mm as _signed_mm, rotated_qr as _rotated_qr, qr_label_layout as _qr_label_layout
-from .measurement_session import SESSION, measured_item
+from .measurement_session import SESSION, measured_item, choice_source
 
 
 @dataclass(frozen=True)
@@ -75,21 +75,22 @@ def read_items(paths, settings, progress):
             progress('读取图片尺寸', index, len(paths),
                      f'{path.name} · {size.width_mm:.1f} × {size.height_mm:.1f} 毫米')
             progress('测量标签与刀码', index-1, len(paths), path.name)
-        choices = [
-            measured_item(
-                _make_item, path, number, width, height, settings, labels,
-                created_at, gap, offset_x, offset_y, manual, qr_location,
-            )
-        ]
-        if settings.allow_rotation and not manual and width != height:
-            degrees = 90 if settings.rotation_direction == "left" else -90
-            choices.append(
+        # Normal and rotated measurements share one decoded source, then close it.
+        with choice_source(path, number, width, height, settings, manual):
+            choices = [
                 measured_item(
-                    _make_item, path, number, height, width, settings, labels,
-                    created_at, gap, offset_x, offset_y, degrees,
-                    qr_location,
+                    _make_item, path, number, width, height, settings, labels,
+                    created_at, gap, offset_x, offset_y, manual, qr_location,
                 )
-            )
+            ]
+            if settings.allow_rotation and not manual and width != height:
+                degrees = 90 if settings.rotation_direction == "left" else -90
+                choices.append(
+                    measured_item(
+                        _make_item, path, number, height, width, settings, labels,
+                        created_at, gap, offset_x, offset_y, degrees, qr_location,
+                    )
+                )
         items.append(choices)
         if progress:
             source = "图片内嵌 DPI" if size.embedded_dpi else "缺少 DPI，按输出 DPI 估算"

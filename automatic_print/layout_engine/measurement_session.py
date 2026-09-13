@@ -87,3 +87,19 @@ def measured_item(make, path, index, width, height, settings, labels, created_at
     if session:
         session.items[key] = item, labels.get(index)
     return item
+
+
+@contextmanager
+def choice_source(path, index, width, height, settings, manual):
+    session = SESSION.get()
+    sizes = [(width, height, manual)]
+    if settings.allow_rotation and not manual and width != height:
+        sizes.append((height, width, 90 if settings.rotation_direction == 'left' else -90))
+    if session:
+        file_key, normalized = identity(path), item_settings(settings)
+        if all((file_key, index, w, h, normalized, degrees) in session.items
+               for w, h, degrees in sizes):
+            yield
+            return
+    with measuring_source(path):
+        yield

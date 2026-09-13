@@ -3,6 +3,7 @@ from math import ceil
 
 from .cut_guide_geometry import detect_guide_band
 from .marker_space import transparent_rect
+from .transparent_search import clear_rectangles
 
 
 def rotated_marks(path, width, height, degrees, settings, block, label, platform):
@@ -27,10 +28,12 @@ def rotated_marks(path, width, height, degrees, settings, block, label, platform
 
     # Search only directly below the QR, never horizontally away from it.
     if lw and lh:
-        while ly+lh <= height and not clear((lx, ly, lw, lh)):
-            ly += max(1, round(settings.dpi/25.4))
-        if ly+lh > height:
-            ly = height + max(1, round(settings.number_gap_mm*settings.dpi/25.4))
+        positions = range(ly, height-lh+1, max(1, round(settings.dpi/25.4)))
+        valid = clear_rectangles(path, width, height, degrees,
+                                ((lx, y, lw, lh) for y in positions), vertical=True)
+        ly = next((y for y, empty in zip(positions, valid) if empty and not (
+            pw and lx < px+pw and lx+lw > px and y < py+ph and y+lh > py)),
+            height + max(1, round(settings.number_gap_mm*settings.dpi/25.4)))
     # Marker origin cannot follow the QR horizontally; outside fallback is safe.
     if not (pw and px < 0) and clear((0, by, bw, bh)):
         bx = 0

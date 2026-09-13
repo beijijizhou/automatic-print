@@ -3,6 +3,7 @@ from math import floor, ceil
 import numpy as np
 from .membrane_region import MembraneRegion
 from .measurement_session import source_pixels
+from .transparent_search import clear_rectangles
 
 
 def header_space(path, qr, width, height, badge_width, badge_height, gap, degrees):
@@ -16,19 +17,12 @@ def header_space(path, qr, width, height, badge_width, badge_height, gap, degree
             return None
         candidates += _free_band_candidates(source, qr, width, height,
                                             badge_width, badge_height, degrees)
-        for x in candidates:
-            if x < 0 or x+badge_width > width or top+badge_height > height:
-                continue
-            region = MembraneRegion(x/width, top/height,
-                (x+badge_width)/width, (top+badge_height)/height).rotated((-degrees+180)%360-180)
-            # Include resampling neighbours, not merely the glyph's black pixels.
-            box = (max(0, floor(region.left*source.width)-3),
-                   max(0, floor(region.top*source.height)-3),
-                   min(source.width, ceil(region.right*source.width)+3),
-                   min(source.height, ceil(region.bottom*source.height)+3))
-            with source.crop(box) as crop:
-                if crop.getchannel('A').getextrema()[1] == 0:
-                    return x
+        # Keep the exact candidate order and the source resampling padding.
+        rectangles = ((x, top, badge_width, badge_height) for x in candidates)
+        clear = clear_rectangles(path, width, height, degrees, rectangles, source=source)
+        for x, valid in zip(candidates, clear):
+            if valid:
+                return x
     return None
 
 
