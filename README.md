@@ -7,12 +7,12 @@ Windows desktop application for combining a folder of images into print-ready la
 在测试电脑上打开 PowerShell，复制并运行：
 
 ```powershell
-powershell -ExecutionPolicy Bypass -Command "irm 'https://raw.githubusercontent.com/beijijizhou/automatic-print/main/windows/bootstrap-test-computer.ps1?v=0.1.86' | iex"
+powershell -ExecutionPolicy Bypass -Command "irm 'https://raw.githubusercontent.com/beijijizhou/automatic-print/main/windows/bootstrap-test-computer.ps1?v=0.1.87' | iex"
 ```
 
 同一条命令既可首次安装，也可在以后下载最新代码并更新运行环境。
 
-界面版本显示为“日期 · 当日第几次更新”，例如 `版本 2026-09-13 · 第25次更新`，不再同时堆叠数字版本和发版日期。次数按发布迭代计数，不是打开软件或点击检查更新的次数；同日递增、换日从第01次开始。内部数字版本保留用于更新比较，可在版本文字上悬停查看。
+界面版本显示为“日期 · 当日第几次更新”，例如 `版本 2026-09-13 · 第26次更新`，不再同时堆叠数字版本和发版日期。次数按发布迭代计数，不是打开软件或点击检查更新的次数；同日递增、换日从第01次开始。内部数字版本保留用于更新比较，可在版本文字上悬停查看。
 
 从源码版 0.1.67（2026-09-13）起，主界面的“检查更新”可直接检查主分支代码，确认后自动拉取代码、同步依赖并安全重启，不再要求下载安装包。旧版电脑需先用上面的命令更新一次，之后直接点击按钮即可。排版、保存或后台预览运行时不会执行更新；本地代码有修改时停止更新，不会覆盖。
 
@@ -24,7 +24,7 @@ powershell -ExecutionPolicy Bypass -Command "irm 'https://raw.githubusercontent.
 
 主界面及打印参数使用统一操作图标：蓝色按钮代表开始排版/生成，红色按钮代表停止，普通操作使用次级样式；保留中文文字、键盘焦点和明确的禁用状态。
 
-默认输出到图片文件夹所在的同级目录，并创建带原文件夹名的独立任务文件夹；例如读取 `D:\订单\批次123`，输出到 `D:\订单\批次123_JOB_时间\批次123_标签名.png`。打印参数可关闭同级默认并指定其他位置，文件夹名和标签名仍保留，重名不覆盖旧图。
+默认输出统一收纳在图片文件夹同级的“切膜机文件”中，再按批次创建独立任务文件夹；例如读取 `D:\订单\批次123`，输出到 `D:\订单\切膜机文件\批次123_JOB_时间\批次123_标签名.png`。完整长图、分段 PNG、切割说明与耗时报告放在同一任务目录。打印参数可指定其他保存位置，其中也会建立“切膜机文件”；文件夹名和标签名仍保留，重名不覆盖旧图。旧输出不自动搬移。
 它会自动准备 Git、Python 3.12、Google Chrome、Playwright 及项目所需依赖，
 然后创建带有 HA 图标的“Haloo Automatic”桌面入口并启动程序。
 以后可以直接双击桌面入口打开。
@@ -143,7 +143,7 @@ source version instead of reinstalling every build.
 Open PowerShell on the test computer and run:
 
 ```powershell
-powershell -ExecutionPolicy Bypass -Command "irm 'https://raw.githubusercontent.com/beijijizhou/automatic-print/main/windows/bootstrap-test-computer.ps1?v=0.1.86' | iex"
+powershell -ExecutionPolicy Bypass -Command "irm 'https://raw.githubusercontent.com/beijijizhou/automatic-print/main/windows/bootstrap-test-computer.ps1?v=0.1.87' | iex"
 ```
 
 The script installs or checks Git, Python 3.12, and Google Chrome; clones or
@@ -170,10 +170,14 @@ computers should continue using tested GitHub Releases.
 Each run creates a timestamped job folder containing:
 
 ```text
-output/
-└── JOB_YYYYMMDD_HHMMSS/
-    ├── print.png
-    └── manifest.json
+图片文件夹所在目录/
+├── 批次123/
+└── 切膜机文件/
+    └── 批次123_JOB_YYYYMMDD_HHMMSS/
+        ├── 批次123_标签名_S-XL 第001段.png
+        ├── 切割说明.txt
+        ├── 耗时报告.txt
+        └── manifest.json
 ```
 
 The first version deliberately keeps RIIN outside the application: it produces finished print canvases, and RIIN only needs to import them.

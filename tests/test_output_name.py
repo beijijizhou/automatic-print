@@ -46,7 +46,16 @@ def test_batch_name_is_in_directory_and_png(tmp_path):
 
 def test_same_second_job_uses_new_directory(tmp_path):
     first = batch_output_directory(tmp_path, '批次123', 'JOB_20260913_120000')
-    first.mkdir()
+    assert first.parent == tmp_path / '切膜机文件'
+    assert not first.parent.exists()  # Path calculation does not create folders.
+    first.mkdir(parents=True)
     second = batch_output_directory(tmp_path, '批次123', 'JOB_20260913_120000')
     assert second.name == first.name + ' (2)'
     assert not second.exists()
+
+
+def test_different_batches_share_cutting_container(tmp_path):
+    first = batch_output_directory(tmp_path, '批次123', 'JOB_1')
+    second = batch_output_directory(tmp_path, '批次456', 'JOB_2')
+    assert first.parent == second.parent == tmp_path / '切膜机文件'
+    assert first != second

@@ -25,6 +25,7 @@ def batch_directory_name(batch_name, job_id):
 
 
 def batch_output_directory(base, batch_name, job_id):
+    base = base / "切膜机文件"
     name = batch_directory_name(batch_name, job_id)
     path, index = base / name, 2
     while path.exists():
