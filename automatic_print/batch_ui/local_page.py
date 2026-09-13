@@ -15,8 +15,8 @@ def build_local_page(owner) -> QWidget:
     page = QWidget()
     layout = QVBoxLayout(page)
     intro = QLabel(
-        "显示已经下载并解压到本机的生产批次。"
-        "选择批次后会先显示全部图片名称，再进行排版。"
+        "选择本机图片文件夹进行排版，或处理已有的本地批次。"
+        "选择批次后先显示全部图片名称；此页面不访问生产平台。"
     )
     intro.setWordWrap(True)
     owner.manual_layout_button = QPushButton(
@@ -25,12 +25,15 @@ def build_local_page(owner) -> QWidget:
     owner.manual_layout_button.clicked.connect(owner.open_manual_layout)
     owner.color_block_button = QPushButton("设置剪膜机色块…")
     owner.color_block_button.clicked.connect(owner.open_color_block_settings)
+    label_button = QPushButton("设置标签与文字…")
+    label_button.clicked.connect(owner.open_label_settings)
     direct_actions = QHBoxLayout()
     direct_actions.addWidget(owner.manual_layout_button)
     direct_actions.addWidget(owner.color_block_button)
+    direct_actions.addWidget(label_button)
     owner.local_summary = QLabel("尚未读取本地生产批次。")
     owner.local_table = _table(
-        ["选择", "平台", "批次号", "图片数", "本地更新时间", "文件夹"],
+        ["选择", "来源", "批次号", "图片数", "本地更新时间", "文件夹"],
         5,
     )
     owner.local_table.currentCellChanged.connect(
@@ -73,8 +76,14 @@ def build_local_page(owner) -> QWidget:
     owner.filename_table = _table(
         ["序号", "图片文件名（包含尺码信息）", "相对位置"], 1
     )
+    layout.addWidget(QLabel("本地图片排版"))
     layout.addWidget(intro)
     layout.addLayout(direct_actions)
+    if getattr(owner, "local_only", False):
+        layout.addWidget(QLabel("已有本地批次 → 来源分类"))
+        layout.addWidget(owner.platform)
+        layout.addWidget(QLabel("本地批次文件所在位置"))
+        layout.addLayout(owner.output_row)
     layout.addWidget(owner.local_summary)
     layout.addWidget(owner.local_table)
     layout.addWidget(owner.local_test_mode)
@@ -84,4 +93,7 @@ def build_local_page(owner) -> QWidget:
     layout.addWidget(owner.filename_summary)
     layout.addLayout(filename_actions)
     layout.addWidget(owner.filename_table)
+    if getattr(owner, "local_only", False):
+        layout.addWidget(QLabel("排版处理日志"))
+        layout.addWidget(owner.log)
     return page

@@ -39,7 +39,7 @@ class BatchActionsMixin:
 
     def choose_output(self) -> None:
         folder = QFileDialog.getExistingDirectory(
-            self, "选择生产图保存位置", self.output.text()
+            self, "选择本地批次文件所在位置", self.output.text()
         )
         if folder:
             self.output.setText(folder)

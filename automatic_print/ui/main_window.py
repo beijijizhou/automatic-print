@@ -40,7 +40,7 @@ class MainWindow(
 ):
     def __init__(self) -> None:
         super().__init__()
-        self.setWindowTitle("生产批次中心")
+        self.setWindowTitle("本地排版工作台")
         self.resize(980, 700)
         self.thread: QThread | None = None
         self.worker = None
@@ -158,7 +158,7 @@ class MainWindow(
         self.run_log = QPlainTextEdit()
         self.run_log.setReadOnly(True)
         self.run_log.setMaximumHeight(115)
-        self.generate_button = QPushButton("高级：手动生成单张排版图片")
+        self.generate_button = QPushButton("开始本地排版")
         self.generate_button.clicked.connect(self.generate)
         self.stop_generation_button = QPushButton("停止当前排版")
         self.stop_generation_button.setEnabled(False)

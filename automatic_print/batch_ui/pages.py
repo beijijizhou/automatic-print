@@ -134,16 +134,19 @@ def build_production_page(owner, output_row: QHBoxLayout) -> QWidget:
     )
     owner.test_mode.setChecked(True)
     owner.merge_batches = QCheckBox("合并选中的批次为一个排版文件")
-    owner.log = QPlainTextEdit()
-    owner.log.setReadOnly(True)
+    if not hasattr(owner, "log"):
+        owner.log = QPlainTextEdit()
+        owner.log.setReadOnly(True)
     layout.addWidget(intro)
-    layout.addWidget(QLabel("下载保存位置"))
-    layout.addLayout(output_row)
+    if not getattr(owner, "local_only", False):
+        layout.addWidget(QLabel("下载保存位置"))
+        layout.addLayout(output_row)
     layout.addWidget(owner.summary)
     layout.addLayout(range_row)
     layout.addWidget(owner.table)
     layout.addWidget(owner.test_mode)
     layout.addWidget(owner.merge_batches)
     layout.addLayout(actions)
-    layout.addWidget(owner.log)
+    if not getattr(owner, "local_only", False):
+        layout.addWidget(owner.log)
     return page

@@ -136,7 +136,8 @@ class ThreadActionsMixin:
                 f"{len(result['batches'])} 个{mode}排版图片。"
                 f"{merged_text}\n{saving}"
             )
-        self.summary.setText(text)
+        target = self.local_summary if getattr(self, "local_only", False) else self.summary
+        target.setText(text)
         QMessageBox.information(self, "处理完成", text)
         folder = Path(result["output_folder"])
         if folder.is_dir():

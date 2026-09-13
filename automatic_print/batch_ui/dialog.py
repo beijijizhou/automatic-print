@@ -10,8 +10,10 @@ from PySide6.QtWidgets import (
     QHBoxLayout,
     QLabel,
     QLineEdit,
+    QPlainTextEdit,
     QProgressBar,
     QPushButton,
+    QScrollArea,
     QTabWidget,
     QVBoxLayout,
     QWidget,
@@ -42,7 +44,8 @@ class AutomationDialog(
 ):
     def __init__(self, parent=None) -> None:
         super().__init__(parent)
-        self.setWindowTitle("生产批次中心")
+        self.local_only = True
+        self.setWindowTitle("本地排版工作台")
         self.resize(940, 640)
         self.thread = None
         self.worker = None
@@ -95,6 +98,9 @@ class AutomationDialog(
         self.output_row.addWidget(browse)
         self.settings_button = QPushButton("打印参数设置…")
         self.settings_button.clicked.connect(self.open_settings)
+        self.log = QPlainTextEdit()
+        self.log.setReadOnly(True)
+        self.log.setMaximumHeight(100)
         self.loading_panel = QWidget()
         self.loading_panel.setStyleSheet(
             "QWidget{background:#e8f1ff;border:1px solid #6f9ee8;"
@@ -121,13 +127,21 @@ class AutomationDialog(
         self.main_tabs.addTab(
             build_production_page(self, self.output_row), "生产批次"
         )
+        if self.local_only:
+            self.main_tabs.setTabVisible(1, False)
+            self.main_tabs.setTabVisible(2, False)
+            self.main_tabs.tabBar().hide()
 
     def _build_layout(self) -> None:
         layout = QVBoxLayout(self)
-        layout.addWidget(QLabel("生产平台"))
-        layout.addWidget(self.platform)
+        if not self.local_only:
+            layout.addWidget(QLabel("生产平台"))
+            layout.addWidget(self.platform)
         layout.addWidget(self.loading_panel)
-        layout.addWidget(self.main_tabs)
+        scroll = QScrollArea()
+        scroll.setWidgetResizable(True)
+        scroll.setWidget(self.main_tabs)
+        layout.addWidget(scroll)
         footer = QHBoxLayout()
         footer.addStretch()
         footer.addWidget(self.settings_button)

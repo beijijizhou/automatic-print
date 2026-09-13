@@ -7,7 +7,7 @@ Windows desktop application for combining a folder of images into print-ready la
 在测试电脑上打开 PowerShell，复制并运行：
 
 ```powershell
-powershell -ExecutionPolicy Bypass -Command "irm 'https://raw.githubusercontent.com/beijijizhou/automatic-print/main/windows/bootstrap-test-computer.ps1?v=0.1.56' | iex"
+powershell -ExecutionPolicy Bypass -Command "irm 'https://raw.githubusercontent.com/beijijizhou/automatic-print/main/windows/bootstrap-test-computer.ps1?v=0.1.57' | iex"
 ```
 
 同一条命令既可首次安装，也可在以后下载最新代码并更新运行环境。
@@ -16,6 +16,9 @@ powershell -ExecutionPolicy Bypass -Command "irm 'https://raw.githubusercontent.
 以后可以直接双击桌面入口打开。
 
 ## Current features
+
+The current UI focuses on local layout. Online order acceptance, batch creation,
+and downloads are temporarily hidden; their implementation remains available.
 
 - Recursively scan a folder for PNG, TIFF, JPEG, JFIF, WebP, or BMP images
 - Set media width, spacing, margins, and DPI
@@ -106,7 +109,7 @@ source version instead of reinstalling every build.
 Open PowerShell on the test computer and run:
 
 ```powershell
-powershell -ExecutionPolicy Bypass -Command "irm 'https://raw.githubusercontent.com/beijijizhou/automatic-print/main/windows/bootstrap-test-computer.ps1?v=0.1.56' | iex"
+powershell -ExecutionPolicy Bypass -Command "irm 'https://raw.githubusercontent.com/beijijizhou/automatic-print/main/windows/bootstrap-test-computer.ps1?v=0.1.57' | iex"
 ```
 
 The script installs or checks Git, Python 3.12, and Google Chrome; clones or

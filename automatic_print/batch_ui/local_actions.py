@@ -41,6 +41,10 @@ class LocalActionsMixin:
         window.color_block_settings.raise_()
         window.color_block_settings.activateWindow()
 
+    def open_label_settings(self) -> None:
+        window = self.window()
+        window.label_settings.exec()
+
     def refresh_local_batches(self) -> None:
         records = discover_local_batches(
             Path(self.output.text().strip()), self.platform.currentData()
@@ -62,7 +66,7 @@ class LocalActionsMixin:
                 )
         self.local_summary.setText(
             f"{self.platform.currentText()}：本地有 {len(records)} 个"
-            "已下载批次，可直接排版，不访问生产平台。"
+            "本地批次，可直接排版，不访问生产平台。"
         )
         self.filename_table.setRowCount(0)
         self.filename_summary.setText("选择一个本地批次查看图片名称。")

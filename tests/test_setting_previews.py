@@ -69,3 +69,18 @@ def test_film_parent_clears_stale_mode_and_knife_on_first_change(tmp_path):
     assert not panel.knife.isEnabled()
     panel.save()
     assert preferences.value("cutter/film_mm", type=int) == 450
+
+
+def test_home_hides_online_workflows_and_keeps_local_logs():
+    from automatic_print.ui.main_window import MainWindow
+
+    _app()
+    window = MainWindow()
+    home = window.automation_home
+    assert window.windowTitle() == "本地排版工作台"
+    assert home.main_tabs.isTabVisible(0)
+    assert not home.main_tabs.isTabVisible(1)
+    assert not home.main_tabs.isTabVisible(2)
+    assert home.thread is None
+    assert home.log.parent() is home.main_tabs.widget(0)
+    window.close()
