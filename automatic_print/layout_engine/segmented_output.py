@@ -150,6 +150,7 @@ def generate_segments(paths, output_dir, settings, progress, plan_ready,
                       'pixel_verified': all(not r['cut_corridor'] or r['cut_corridor'].get('pixel_verified') for r in ordered)},
         timings_seconds={'reading': reading, 'combining': 0, 'saving_png': wall,
                          'total': perf_counter()-started})
+    result['dual_quality'] = payload.get('dual_quality', {})
     result['source_dimensions'] = [d for part in ordered for d in part['source_dimensions']]
     result['printed_guides'] = {
         'span_count': sum(r['printed_guides']['span_count'] for r in ordered),

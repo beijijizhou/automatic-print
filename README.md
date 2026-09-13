@@ -7,12 +7,12 @@ Windows desktop application for combining a folder of images into print-ready la
 在测试电脑上打开 PowerShell，复制并运行：
 
 ```powershell
-powershell -ExecutionPolicy Bypass -Command "irm 'https://raw.githubusercontent.com/beijijizhou/automatic-print/main/windows/bootstrap-test-computer.ps1?v=0.1.88' | iex"
+powershell -ExecutionPolicy Bypass -Command "irm 'https://raw.githubusercontent.com/beijijizhou/automatic-print/main/windows/bootstrap-test-computer.ps1?v=0.1.89' | iex"
 ```
 
 同一条命令既可首次安装，也可在以后下载最新代码并更新运行环境。
 
-界面版本显示为“日期 · 当日第几次更新”，例如 `版本 2026-09-13 · 第27次更新`，不再同时堆叠数字版本和发版日期。次数按发布迭代计数，不是打开软件或点击检查更新的次数；同日递增、换日从第01次开始。内部数字版本保留用于更新比较，可在版本文字上悬停查看。
+界面版本显示为“日期 · 当日第几次更新”，例如 `版本 2026-09-13 · 第28次更新`，不再同时堆叠数字版本和发版日期。次数按发布迭代计数，不是打开软件或点击检查更新的次数；同日递增、换日从第01次开始。内部数字版本保留用于更新比较，可在版本文字上悬停查看。
 
 从源码版 0.1.67（2026-09-13）起，主界面的“检查更新”可直接检查主分支代码，确认后自动拉取代码、同步依赖并安全重启，不再要求下载安装包。旧版电脑需先用上面的命令更新一次，之后直接点击按钮即可。排版、保存或后台预览运行时不会执行更新；本地代码有修改时停止更新，不会覆盖。
 
@@ -143,7 +143,7 @@ source version instead of reinstalling every build.
 Open PowerShell on the test computer and run:
 
 ```powershell
-powershell -ExecutionPolicy Bypass -Command "irm 'https://raw.githubusercontent.com/beijijizhou/automatic-print/main/windows/bootstrap-test-computer.ps1?v=0.1.88' | iex"
+powershell -ExecutionPolicy Bypass -Command "irm 'https://raw.githubusercontent.com/beijijizhou/automatic-print/main/windows/bootstrap-test-computer.ps1?v=0.1.89' | iex"
 ```
 
 The script installs or checks Git, Python 3.12, and Google Chrome; clones or
@@ -170,6 +170,8 @@ computers should continue using tested GitHub Releases.
 当前报告统一为 `排版报告.txt`：包含切割说明、总计/分步骤耗时、实际并行数与分段耗时，不再分别输出切割和耗时两个文本文件。旧报告保留。
 
 平台字优先复用二维码旁经过源图透明像素检查的空位，不追加到图案右侧。没有安全空位时保守放在图片左侧外部，仍可能影响可并排宽度；不为省材料覆盖原图。旋转后重新检查，实际预览与输出共享坐标。
+
+空位搜索覆盖整个膜标签高度带，不限二维码附近，动态适应左/右膜标签。双列总结和报告显示双排行数、常规单排及旋转单排数量；常规单排标记未达到全双排预期，并列出需要核对的图片及平台文字外置情况。
 
 Each run creates a timestamped job folder containing:
 

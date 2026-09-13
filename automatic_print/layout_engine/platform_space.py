@@ -1,6 +1,7 @@
 """Reuse verified transparent QR-header space without extending artwork width."""
 from math import floor, ceil
 from PIL import Image
+import numpy as np
 from .membrane_region import MembraneRegion
 
 
@@ -13,11 +14,13 @@ def header_space(path, qr, width, height, badge_width, badge_height, gap, degree
     with Image.open(path) as source:
         if 'A' not in source.getbands():
             return None
+        candidates += _free_band_candidates(source, qr, width, height,
+                                            badge_width, badge_height, degrees)
         for x in candidates:
             if x < 0 or x+badge_width > width or top+badge_height > height:
                 continue
             region = MembraneRegion(x/width, top/height,
-                (x+badge_width)/width, (top+badge_height)/height).rotated(-degrees)
+                (x+badge_width)/width, (top+badge_height)/height).rotated((-degrees+180)%360-180)
             # Include resampling neighbours, not merely the glyph's black pixels.
             box = (max(0, floor(region.left*source.width)-3),
                    max(0, floor(region.top*source.height)-3),
@@ -27,3 +30,24 @@ def header_space(path, qr, width, height, badge_width, badge_height, gap, degree
                 if crop.getchannel('A').getextrema()[1] == 0:
                     return x
     return None
+
+
+def _free_band_candidates(source, qr, width, height, badge_width, badge_height, degrees):
+    """Search the complete header, including space beyond a long label card."""
+    top = round(qr.top*height)
+    band = MembraneRegion(0, top/height, 1, (top+badge_height)/height).rotated((-degrees+180)%360-180)
+    box = (floor(band.left*source.width), floor(band.top*source.height),
+           ceil(band.right*source.width), ceil(band.bottom*source.height))
+    with source.crop(box) as crop:
+        alpha = crop.getchannel('A').rotate(degrees, expand=True)
+        occupied = np.asarray(alpha).max(axis=0) > 0
+        scale = width / alpha.width
+        alpha.close()
+    edges = np.flatnonzero(np.diff(np.r_[True, occupied, True].astype(np.int8)))
+    candidates = []
+    for start, end in zip(edges[::2], edges[1::2]):
+        left, right = ceil((start+4)*scale), floor((end-4)*scale)-badge_width
+        if left <= right:
+            candidates.extend((left, right))
+    center = (qr.left+qr.right)*width/2
+    return tuple(sorted(set(candidates), key=lambda x: abs(x+badge_width/2-center)))

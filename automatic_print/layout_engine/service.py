@@ -10,6 +10,7 @@ from .models import LayoutSettings, ProgressCallback
 from .images import print_dimensions
 from .labels import normalize_machine_number, format_label
 from .output_name import label_output_name, unused_output_path
+from .dual_quality import dual_quality
 from .cut_validation import validate_cut_corridor, validate_canvas_pixels, validate_vips_output
 from .metrics import saving_metrics
 from .order_validation import validate_order_placements
@@ -90,8 +91,9 @@ def generate_layout(
     zones = {p.cut_zone for _, p in planned}
     zone_suffix = ' 旋转区' if zones == {'旋转区'} else ' 常规+旋转区' if '旋转区' in zones else ''
     output_path = unused_output_path(output_dir, label_output_name(label_text+size_suffix+zone_suffix+filename_suffix, batch_name))
+    quality = dual_quality(planned, settings)
     if plan_ready:
-        plan_ready({"planned": planned, "labels": labels, "settings": settings, "warning": warning, "order_check": order_check, "analysis": analysis[-1],
+        plan_ready({"planned": planned, "labels": labels, "settings": settings, "warning": warning, "order_check": order_check, "analysis": analysis[-1], "dual_quality": quality,
                     "saved_meters": max(0,baseline_height-height)*25.4/settings.dpi/1000,
                     "canvas": (width, height, baseline_height)})
     if preview_only:
@@ -146,6 +148,7 @@ def generate_layout(
     size = output_path.stat().st_size
     result = {
         "filename": filename,
+        "dual_quality": quality,
         "size_range": sizes, "output_dpi": settings.dpi,
         "transition_marks": transitions,
         "rotation_marker_shift_mm": settings.rotation_marker_shift_mm,

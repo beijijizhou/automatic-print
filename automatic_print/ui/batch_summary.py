@@ -39,6 +39,7 @@ class BatchSummaryPanel(QGroupBox):
         rotations = sum(bool(p.rotation_degrees) for _, p in planned)
         self.metrics.setText(self.metrics.text()+f' · 旋转 {rotations} 张'
                              f" · 可用宽度 {payload['settings'].media_width_mm:g} 毫米")
+        self._show_quality(payload.get('dual_quality', {}))
         self.progress.setText(payload.get('warning') or '排版已确定，下面显示本批次真实预览。')
 
     def show_analysis(self, report):
@@ -74,3 +75,8 @@ class BatchSummaryPanel(QGroupBox):
         if 'output_dpi' in result:
             self.cutting.setPlainText(cutting_report(result))
             self.cutting.show()
+        self._show_quality(result.get('dual_quality', {}))
+
+    def _show_quality(self, quality):
+        if quality:
+            self.metrics.setText(self.metrics.text()+'\n'+quality['text'])
