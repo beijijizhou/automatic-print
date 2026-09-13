@@ -4,9 +4,11 @@ from PySide6.QtGui import QColor, QPen
 
 from ..layout_engine.cut_guide_geometry import guide_spans
 from ..layout_engine.printed_guides import dot_boxes
+from ..layout_engine.transition_marks import transition_rects
 
 
 def draw_cut_guides(preview, painter, scale):
+    _transition_lines(preview, painter)
     if preview.render_settings.cutter_mode != 'dual':
         preview.guide_status = ''
         return
@@ -27,6 +29,27 @@ def draw_cut_guides(preview, painter, scale):
             painter.drawEllipse(QRectF(x, y, diameter, diameter))
         painter.setPen(QPen(QColor('#ff0000'), 0))
         _zone_boundary(preview, painter, scale)
+    finally:
+        painter.restore()
+
+
+def _transition_lines(preview, painter):
+    settings = preview.render_settings
+    planned = (preview.batch_payload or {}).get('planned') or preview.planned
+    if not planned or not preview.planned or not settings.transition_lines:
+        return
+    originals = dict(planned)
+    path, local = preview.planned[0]
+    offset = originals[path].row_y_px-local.row_y_px
+    painter.save()
+    try:
+        try:
+            rects = transition_rects(planned, settings, preview.canvas_width)
+        except ValueError as error:
+            preview.guide_status = str(error)
+            return
+        for r in rects:
+            painter.fillRect(QRectF(r['x'], r['y']-offset, r['width'], r['height']), QColor('#ff0000'))
     finally:
         painter.restore()
 

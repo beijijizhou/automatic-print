@@ -75,7 +75,12 @@ def test_entire_batch_uses_580_canvas_and_pixel_safe_knife_without_padding(tmp_p
     output = tmp_path/'out'/result['filename']
     with Image.open(output) as image:
         assert image.width == 580
-        assert image.getchannel('A').crop((287, 0, 293, image.height)).getextrema() == (0, 0)
+        stripe = image.getchannel('A').crop((287, 0, 293, image.height))
+        # The new printed end notice is the only permitted full-width content.
+        for mark in result['transition_marks']:
+            assert image.getpixel((290, mark['y'])) == (255, 0, 0, 255)
+            stripe.paste(0, (0, mark['y'], stripe.width, mark['y']+mark['height']))
+        assert stripe.getextrema() == (0, 0)
     controller = window.generation_preview
     controller.start()
     controller.ready(payloads[0])

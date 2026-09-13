@@ -52,7 +52,7 @@ def paint_guides(canvas, boxes, use_vips=False):
         sprite.close()
 
 
-def vips_corridor_is_clear(image, check, boxes=()):
+def vips_corridor_is_clear(image, check, boxes=(), rectangles=()):
     """Allow exactly our circle alpha mask, never a whole band or arbitrary red ink."""
     import pyvips
     left, right = check['safe_left_px'], check['safe_right_px']
@@ -71,6 +71,11 @@ def vips_corridor_is_clear(image, check, boxes=()):
             mask = mask.insert(dot.crop(x0-x, y0-y, x1-x0, y1-y0), x0-left, y0-top)
         finally:
             sprite.close()
+    for r in rectangles:
+        x0, y0 = max(left, r['x']), max(top, r['y'])
+        x1, y1 = min(right, r['x']+r['width']), min(bottom, r['y']+r['height'])
+        if x1 > x0 and y1 > y0:
+            mask = mask.insert(pyvips.Image.black(x1-x0, y1-y0).new_from_image(255), x0-left, y0-top)
     return (alpha > mask).max() == 0
 
 

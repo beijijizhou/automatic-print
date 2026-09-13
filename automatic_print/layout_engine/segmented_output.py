@@ -8,6 +8,7 @@ from .models import mm_to_px
 from .order_groups import order_key
 from .operation_timing import OperationTiming
 from .metrics import saving_metrics
+from .output_sizes import size_range_label
 
 
 def partition_plan(planned, count):
@@ -51,6 +52,15 @@ def shift_part(members, margin):
     return shifted, end-start+2*margin
 
 
+def save_concurrency(settings, width, plans, planned):
+    parallel = min(max(1, settings.save_parallelism), 2, len(plans))
+    buffers = settings.worker_threads*max(p.width_px*p.height_px*4 for _, p in planned)
+    estimate = sum(sorted((width*height*4 for _, height in plans), reverse=True)[:parallel])+buffers
+    if not settings.save_memory_unlimited and estimate > max(128, settings.save_memory_mb)*1024*1024:
+        parallel = 1
+    return parallel, estimate
+
+
 def generate_segments(paths, output_dir, settings, progress, plan_ready,
                       analysis_ready, batch_name, phase_ready):
     from .service import generate_layout
@@ -71,14 +81,10 @@ def generate_segments(paths, output_dir, settings, progress, plan_ready,
     parts = partition_plan(payload['planned'], settings.output_parts)
     margin = mm_to_px(settings.margin_mm, settings.dpi)
     plans = [shift_part(members, margin) for members in parts]
-    parallel = min(max(1, settings.save_parallelism), 2, len(parts))
-    # Include bounded preparation buffers, not just the two output canvases.
-    buffers = settings.worker_threads*max(p.width_px*p.height_px*4 for _, p in payload['planned'])
-    estimate = sum(sorted((width*height*4 for _, height in plans), reverse=True)[:parallel])+buffers
-    if estimate > max(128, settings.save_memory_mb)*1024*1024:
-        parallel = 1
+    parallel, estimate = save_concurrency(settings, width, plans, payload['planned'])
     if progress:
-        progress('分段输出', 0, len(parts), f'{len(parts)} 个文件 · 同时处理 {parallel} 段 · 沿用整批刀位')
+        budget = '不限制内存预算' if settings.save_memory_unlimited else f'内存预算 {settings.save_memory_mb} 兆字节'
+        progress('分段输出', 0, len(parts), f'{len(parts)} 个文件 · 同时处理 {parallel} 段 · {budget} · 沿用整批刀位')
     if phase_ready:
         phase_ready('分段合成、安全检查与保存')
     output_dir.mkdir(parents=True, exist_ok=True)
@@ -88,6 +94,9 @@ def generate_segments(paths, output_dir, settings, progress, plan_ready,
     rendering = perf_counter()
     def render(index):
         members, height = plans[index]
+        end_notice = '批次结束' if index == len(parts)-1 else '分段结束'
+        if index < len(parts)-1 and members[-1][1].cut_zone != plans[index+1][0][0][1].cut_zone:
+            end_notice += ' / 下一段进入旋转区换刀'
         timer = OperationTiming()
         def report(stage, current, total, filename):
             if progress:
@@ -103,7 +112,7 @@ def generate_segments(paths, output_dir, settings, progress, plan_ready,
             filename_suffix=f' 第{index+1:03d}段', prepared_plan={
                 'plan': (members, payload['labels'], width, height, height),
                 'settings': replace(base, worker_threads=max(1, settings.worker_threads//parallel)),
-                'analysis': payload['analysis']})
+                'analysis': payload['analysis'], 'end_notice': end_notice})
         result['operation_timings'] = timer.finish()
         result['segment_index'] = index+1
         return result
@@ -128,9 +137,12 @@ def generate_segments(paths, output_dir, settings, progress, plan_ready,
     result = dict(ordered[0])
     result.update(parts=ordered, files=[r['filename'] for r in ordered],
         segment_count=len(parts), actual_save_parallelism=parallel,
+        save_memory_unlimited=settings.save_memory_unlimited,
+        estimated_parallel_memory_mb=round(estimate/1024/1024, 1),
         placements=[dict(p, output_filename=r['filename'], segment_index=r['segment_index'])
                     for r in ordered for p in r['placements']],
         analysis=payload['analysis'], order_check=payload['order_check'],
+        size_range=size_range_label([path for path, p in sorted(payload['planned'], key=lambda entry: (entry[1].row_y_px, entry[1].x_px))]),
         height_px=total_height, height_mm=round(total_height*25.4/settings.dpi, 1),
         file_size_bytes=total_size, rotation_count=sum(r['rotation_count'] for r in ordered),
         cut_corridor={'segments': [r['cut_corridor'] for r in ordered],
@@ -142,6 +154,8 @@ def generate_segments(paths, output_dir, settings, progress, plan_ready,
         'span_count': sum(r['printed_guides']['span_count'] for r in ordered),
         'dot_count': sum(r['printed_guides']['dot_count'] for r in ordered),
         'missing_qr': [name for r in ordered for name in r['printed_guides']['missing_qr']]}
+    result['transition_marks'] = [dict(r, filename=part['filename'])
+                                  for part in ordered for r in part['transition_marks']]
     result['output_megabytes_per_second'] = round(total_size/1_000_000/max(wall, .001), 1)
     result.update(saving_metrics(baseline, total_height, settings.dpi))
     return result

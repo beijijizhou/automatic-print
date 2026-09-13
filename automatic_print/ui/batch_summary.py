@@ -2,7 +2,8 @@
 from pathlib import Path
 
 from PySide6.QtCore import Qt
-from PySide6.QtWidgets import QGroupBox, QLabel, QVBoxLayout
+from PySide6.QtWidgets import QGroupBox, QLabel, QPlainTextEdit, QVBoxLayout
+from ..layout_engine.output_sizes import cutting_report
 
 
 class BatchSummaryPanel(QGroupBox):
@@ -11,13 +12,21 @@ class BatchSummaryPanel(QGroupBox):
         self.info = QLabel('请选择本地图片文件夹。')
         self.metrics = QLabel('排版后显示总长度、节省用膜和旋转数量。')
         self.progress = QLabel('尚未开始')
+        self.cutting = QPlainTextEdit()
+        self.cutting.setReadOnly(True)
+        self.cutting.setMaximumHeight(110)
+        self.cutting.setMinimumHeight(65)
+        self.cutting.hide()
         layout = QVBoxLayout(self)
         for label in (self.info, self.metrics, self.progress):
             label.setWordWrap(True)
             label.setTextInteractionFlags(Qt.TextSelectableByMouse)
             layout.addWidget(label)
+        layout.addWidget(self.cutting)
 
     def start(self, folder, count=None):
+        self.cutting.clear()
+        self.cutting.hide()
         path = Path(folder)
         quantity = f'{count} 张图片' if count is not None else '正在读取图片名称'
         self.info.setText(f'批次 / 文件夹：{path.name} · {quantity}\n来源：{path}')
@@ -54,8 +63,14 @@ class BatchSummaryPanel(QGroupBox):
                              f" · 节省用膜 {result['saved_length_m']:.3f} 米"
                              f"（{result['saved_percent']:.1f}%） · 旋转 {result['rotation_count']} 张")
         self.progress.setText(f"已完成 · 输出：{Path(output)/result['filename']}")
+        if result.get('segment_count', 1) == 1:
+            self.progress.setText(self.progress.text()+' · 单张输出，未启用多段并行')
         if result.get('segment_count', 1) > 1:
             self.progress.setText(f"已完成 · {result['segment_count']} 个连续文件"
-                                 f" · 同时处理 {result['actual_save_parallelism']} 段 · {output}")
+                                 f" · 同时处理 {result['actual_save_parallelism']} 段"
+                                 f" · {'不限制内存预算' if result.get('save_memory_unlimited') else '使用内存预算'} · {output}")
         if 'maximum_width_mm' in result:
             self.metrics.setText(self.metrics.text()+f" · 可用宽度 {result['maximum_width_mm']:g} 毫米")
+        if 'output_dpi' in result:
+            self.cutting.setPlainText(cutting_report(result))
+            self.cutting.show()

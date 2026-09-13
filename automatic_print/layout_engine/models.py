@@ -19,6 +19,11 @@ class LayoutSettings:
     output_parts: int = 1
     save_parallelism: int = 2
     save_memory_mb: int = 512
+    save_memory_unlimited: bool = False
+    transition_lines: bool = False
+    transition_gap_mm: float = 3
+    transition_line_mm: float = .3
+    rotation_marker_shift_mm: float = 0
     number_images: bool = True
     number_gap_mm: float = 5
     number_font_size_mm: float = 7.5 * 25.4 / 72
@@ -49,6 +54,7 @@ class LayoutSettings:
     manual_rotations: tuple[tuple[str, int], ...] = ()
     cutter_auto_knife: bool = False
     cutter_rotation_zone: bool = False
+    cutter_tail_rotation: bool = False
     sequence_numbers: tuple[tuple[str, int], ...] = ()
 
 

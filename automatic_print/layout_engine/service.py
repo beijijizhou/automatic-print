@@ -18,6 +18,9 @@ from .printed_guides import collect_guides, dot_boxes, paint_guides, validate_vi
 from .planner import plan_layout
 from .save_progress import monitor_save
 from .vips_renderer import available, build_vips_canvas
+from .transition_marks import marked_height, transition_rects, paint_transition_lines
+from .output_sizes import size_range_label
+from .marked_pixel_validation import validate_marked_pillow
 
 
 def png_engine_name() -> str:
@@ -67,6 +70,7 @@ def generate_layout(
         effective[0] = prepared_plan['settings']
         analysis[:] = [prepared_plan['analysis']]
     settings = effective[0]
+    height = marked_height(planned, settings, width, height)
     phase('坐标与订单安全检查')
     warning, order_check = "", {}
     try:
@@ -78,7 +82,11 @@ def generate_layout(
         warning = f"仅供检查，禁止输出：{error}"
     label_text = labels.get(1) or format_label(settings.label_text_template, 1, paths[0],
                     datetime.now().astimezone(), settings.label_date_format, settings.machine_number)
-    output_path = unused_output_path(output_dir, label_output_name(label_text+filename_suffix, batch_name))
+    sizes = size_range_label([path for path, p in sorted(planned, key=lambda entry: (entry[1].row_y_px, entry[1].x_px))])
+    size_suffix = f' {sizes}' if sizes else ''
+    zones = {p.cut_zone for _, p in planned}
+    zone_suffix = ' 旋转区' if zones == {'旋转区'} else ' 常规+旋转区' if '旋转区' in zones else ''
+    output_path = unused_output_path(output_dir, label_output_name(label_text+size_suffix+zone_suffix+filename_suffix, batch_name))
     if plan_ready:
         plan_ready({"planned": planned, "labels": labels, "settings": settings, "warning": warning, "order_check": order_check, "analysis": analysis[-1],
                     "saved_meters": max(0,baseline_height-height)*25.4/settings.dpi/1000,
@@ -104,6 +112,11 @@ def generate_layout(
     guide_spans, missing_guides = collect_guides(planned, settings, progress)
     guide_boxes = list(dot_boxes(guide_spans, settings.dpi))
     canvas = paint_guides(canvas, guide_boxes, use_vips)
+    transitions = transition_rects(planned, settings, width,
+                                  (prepared_plan or {}).get('end_notice', '批次结束'))
+    canvas = paint_transition_lines(canvas, transitions, use_vips)
+    if not use_vips:
+        validate_marked_pillow(canvas, cut_check, guide_boxes, transitions, progress)
 
     filename = output_path.name
     saving_started = perf_counter()
@@ -125,11 +138,14 @@ def generate_layout(
     saving_seconds = perf_counter() - saving_started
     if use_vips:
         phase('输出文件安全复核')
-        validate_vips_output(output_path, cut_check, progress, guide_boxes)
+        validate_vips_output(output_path, cut_check, progress, guide_boxes, transitions)
     phase('批次信息整理')
     size = output_path.stat().st_size
     result = {
         "filename": filename,
+        "size_range": sizes, "output_dpi": settings.dpi,
+        "transition_marks": transitions,
+        "rotation_marker_shift_mm": settings.rotation_marker_shift_mm,
         "machine_number": normalize_machine_number(settings.machine_number),
         "cutter_mode": settings.cutter_mode,
         "cut_corridor": cut_check,

@@ -7,7 +7,7 @@ Windows desktop application for combining a folder of images into print-ready la
 在测试电脑上打开 PowerShell，复制并运行：
 
 ```powershell
-powershell -ExecutionPolicy Bypass -Command "irm 'https://raw.githubusercontent.com/beijijizhou/automatic-print/main/windows/bootstrap-test-computer.ps1?v=0.1.79' | iex"
+powershell -ExecutionPolicy Bypass -Command "irm 'https://raw.githubusercontent.com/beijijizhou/automatic-print/main/windows/bootstrap-test-computer.ps1?v=0.1.80' | iex"
 ```
 
 同一条命令既可首次安装，也可在以后下载最新代码并更新运行环境。
@@ -23,7 +23,7 @@ powershell -ExecutionPolicy Bypass -Command "irm 'https://raw.githubusercontent.
 然后创建带有 HA 图标的“Haloo Automatic”桌面入口并启动程序。
 以后可以直接双击桌面入口打开。
 
-默认开启“上线快速模式”：选择文件夹不先计算预览，点击开始排版后统一扫描、显示文件名、读取尺寸、排版与保存。不比较自动旋转区域，仍保留统一刀位、订单/双面及输出像素安全检查；高级旋转功能可在打印参数中主动开启。
+默认开启“上线快速模式”：选择文件夹不先计算预览，点击开始排版后统一扫描、显示文件名、读取尺寸、排版与保存。不进行全批旋转搜索。单件批次默认只比较末尾 3XL 及以上完整尺码块的几种旋转后缀，计入区域间距、红线和留白后仍省膜才采用；每行一张，不拆双面，同尺码不拆区。混合多件或归属不明的批次不自动走此快速末尾旋转。完整旋转区搜索仍需主动开启。
 
 打印参数可设置 RIIN 已配置的左右预留（默认各 10 毫米）：600 毫米膜按 580 毫米可用宽度排版，450 毫米膜按 430 毫米排版。只扣除容量，不在输出图中重复添加边距；请与 RIIN 实际配置保持一致。
 
@@ -37,7 +37,11 @@ powershell -ExecutionPolicy Bypass -Command "irm 'https://raw.githubusercontent.
 
 刀位搜索复用订单与尺码分析，配对使用数值几何而非重复构造排版对象，并合并左右可放置状态等价的候选刀位；保留原搜索目标和整批真实像素安全检查。
 
-打印参数支持可选分段输出：默认 1 个完整文件，可设置多个连续 PNG 和最多 2 段同时处理。按完整订单和整行边界切分，所有文件沿用整批刀位；估算画布和准备缓冲超过可设的内存预算（默认 512MiB）时自动串行。预算不是实际峰值内存保证，切勿盲目增大。每段均检查像素安全，失败/停止后本次输出标记为禁止打印并保留。报告包含每段耗时；并行不保证提速，兼容状态栏的保存耗时包含分段合成与检查。
+打印参数支持可选分段输出：默认 1 个完整文件，可设置多个连续 PNG 和最多 2 段同时处理。按完整订单和整行边界切分，所有文件沿用整批刀位。默认勾选“不限制并行内存预算”，不因预算降为串行；取消后才应用可设置的预算（初值 512MiB）。内存不足仍可能失败。每段均检查像素安全，失败/停止后本次输出标记为禁止打印并保留。报告包含实际并行段数和每段耗时；并行不保证提速，兼容状态栏的保存耗时包含分段合成与检查。
+
+输出文件名带实际尺码：按生产顺序连续的 `S、M、L、XL` 简写为 `S-XL`；跳码、不连续或重复回到前一尺码时不冒充连续范围。保留原文件夹名、标签及段号，旋转文件标注“旋转区”或“常规+旋转区”。主界面和输出目录“切割说明.txt”列出各段文件、尺码、刀位、红线位置与换刀提醒。
+
+打印参数可设置红色横向提示线，默认在区域最后一张图下方 3mm，线粗 0.3mm；换刀前及批次/分段结束处都会打印，并在实际预览展示。旋转区文件左侧刀码与标签默认一起右移 2mm，图片和刀位不动；普通区仍在左边缘。若标记碰到图片或红线重叠，禁止输出。刀码偏移是否令机器暂停必须实测，不作为可靠停机保护。
 
 ## Current features
 
@@ -133,7 +137,7 @@ source version instead of reinstalling every build.
 Open PowerShell on the test computer and run:
 
 ```powershell
-powershell -ExecutionPolicy Bypass -Command "irm 'https://raw.githubusercontent.com/beijijizhou/automatic-print/main/windows/bootstrap-test-computer.ps1?v=0.1.79' | iex"
+powershell -ExecutionPolicy Bypass -Command "irm 'https://raw.githubusercontent.com/beijijizhou/automatic-print/main/windows/bootstrap-test-computer.ps1?v=0.1.80' | iex"
 ```
 
 The script installs or checks Git, Python 3.12, and Google Chrome; clones or

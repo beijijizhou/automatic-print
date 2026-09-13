@@ -4,6 +4,7 @@ from pathlib import Path
 from dataclasses import replace
 from .order_groups import ordered_paths
 from .batch_analysis import analyze_batch, finish_analysis
+from .transition_marks import marked_height
 
 from .item_factory import read_items
 from .metrics import basic_ordered_height
@@ -23,6 +24,9 @@ def plan_layout(
     paths = ordered_paths(paths)
     analysis = analyze_batch(paths, settings, progress, analysis_ready)
     result = _plan_layout(paths, settings, progress, analysis, analysis_ready)
+    planned, labels, width, height, baseline = result
+    extra = marked_height(planned, settings, width, height)-height
+    result = planned, labels, width, height+extra, baseline+extra
     if analysis_ready:
         analysis_ready(finish_analysis(analysis, result[0], settings, result[3], result[4]))
     return result
@@ -33,6 +37,9 @@ def _plan_layout(paths, settings, progress, analysis, analysis_ready):
         if settings.cutter_rotation_zone and settings.cutter_mode == "dual":
             from .rotation_zones import plan_rotation_zones
             return plan_rotation_zones(paths, settings, progress, analysis, analysis_ready)
+        if settings.cutter_tail_rotation and settings.cutter_mode == 'dual':
+            from .tail_rotation import plan_tail_rotation
+            return plan_tail_rotation(paths, settings, progress)
         from .cutter_planner import plan_cutter_layout
         return plan_cutter_layout(paths, settings, progress)
     canvas_width = mm_to_px(settings.media_width_mm, settings.dpi)

@@ -19,7 +19,9 @@ def available() -> bool:
 
 
 def _rgba(path: Path, width: int, height: int, rotation_degrees: int):
-    image = pyvips.Image.new_from_file(str(path), access="sequential")
+    # Pixel validation can evaluate a source before PNG saving re-reads it.
+    # A forward-only decoder fails on that second pass, especially after rotation.
+    image = pyvips.Image.new_from_file(str(path), access="random")
     if str(image.interpretation) not in {
         "srgb", "rgb", "b-w", "grey16", "multiband"
     }:

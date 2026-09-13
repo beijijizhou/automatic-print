@@ -1,5 +1,6 @@
 from PySide6.QtWidgets import QCheckBox, QComboBox, QDoubleSpinBox, QFormLayout, QLabel, QWidget
 from .printable_width import PrintableWidthPanel
+from .transition_settings import TransitionSettings
 
 
 class CutterSettingsPanel(QWidget):
@@ -8,7 +9,7 @@ class CutterSettingsPanel(QWidget):
     def __init__(self, preferences, width, rotation, direction, parent=None, block=None):
         super().__init__(parent)
         self.preferences = preferences
-        self.quick_mode = QCheckBox('上线快速模式（不比较旋转区，读取与排版一次完成）')
+        self.quick_mode = QCheckBox('上线快速模式（不做全批旋转搜索，读取与排版一次完成）')
         self.quick_mode.setChecked(preferences.value('cutter/quick_mode', True, bool))
         self.block = block
         self.width_control, self.rotation, self.direction = width, rotation, direction
@@ -22,8 +23,11 @@ class CutterSettingsPanel(QWidget):
         self.auto_knife.setChecked(preferences.value("cutter/auto_knife", True, bool))
         self.rotation_zone = QCheckBox("省膜时启用独立旋转区（每行一张，换刀一次）")
         self.rotation_zone.setChecked(not self.quick_mode.isChecked() and preferences.value("cutter/rotation_zone", False, bool))
+        self.tail_rotation = QCheckBox('单件批次末尾 3XL 及以上：省膜时整尺码块旋转')
+        self.tail_rotation.setChecked(preferences.value('cutter/tail_rotation', True, bool))
         self.safety = self._box(3, 0.1, 30)
         self.marker_offset = self._box(0, 0, 100)
+        self.transitions = TransitionSettings(preferences, self)
         note = QLabel(
             "先选择膜规格，再选择排版模式。固定双列的刀位整批不变；"
             "右侧色块左边缘 = 刀位 + 安全距离 + 色块偏移。"
@@ -37,6 +41,8 @@ class CutterSettingsPanel(QWidget):
             ('RIIN 已设置的预留', self.printable),
             ("刀位选择", self.auto_knife),
             ("旋转区域", self.rotation_zone),
+            ('快速末尾旋转', self.tail_rotation),
+            ('区域与批次提示', self.transitions),
             ("刀位距排版左边（毫米）", self.knife),
             ("刀位两侧安全距离（毫米）", self.safety),
             ("右侧色块基准偏移（毫米）", self.marker_offset), ("", note),
@@ -88,6 +94,7 @@ class CutterSettingsPanel(QWidget):
             control.setEnabled(mode == "dual")
         self.auto_knife.setEnabled(mode == "dual")
         self.rotation_zone.setEnabled(mode == "dual" and not self.quick_mode.isChecked())
+        self.tail_rotation.setEnabled(mode == 'dual')
         if self.quick_mode.isChecked():
             self.rotation_zone.setChecked(False)
         self.knife.setEnabled(mode == "dual" and not self.auto_knife.isChecked())
@@ -110,6 +117,7 @@ class CutterSettingsPanel(QWidget):
             "film_mm": self.film.currentData(), "mode": self.mode.currentData(),
             "auto_knife": self.auto_knife.isChecked(),
             "rotation_zone": self.rotation_zone.isChecked(),
+            'tail_rotation': self.tail_rotation.isChecked(),
             "knife_mm": self.knife.value(), "safety_mm": self.safety.value(),
             "marker_offset_mm": self.marker_offset.value(),
         }.items():

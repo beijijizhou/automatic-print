@@ -1,4 +1,4 @@
-from PySide6.QtWidgets import QFormLayout, QGroupBox, QLabel, QSpinBox
+from PySide6.QtWidgets import QCheckBox, QFormLayout, QGroupBox, QLabel, QSpinBox
 
 
 class SegmentedOutputSettings(QGroupBox):
@@ -14,13 +14,19 @@ class SegmentedOutputSettings(QGroupBox):
         self.memory.setRange(128, 16384)
         self.memory.setSingleStep(256)
         self.memory.setValue(preferences.value('output/save_memory_mb', 512, int))
+        self.unlimited = QCheckBox('不限制并行内存预算（按设定段数运行）')
+        self.unlimited.setChecked(preferences.value('output/save_memory_unlimited', True, bool))
+        self.memory.setEnabled(not self.unlimited.isChecked())
+        self.unlimited.toggled.connect(lambda value: preferences.setValue('output/save_memory_unlimited', value))
+        self.unlimited.toggled.connect(lambda value: self.memory.setEnabled(not value))
         for widget, key in ((self.parts, 'output/parts'), (self.workers, 'output/save_workers'),
                             (self.memory, 'output/save_memory_mb')):
             widget.valueChanged.connect(lambda value, key=key: preferences.setValue(key, value))
-        note = QLabel('1 表示完整长图。按完整订单和整行边界分段，沿用整批刀位；可分段数不足时减少文件数。大段超过内存预算时自动串行，完成全部检查后才能打印。')
+        note = QLabel('1 表示完整长图。按完整订单和整行边界分段，沿用整批刀位。勾选不限制后不因预算改为串行；内存不足仍可能失败。各段文件名带实际尺码，完成全部检查后才能打印。')
         note.setWordWrap(True)
         layout = QFormLayout(self)
         layout.addRow('期望输出文件数', self.parts)
         layout.addRow('最多同时处理段数', self.workers)
+        layout.addRow(self.unlimited)
         layout.addRow('并行内存预算（兆字节）', self.memory)
         layout.addRow(note)

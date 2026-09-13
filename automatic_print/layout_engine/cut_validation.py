@@ -5,7 +5,7 @@ from dataclasses import replace
 from .models import mm_to_px
 
 
-def validate_cut_corridor(planned, settings, canvas_width):
+def validate_cut_corridor(planned, settings, canvas_width, left_marker_px=0):
     if settings.cutter_mode == "single":
         if any(p.color_block_width_px and p.color_block_x_px != 0 for _, p in planned):
             raise ValueError("单排色块必须位于输出文件最左边缘，禁止输出。")
@@ -22,7 +22,8 @@ def validate_cut_corridor(planned, settings, canvas_width):
             if name == "旋转区" and len({p.row_y_px for _,p in members}) != len(members):
                 raise ValueError("旋转区必须每一行只有一张图片。")
             checked = validate_cut_corridor([(path,replace(p,cut_zone="",cut_knife_x_px=None)) for path,p in members],
-                      replace(settings,cutter_knife_mm=knife*25.4/settings.dpi),canvas_width)
+                      replace(settings,cutter_knife_mm=knife*25.4/settings.dpi),canvas_width,
+                      mm_to_px(settings.rotation_marker_shift_mm, settings.dpi) if name == '旋转区' else 0)
             checked.update(name=name,start_y_px=min(p.row_y_px for _,p in members),
                            end_y_px=max(p.row_y_px+p.footprint_height_px for _,p in members))
             zones.append(checked)
@@ -50,13 +51,13 @@ def validate_cut_corridor(planned, settings, canvas_width):
         if p.color_block_width_px:
             if p.x_px >= knife and (p.row_y_px, p.y_px) not in left_rows:
                 violations.append(f"{path.name}：单排色块不在输出文件最左边缘")
-            expected = 0 if p.x_px < knife else expected_marker
+            expected = left_marker_px if p.x_px < knife else expected_marker
             if p.color_block_x_px != expected:
                 violations.append(f"{path.name}：色块未对齐固定分区左边缘")
     if violations:
         raise ValueError("整批贯穿切割检查失败，禁止输出：\n"+"\n".join(violations[:20]))
     return {"knife_x_px": knife, "safe_left_px": left, "safe_right_px": right,
-            "checked_images": len(planned), "continuous": True}
+            "checked_images": len(planned), "continuous": True, "left_marker_x_px": left_marker_px}
 
 
 def validate_canvas_pixels(canvas, check, progress=None):
@@ -81,12 +82,12 @@ def validate_canvas_pixels(canvas, check, progress=None):
     check["pixel_verified"] = True
 
 
-def validate_vips_output(path, check, progress=None, guide_boxes=()):
+def validate_vips_output(path, check, progress=None, guide_boxes=(), transition_rectangles=()):
     if check is None:
         return
     if "zones" in check:
         for zone in check["zones"]:
-            validate_vips_output(path,zone,progress,guide_boxes)
+            validate_vips_output(path,zone,progress,guide_boxes,transition_rectangles)
         check["pixel_verified"] = True
         return
     import pyvips
@@ -94,7 +95,7 @@ def validate_vips_output(path, check, progress=None, guide_boxes=()):
         progress("核对切割通道", 0, 1, "扫描输出 PNG 的全长切割通道")
     image = pyvips.Image.new_from_file(str(path), access="sequential")
     from .printed_guides import vips_corridor_is_clear
-    if not vips_corridor_is_clear(image, check, guide_boxes):
+    if not vips_corridor_is_clear(image, check, guide_boxes, transition_rectangles):
         path.rename(path.with_suffix(".禁止打印"))
         raise ValueError("最终 PNG 进入切割安全通道，文件已标记为禁止打印。")
     check["pixel_verified"] = True

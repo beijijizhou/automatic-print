@@ -11,6 +11,7 @@ from .units import UnitChoice, UnitMember
 from .zone_optimizer import select_zones
 from .batch_analysis import attach_rotation_options
 from .size_policy import ordered_single_blocks
+from .transition_marks import rotation_marker_item, marked_height
 
 
 def _normal(paths, settings, prepared=None, preserve_sequence=False):
@@ -31,7 +32,8 @@ def rotation_items(paths, settings, progress=None):
     options, labels = read_items(paths, rotated, progress)
     width = mm_to_px(settings.media_width_mm, settings.dpi)
     safety = ceil(settings.cutter_safety_mm*settings.dpi/25.4)
-    items = {row[0].path: row[0] for row in options if row[0].footprint_width+2*safety < width}
+    items = {row[0].path: rotation_marker_item(row[0], settings) for row in options
+             if row[0].footprint_width+2*safety < width}
     return items, labels
 
 
@@ -85,6 +87,10 @@ def plan_rotation_zones(paths, settings, progress, analysis=None, analysis_ready
     rotated = _rotated(rotated_paths, base_settings, (rotated_items, rotated_labels))
     spacing = mm_to_px(settings.spacing_mm, settings.dpi)
     boundary = normal_result[3]+spacing if normal_result else 0
+    if normal_result and settings.transition_lines:
+        end = max(p.y_px+p.height_px for _, p in normal_result[0])
+        boundary = max(boundary, end+mm_to_px(settings.transition_gap_mm, settings.dpi)
+                       +max(1, mm_to_px(settings.transition_line_mm, settings.dpi)))
     new_height = boundary+rotated[2]
     if baseline and new_height >= baseline[3]:
         return _baseline_result(baseline, _normal(paths, base_settings, (options, labels))[1], progress)
@@ -96,6 +102,12 @@ def plan_rotation_zones(paths, settings, progress, analysis=None, analysis_ready
                        number_y_px=p.number_y_px+boundary, color_block_y_px=p.color_block_y_px+boundary,
                        cut_zone='旋转区', cut_knife_x_px=rotated[3])) for path, p in rotated[0])
     baseline_height = baseline[3] if baseline else new_height
+    if settings.transition_lines:
+        width = mm_to_px(settings.media_width_mm, settings.dpi)
+        new_height = marked_height(planned, settings, width, new_height)
+        baseline_height = marked_height(baseline[0], settings, width, baseline[3]) if baseline else new_height
+        if baseline and new_height >= baseline_height:
+            return _baseline_result(baseline, _normal(paths, base_settings, (options, labels))[1], progress)
     if progress:
         progress('批次刀位已确定', knife if normal_result else rotated[3], settings.dpi,
                  '完整订单分区，双面保持相邻；各区刀位固定')

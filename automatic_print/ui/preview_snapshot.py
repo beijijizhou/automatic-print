@@ -6,6 +6,7 @@ from PySide6.QtGui import QImage, QImageReader
 
 from ..layout_engine.dynamic_label import source_label_badge
 from ..layout_engine.models import mm_to_px
+from ..layout_engine.transition_marks import marked_height, transition_rects
 
 
 def install_snapshot(preview, planned, labels, settings, warning="", overflow=()):
@@ -36,6 +37,14 @@ def install_snapshot(preview, planned, labels, settings, warning="", overflow=()
     preview.film_width = mm_to_px(settings.media_width_mm, settings.dpi)
     preview.canvas_width = max(preview.film_width, max(p.x_px+p.width_px for _, p in local))
     preview.canvas_height = max(p.row_y_px+p.footprint_height_px for _, p in local)
+    if getattr(preview, 'overview', False) or not preview.batch_payload:
+        preview.canvas_height = marked_height(local, settings, preview.canvas_width, preview.canvas_height)
+    elif settings.transition_lines:
+        full = preview.batch_payload['planned']
+        limit = top+preview.canvas_height+mm_to_px(settings.transition_gap_mm, settings.dpi)+1
+        notices = [r['y']-top+r['height'] for r in transition_rects(full, settings, preview.canvas_width)
+                   if top <= r['y'] <= limit]
+        preview.canvas_height = max([preview.canvas_height]+notices)
     preview.render_settings, preview.warning = settings, warning
     preview.batch_labels = labels
     preview.overflow = [(x, y-top, w, h) for x, y, w, h in overflow]

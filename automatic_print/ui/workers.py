@@ -11,6 +11,7 @@ from ..cancellation import Cancellation, TaskCancelled
 from ..layout import LayoutSettings, generate_layout, discover_images, discovered_extensions
 from ..updater import fetch_latest_release
 from ..layout_engine.operation_timing import OperationTiming, PROGRESS_PHASES, timing_report
+from ..layout_engine.output_sizes import cutting_report
 
 
 class GenerateWorker(QObject):
@@ -95,12 +96,16 @@ class GenerateWorker(QObject):
                 json.dumps(manifest, indent=2), encoding="utf-8"
             )
             report_text = timing_report(result['operation_timings'])
+            if 'actual_save_parallelism' in result:
+                report_text += (f"\n分段保存：{result['segment_count']} 个文件 · 同时处理 {result['actual_save_parallelism']} 段"
+                                f" · {'不限制内存预算' if result['save_memory_unlimited'] else '使用内存预算'}")
             for part in result.get('parts', []):
                 report_text += f"\n\n第{part['segment_index']:03d}段：{part['filename']}\n"
                 report_text += timing_report(part['operation_timings']).replace(
                     '计时从文件名扫描开始，到批次信息整理完成',
                     '本段计时从复用整批排版开始，到本段信息整理完成')
             (self.output / '耗时报告.txt').write_text(report_text, encoding='utf-8')
+            (self.output / '切割说明.txt').write_text(cutting_report(result), encoding='utf-8')
         except TaskCancelled:
             self.timings_ready.emit(self.timing.finish('已停止'))
             self.cancelled.emit()
