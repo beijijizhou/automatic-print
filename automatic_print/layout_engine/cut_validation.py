@@ -45,6 +45,7 @@ def validate_cut_corridor(planned, settings, canvas_width, left_marker_px=0):
             ("图片", p.x_px, p.width_px),
             ("标签", p.number_x_px, p.number_width_px),
             ("色块", p.color_block_x_px, p.color_block_width_px),
+            ('平台名称', p.platform_x_px, p.platform_width_px),
         ):
             if width and x < right and x+width > left:
                 violations.append(f"{path.name}：{title}进入整批切割安全通道")

@@ -17,6 +17,8 @@ class SettingPreview(QWidget):
 
     def sample_text(self) -> str:
         template = self.values().get("text", "{编号}")
+        if self.values().get('sequence_enabled') and not any(t in template for t in ('{编号}', '{number}')):
+            template += ' {编号}'
         today = datetime.now().strftime(
             self.values().get("date_format") or "%Y-%m-%d"
         )
@@ -50,6 +52,9 @@ class SettingPreview(QWidget):
             self._draw_image(painter, image)
             if self.kind == "label":
                 self._draw_label(painter, image)
+                if self.values().get('enabled') and self.values().get('platform_name'):
+                    from .platform_preview import draw_platform_diagram
+                    draw_platform_diagram(self, painter, image)
             else:
                 self._draw_block(painter, image)
             painter.setPen(QColor("#64748b"))

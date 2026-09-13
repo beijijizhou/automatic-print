@@ -24,6 +24,7 @@ def transition_rects(planned, settings, width, end_notice='批次结束'):
             for name, y, w, h in (
                 ('图片', p.y_px, p.width_px, p.height_px),
                 ('标签', p.number_y_px, p.number_width_px, p.number_height_px),
+                ('平台名称', p.platform_y_px, p.platform_width_px, p.platform_height_px),
                 ('色块', p.color_block_y_px, p.color_block_width_px, p.color_block_height_px),
             ):
                 if w and h and y < r['y']+r['height'] and y+h > r['y']:

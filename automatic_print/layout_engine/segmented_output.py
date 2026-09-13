@@ -47,7 +47,8 @@ def shift_part(members, margin):
     end = max(p.row_y_px+p.footprint_height_px for _, p in members)
     offset = start-margin
     shifted = [(path, replace(p, y_px=p.y_px-offset, row_y_px=p.row_y_px-offset,
-        number_y_px=p.number_y_px-offset, color_block_y_px=p.color_block_y_px-offset))
+        number_y_px=p.number_y_px-offset, color_block_y_px=p.color_block_y_px-offset,
+        platform_y_px=p.platform_y_px-offset))
         for path, p in members]
     return shifted, end-start+2*margin
 

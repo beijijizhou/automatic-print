@@ -25,6 +25,12 @@ class LabelSettingsDialog(QDialog):
         self.setMinimumWidth(520)
         self.enabled = QCheckBox("为每张图片添加编号或文字标签")
         self.enabled.setChecked(True)
+        self.sequence = QCheckBox('自动添加序号（每批从 1 到最后一张，不重复添加）')
+        self.sequence.setChecked(True)
+        self.platform = QComboBox()
+        self.platform.addItems(['隆丰', '蜂鸟'])
+        self.platform_enabled = QCheckBox('在二维码旁打印平台名称，整段文字与二维码等高')
+        self.platform_enabled.setChecked(True)
         self.follow_qr = QCheckBox(
             "自动识别膜标签二维码，并让文字与二维码水平对齐"
         )
@@ -78,6 +84,9 @@ class LabelSettingsDialog(QDialog):
         form = QFormLayout()
         for label, widget in (
             ("启用标签", self.enabled),
+            ('图片序号', self.sequence),
+            ('生产平台', self.platform),
+            ('平台标记', self.platform_enabled),
             ("机器号", self.machine),
             ("二维码自动定位", self.follow_qr),
             ("", qr_help),
@@ -118,6 +127,8 @@ class LabelSettingsDialog(QDialog):
             "offset_y": self.offset_y.value(),
             "date_format": self.date_format.text(),
             "machine_number": self.machine.currentData(),
+            'sequence_enabled': self.sequence.isChecked(),
+            'platform_name': self.platform.currentText() if self.platform_enabled.isChecked() else '',
         }
 
     def _connect_preview(self) -> None:
@@ -126,11 +137,15 @@ class LabelSettingsDialog(QDialog):
         self.text_template.textChanged.connect(self.preview.update)
         self.position.currentIndexChanged.connect(self.preview.update)
         self.machine.currentIndexChanged.connect(self.preview.update)
+        self.sequence.toggled.connect(self.preview.update)
+        self.platform.currentIndexChanged.connect(self.preview.update)
+        self.platform_enabled.toggled.connect(self.preview.update)
         self.position.currentIndexChanged.connect(self._sync_position)
         self.date_format.textChanged.connect(self.preview.update)
         for box in (self.font_size, self.gap, self.offset_x, self.offset_y):
             box.valueChanged.connect(self.preview.update)
         signals = [
+            self.sequence.toggled, self.platform.currentIndexChanged, self.platform_enabled.toggled,
             self.detect_region.toggled,
             self.fit_height.toggled, self.reference_height.valueChanged,
             self.enabled.toggled, self.follow_qr.toggled,

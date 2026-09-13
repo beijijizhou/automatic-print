@@ -50,6 +50,7 @@ def plan_tail_rotation(paths, settings, progress):
                            +max(1, mm_to_px(settings.transition_line_mm, settings.dpi)))
         planned = normal+[(path, replace(p, y_px=p.y_px+boundary, row_y_px=p.row_y_px+boundary,
                             number_y_px=p.number_y_px+boundary, color_block_y_px=p.color_block_y_px+boundary,
+                            platform_y_px=p.platform_y_px+boundary,
                             cut_zone='旋转区', cut_knife_x_px=rotated[3])) for path, p in rotated[0]]
         height = marked_height(planned, settings, width, boundary+rotated[2])
         score = height, len(targets)

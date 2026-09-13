@@ -14,7 +14,7 @@ def diagnostic_layout(paths, settings, progress=None):
         choices, labels = read_items(paths, safe, progress)
     except ValueError:
         # Even label-recognition failure must not hide the source artwork.
-        choices, labels = read_items(paths, replace(safe, number_images=False), progress)
+        choices, labels = read_items(paths, replace(safe, number_images=False, platform_name=''), progress)
     width = mm_to_px(settings.media_width_mm, settings.dpi)
     margin = mm_to_px(settings.margin_mm, settings.dpi)
     spacing = mm_to_px(settings.spacing_mm, settings.dpi)

@@ -94,7 +94,7 @@ def test_home_hides_online_workflows_and_keeps_local_logs():
     assert not home.main_tabs.isTabVisible(1)
     assert not home.main_tabs.isTabVisible(2)
     assert home.thread is None
-    assert home.log.parent() is home.main_tabs.widget(0)
+    assert home.label_quick_panel.details_dialog.isAncestorOf(home.log)
     assert home.local_summary.isHidden()
     assert home.local_table.isHidden()
     assert home.platform.isHidden()

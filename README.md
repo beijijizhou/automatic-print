@@ -7,18 +7,20 @@ Windows desktop application for combining a folder of images into print-ready la
 在测试电脑上打开 PowerShell，复制并运行：
 
 ```powershell
-powershell -ExecutionPolicy Bypass -Command "irm 'https://raw.githubusercontent.com/beijijizhou/automatic-print/main/windows/bootstrap-test-computer.ps1?v=0.1.83' | iex"
+powershell -ExecutionPolicy Bypass -Command "irm 'https://raw.githubusercontent.com/beijijizhou/automatic-print/main/windows/bootstrap-test-computer.ps1?v=0.1.84' | iex"
 ```
 
 同一条命令既可首次安装，也可在以后下载最新代码并更新运行环境。
 
-界面版本显示为“日期 · 当日第几次更新”，例如 `版本 2026-09-13 · 第22次更新`，不再同时堆叠数字版本和发版日期。次数按发布迭代计数，不是打开软件或点击检查更新的次数；同日递增、换日从第01次开始。内部数字版本保留用于更新比较，可在版本文字上悬停查看。
+界面版本显示为“日期 · 当日第几次更新”，例如 `版本 2026-09-13 · 第23次更新`，不再同时堆叠数字版本和发版日期。次数按发布迭代计数，不是打开软件或点击检查更新的次数；同日递增、换日从第01次开始。内部数字版本保留用于更新比较，可在版本文字上悬停查看。
 
 从源码版 0.1.67（2026-09-13）起，主界面的“检查更新”可直接检查主分支代码，确认后自动拉取代码、同步依赖并安全重启，不再要求下载安装包。旧版电脑需先用上面的命令更新一次，之后直接点击按钮即可。排版、保存或后台预览运行时不会执行更新；本地代码有修改时停止更新，不会覆盖。
 
 本地工作台点击“开始排版”直接使用当前已保存参数生成文件，不打开参数确认窗口。主界面显示整批真实排版和逐张处理进度：待处理图片淡化，已处理图片为绿色边框；保存大图时保留整批预览。该缩略图展示引擎处理进度，不是大图磁盘写入的像素回读。
 
 主界面保留常用标签、排版操作、耗时、预览和总结。订单/尺码分析、手动旋转、切割明细、仅预览及处理日志集中在“批次详情与检查”独立窗口；打印参数仍从底部单独打开，不占主界面。
+
+标签默认自动附加每批从 1 到最后一张的序号，不替换已有文字、不重复添加已有编号变量；分段沿用整批编号。主界面生产平台下拉框默认“隆丰”，另可选择“蜂鸟”。平台名称作为独立醒目标记，放在二维码最近一侧的图片外，整段高度按真实二维码适配；普通标签保持原字号。预览和输出共用位置，旋转后重新适配，不覆盖图案、不跨刀位；识别失败禁止输出，可在标签设置中关闭平台标记。平台和序号选择自动保存，不触发 ERP 访问。
 
 主界面及打印参数使用统一操作图标：蓝色按钮代表开始排版/生成，红色按钮代表停止，普通操作使用次级样式；保留中文文字、键盘焦点和明确的禁用状态。
 
@@ -141,7 +143,7 @@ source version instead of reinstalling every build.
 Open PowerShell on the test computer and run:
 
 ```powershell
-powershell -ExecutionPolicy Bypass -Command "irm 'https://raw.githubusercontent.com/beijijizhou/automatic-print/main/windows/bootstrap-test-computer.ps1?v=0.1.83' | iex"
+powershell -ExecutionPolicy Bypass -Command "irm 'https://raw.githubusercontent.com/beijijizhou/automatic-print/main/windows/bootstrap-test-computer.ps1?v=0.1.84' | iex"
 ```
 
 The script installs or checks Git, Python 3.12, and Google Chrome; clones or

@@ -52,7 +52,8 @@ class PreferencesMixin:
         for widget, key, default, value_type in values:
             widget.setValue(self.preferences.value(key, default, value_type))
         self.number_images.setChecked(
-            self.preferences.value("layout/number_images", True, bool)
+            self.preferences.value("layout/number_images",
+                self.preferences.value('label/enabled', True, bool), bool)
         )
         self.allow_rotation.setChecked(
             self.preferences.value("layout/allow_rotation", True, bool)
@@ -76,6 +77,10 @@ class PreferencesMixin:
             max(0, self.png_engine.findData(engine))
         )
         label = self.label_settings
+        label.sequence.setChecked(self.preferences.value('label/sequence_enabled', True, bool))
+        label.platform_enabled.setChecked(self.preferences.value('label/platform_enabled', True, bool))
+        label.platform.setCurrentIndex(max(0, label.platform.findText(
+            self.preferences.value('label/platform_name', '隆丰', str))))
         label.detect_region.setChecked(self.preferences.value("label/detect_region", True, bool))
         label.fit_height.setChecked(self.preferences.value("label/fit_height", True, bool))
         label.reference_height.setValue(self.preferences.value("label/reference_height_mm", 10, float))
@@ -175,6 +180,9 @@ class PreferencesMixin:
             "layout/png_compression_level": self.png_compression.currentData(),
             "layout/png_engine": self.png_engine.currentData(),
             "label/text_template": label.text_template.text(),
+            'label/sequence_enabled': label.sequence.isChecked(),
+            'label/platform_name': label.platform.currentText(),
+            'label/platform_enabled': label.platform_enabled.isChecked(),
             "layout/machine_number": label.machine.currentData(),
             "label/follow_qr": label.follow_qr.isChecked(),
             "label/position": label.position.currentData(),

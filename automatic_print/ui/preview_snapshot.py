@@ -13,7 +13,8 @@ def install_snapshot(preview, planned, labels, settings, warning="", overflow=()
     images, badges = {}, {}
     top = min(p.row_y_px for _, p in planned)
     local = [(path, replace(p, y_px=p.y_px-top, number_y_px=p.number_y_px-top,
-                            color_block_y_px=p.color_block_y_px-top, row_y_px=p.row_y_px-top))
+                            color_block_y_px=p.color_block_y_px-top, row_y_px=p.row_y_px-top,
+                            platform_y_px=p.platform_y_px-top))
              for path, p in planned]
     for path, p in local:
         if getattr(preview, "overview", False):
@@ -33,6 +34,7 @@ def install_snapshot(preview, planned, labels, settings, warning="", overflow=()
             badges[path] = QImage(ImageQt(badge)).copy()
             badge.close()
     preview.images, preview.badges, preview.planned = images, badges, local
+    preview.platform_badges = {}
     preview.item = local[0][1]
     preview.film_width = mm_to_px(settings.media_width_mm, settings.dpi)
     preview.canvas_width = max(preview.film_width, max(p.x_px+p.width_px for _, p in local))

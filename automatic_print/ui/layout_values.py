@@ -33,6 +33,8 @@ def settings_from_window(window) -> LayoutSettings:
         manual_rotations=tuple(json.loads(window.preferences.value("layout/manual_rotations", "{}", str)).items()),
         label_reference_height_mm=label.reference_height.value(),
         label_text_template=label.text_template.text(),
+        label_sequence_enabled=label.sequence.isChecked(),
+        platform_name=label.platform.currentText() if label.enabled.isChecked() and label.platform_enabled.isChecked() else '',
         label_position=label.position.currentData(),
         label_offset_x_mm=label.offset_x.value(),
         label_offset_y_mm=label.offset_y.value(),

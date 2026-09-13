@@ -9,6 +9,7 @@ from .images import normalized_image
 from .dynamic_label import source_label_badge
 from .models import LayoutSettings, Placement, ProgressCallback
 from .image_pipeline import prepared_images
+from .platform_label import platform_badge
 
 
 def _prepare(item: tuple[Path, Placement]):
@@ -44,6 +45,10 @@ def build_pillow_canvas(
         ):
             canvas.paste(image, (placement.x_px, placement.y_px))
             image.close()
+            if placement.platform_width_px:
+                badge = platform_badge(settings.platform_name, placement.platform_height_px)
+                canvas.alpha_composite(badge, (placement.platform_x_px, placement.platform_y_px))
+                badge.close()
             if settings.number_images:
                 badge = source_label_badge(
                     labels[placement.sequence_number],

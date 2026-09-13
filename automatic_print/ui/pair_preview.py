@@ -12,6 +12,7 @@ from .cut_guide_preview import draw_cut_guides
 from ..layout_engine.order_groups import detail_members
 from .preview_snapshot import install_snapshot
 from .overview_assets import visible_assets
+from .platform_preview import draw_platform_badge
 
 
 class PairProductionPreview(ProductionPreview):
@@ -23,6 +24,7 @@ class PairProductionPreview(ProductionPreview):
     plan_loaded = Signal(object)
     def __init__(self, settings_getter, parent=None):
         self.planned, self.images, self.badges = [], {}, {}
+        self.platform_badges = {}
         self.canvas_width, self.canvas_height = 1, 1
         self.render_settings, self.warning, self.overflow = None, "", []
         self.production_active, self.production_stage = False, ""
@@ -180,6 +182,7 @@ class PairProductionPreview(ProductionPreview):
                 if path in self.badges:
                     painter.drawImage(QRectF(p.number_x_px, p.number_y_px,
                                             p.number_width_px, p.number_height_px), self.badges[path])
+                draw_platform_badge(self, painter, p)
                 if p.color_block_width_px:
                     painter.fillRect(QRectF(p.color_block_x_px, p.color_block_y_px,
                                            p.color_block_width_px, p.color_block_height_px),

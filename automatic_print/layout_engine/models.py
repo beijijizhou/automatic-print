@@ -56,6 +56,9 @@ class LayoutSettings:
     cutter_rotation_zone: bool = False
     cutter_tail_rotation: bool = False
     sequence_numbers: tuple[tuple[str, int], ...] = ()
+    label_sequence_enabled: bool = False
+    platform_name: str = ''
+    platform_gap_mm: float = 2
 
 
 @dataclass(frozen=True)
@@ -80,6 +83,10 @@ class Placement:
     color_block_height_px: int = 0
     cut_zone: str = ""
     cut_knife_x_px: int | None = None
+    platform_x_px: int = 0
+    platform_y_px: int = 0
+    platform_width_px: int = 0
+    platform_height_px: int = 0
 
 
 def mm_to_px(value: float, dpi: int) -> int:

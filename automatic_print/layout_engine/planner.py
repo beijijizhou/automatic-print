@@ -88,6 +88,8 @@ def _plan_layout(paths, settings, progress, analysis, analysis_ready):
 def _used_canvas_width(planned):
     right_edges = []
     for _path, placement in planned:
+        if placement.platform_width_px:
+            right_edges.append(placement.platform_x_px+placement.platform_width_px)
         right_edges.append(placement.x_px + placement.width_px)
         if placement.number_width_px:
             right_edges.append(
@@ -156,6 +158,10 @@ def _place_choice(choice, unit_x, row_y):
                     base_y + item.block_ry,
                     item.block_width,
                     item.block_height,
+                    platform_x_px=base_x+item.platform_rx,
+                    platform_y_px=base_y+item.platform_ry,
+                    platform_width_px=item.platform_width,
+                    platform_height_px=item.platform_height,
                 ),
             )
         )

@@ -7,6 +7,7 @@ from PIL import ImageColor
 
 from .dynamic_label import source_label_badge
 from .models import LayoutSettings, Placement, ProgressCallback, mm_to_px
+from .platform_label import platform_badge
 
 try:
     import pyvips
@@ -84,6 +85,13 @@ def build_vips_canvas(
             )
             xs.append(placement.x_px)
             ys.append(placement.y_px - row_y)
+            if placement.platform_width_px:
+                badge = platform_badge(settings.platform_name, placement.platform_height_px)
+                layers.append(pyvips.Image.new_from_memory(badge.tobytes(), badge.width,
+                    badge.height, 4, 'uchar').copy(interpretation='srgb'))
+                xs.append(placement.platform_x_px)
+                ys.append(placement.platform_y_px-row_y)
+                badge.close()
             if settings.number_images:
                 badge = source_label_badge(
                     labels[placement.sequence_number],

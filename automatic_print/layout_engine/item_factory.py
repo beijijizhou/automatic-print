@@ -11,6 +11,7 @@ from .models import LayoutSettings, mm_to_px
 from .qr_detection import QrLocation, detect_qr_location
 from .dynamic_label import source_label_badge
 from .membrane_region import detect_membrane_region
+from .platform_label import platform_geometry, numbered_template
 from .qr_placement import signed_mm as _signed_mm, rotated_qr as _rotated_qr, qr_label_layout as _qr_label_layout
 
 
@@ -33,6 +34,10 @@ class LayoutItem:
     block_ry: int
     block_width: int
     block_height: int
+    platform_rx: int = 0
+    platform_ry: int = 0
+    platform_width: int = 0
+    platform_height: int = 0
 
 
 def read_items(paths, settings, progress):
@@ -118,6 +123,10 @@ def _make_item(
     block_x, block_y = _block_position(
         (width, height), (block_width, block_height), settings
     )
+    px, py, pw, ph = platform_geometry(path, settings, width, height, rotation_degrees)
+    if pw and px < 0:
+        # Reserve space outside the artwork, while retaining the left cutter marker.
+        block_x = min(block_x, px-mm_to_px(settings.color_block_gap_mm, settings.dpi)-block_width)
     if settings.number_images and settings.cutter_mode != "free":
         label_x = block_x
         label_y = block_y + block_height + gap
@@ -141,6 +150,7 @@ def _make_item(
         label_x = block_x + block_width - label_width + min(0, offset_x)
         label_y = block_y + block_height + gap + max(0, offset_y)
     decorations = [
+        (px, py, pw, ph),
         (label_x, label_y, label_width, label_height),
         (block_x, block_y, block_width, block_height),
     ]
@@ -153,6 +163,7 @@ def _make_item(
         label_width, label_height, footprint_width, footprint_height,
         rotation_degrees, block_x + image_rx, block_y + image_ry,
         block_width, block_height,
+        px+image_rx, py+image_ry, pw, ph,
     )
 
 
@@ -187,7 +198,7 @@ def _label_values(
     if not settings.number_images:
         return 0, 0, 0, 0, 0, 0, width, height
     text = format_label(
-        settings.label_text_template,
+        numbered_template(settings),
         index,
         path,
         created_at,

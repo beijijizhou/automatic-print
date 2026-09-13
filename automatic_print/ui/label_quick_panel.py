@@ -78,6 +78,18 @@ class LabelQuickPanel(QWidget):
         text_row.addWidget(machine_button)
         form = QFormLayout()
         form.addRow("标签与文字", text_row)
+        self.sequence = self._checkbox('序号从 1 到最后一张', label.sequence)
+        self.platform = QComboBox()
+        for index in range(label.platform.count()):
+            self.platform.addItem(label.platform.itemText(index))
+        self.platform.setCurrentIndex(label.platform.currentIndex())
+        self.platform.currentIndexChanged.connect(label.platform.setCurrentIndex)
+        label.platform.currentIndexChanged.connect(self.platform.setCurrentIndex)
+        self.platform.setStyleSheet('QComboBox { font-size: 20px; font-weight: bold; }')
+        platform_row = QHBoxLayout()
+        platform_row.addWidget(self.platform, 1)
+        platform_row.addWidget(self.sequence)
+        form.addRow('生产平台', platform_row)
         form.addRow("当前机器号", self.machine)
         # Advanced controls live in the canonical print-parameter dialogs.
         # Retain these mirrored objects for compatibility, never show duplicates.
