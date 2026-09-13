@@ -30,7 +30,6 @@ def build_local_page(owner) -> QWidget:
     direct_actions.addWidget(owner.start_layout_button)
     preview_button = QPushButton("仅预览整批（不生成文件）")
     preview_button.clicked.connect(lambda: owner.window().generate(preview_only=True))
-    direct_actions.addWidget(preview_button)
     owner.local_summary = QLabel("尚未读取本地生产批次。")
     owner.local_table = _table(
         ["选择", "来源", "批次号", "图片数", "本地更新时间", "文件夹"],
@@ -86,6 +85,11 @@ def build_local_page(owner) -> QWidget:
             window.label_settings, window.color_block_settings, page, window=window
         )
         layout.addWidget(owner.label_quick_panel)
+        direct_actions.addWidget(window.stop_generation_button)
+        direct_actions.addWidget(owner.label_quick_panel.details_button)
+        owner.label_quick_panel.details_dialog.add_page('预览与处理日志', [
+            preview_button, window.run_log, owner.log,
+        ])
     # Keep legacy workflow objects available to workers, but out of the workbench.
     for widget in (
         owner.platform, owner.output, owner.local_summary, owner.local_table,
@@ -96,7 +100,4 @@ def build_local_page(owner) -> QWidget:
     ):
         widget.setParent(page)
         widget.hide()
-    if getattr(owner, "local_only", False):
-        layout.addWidget(QLabel("排版处理日志"))
-        layout.addWidget(owner.log)
     return page

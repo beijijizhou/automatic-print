@@ -10,6 +10,7 @@ from .batch_analysis_panel import BatchAnalysisPanel
 from .batch_summary import BatchSummaryPanel
 from .operation_timing import OperationTimingPanel
 from .manual_rotation import ManualRotationPanel
+from .batch_details import BatchDetailsDialog
 from ..layout_engine.labels import compact_label_text
 
 
@@ -89,6 +90,7 @@ class LabelQuickPanel(QWidget):
         self.preview = PairProductionPreview(window._layout_settings, self)
         self.preview.overview = True
         self.analysis = BatchAnalysisPanel(self)
+        self.details_dialog = BatchDetailsDialog(window)
         self.summary = BatchSummaryPanel(self)
         self.timings = OperationTimingPanel(window.worker_bridge, self)
         self.preview.loading_status.connect(self.summary.progress.setText)
@@ -127,7 +129,7 @@ class LabelQuickPanel(QWidget):
         self.preview_scroll = QScrollArea()
         self.preview_scroll.setWidgetResizable(True)
         self.preview_scroll.setWidget(self.preview)
-        self.preview_scroll.setMinimumHeight(460)
+        self.preview_scroll.setMinimumHeight(300)
         self.preview_scroll.setMaximumHeight(520)
         QVBoxLayout(group).addWidget(self.preview_scroll)
         self.preview.detail = '尚未读取批次。选择文件夹或点击“读取当前文件夹”后开始。'
@@ -136,23 +138,28 @@ class LabelQuickPanel(QWidget):
         layout.setContentsMargins(0, 0, 0, 0)
         layout.addLayout(form)
         layout.addWidget(self.summary)
+        layout.addWidget(group)
         from .generation_panel import build_generation_panel
         layout.addWidget(build_generation_panel(window))
         layout.addWidget(self.timings)
-        layout.addWidget(group)
         self.manual_rotation = ManualRotationPanel(window, self.preview, self)
-        layout.addWidget(self.manual_rotation)
         overview = QCheckBox("显示整批总览（向下滚动查看全部；取消勾选查看双图细节）")
         overview.setChecked(True)
         overview.toggled.connect(self.preview.set_overview)
         layout.addWidget(overview)
         self.read_folder_button = QPushButton('读取当前文件夹（使用上次路径）')
         self.read_folder_button.clicked.connect(lambda: self.preview.use_folder(window.folder.text()))
-        layout.addWidget(self.read_folder_button)
         stop_preview = QPushButton('停止后台预览计算')
         stop_preview.clicked.connect(self.preview.stop_loading)
-        layout.addWidget(stop_preview)
-        layout.addWidget(self.analysis)
+        self.details_dialog.add_page('订单与尺码', [self.analysis])
+        self.details_dialog.add_page('图片检查与旋转', [
+            self.manual_rotation, self.read_folder_button, stop_preview,
+        ])
+        self.summary.layout().removeWidget(self.summary.cutting)
+        self.summary.cutting.setMaximumHeight(16777215)
+        self.details_dialog.add_page('切割明细', [self.summary.cutting])
+        self.details_button = QPushButton('批次详情与检查…')
+        self.details_button.clicked.connect(self.details_dialog.open_details)
 
     def _select_analysis_source(self, path):
         combo = self.manual_rotation.images
