@@ -152,9 +152,11 @@ class LabelQuickPanel(QWidget):
         self.preview_scroll = QScrollArea()
         self.preview_scroll.setWidgetResizable(True)
         self.preview_scroll.setWidget(self.preview)
-        self.preview_scroll.setMinimumHeight(300)
-        self.preview_scroll.setMaximumHeight(520)
-        QVBoxLayout(group).addWidget(self.preview_scroll)
+        self.preview_scroll.setMinimumHeight(420)
+        self.preview_scroll.setMaximumHeight(720)
+        from .preview_viewport import PreviewViewport
+        self.preview_viewport = PreviewViewport(self.preview, self.preview_scroll)
+        QVBoxLayout(group).addWidget(self.preview_viewport)
         self.preview.detail = '尚未读取批次。选择文件夹或点击“读取当前文件夹”后开始。'
         self.summary.progress.setText('软件已就绪，未读取上次批次。')
         layout = QVBoxLayout(self)

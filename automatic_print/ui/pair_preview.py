@@ -103,6 +103,9 @@ class PairProductionPreview(ProductionPreview):
 
     def resizeEvent(self, event):
         super().resizeEvent(event)
+        if hasattr(self, 'view_controls'):
+            self.view_controls.update_geometry()
+            return
         if self.overview and self.item is not None:
             height = max(440, round(self.canvas_height*(self.width()-32)/self.canvas_width)+110)
             if self.minimumHeight() != height:
@@ -157,6 +160,8 @@ class PairProductionPreview(ProductionPreview):
                     (self.height()-100)/self.canvas_height)
         if self.overview:
             scale = (self.width()-32)/self.canvas_width
+        if hasattr(self, 'view_controls'):
+            scale = self.view_controls.scale()
         painter.save()
         try:
             painter.translate((self.width()-self.canvas_width*scale)/2, 86)

@@ -10,7 +10,9 @@ def visible_assets(preview, path, placement):
         reader = QImageReader(str(path))
         size = reader.size()
         if size.isValid():
-            reader.setScaledSize(size.scaled(QSize(320, 320), Qt.KeepAspectRatio))
+            controls = getattr(preview, 'view_controls', None)
+            limit = min(1600, max(320, round(320*controls.zoom.value()/100))) if controls else 320
+            reader.setScaledSize(size.scaled(QSize(limit, limit), Qt.KeepAspectRatio))
         preview.images[path] = reader.read()
         if placement.number_width_px:
             badge = source_label_badge(preview.batch_labels[placement.sequence_number],

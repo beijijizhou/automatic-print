@@ -45,6 +45,8 @@ QCheckBox { spacing: 7px; }
 
 def button_kind(text):
     for words, kind in (
+        (('放大',), 'zoom_in'), (('缩小',), 'zoom_out'),
+        (('适合宽度', '最大化查看', '返回主界面'), 'expand'),
         (('停止',), 'stop'), (('预览',), 'preview'),
         (('开始排版', '生成最终', '确认并生成'), 'play'),
         (('色块',), 'color'), (('标签', '文字'), 'text'),

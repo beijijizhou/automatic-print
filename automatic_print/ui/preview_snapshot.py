@@ -55,3 +55,5 @@ def install_snapshot(preview, planned, labels, settings, warning="", overflow=()
                                  max(400, preview.width()-32)/preview.canvas_width)+110))
     else:
         preview.setMinimumHeight(440)
+    if hasattr(preview, 'view_controls'):
+        preview.view_controls.update_geometry()

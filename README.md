@@ -7,12 +7,12 @@ Windows desktop application for combining a folder of images into print-ready la
 在测试电脑上打开 PowerShell，复制并运行：
 
 ```powershell
-powershell -ExecutionPolicy Bypass -Command "irm 'https://raw.githubusercontent.com/beijijizhou/automatic-print/main/windows/bootstrap-test-computer.ps1?v=0.1.94' | iex"
+powershell -ExecutionPolicy Bypass -Command "irm 'https://raw.githubusercontent.com/beijijizhou/automatic-print/main/windows/bootstrap-test-computer.ps1?v=0.1.95' | iex"
 ```
 
 同一条命令既可首次安装，也可在以后下载最新代码并更新运行环境。
 
-界面版本显示为“日期 · 当日第几次更新”，例如 `版本 2026-09-13 · 第33次更新`，不再同时堆叠数字版本和发版日期。次数按发布迭代计数，不是打开软件或点击检查更新的次数；同日递增、换日从第01次开始。内部数字版本保留用于更新比较，可在版本文字上悬停查看。
+界面版本显示为“日期 · 当日第几次更新”，例如 `版本 2026-09-13 · 第34次更新`，不再同时堆叠数字版本和发版日期。次数按发布迭代计数，不是打开软件或点击检查更新的次数；同日递增、换日从第01次开始。内部数字版本保留用于更新比较，可在版本文字上悬停查看。
 
 从源码版 0.1.67（2026-09-13）起，主界面的“检查更新”可直接检查主分支代码，确认后自动拉取代码、同步依赖并安全重启，不再要求下载安装包。旧版电脑需先用上面的命令更新一次，之后直接点击按钮即可。排版、保存或后台预览运行时不会执行更新；本地代码有修改时停止更新，不会覆盖。
 
@@ -143,7 +143,7 @@ source version instead of reinstalling every build.
 Open PowerShell on the test computer and run:
 
 ```powershell
-powershell -ExecutionPolicy Bypass -Command "irm 'https://raw.githubusercontent.com/beijijizhou/automatic-print/main/windows/bootstrap-test-computer.ps1?v=0.1.94' | iex"
+powershell -ExecutionPolicy Bypass -Command "irm 'https://raw.githubusercontent.com/beijijizhou/automatic-print/main/windows/bootstrap-test-computer.ps1?v=0.1.95' | iex"
 ```
 
 The script installs or checks Git, Python 3.12, and Google Chrome; clones or
