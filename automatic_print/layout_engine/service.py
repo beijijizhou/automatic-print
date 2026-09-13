@@ -155,6 +155,7 @@ def generate_layout(
         "machine_number": normalize_machine_number(settings.machine_number),
         "cutter_mode": settings.cutter_mode,
         'platform_name': settings.platform_name,
+        'platform_font_height_mm': settings.platform_font_height_mm,
         'label_sequence_enabled': settings.label_sequence_enabled,
         "cut_corridor": cut_check,
         "printed_guides": {"span_count": len(guide_spans), "dot_count": len(guide_boxes),

@@ -5,6 +5,7 @@ from functools import lru_cache
 from .cut_guide_geometry import detect_guide_band
 from .models import mm_to_px
 from .platform_space import header_space
+from .membrane_region import MembraneRegion
 
 
 def _font(size):
@@ -60,6 +61,9 @@ def platform_geometry(path, settings, width, height, degrees):
     region = region.rotated(degrees)
     top = round(region.top*height)
     target = max(1, round(region.bottom*height)-top)
+    if settings.platform_font_height_mm > 0:
+        target = min(target, max(2, mm_to_px(settings.platform_font_height_mm, settings.dpi)))
+    region = MembraneRegion(region.left, top/height, region.right, (top+target)/height)
     badge = platform_badge(settings.platform_name, target)
     badge_width = badge.width
     badge.close()

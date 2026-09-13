@@ -18,6 +18,9 @@ def test_platform_and_sequence_default_and_persist(tmp_path):
     assert panel.platform.currentText() == '隆丰'
     assert panel.sequence.isChecked()
     assert window._layout_settings().platform_name == '隆丰'
+    assert panel.platform_font_height.value() == 6
+    panel.platform_font_height.setValue(4.5)
+    assert window.label_settings.platform_font_height.value() == 4.5
     assert window._layout_settings().label_sequence_enabled
     assert panel.text.text() == '自定义标签'
     assert panel.platform.findText('蜂鸟') == -1
@@ -31,6 +34,7 @@ def test_platform_and_sequence_default_and_persist(tmp_path):
     WINDOWS.append(reopened)
     reopened.startup_update_timer.stop()
     assert reopened._layout_settings().platform_name == '测试平台'
+    assert reopened._layout_settings().platform_font_height_mm == 4.5
     assert reopened._layout_settings().machine_number == 'M11'
     assert not reopened._layout_settings().label_sequence_enabled
     assert reopened.label_settings.text_template.text() == '自定义标签'

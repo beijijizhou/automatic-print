@@ -61,6 +61,7 @@ class LayoutSettings:
     label_machine_enabled: bool = False
     platform_name: str = ''
     platform_gap_mm: float = 2
+    platform_font_height_mm: float = 0  # Zero retains automatic QR-height sizing.
 
 
 @dataclass(frozen=True)

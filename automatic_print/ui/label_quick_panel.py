@@ -88,6 +88,15 @@ class LabelQuickPanel(QWidget):
         platform_row.addWidget(self.platform, 1)
         platform_row.addWidget(self.sequence)
         form.addRow('生产平台', platform_row)
+        self.platform_font_height = QDoubleSpinBox()
+        self.platform_font_height.setRange(0, 50)
+        self.platform_font_height.setDecimals(1)
+        self.platform_font_height.setSuffix(' 毫米')
+        self.platform_font_height.setSpecialValueText('自动：二维码等高')
+        self.platform_font_height.setValue(label.platform_font_height.value())
+        self.platform_font_height.valueChanged.connect(label.platform_font_height.setValue)
+        label.platform_font_height.valueChanged.connect(self.platform_font_height.setValue)
+        form.addRow('平台文字高度', self.platform_font_height)
         form.addRow("当前机器号", self.machine)
         # Advanced controls live in the canonical print-parameter dialogs.
         # Retain these mirrored objects for compatibility, never show duplicates.
@@ -112,6 +121,10 @@ class LabelQuickPanel(QWidget):
         self.preview.analysis_started.connect(lambda: self.summary.start(window.folder.text()))
         self.analysis.source_selected.connect(self._select_analysis_source)
         label.settings_changed.connect(self.preview.schedule_refresh)
+        def refresh_platform_font(*_args):
+            if self.preview.batch_payload and not self.preview.production_active:
+                self.preview.refresh_timer.start()
+        label.platform_font_height.valueChanged.connect(refresh_platform_font)
         block.settings_changed.connect(self.preview.schedule_refresh)
         def folder_changed(folder):
             if window.cutter_settings.quick_mode.isChecked():

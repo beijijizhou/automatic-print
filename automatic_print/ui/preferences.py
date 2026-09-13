@@ -79,6 +79,7 @@ class PreferencesMixin:
         label = self.label_settings
         label.sequence.setChecked(self.preferences.value('label/sequence_enabled', True, bool))
         label.platform_enabled.setChecked(self.preferences.value('label/platform_enabled', True, bool))
+        label.platform_font_height.setValue(self.preferences.value('label/platform_font_height_mm', 6, float))
         platform = self.preferences.value('label/platform_name', '隆丰', str).strip()
         if not platform or platform.casefold() in {'蜂鸟', 'haloo'}:
             platform = '隆丰'
@@ -187,6 +188,7 @@ class PreferencesMixin:
             'label/sequence_enabled': label.sequence.isChecked(),
             'label/platform_name': label.platform.currentText(),
             'label/platform_enabled': label.platform_enabled.isChecked(),
+            'label/platform_font_height_mm': label.platform_font_height.value(),
             "layout/machine_number": label.machine.currentData(),
             "label/follow_qr": label.follow_qr.isChecked(),
             "label/position": label.position.currentData(),

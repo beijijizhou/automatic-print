@@ -30,8 +30,12 @@ class LabelSettingsDialog(QDialog):
         self.platform = QComboBox()
         self.platform.setEditable(True)
         self.platform.addItem('隆丰')
-        self.platform_enabled = QCheckBox('在二维码旁打印平台名称，整段文字与二维码等高')
+        self.platform_enabled = QCheckBox('在二维码旁打印平台名称（高度不超过二维码）')
         self.platform_enabled.setChecked(True)
+        self.platform_font_height = self._box(6, 0, 50)
+        self.platform_font_height.setSuffix(' 毫米')
+        self.platform_font_height.setSpecialValueText('自动：二维码等高')
+        self.platform_font_height.setToolTip('平台字独立大小，默认高度 6 毫米；0 为自动等高。不会改变标签或序号字号。')
         self.follow_qr = QCheckBox(
             "自动识别膜标签二维码，并让文字与二维码水平对齐"
         )
@@ -89,6 +93,7 @@ class LabelSettingsDialog(QDialog):
             ('图片序号', self.sequence),
             ('生产平台', self.platform),
             ('平台标记', self.platform_enabled),
+            ('平台文字高度', self.platform_font_height),
             ("机器号", self.machine),
             ("二维码自动定位", self.follow_qr),
             ("", qr_help),
@@ -132,6 +137,7 @@ class LabelSettingsDialog(QDialog):
             'sequence_enabled': self.sequence.isChecked(),
             'machine_enabled': True,
             'platform_name': self.platform.currentText() if self.platform_enabled.isChecked() else '',
+            'platform_font_height_mm': self.platform_font_height.value(),
         }
 
     def _connect_preview(self) -> None:
@@ -143,12 +149,14 @@ class LabelSettingsDialog(QDialog):
         self.sequence.toggled.connect(self.preview.update)
         self.platform.currentTextChanged.connect(self.preview.update)
         self.platform_enabled.toggled.connect(self.preview.update)
+        self.platform_font_height.valueChanged.connect(self.preview.update)
         self.position.currentIndexChanged.connect(self._sync_position)
         self.date_format.textChanged.connect(self.preview.update)
         for box in (self.font_size, self.gap, self.offset_x, self.offset_y):
             box.valueChanged.connect(self.preview.update)
         signals = [
             self.sequence.toggled, self.platform.currentTextChanged, self.platform_enabled.toggled,
+            self.platform_font_height.valueChanged,
             self.detect_region.toggled,
             self.fit_height.toggled, self.reference_height.valueChanged,
             self.enabled.toggled, self.follow_qr.toggled,
