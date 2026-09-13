@@ -62,7 +62,8 @@ def button_kind(text):
 
 
 def apply_workbench_style(window):
-    window.setStyleSheet(WORKBENCH_STYLE + BUTTON_STYLE)
+    from .spinbox_style import spinbox_style
+    window.setStyleSheet(WORKBENCH_STYLE + BUTTON_STYLE + spinbox_style())
     for button in window.findChildren(QPushButton):
         kind = button_kind(button.text())
         importance = 'primary' if kind == 'play' else 'danger' if kind == 'stop' else 'secondary'

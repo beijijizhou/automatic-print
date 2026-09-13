@@ -8,7 +8,7 @@ analysis = Analysis(
     pathex=[str(project_root)],
     binaries=[],
     datas=[(str(project_root / "assets" / name), "assets")
-           for name in ("ha-icon.ico", "ha-icon.png")],
+           for name in ("ha-icon.ico", "ha-icon.png", "spin-plus.svg", "spin-minus.svg")],
     hiddenimports=[],
     hookspath=[],
     hooksconfig={},

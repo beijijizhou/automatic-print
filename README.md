@@ -7,12 +7,12 @@ Windows desktop application for combining a folder of images into print-ready la
 在测试电脑上打开 PowerShell，复制并运行：
 
 ```powershell
-powershell -ExecutionPolicy Bypass -Command "irm 'https://raw.githubusercontent.com/beijijizhou/automatic-print/main/windows/bootstrap-test-computer.ps1?v=0.1.97' | iex"
+powershell -ExecutionPolicy Bypass -Command "irm 'https://raw.githubusercontent.com/beijijizhou/automatic-print/main/windows/bootstrap-test-computer.ps1?v=0.1.98' | iex"
 ```
 
 同一条命令既可首次安装，也可在以后下载最新代码并更新运行环境。
 
-界面版本显示为“日期 · 当日第几次更新”，例如 `版本 2026-09-13 · 第36次更新`，不再同时堆叠数字版本和发版日期。次数按发布迭代计数，不是打开软件或点击检查更新的次数；同日递增、换日从第01次开始。内部数字版本保留用于更新比较，可在版本文字上悬停查看。
+界面版本显示为“日期 · 当日第几次更新”，例如 `版本 2026-09-13 · 第37次更新`，不再同时堆叠数字版本和发版日期。次数按发布迭代计数，不是打开软件或点击检查更新的次数；同日递增、换日从第01次开始。内部数字版本保留用于更新比较，可在版本文字上悬停查看。
 
 在打印参数的“膜规格比较”勾选四方案计算，再显式预览或开始排版，主界面总结及排版报告会显示 60/45 厘米膜各自不旋转与允许旋转的长度、耗膜面积及图片占位率。比较使用自动刀位，扣除当前 RIIN 预留，不自动换膜，也不保存四份比较大图；默认关闭以避免额外等待。跨膜宽以“物理膜宽 × 长度”的平方米比较，图片占位率包含生产图片本身的透明区域，不是油墨覆盖率；长度为分段前结果。
 
@@ -145,7 +145,7 @@ source version instead of reinstalling every build.
 Open PowerShell on the test computer and run:
 
 ```powershell
-powershell -ExecutionPolicy Bypass -Command "irm 'https://raw.githubusercontent.com/beijijizhou/automatic-print/main/windows/bootstrap-test-computer.ps1?v=0.1.97' | iex"
+powershell -ExecutionPolicy Bypass -Command "irm 'https://raw.githubusercontent.com/beijijizhou/automatic-print/main/windows/bootstrap-test-computer.ps1?v=0.1.98' | iex"
 ```
 
 The script installs or checks Git, Python 3.12, and Google Chrome; clones or
