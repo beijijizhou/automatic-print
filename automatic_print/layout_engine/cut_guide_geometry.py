@@ -6,7 +6,7 @@ from pathlib import Path
 
 from .membrane_region import MembraneRegion
 from .models import mm_to_px
-from .qr_detection import cv2, np, _detect_points
+from .qr_detection import cv2, np
 
 
 @dataclass(frozen=True)
@@ -29,41 +29,8 @@ def detect_guide_band(path: Path):
 
 @lru_cache(maxsize=512)
 def _cached(path, _mtime, _size):
-    from .measurement_session import active_source
-    source = active_source(Path(path))
-    if source is not None:
-        with source.convert('RGBA') as rgba:
-            raw = cv2.cvtColor(np.asarray(rgba), cv2.COLOR_RGBA2BGRA)
-    else:
-        raw = cv2.imdecode(np.fromfile(path, dtype=np.uint8), cv2.IMREAD_UNCHANGED)
-    if raw is None:
-        return None
-    scale = min(1, 1800 / max(raw.shape[:2]))
-    if scale < 1:
-        raw = cv2.resize(raw, None, fx=scale, fy=scale, interpolation=cv2.INTER_AREA)
-    if raw.ndim == 2:
-        gray = raw
-    else:
-        rgb = raw[:, :, :3].astype(np.float32)
-        if raw.shape[2] == 4:
-            alpha = raw[:, :, 3:4].astype(np.float32) / 255
-            rgb = rgb*alpha + 255*(1-alpha)
-        gray = cv2.cvtColor(rgb.astype(np.uint8), cv2.COLOR_BGR2GRAY)
-    points = _detect_points(gray)
-    if points is None:
-        # Isolate the source header from the artwork when whole-image detection fails.
-        for fraction in (0.5, 0.3):
-            points = _detect_points(gray[:max(1, round(gray.shape[0]*fraction))])
-            if points is not None:
-                break
-    if points is None:
-        return None
-    points = points.reshape(-1, 2)
-    height, width = gray.shape
-    left, top = np.min(points, axis=0)
-    right, bottom = np.max(points, axis=0)
-    return MembraneRegion(max(0,float(left)/width), max(0,float(top)/height),
-                          min(1,float(right)/width), min(1,float(bottom)/height))
+    from .qr_corners import detect_source_corners
+    return detect_source_corners(Path(path))
 
 
 def guide_spans(planned, settings, bands):

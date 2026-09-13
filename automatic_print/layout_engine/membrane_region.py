@@ -3,7 +3,7 @@ from dataclasses import dataclass
 from functools import lru_cache
 from pathlib import Path
 
-from .qr_detection import cv2, np, _detect_points
+from .qr_detection import cv2, np
 
 
 @dataclass(frozen=True)
@@ -35,22 +35,22 @@ def detect_membrane_region(path: Path):
 
 @lru_cache(maxsize=4096)
 def _cached(path, _mtime, _size):
-    raw = cv2.imdecode(np.fromfile(path, dtype=np.uint8), cv2.IMREAD_UNCHANGED)
-    if raw is None:
+    from .cut_guide_geometry import detect_guide_band
+    from .measurement_session import source_pixels
+    qr = detect_guide_band(Path(path))
+    if qr is None:
         return None
-    scale = min(1, 1800 / max(raw.shape[:2]))
-    if scale < 1:
-        raw = cv2.resize(raw, None, fx=scale, fy=scale, interpolation=cv2.INTER_AREA)
-    if raw.ndim == 2:
-        gray = raw
-    else:
-        rgb = raw[:, :, :3].astype(np.float32)
-        if raw.shape[2] == 4:
-            alpha = raw[:, :, 3:4].astype(np.float32) / 255
-            rgb = rgb * alpha + 255 * (1-alpha)
-        gray = cv2.cvtColor(rgb.astype(np.uint8), cv2.COLOR_BGR2GRAY)
-    points = _detect_points(gray)
-    return region_from_ink(gray < 225, points) if points is not None else None
+    with source_pixels(Path(path)) as source:
+        with source.copy() as small:
+            small.thumbnail((1800, 1800))
+            with small.convert('RGBA') as rgba:
+                pixels = np.asarray(rgba)
+                alpha = pixels[:, :, 3:4].astype(np.float32)/255
+                rgb = pixels[:, :, :3]*alpha+255*(1-alpha)
+                gray = cv2.cvtColor(rgb.astype(np.uint8), cv2.COLOR_RGB2GRAY)
+    height, width = gray.shape
+    points = np.array([[qr.left*width, qr.top*height], [qr.right*width, qr.bottom*height]])
+    return region_from_ink(gray < 225, points)
 
 
 def region_from_ink(ink, points):

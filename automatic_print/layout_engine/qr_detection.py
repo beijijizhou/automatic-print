@@ -35,20 +35,11 @@ def detect_qr_location(path: Path) -> QrLocation | None:
 def _detect_cached(
     path: str, _modified_ns: int, _file_size: int
 ) -> QrLocation | None:
-    data = np.fromfile(path, dtype=np.uint8)
-    image = cv2.imdecode(data, cv2.IMREAD_GRAYSCALE)
-    if image is None or not image.size:
+    from .cut_guide_geometry import detect_guide_band
+    region = detect_guide_band(Path(path))
+    if region is None:
         return None
-    image = _scaled_for_detection(image)
-    points = _detect_points(image)
-    if points is None:
-        return None
-    height, width = image.shape[:2]
-    center = points.reshape(-1, 2).mean(axis=0)
-    return QrLocation(
-        min(1.0, max(0.0, float(center[0]) / width)),
-        min(1.0, max(0.0, float(center[1]) / height)),
-    )
+    return QrLocation((region.left+region.right)/2, (region.top+region.bottom)/2)
 
 
 def _scaled_for_detection(image, maximum: int = 1800):
@@ -66,14 +57,16 @@ def _scaled_for_detection(image, maximum: int = 1800):
 
 def _detect_points(image):
     detector = cv2.QRCodeDetector()
+    found, points = detector.detect(image)
+    if found:
+        return points
     try:
         found, groups = detector.detectMulti(image)
         if found and groups is not None and len(groups):
             return max(groups, key=_polygon_area)
     except (AttributeError, cv2.error):
         pass
-    found, points = detector.detect(image)
-    return points if found else None
+    return None
 
 
 def _polygon_area(points) -> float:
