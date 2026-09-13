@@ -8,6 +8,7 @@ from PySide6.QtWidgets import (
 from .pair_preview import PairProductionPreview
 from .batch_analysis_panel import BatchAnalysisPanel
 from .batch_summary import BatchSummaryPanel
+from .operation_timing import OperationTimingPanel
 from .manual_rotation import ManualRotationPanel
 from ..layout_engine.labels import compact_label_text
 
@@ -89,6 +90,7 @@ class LabelQuickPanel(QWidget):
         self.preview.overview = True
         self.analysis = BatchAnalysisPanel(self)
         self.summary = BatchSummaryPanel(self)
+        self.timings = OperationTimingPanel(window.worker_bridge, self)
         self.preview.loading_status.connect(self.summary.progress.setText)
         self.preview.plan_loaded.connect(self.summary.show_plan)
         self.preview.analysis_ready.connect(self.analysis.show_report)
@@ -136,6 +138,7 @@ class LabelQuickPanel(QWidget):
         layout.addWidget(self.summary)
         from .generation_panel import build_generation_panel
         layout.addWidget(build_generation_panel(window))
+        layout.addWidget(self.timings)
         layout.addWidget(group)
         self.manual_rotation = ManualRotationPanel(window, self.preview, self)
         layout.addWidget(self.manual_rotation)

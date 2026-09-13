@@ -38,6 +38,8 @@ class LayoutItem:
 def read_items(paths, settings, progress):
     if not paths:
         raise ValueError("没有可供排版的图片。")
+    if progress:
+        progress('读取图片尺寸', 0, len(paths), '开始读取尺寸并测量标签占位')
     labels, items = {}, []
     created_at = datetime.now().astimezone()
     gap = mm_to_px(settings.number_gap_mm, settings.dpi)

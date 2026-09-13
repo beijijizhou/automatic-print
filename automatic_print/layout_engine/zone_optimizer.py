@@ -22,6 +22,8 @@ def select_zones(orders, normal_items, rotated_items, settings, progress=None):
     rotated_costs = [sum(rotated_items[p].footprint_height + spacing for p in order)
                      if all(p in rotated_items for p in order) else None for order in orders]
     best = None
+    if progress:
+        progress('比较旋转区域', 0, len(knives), '开始完整订单旋转组合比较')
     for index, knife in enumerate(knives):
         lanes = _lanes(replace(settings, cutter_knife_mm=knife*25.4/settings.dpi), width)
         sequence = list(range(len(orders)))  # Coalesced size blocks are already in production order.

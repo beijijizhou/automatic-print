@@ -42,6 +42,8 @@ def _plan_layout(paths, settings, progress, analysis, analysis_ready):
     if usable_width <= 0:
         raise ValueError("外边距过大，画布没有可打印区域。")
     items, labels = read_items(paths, settings, progress)
+    if progress:
+        progress('计算排版', 0, len(paths), '开始整批顺序排版计算')
     units = build_units(items, spacing)
     double_count = sum(
         len(choices[0].members) == 2 for choices in units

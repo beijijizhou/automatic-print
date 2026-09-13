@@ -21,6 +21,8 @@ def plan_cutter_layout(paths, settings, progress, prepared=None, preserve_sequen
     spacing = mm_to_px(settings.spacing_mm, settings.dpi)
     margin = mm_to_px(settings.margin_mm, settings.dpi)
     items, labels = prepared if prepared is not None else read_cutter_items(paths, settings, progress)
+    if progress:
+        progress('计算排版', 0, len(paths), '整理完整订单与固定分区占位')
     units = build_units(items, spacing)
     groups = [[member.item for member in choices[0].members] for choices in units]
     if settings.cutter_mode == "dual" and settings.cutter_auto_knife:
@@ -153,6 +155,8 @@ def read_cutter_items(paths, settings, progress):
         settings, allow_rotation=False, color_block_position="left_top",
         color_block_offset_y_mm=0,
     )
+    if progress:
+        progress('读取图片尺寸', 0, len(paths), '读取内嵌 DPI、尺寸和标签占位')
     dimensions = [print_dimensions(path, settings.dpi) for path in paths]
     missing = [path.name for path, size in zip(paths, dimensions) if not size.embedded_dpi]
     if missing:

@@ -82,6 +82,7 @@ class GenerationActionsMixin:
         bridge = self.worker_bridge
         self.worker.sources_ready.connect(bridge.layout_sources, queued)
         self.worker.progress.connect(bridge.layout_progress, queued)
+        self.worker.timings_ready.connect(bridge.layout_timings, queued)
         self.worker.preview_ready.connect(bridge.layout_preview, queued)
         self.worker.analysis_ready.connect(bridge.layout_analysis, queued)
         self.worker.finished.connect(bridge.layout_finished, queued)
@@ -106,7 +107,7 @@ class GenerationActionsMixin:
             percent = round(current / total * 20) if stage == "分析批次" else 20 + round(current / total * 25)
         elif stage == "识别膜标签":
             percent = 45
-        elif stage in {"整理双面图片", "切膜安全检查", "计算批次刀位", "批次刀位已确定", "比较旋转区域"}:
+        elif stage in {"整理双面图片", "切膜安全检查", "计算排版", "计算批次刀位", "批次刀位已确定", "比较旋转区域"}:
             percent = 45
         elif stage == "合成图片":
             percent = 45 + round(current / total * 45)

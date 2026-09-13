@@ -10,10 +10,12 @@ from PySide6.QtCore import QObject, Signal, Slot
 from ..cancellation import Cancellation, TaskCancelled
 from ..layout import LayoutSettings, generate_layout, discover_images, discovered_extensions
 from ..updater import fetch_latest_release
+from ..layout_engine.operation_timing import OperationTiming, PROGRESS_PHASES, timing_report
 
 
 class GenerateWorker(QObject):
     sources_ready = Signal(object)
+    timings_ready = Signal(object)
     preview_ready = Signal(object)
     analysis_ready = Signal(object)
     progress = Signal(str, int, object, str)
@@ -38,17 +40,27 @@ class GenerateWorker(QObject):
         self.settings = settings
         self.preview_only = preview_only
         self.cancellation = Cancellation()
+        self.timing = None
+
+    def _phase(self, name):
+        self.cancellation.check()
+        if self.timing.phase(name):
+            self.timings_ready.emit(self.timing.snapshot())
 
     def request_cancel(self) -> None:
         self.cancellation.request()
 
     def _progress(self, stage, current, total, filename) -> None:
         self.cancellation.check()
+        if stage in PROGRESS_PHASES:
+            self._phase(PROGRESS_PHASES[stage])
         self.progress.emit(stage, current, total, filename)
 
     @Slot()
     def run(self) -> None:
+        self.timing = OperationTiming()
         try:
+            self._phase('扫描文件名')
             self.cancellation.check()
             if self.images is None:
                 self._progress('扫描文件夹', 0, 0, str(self.source))
@@ -63,8 +75,11 @@ class GenerateWorker(QObject):
                 plan_ready=self.preview_ready.emit, preview_only=self.preview_only,
                 analysis_ready=self.analysis_ready.emit,
                 batch_name=self.source.resolve().name,
+                phase_ready=self._phase,
             )
             self.cancellation.check()
+            result['operation_timings'] = self.timing.finish()
+            self.timings_ready.emit(result['operation_timings'])
             if self.preview_only:
                 self.finished.emit("", result)
                 return
@@ -79,10 +94,14 @@ class GenerateWorker(QObject):
             (self.output / "manifest.json").write_text(
                 json.dumps(manifest, indent=2), encoding="utf-8"
             )
+            (self.output / '耗时报告.txt').write_text(
+                timing_report(result['operation_timings']), encoding='utf-8')
         except TaskCancelled:
+            self.timings_ready.emit(self.timing.finish('已停止'))
             self.cancelled.emit()
             return
         except Exception as error:
+            self.timings_ready.emit(self.timing.finish('失败'))
             self.failed.emit(str(error))
             return
         self.finished.emit(str(self.output), result)

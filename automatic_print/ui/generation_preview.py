@@ -26,6 +26,7 @@ class GenerationPreviewController(QObject):
         bridge.layout_cancelled.connect(self.cancelled)
 
     def start(self):
+        self.panel.timings.reset()
         self.payload = None
         self.panel.analysis.clear()
         folder = self.window.folder.text().strip()

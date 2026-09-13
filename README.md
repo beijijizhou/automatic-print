@@ -7,7 +7,7 @@ Windows desktop application for combining a folder of images into print-ready la
 在测试电脑上打开 PowerShell，复制并运行：
 
 ```powershell
-powershell -ExecutionPolicy Bypass -Command "irm 'https://raw.githubusercontent.com/beijijizhou/automatic-print/main/windows/bootstrap-test-computer.ps1?v=0.1.76' | iex"
+powershell -ExecutionPolicy Bypass -Command "irm 'https://raw.githubusercontent.com/beijijizhou/automatic-print/main/windows/bootstrap-test-computer.ps1?v=0.1.77' | iex"
 ```
 
 同一条命令既可首次安装，也可在以后下载最新代码并更新运行环境。
@@ -30,6 +30,8 @@ powershell -ExecutionPolicy Bypass -Command "irm 'https://raw.githubusercontent.
 单排图片的色块和标签固定在输出文件最左边缘，不允许独占右分区。右侧色块仅用于真正并排的右图；手动左分区放不下时提示调整刀位或使用单列，不能绕过安全检查。
 
 图片间距默认 5 毫米；已保存的自定义间距继续保留，可在打印参数中修改。
+
+主界面增加“分步耗时”：从扫描文件名开始记录各大步骤的秒数、占比及最耗时步骤，支持复制；输出目录保存 `耗时报告.txt`，批次记录保存详细计时。大图延迟计算可能计入安全检查或保存，不能将保存阶段当作纯磁盘耗时。报告/批次记录自身写入和独立缩略图不计入该总时间。
 
 ## Current features
 
@@ -125,7 +127,7 @@ source version instead of reinstalling every build.
 Open PowerShell on the test computer and run:
 
 ```powershell
-powershell -ExecutionPolicy Bypass -Command "irm 'https://raw.githubusercontent.com/beijijizhou/automatic-print/main/windows/bootstrap-test-computer.ps1?v=0.1.76' | iex"
+powershell -ExecutionPolicy Bypass -Command "irm 'https://raw.githubusercontent.com/beijijizhou/automatic-print/main/windows/bootstrap-test-computer.ps1?v=0.1.77' | iex"
 ```
 
 The script installs or checks Git, Python 3.12, and Google Chrome; clones or

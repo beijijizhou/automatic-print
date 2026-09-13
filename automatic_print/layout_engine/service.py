@@ -33,12 +33,15 @@ def generate_layout(
     preview_only=False,
     analysis_ready=None,
     batch_name="",
+    phase_ready=None,
 ) -> dict:
     total_started = perf_counter()
     if not preview_only:
         output_dir.mkdir(parents=True, exist_ok=True)
     reading_started = perf_counter()
     paths = list(image_paths)
+    phase = phase_ready or (lambda name: None)
+    phase('订单与尺码分析')
     effective = [settings]
     def report(stage, current, total, filename):
         if stage == "批次刀位已确定":
@@ -54,6 +57,7 @@ def generate_layout(
         paths, settings, report, analysis_ready=analyzed
     )
     settings = effective[0]
+    phase('坐标与订单安全检查')
     warning, order_check = "", {}
     try:
         order_check = validate_order_placements(paths, planned)
@@ -73,22 +77,26 @@ def generate_layout(
     reading_seconds = perf_counter() - reading_started
 
     combining_started = perf_counter()
+    phase('图片准备与合成')
     use_vips = settings.png_engine == "libvips" and available()
     builder = build_vips_canvas if use_vips else build_pillow_canvas
     canvas = builder(
         planned, labels, (width, height), settings, progress
     )
     combining_seconds = perf_counter() - combining_started
+    phase('合成像素安全检查')
     if not use_vips:
         validate_canvas_pixels(canvas, cut_check, progress)
     else:
         validate_vips_canvas(canvas, cut_check)
+    phase('二维码与辅助线处理')
     guide_spans, missing_guides = collect_guides(planned, settings, progress)
     guide_boxes = list(dot_boxes(guide_spans, settings.dpi))
     canvas = paint_guides(canvas, guide_boxes, use_vips)
 
     filename = output_path.name
     saving_started = perf_counter()
+    phase('保存输出图片')
     with monitor_save(output_path, progress):
         if use_vips:
             canvas.pngsave(
@@ -105,7 +113,9 @@ def generate_layout(
             canvas.close()
     saving_seconds = perf_counter() - saving_started
     if use_vips:
+        phase('输出文件安全复核')
         validate_vips_output(output_path, cut_check, progress, guide_boxes)
+    phase('批次信息整理')
     size = output_path.stat().st_size
     result = {
         "filename": filename,

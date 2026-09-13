@@ -11,6 +11,8 @@ def select_batch_knife(groups, settings, spacing, progress=None):
     width = mm_to_px(settings.media_width_mm, settings.dpi)
     candidates = knife_candidates(groups, settings)
     best = None
+    if progress:
+        progress('计算批次刀位', 0, len(candidates), '开始整批固定刀位比较')
     for index, knife in enumerate(candidates):
         trial = replace(settings, cutter_knife_mm=knife*25.4/settings.dpi)
         lanes = _lanes(trial, width)

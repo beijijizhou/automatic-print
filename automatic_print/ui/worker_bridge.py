@@ -5,6 +5,7 @@ class MainWindowWorkerBridge(QObject):
     """Routes worker results through an object owned by the GUI thread."""
 
     layout_progress = Signal(str, int, object, str)
+    layout_timings = Signal(object)
     layout_preview = Signal(object)
     layout_sources = Signal(object)
     layout_analysis = Signal(object)
