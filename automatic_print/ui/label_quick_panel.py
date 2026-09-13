@@ -156,22 +156,21 @@ class LabelQuickPanel(QWidget):
         self.preview_scroll.setMaximumHeight(720)
         from .preview_viewport import PreviewViewport
         self.preview_viewport = PreviewViewport(self.preview, self.preview_scroll)
-        QVBoxLayout(group).addWidget(self.preview_viewport)
+        preview_layout = QVBoxLayout(group)
+        preview_layout.addWidget(self.preview_viewport)
         self.preview.detail = '尚未读取批次。选择文件夹或点击“读取当前文件夹”后开始。'
         self.summary.progress.setText('软件已就绪，未读取上次批次。')
         layout = QVBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
         layout.addLayout(form)
-        layout.addWidget(self.summary)
+        from .generation_panel import build_data_panel
+        layout.addWidget(build_data_panel(window, self.summary, self.timings))
         layout.addWidget(group)
-        from .generation_panel import build_generation_panel
-        layout.addWidget(build_generation_panel(window))
-        layout.addWidget(self.timings)
         self.manual_rotation = ManualRotationPanel(window, self.preview, self)
         overview = QCheckBox("显示整批总览（向下滚动查看全部；取消勾选查看双图细节）")
         overview.setChecked(True)
         overview.toggled.connect(self.preview.set_overview)
-        layout.addWidget(overview)
+        preview_layout.addWidget(overview)
         self.read_folder_button = QPushButton('读取当前文件夹（使用上次路径）')
         self.read_folder_button.clicked.connect(lambda: self.preview.use_folder(window.folder.text()))
         stop_preview = QPushButton('停止后台预览计算')
