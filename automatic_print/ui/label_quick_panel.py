@@ -99,7 +99,18 @@ class LabelQuickPanel(QWidget):
         self.analysis.source_selected.connect(self._select_analysis_source)
         label.settings_changed.connect(self.preview.schedule_refresh)
         block.settings_changed.connect(self.preview.schedule_refresh)
-        window.folder.textChanged.connect(self.preview.use_folder)
+        def folder_changed(folder):
+            if window.cutter_settings.quick_mode.isChecked():
+                self.summary.start(folder)
+                self.preview.stage_folder(folder)
+            else:
+                self.preview.use_folder(folder)
+        window.folder.textChanged.connect(folder_changed)
+        def mode_changed(*_args):
+            self.preview.auto_refresh_enabled = not window.cutter_settings.quick_mode.isChecked()
+            folder_changed(window.folder.text())
+        window.cutter_settings.quick_mode.toggled.connect(mode_changed)
+        self.preview.auto_refresh_enabled = not window.cutter_settings.quick_mode.isChecked()
         window.dpi.valueChanged.connect(self.preview.schedule_refresh)
         cutter = window.cutter_settings
         for signal in (cutter.film.currentIndexChanged, cutter.mode.currentIndexChanged,

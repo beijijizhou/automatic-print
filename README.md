@@ -7,7 +7,7 @@ Windows desktop application for combining a folder of images into print-ready la
 在测试电脑上打开 PowerShell，复制并运行：
 
 ```powershell
-powershell -ExecutionPolicy Bypass -Command "irm 'https://raw.githubusercontent.com/beijijizhou/automatic-print/main/windows/bootstrap-test-computer.ps1?v=0.1.69' | iex"
+powershell -ExecutionPolicy Bypass -Command "irm 'https://raw.githubusercontent.com/beijijizhou/automatic-print/main/windows/bootstrap-test-computer.ps1?v=0.1.70' | iex"
 ```
 
 同一条命令既可首次安装，也可在以后下载最新代码并更新运行环境。
@@ -20,6 +20,8 @@ powershell -ExecutionPolicy Bypass -Command "irm 'https://raw.githubusercontent.
 它会自动准备 Git、Python 3.12、Google Chrome、Playwright 及项目所需依赖，
 然后创建带有 HA 图标的“Haloo Automatic”桌面入口并启动程序。
 以后可以直接双击桌面入口打开。
+
+默认开启“上线快速模式”：选择文件夹不先计算预览，点击开始排版后统一扫描、显示文件名、读取尺寸、排版与保存。不比较自动旋转区域，仍保留统一刀位、订单/双面及输出像素安全检查；高级旋转功能可在打印参数中主动开启。
 
 ## Current features
 
@@ -115,7 +117,7 @@ source version instead of reinstalling every build.
 Open PowerShell on the test computer and run:
 
 ```powershell
-powershell -ExecutionPolicy Bypass -Command "irm 'https://raw.githubusercontent.com/beijijizhou/automatic-print/main/windows/bootstrap-test-computer.ps1?v=0.1.69' | iex"
+powershell -ExecutionPolicy Bypass -Command "irm 'https://raw.githubusercontent.com/beijijizhou/automatic-print/main/windows/bootstrap-test-computer.ps1?v=0.1.70' | iex"
 ```
 
 The script installs or checks Git, Python 3.12, and Google Chrome; clones or

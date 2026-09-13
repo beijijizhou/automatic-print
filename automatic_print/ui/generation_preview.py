@@ -2,7 +2,6 @@ from PySide6.QtCore import QObject, Slot
 from pathlib import Path
 
 from .preview_snapshot import install_snapshot
-from ..layout import discover_images
 from ..layout_engine.order_groups import detail_members
 
 
@@ -16,6 +15,7 @@ class GenerationPreviewController(QObject):
         self.payload = None
         bridge = window.worker_bridge
         bridge.layout_preview.connect(self.ready)
+        bridge.layout_sources.connect(self.sources)
         bridge.layout_analysis.connect(self.panel.analysis.show_report)
         bridge.layout_analysis.connect(self.panel.summary.show_analysis)
         bridge.layout_finished.connect(self.panel.summary.finished)
@@ -29,7 +29,7 @@ class GenerationPreviewController(QObject):
         self.payload = None
         self.panel.analysis.clear()
         folder = self.window.folder.text().strip()
-        self.panel.summary.start(folder, len(discover_images(Path(folder))))
+        self.panel.summary.start(folder)
         self.panel.preview_scroll.verticalScrollBar().setValue(0)
         self.preview.clear_for_generation()
         self.preview.source_folder = Path(folder)
@@ -41,6 +41,12 @@ class GenerationPreviewController(QObject):
         self.preview.update()
         self.window.settings_dialog.hide()
         self.window.automation_home.workbench_scroll.verticalScrollBar().setValue(0)
+
+    @Slot(object)
+    def sources(self, paths):
+        self.panel.summary.start(self.window.folder.text(), len(paths))
+        self.window.run_log.appendPlainText(f'已扫描 {len(paths)} 张图片，开始读取尺寸和排版。')
+        self.preview.sources_ready.emit(paths)
 
     @Slot(object)
     def ready(self, payload):

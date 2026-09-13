@@ -16,9 +16,13 @@ class PreferencesMixin:
             unchanged = self.folder.text() == folder
             self.folder.setText(folder)
             if unchanged:
-                self.generation_preview.preview.use_folder(folder)
+                preview = self.generation_preview.preview
+                if self.cutter_settings.quick_mode.isChecked():
+                    preview.stage_folder(folder)
+                else:
+                    preview.use_folder(folder)
             self.preferences.setValue("source_location", folder)
-            self.status.setText('已选择文件夹，正在后台读取图片名称和批次信息…')
+            self.status.setText('已选择文件夹，点击开始排版统一读取和处理。' if self.cutter_settings.quick_mode.isChecked() else '已选择文件夹，正在后台读取图片名称和批次信息…')
             return True
         return False
 

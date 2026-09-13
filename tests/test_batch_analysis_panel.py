@@ -49,6 +49,7 @@ def test_worker_analysis_reaches_gui_and_image_selection_matches_rotation_contro
         Image.new('RGBA',(100,160),'blue').save(path,dpi=(25.4,25.4))
         paths.append(path)
     prefs=QSettings(str(tmp_path/'prefs.ini'),QSettings.IniFormat)
+    prefs.setValue('cutter/quick_mode', False)
     window=MainWindow(preferences=prefs)
     window.folder.setText(str(folder))
     panel=window.automation_home.label_quick_panel

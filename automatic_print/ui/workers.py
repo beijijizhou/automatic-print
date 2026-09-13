@@ -8,11 +8,12 @@ from pathlib import Path
 from PySide6.QtCore import QObject, Signal, Slot
 
 from ..cancellation import Cancellation, TaskCancelled
-from ..layout import LayoutSettings, generate_layout
+from ..layout import LayoutSettings, generate_layout, discover_images, discovered_extensions
 from ..updater import fetch_latest_release
 
 
 class GenerateWorker(QObject):
+    sources_ready = Signal(object)
     preview_ready = Signal(object)
     analysis_ready = Signal(object)
     progress = Signal(str, int, object, str)
@@ -48,6 +49,14 @@ class GenerateWorker(QObject):
     @Slot()
     def run(self) -> None:
         try:
+            self.cancellation.check()
+            if self.images is None:
+                self._progress('扫描文件夹', 0, 0, str(self.source))
+                self.images = discover_images(self.source)
+                if not self.images:
+                    types = '、'.join(discovered_extensions(self.source)[:15]) or '没有文件'
+                    raise ValueError(f'所选文件夹没有支持的图片。实际文件类型：{types}')
+            self.sources_ready.emit(self.images)
             self.cancellation.check()
             result = generate_layout(
                 self.images, self.output, self.settings, self._progress,

@@ -35,6 +35,7 @@ def test_saved_folder_does_not_block_startup_and_stale_results_are_ignored(tmp_p
     prefs = QSettings(str(tmp_path/'startup.ini'), QSettings.IniFormat)
     prefs.setValue('source_location', str(first))
     prefs.setValue('label/enabled', False)
+    prefs.setValue('cutter/quick_mode', False)  # Advanced auto-preview remains available.
     window = MainWindow(prefs)
     window.startup_update_timer.stop()
     assert calls == []  # No file discovery, thumbnail decoding, or layout in constructor.

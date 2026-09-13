@@ -7,6 +7,8 @@ class CutterSettingsPanel(QWidget):
     def __init__(self, preferences, width, rotation, direction, parent=None, block=None):
         super().__init__(parent)
         self.preferences = preferences
+        self.quick_mode = QCheckBox('上线快速模式（不比较旋转区，读取与排版一次完成）')
+        self.quick_mode.setChecked(preferences.value('cutter/quick_mode', True, bool))
         self.block = block
         self.width_control, self.rotation, self.direction = width, rotation, direction
         self.film = QComboBox()
@@ -17,7 +19,7 @@ class CutterSettingsPanel(QWidget):
         self.auto_knife = QCheckBox("按整批图片自动计算统一刀位")
         self.auto_knife.setChecked(preferences.value("cutter/auto_knife", True, bool))
         self.rotation_zone = QCheckBox("省膜时启用独立旋转区（每行一张，换刀一次）")
-        self.rotation_zone.setChecked(preferences.value("cutter/rotation_zone", True, bool))
+        self.rotation_zone.setChecked(not self.quick_mode.isChecked() and preferences.value("cutter/rotation_zone", False, bool))
         self.safety = self._box(3, 0.1, 30)
         self.marker_offset = self._box(0, 0, 100)
         note = QLabel(
@@ -28,6 +30,7 @@ class CutterSettingsPanel(QWidget):
         note.setWordWrap(True)
         form = QFormLayout(self)
         for text, control in (
+            ('处理模式', self.quick_mode),
             ("膜规格", self.film), ("生产排版模式", self.mode),
             ("刀位选择", self.auto_knife),
             ("旋转区域", self.rotation_zone),
@@ -54,6 +57,7 @@ class CutterSettingsPanel(QWidget):
         self.film.currentIndexChanged.connect(self._film_changed)
         self.mode.currentIndexChanged.connect(self._mode_changed)
         self.auto_knife.toggled.connect(self._mode_changed)
+        self.quick_mode.toggled.connect(self._mode_changed)
         self._mode_changed()
 
     def _film_changed(self, *_args):
@@ -80,11 +84,13 @@ class CutterSettingsPanel(QWidget):
         for control in (self.knife, self.safety, self.marker_offset):
             control.setEnabled(mode == "dual")
         self.auto_knife.setEnabled(mode == "dual")
-        self.rotation_zone.setEnabled(mode == "dual")
+        self.rotation_zone.setEnabled(mode == "dual" and not self.quick_mode.isChecked())
+        if self.quick_mode.isChecked():
+            self.rotation_zone.setChecked(False)
         self.knife.setEnabled(mode == "dual" and not self.auto_knife.isChecked())
-        self.rotation.setEnabled(mode == "free")
-        self.direction.setEnabled(mode == "free")
-        if mode != "free":
+        self.rotation.setEnabled(mode == "free" and not self.quick_mode.isChecked())
+        self.direction.setEnabled(mode == "free" and not self.quick_mode.isChecked())
+        if mode != "free" or self.quick_mode.isChecked():
             self.rotation.setChecked(False)
         if self.block is not None:
             for control in (self.block.enabled, self.block.position, self.block.offset_y):
@@ -96,6 +102,7 @@ class CutterSettingsPanel(QWidget):
 
     def save(self):
         for key, value in {
+            'quick_mode': self.quick_mode.isChecked(),
             "film_mm": self.film.currentData(), "mode": self.mode.currentData(),
             "auto_knife": self.auto_knife.isChecked(),
             "rotation_zone": self.rotation_zone.isChecked(),

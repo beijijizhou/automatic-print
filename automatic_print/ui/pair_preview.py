@@ -26,6 +26,7 @@ class PairProductionPreview(ProductionPreview):
         self.canvas_width, self.canvas_height = 1, 1
         self.render_settings, self.warning, self.overflow = None, "", []
         self.production_active, self.production_stage = False, ""
+        self.auto_refresh_enabled = True
         self.composed_count = None
         self.source_folder = None
         self.overview, self.batch_payload, self.batch_labels = False, None, {}
@@ -48,7 +49,7 @@ class PairProductionPreview(ProductionPreview):
         self.clear_for_generation()
         self.production_stage = '界面已就绪，等待后台读取图片文件夹…'
         self.loading_status.emit(self.production_stage)
-        self.schedule_refresh()
+        self.refresh_timer.start()
 
     def set_sample(self, path):
         self.path = Path(path) if path else None
@@ -58,9 +59,18 @@ class PairProductionPreview(ProductionPreview):
             self.schedule_refresh()
 
     def schedule_refresh(self, *_args):
+        if not self.auto_refresh_enabled:
+            return
         if self.source_folder is None and self.path is None:
             return
         self.refresh_timer.start()
+
+    def stage_folder(self, folder):
+        self.source_folder, self.path = None, None
+        self.clear_for_generation()
+        self.detail = '已选择图片文件夹；点击开始排版，将统一读取、排版和保存。'
+        self.production_stage = self.detail
+        self.loading_status.emit(self.detail)
 
     def stop_loading(self):
         self.refresh_timer.stop()

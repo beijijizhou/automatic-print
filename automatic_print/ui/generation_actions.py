@@ -8,7 +8,7 @@ from PySide6.QtCore import QThread, Qt, QUrl, Slot
 from PySide6.QtGui import QDesktopServices
 from PySide6.QtWidgets import QMessageBox
 
-from ..layout import LayoutSettings, discover_images, discovered_extensions
+from ..layout import LayoutSettings
 from ..layout_engine.metrics import saving_text
 from .workers import GenerateWorker
 from .layout_values import settings_from_window
@@ -35,17 +35,7 @@ class GenerationActionsMixin:
                 self, "请选择文件夹", "请选择有效的图片文件夹。"
             )
             return
-        images = discover_images(source)
-        if not images:
-            types = discovered_extensions(source)
-            found = "、".join(types[:15]) if types else "没有文件"
-            QMessageBox.warning(
-                self,
-                "未找到图片",
-                "所选文件夹中没有支持的图片。\n\n"
-                f"实际发现的文件类型：{found}",
-            )
-            return
+        images = None  # Discover once in the worker, never block the GUI.
         base = output_base(self, source)
         if not preview_only and not base.is_dir():
             QMessageBox.warning(
@@ -59,13 +49,13 @@ class GenerationActionsMixin:
         self.preferences.setValue("source_location", str(source))
         self.preferences.setValue("output_location", str(base))
         self.job_path.setText(str(output))
-        self.status.setText(f"已找到 {len(images)} 张图片，正在开始…")
+        self.status.setText('正在开始：后台扫描图片文件名，再读取尺寸与排版…')
         self.current_file.setText("当前文件：—")
         self.progress.setValue(0)
         self.progress.setFormat("正在开始…")
         self.run_log.clear()
         self.run_log.appendPlainText(f"任务：{job_id}")
-        self.run_log.appendPlainText(f"图片数量：{len(images)}")
+        self.run_log.appendPlainText('正在后台扫描图片文件名…')
         self.run_log.appendPlainText(f"输出位置：{output}")
         self.generate_button.setEnabled(False)
         self.stop_generation_button.setEnabled(True)
@@ -73,7 +63,7 @@ class GenerationActionsMixin:
         self.stage_started_at = self.started_at
         self.current_stage = "正在开始"
         self.current_count = 0
-        self.current_total = len(images)
+        self.current_total = 0
         self.active_png_compression = settings.png_compression_level
         self.active_png_engine = settings.png_engine
         self.clock.start()
@@ -85,6 +75,7 @@ class GenerationActionsMixin:
         self.thread.started.connect(self.worker.run)
         queued = Qt.ConnectionType.QueuedConnection
         bridge = self.worker_bridge
+        self.worker.sources_ready.connect(bridge.layout_sources, queued)
         self.worker.progress.connect(bridge.layout_progress, queued)
         self.worker.preview_ready.connect(bridge.layout_preview, queued)
         self.worker.analysis_ready.connect(bridge.layout_analysis, queued)
@@ -104,7 +95,9 @@ class GenerationActionsMixin:
     def update_progress(
         self, stage: str, current: int, total: int, filename: str
     ) -> None:
-        if stage in {"分析批次", "读取图片尺寸"}:
+        if stage == '扫描文件夹':
+            percent = 0
+        elif stage in {"分析批次", "读取图片尺寸"}:
             percent = round(current / total * 20) if stage == "分析批次" else 20 + round(current / total * 25)
         elif stage == "识别膜标签":
             percent = 45
@@ -120,7 +113,10 @@ class GenerationActionsMixin:
         self.current_stage = stage
         self.current_count = current
         self.current_total = total
-        if stage == "保存图片":
+        if stage == '扫描文件夹':
+            self.progress.setRange(0, 0)
+            self.progress.setFormat('正在扫描图片文件名…')
+        elif stage == "保存图片":
             self.active_output_filename = filename
             self.progress.setRange(0, 0)
             self.progress.setFormat("正在保存图片…")
@@ -148,7 +144,7 @@ class GenerationActionsMixin:
             estimate = "正在计算…"
         saving_detail = self._saving_detail()
         count = (
-            "正在持续写入磁盘"
+            '正在扫描图片文件名' if self.current_stage == '扫描文件夹' else "正在持续写入磁盘"
             if self.current_stage == "保存图片"
             else f"{self.current_count}/{self.current_total}"
         )
