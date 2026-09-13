@@ -17,7 +17,7 @@ def rotated_marks(path, width, height, degrees, settings, block, label, platform
     bx, _, bw, bh = block
     _, _, lw, lh = label
     px, py, pw, ph = platform
-    by = max(0, round(qr.top*height))
+    by = marker_top(qr, height)
     lx = max(0, round(qr.left*width))
     ly = ceil(qr.bottom*height) + max(1, round(settings.number_gap_mm*settings.dpi/25.4))
 
@@ -38,5 +38,8 @@ def rotated_marks(path, width, height, degrees, settings, block, label, platform
     return bx, by, lx, ly
 
 
-def qr_relative_item(item):
-    return bool(item.rotation_degrees % 360 and detect_guide_band(item.path))
+def marker_top(qr, height):
+    """A bottom-left QR must not drag the cutter mark to the batch tail."""
+    if (qr.left+qr.right)/2 < .5 and (qr.top+qr.bottom)/2 >= .5:
+        return 0
+    return max(0, round(qr.top*height))

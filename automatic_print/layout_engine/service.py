@@ -154,7 +154,7 @@ def generate_layout(
         "dual_quality": quality,
         "size_range": sizes, "output_dpi": settings.dpi,
         "transition_marks": transitions,
-        "rotation_marker_shift_mm": settings.rotation_marker_shift_mm,
+        "rotation_marker_shift_mm": 0,
         "machine_number": normalize_machine_number(settings.machine_number),
         "cutter_mode": settings.cutter_mode,
         'platform_name': settings.platform_name,

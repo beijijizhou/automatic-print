@@ -16,7 +16,7 @@ def test_segment_settings_default_and_persistence(tmp_path):
     assert window._layout_settings().output_parts == 1
     assert window._layout_settings().save_memory_unlimited
     assert not window.segmented_output.memory.isEnabled()
-    assert window._layout_settings().rotation_marker_shift_mm == 2
+    assert window._layout_settings().rotation_marker_shift_mm == 0
     assert window._layout_settings().transition_lines
     assert window._layout_settings().cutter_tail_rotation
     window.segmented_output.parts.setValue(3)
@@ -24,7 +24,7 @@ def test_segment_settings_default_and_persistence(tmp_path):
     window.segmented_output.memory.setValue(1024)
     window.segmented_output.unlimited.setChecked(False)
     assert window.segmented_output.memory.isEnabled()
-    window.cutter_settings.transitions.shift.setValue(1)
+    prefs.setValue('cutter/rotation_marker_shift_mm', 2)
     window.cutter_settings.transitions.gap.setValue(4)
     assert window._layout_settings().output_parts == 3
     window.close()
@@ -35,6 +35,6 @@ def test_segment_settings_default_and_persistence(tmp_path):
     assert restored._layout_settings().save_parallelism == 1
     assert restored._layout_settings().save_memory_mb == 1024
     assert not restored._layout_settings().save_memory_unlimited
-    assert restored._layout_settings().rotation_marker_shift_mm == 1
+    assert restored._layout_settings().rotation_marker_shift_mm == 0
     assert restored._layout_settings().transition_gap_mm == 4
     restored.close()

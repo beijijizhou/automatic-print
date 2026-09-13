@@ -28,7 +28,7 @@ def settings_from_window(window) -> LayoutSettings:
         transition_lines=window.cutter_settings.transitions.enabled.isChecked(),
         transition_gap_mm=window.cutter_settings.transitions.gap.value(),
         transition_line_mm=window.cutter_settings.transitions.thickness.value(),
-        rotation_marker_shift_mm=window.cutter_settings.transitions.shift.value(),
+        rotation_marker_shift_mm=0,
         allow_rotation=window.allow_rotation.isChecked() and not window.cutter_settings.quick_mode.isChecked(),
         rotation_direction=window.rotation_direction.currentData(),
         number_images=window.number_images.isChecked(),

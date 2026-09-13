@@ -18,9 +18,12 @@ def test_rotated_whole_batch_qr_label_and_fixed_marker(tmp_path, engine, parts):
     paths = []
     for index in range(12):
         rotated = Image.new('RGBA', (250, 300))
-        rotated.paste('white', (35, 10, 100, 55))
-        rotated.paste(qr, (45, 20))
+        top = 10 if index < 6 else 150
+        rotated.paste('white', (35, top, 100, top+45))
+        rotated.paste(qr, (45, top+10))
         rotated.paste('blue', (115, 0, 250, 300))
+        if index >= 10:
+            rotated.paste('blue', (0, 0, 20, 20))
         path = tmp_path/f'B{index//2}-1-T-Black-M-NO1-{index%2+1}.png'
         rotated.rotate(-90, expand=True).save(path, dpi=(25.4, 25.4))
         paths.append(path)
@@ -36,7 +39,7 @@ def test_rotated_whole_batch_qr_label_and_fixed_marker(tmp_path, engine, parts):
     assert len(previews[0]['planned']) == 12
     from automatic_print.layout_engine.marker_space import validate_embedded_marks
     path, placement = previews[0]['planned'][0]
-    with pytest.raises(ValueError, match='未与二维码同高'):
+    with pytest.raises(ValueError, match='安全基准高度'):
         validate_embedded_marks([(path, replace(placement,
             color_block_y_px=placement.color_block_y_px+1))])
     with pytest.raises(ValueError, match='未放在二维码下方'):
@@ -48,7 +51,11 @@ def test_rotated_whole_batch_qr_label_and_fixed_marker(tmp_path, engine, parts):
                 path = tmp_path/p['source']
                 band = detect_guide_band(path).rotated(90)
                 assert p['color_block_x_px'] == 0
-                assert p['color_block_y_px'] == p['y_px']+round(band.top*p['height_px'])
+                bottom_qr = int(p['source'].split('-')[0][1:]) >= 3
+                expected_y = 0 if bottom_qr else round(band.top*p['height_px'])
+                assert p['color_block_y_px'] == p['y_px']+expected_y
+                if bottom_qr:
+                    assert (p['x_px'] > 0) == (int(p['source'].split('-')[0][1:]) == 5)
                 assert p['number_x_px'] == p['x_px']+round(band.left*p['width_px'])
                 assert p['number_y_px'] >= p['y_px']+band.bottom*p['height_px']
                 assert p['number_y_px']+p['number_height_px'] <= p['y_px']+p['height_px']
@@ -62,7 +69,7 @@ def test_rotated_whole_batch_qr_label_and_fixed_marker(tmp_path, engine, parts):
     choices, _ = read_items(paths, settings, None)
     item = choices[0][0]
     shifted = rotation_marker_item(item, replace(settings, rotation_marker_shift_mm=2))
-    assert shifted.block_rx == item.block_rx+2
+    assert shifted.block_rx == item.block_rx
     assert shifted.label_rx == item.label_rx
     if parts == 1:
         from automatic_print.layout_engine.rotation_zones import _rotated
@@ -79,9 +86,9 @@ def test_rotated_whole_batch_qr_label_and_fixed_marker(tmp_path, engine, parts):
         assert zone['cut_corridor']['pixel_verified']
         with Image.open(tmp_path/'zone'/zone['filename']) as output:
             for p in zone['placements']:
-                assert p['color_block_x_px'] == 2
-                assert p['number_x_px'] > 2
-                assert output.getpixel((2, p['color_block_y_px'])) == (255, 0, 0, 255)
+                assert p['color_block_x_px'] == 0
+                assert p['number_x_px'] > 0
+                assert output.getpixel((0, p['color_block_y_px'])) == (255, 0, 0, 255)
                 with Image.open(tmp_path/p['source']) as source:
                     original = np.asarray(source.rotate(90, expand=True))
                 crop = np.asarray(output.crop((p['x_px'], p['y_px'],

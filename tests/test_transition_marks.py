@@ -42,10 +42,9 @@ def test_full_outputs_have_exact_red_lines_and_shifted_rotation_markers(tmp_path
                 assert mark['y']+mark['height'] <= image.height
             for p in part['placements']:
                 if p['cut_zone'] == '旋转区':
-                    assert p['color_block_x_px'] == 2
-                    assert p['number_x_px'] == 2
-                    assert image.getpixel((0, p['color_block_y_px']))[3] == 0
-                    assert image.getpixel((2, p['color_block_y_px'])) == (255, 0, 0, 255)
+                    assert p['color_block_x_px'] == 0
+                    assert p['number_x_px'] == 0
+                    assert image.getpixel((0, p['color_block_y_px'])) == (255, 0, 0, 255)
             for zone in part['cut_corridor'].get('zones', [part['cut_corridor']]):
                 assert zone['pixel_verified']
                 left, right = zone['safe_left_px'], zone['safe_right_px']
@@ -66,7 +65,7 @@ def test_independent_validation_rejects_wrong_shift_and_colliding_line(tmp_path)
         cutter_auto_knife=True, cutter_rotation_zone=True, number_images=False,
         rotation_marker_shift_mm=2, transition_lines=True)
     planned, _, width, _, _ = plan_layout(paths, settings, None)
-    corrupt = [(path, replace(p, color_block_x_px=0) if p.cut_zone == '旋转区' else p) for path, p in planned]
+    corrupt = [(path, replace(p, color_block_x_px=2) if p.cut_zone == '旋转区' else p) for path, p in planned]
     with pytest.raises(ValueError, match='色块未对齐'):
         validate_cut_corridor(corrupt, settings, width)
     line = transition_rects(planned, settings, width)[-1]

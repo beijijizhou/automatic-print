@@ -46,8 +46,9 @@ def validate_embedded_marks(planned):
             qr = detect_guide_band(path)
             if qr:
                 qr = qr.rotated(p.rotation_degrees)
-                if p.color_block_width_px and p.color_block_y_px != p.y_px+round(qr.top*p.height_px):
-                    raise ValueError(f'{path.name}：旋转刀码未与二维码同高，禁止输出。')
+                from .rotated_marks import marker_top
+                if p.color_block_width_px and p.color_block_y_px != p.y_px+marker_top(qr, p.height_px):
+                    raise ValueError(f'{path.name}：旋转刀码未处于安全基准高度，禁止输出。')
                 if p.number_width_px and (
                     p.number_x_px != p.x_px+round(qr.left*p.width_px)
                     or p.number_y_px < p.y_px+ceil(qr.bottom*p.height_px)

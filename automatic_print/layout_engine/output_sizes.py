@@ -32,7 +32,7 @@ def cutting_description(result):
     notices = '；'.join(f"{r['kind']}红线：距文件顶部 {r['y']*25.4/result['output_dpi']:.1f} 毫米"
                         for r in result.get('transition_marks', []))
     rotated = any(p['cut_zone'] == '旋转区' for p in result['placements'])
-    shift = f" · 旋转区刀码右移 {result.get('rotation_marker_shift_mm', 0):g} 毫米" if rotated else ''
+    shift = ' · 刀码保持左侧固定基准' if rotated else ''
     return (f"{result['filename']} · {sizes} · {len(result['placements'])} 张 · {knife or '单列 / 自由排版'}"
             f"{shift}"+(f'\n{notices}' if notices else ''))
 
@@ -44,5 +44,5 @@ def cutting_report(result):
     for item in quality.get('single_images', []):
         review += f"\n单排：{item['source']} · 图宽 {item['width_mm']:g} 毫米 · {item['reason']}"
     return ('按文件段号顺序生产，不重新排序。刀位从输出文件最左侧起算，实际膜位置还需加 RIIN 左预留。\n'
-            '红色横线表示分段、换刀或批次结束，详见每段说明；不切入图片。刀码偏移是否停机必须实测。\n\n'
+            '红色横线表示分段、换刀或批次结束，详见每段说明；不切入图片。刀码不添加旋转偏移。\n\n'
             +review+'\n\n'+'\n\n'.join(cutting_description(part) for part in parts))

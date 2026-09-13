@@ -23,7 +23,7 @@ def validate_cut_corridor(planned, settings, canvas_width, left_marker_px=0):
                 raise ValueError("旋转区必须每一行只有一张图片。")
             checked = validate_cut_corridor([(path,replace(p,cut_zone="",cut_knife_x_px=None)) for path,p in members],
                       replace(settings,cutter_knife_mm=knife*25.4/settings.dpi),canvas_width,
-                      mm_to_px(settings.rotation_marker_shift_mm, settings.dpi) if name == '旋转区' else 0)
+                      0)
             checked.update(name=name,start_y_px=min(p.row_y_px for _,p in members),
                            end_y_px=max(p.row_y_px+p.footprint_height_px for _,p in members))
             zones.append(checked)

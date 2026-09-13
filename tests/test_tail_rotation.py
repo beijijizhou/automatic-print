@@ -35,7 +35,7 @@ def test_fast_tail_rotation_keeps_full_sizes_double_faces_and_real_cut_channels(
     assert result['size_range'] in result['filename']
     rotated = [p for p in result['placements'] if p['cut_zone'] == '旋转区']
     assert len(rotated) == 4
-    assert all(p['rotation_degrees'] == 90 and p['color_block_x_px'] == 2 for p in rotated)
+    assert all(p['rotation_degrees'] == 90 and p['color_block_x_px'] == 0 for p in rotated)
     assert rotated[0]['source'].endswith('NO1-1.png') and rotated[1]['source'].endswith('NO1-2.png')
     assert rotated[1]['row_y_px'] == rotated[0]['row_y_px']+rotated[0]['footprint_height_px']+5
     with Image.open(tmp_path/'out'/result['filename']) as image:
