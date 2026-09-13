@@ -7,12 +7,12 @@ Windows desktop application for combining a folder of images into print-ready la
 在测试电脑上打开 PowerShell，复制并运行：
 
 ```powershell
-powershell -ExecutionPolicy Bypass -Command "irm 'https://raw.githubusercontent.com/beijijizhou/automatic-print/main/windows/bootstrap-test-computer.ps1?v=0.1.85' | iex"
+powershell -ExecutionPolicy Bypass -Command "irm 'https://raw.githubusercontent.com/beijijizhou/automatic-print/main/windows/bootstrap-test-computer.ps1?v=0.1.86' | iex"
 ```
 
 同一条命令既可首次安装，也可在以后下载最新代码并更新运行环境。
 
-界面版本显示为“日期 · 当日第几次更新”，例如 `版本 2026-09-13 · 第24次更新`，不再同时堆叠数字版本和发版日期。次数按发布迭代计数，不是打开软件或点击检查更新的次数；同日递增、换日从第01次开始。内部数字版本保留用于更新比较，可在版本文字上悬停查看。
+界面版本显示为“日期 · 当日第几次更新”，例如 `版本 2026-09-13 · 第25次更新`，不再同时堆叠数字版本和发版日期。次数按发布迭代计数，不是打开软件或点击检查更新的次数；同日递增、换日从第01次开始。内部数字版本保留用于更新比较，可在版本文字上悬停查看。
 
 从源码版 0.1.67（2026-09-13）起，主界面的“检查更新”可直接检查主分支代码，确认后自动拉取代码、同步依赖并安全重启，不再要求下载安装包。旧版电脑需先用上面的命令更新一次，之后直接点击按钮即可。排版、保存或后台预览运行时不会执行更新；本地代码有修改时停止更新，不会覆盖。
 
@@ -43,7 +43,7 @@ powershell -ExecutionPolicy Bypass -Command "irm 'https://raw.githubusercontent.
 
 刀位搜索复用订单与尺码分析，配对使用数值几何而非重复构造排版对象，并合并左右可放置状态等价的候选刀位；保留原搜索目标和整批真实像素安全检查。
 
-打印参数支持可选分段输出：默认 1 个完整文件，可设置多个连续 PNG 和最多 2 段同时处理。按完整订单和整行边界切分，所有文件沿用整批刀位。默认勾选“不限制并行内存预算”，不因预算降为串行；取消后才应用可设置的预算（初值 512MiB）。内存不足仍可能失败。每段均检查像素安全，失败/停止后本次输出标记为禁止打印并保留。报告包含实际并行段数和每段耗时；并行不保证提速，兼容状态栏的保存耗时包含分段合成与检查。
+打印参数支持可选分段输出：默认 1 个完整文件，可设置多个连续 PNG，并行可选 1–8 段（默认 2 段），选择自动保存。实际并行不超过安全切分后的文件数；试用 4 段并行时，期望输出文件数也需至少 4 个。按完整订单和整行边界切分，所有文件沿用整批刀位。默认勾选“不限制并行内存预算”，不因预算降为串行；取消后才应用可设置的预算（初值 512MiB）。内存不足仍可能失败。每段均检查像素安全，失败/停止后本次输出标记为禁止打印并保留。报告包含实际并行段数和每段耗时；并行不保证提速，兼容状态栏的保存耗时包含分段合成与检查。
 
 输出文件名带实际尺码：按生产顺序连续的 `S、M、L、XL` 简写为 `S-XL`；跳码、不连续或重复回到前一尺码时不冒充连续范围。保留原文件夹名、标签及段号，旋转文件标注“旋转区”或“常规+旋转区”。主界面和输出目录“切割说明.txt”列出各段文件、尺码、刀位、红线位置与换刀提醒。
 
@@ -143,7 +143,7 @@ source version instead of reinstalling every build.
 Open PowerShell on the test computer and run:
 
 ```powershell
-powershell -ExecutionPolicy Bypass -Command "irm 'https://raw.githubusercontent.com/beijijizhou/automatic-print/main/windows/bootstrap-test-computer.ps1?v=0.1.85' | iex"
+powershell -ExecutionPolicy Bypass -Command "irm 'https://raw.githubusercontent.com/beijijizhou/automatic-print/main/windows/bootstrap-test-computer.ps1?v=0.1.86' | iex"
 ```
 
 The script installs or checks Git, Python 3.12, and Google Chrome; clones or

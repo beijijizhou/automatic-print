@@ -5,6 +5,7 @@ from typing import Callable
 
 
 ProgressCallback = Callable[[str, int, int, str], None]
+MAX_SAVE_PARALLELISM = 8
 
 
 @dataclass(frozen=True)

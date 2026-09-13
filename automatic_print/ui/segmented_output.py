@@ -1,4 +1,5 @@
 from PySide6.QtWidgets import QCheckBox, QFormLayout, QGroupBox, QLabel, QSpinBox
+from ..layout_engine.models import MAX_SAVE_PARALLELISM
 
 
 class SegmentedOutputSettings(QGroupBox):
@@ -8,7 +9,8 @@ class SegmentedOutputSettings(QGroupBox):
         self.parts.setRange(1, 32)
         self.parts.setValue(preferences.value('output/parts', 1, int))
         self.workers = QSpinBox()
-        self.workers.setRange(1, 2)
+        self.workers.setRange(1, MAX_SAVE_PARALLELISM)
+        self.workers.setToolTip('可选择 1–8 段，实际并行不超过实际输出文件数；选择的上限自动保存。')
         self.workers.setValue(preferences.value('output/save_workers', 2, int))
         self.memory = QSpinBox()
         self.memory.setRange(128, 16384)
@@ -22,7 +24,7 @@ class SegmentedOutputSettings(QGroupBox):
         for widget, key in ((self.parts, 'output/parts'), (self.workers, 'output/save_workers'),
                             (self.memory, 'output/save_memory_mb')):
             widget.valueChanged.connect(lambda value, key=key: preferences.setValue(key, value))
-        note = QLabel('1 表示完整长图。按完整订单和整行边界分段，沿用整批刀位。勾选不限制后不因预算改为串行；内存不足仍可能失败。各段文件名带实际尺码，完成全部检查后才能打印。')
+        note = QLabel('文件数 1 表示完整长图，不启用多段并行。并行可选 1–8 段，实际不超过输出段数；例如同时处理 4 段，需输出至少 4 个文件。按完整订单和整行边界分段，沿用整批刀位。勾选不限制后不因预算改为串行；内存不足仍可能失败，并行更多不一定更快。完成全部检查后才能打印。')
         note.setWordWrap(True)
         layout = QFormLayout(self)
         layout.addRow('期望输出文件数', self.parts)

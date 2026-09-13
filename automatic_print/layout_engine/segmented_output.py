@@ -4,7 +4,7 @@ from dataclasses import replace
 from threading import RLock
 from time import perf_counter
 
-from .models import mm_to_px
+from .models import mm_to_px, MAX_SAVE_PARALLELISM
 from .order_groups import order_key
 from .operation_timing import OperationTiming
 from .metrics import saving_metrics
@@ -54,7 +54,7 @@ def shift_part(members, margin):
 
 
 def save_concurrency(settings, width, plans, planned):
-    parallel = min(max(1, settings.save_parallelism), 2, len(plans))
+    parallel = min(max(1, settings.save_parallelism), MAX_SAVE_PARALLELISM, len(plans))
     buffers = settings.worker_threads*max(p.width_px*p.height_px*4 for _, p in planned)
     estimate = sum(sorted((width*height*4 for _, height in plans), reverse=True)[:parallel])+buffers
     if not settings.save_memory_unlimited and estimate > max(128, settings.save_memory_mb)*1024*1024:
