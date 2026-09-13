@@ -26,7 +26,8 @@ def test_new_settings_default_to_five_mm_and_saved_value_survives(tmp_path):
     mode.setCurrentIndex(mode.findData('dual'))
     assert any(label.text() == '上下垂直间距（毫米）' for label in window.findChildren(QLabel))
     window.spacing.setValue(7)
-    assert not window.cutter_settings.compare_films.isChecked()
+    assert window.cutter_settings.compare_films.isChecked()
+    window.cutter_settings.compare_films.setChecked(False)
     window.cutter_settings.compare_films.setChecked(True)
     assert window._layout_settings().compare_film_sizes
     assert window._layout_settings().riin_left_mm == 10

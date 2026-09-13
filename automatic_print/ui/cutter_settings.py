@@ -29,7 +29,10 @@ class CutterSettingsPanel(QWidget):
         self.marker_offset = self._box(0, 0, 100)
         self.transitions = TransitionSettings(preferences, self)
         self.compare_films = QCheckBox('计算 45/60 厘米：常规与旋转四方案（额外计算，不保存比较图）')
-        self.compare_films.setChecked(preferences.value('cutter/compare_films', False, bool))
+        if not preferences.value('cutter/film_comparison_default_v2', False, bool):
+            preferences.setValue('cutter/compare_films', True)
+            preferences.setValue('cutter/film_comparison_default_v2', True)
+        self.compare_films.setChecked(preferences.value('cutter/compare_films', True, bool))
         self.compare_films.toggled.connect(lambda v: preferences.setValue('cutter/compare_films', v))
         note = QLabel(
             "先选择膜规格，再选择排版模式。固定双列的刀位整批不变；"

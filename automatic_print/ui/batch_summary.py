@@ -12,6 +12,8 @@ class BatchSummaryPanel(QGroupBox):
         self.info = QLabel('请选择本地图片文件夹。')
         self.metrics = QLabel('排版后显示总长度、节省用膜和旋转数量。')
         self.progress = QLabel('尚未开始')
+        from .film_comparison_table import FilmComparisonTable
+        self.film_table = FilmComparisonTable(self)
         self.cutting = QPlainTextEdit()
         self.cutting.setReadOnly(True)
         self.cutting.setMaximumHeight(110)
@@ -23,8 +25,10 @@ class BatchSummaryPanel(QGroupBox):
             label.setTextInteractionFlags(Qt.TextSelectableByMouse)
             layout.addWidget(label)
         layout.addWidget(self.cutting)
+        layout.addWidget(self.film_table)
 
     def start(self, folder, count=None):
+        self.film_table.reset()
         self.cutting.clear()
         self.cutting.hide()
         path = Path(folder)
@@ -57,10 +61,9 @@ class BatchSummaryPanel(QGroupBox):
         self._show_comparison(report)
 
     def _show_comparison(self, report):
-        from ..layout_engine.film_comparison import comparison_text
-        films = comparison_text(report.get('film_comparison'))
-        if films:
-            self.metrics.setText(self.metrics.text()+'\n'+films)
+        self.film_table.show_comparison(report.get('film_comparison'))
+        if report.get('stage') == '排版结果' and not report.get('film_comparison'):
+            self.film_table.reset('比较未启用')
         comparison = report.get('rotation_comparison')
         if comparison:
             normal = comparison['normal_m']

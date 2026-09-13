@@ -23,12 +23,12 @@ def test_four_options_are_visible_and_copyable(tmp_path):
     panel.resize(1300, 470)
     panel.show()
     app.processEvents()
-    text = panel.metrics.text()
+    text = '\n'.join(panel.film_table.item(row, 0).text() for row in range(4))
     for film in ('60', '45'):
         for option in ('不旋转', '允许旋转'):
             assert f'{film} 厘米 · {option}' in text
-    assert '平方米' in text
-    assert '图片占位' in text
+    assert panel.film_table.horizontalHeaderItem(2).text() == '面积 / ㎡'
+    assert panel.film_table.horizontalHeaderItem(3).text() == '图片占位'
     assert panel.metrics.textInteractionFlags() & Qt.TextSelectableByMouse
     assert panel.grab().save(str(tmp_path/'four-film-comparison.png'))
     panel.close()

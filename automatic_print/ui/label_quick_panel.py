@@ -1,8 +1,8 @@
 from pathlib import Path
 
 from PySide6.QtWidgets import (
-    QCheckBox, QComboBox, QDoubleSpinBox, QFormLayout, QGroupBox,
-    QHBoxLayout, QLineEdit, QPushButton, QScrollArea, QVBoxLayout, QWidget,
+    QCheckBox, QComboBox, QDoubleSpinBox, QGroupBox,
+    QLineEdit, QPushButton, QScrollArea, QVBoxLayout, QWidget,
 )
 
 from .pair_preview import PairProductionPreview
@@ -70,11 +70,6 @@ class LabelQuickPanel(QWidget):
         )
         date_button = QPushButton("添加日期")
         date_button.clicked.connect(self._add_date)
-        text_row = QHBoxLayout()
-        text_row.addWidget(self.text)
-        text_row.addWidget(date_button)
-        form = QFormLayout()
-        form.addRow("标签与文字", text_row)
         self.sequence = self._checkbox('序号从 1 到最后一张', label.sequence)
         self.platform = QComboBox()
         self.platform.setEditable(True)
@@ -84,10 +79,6 @@ class LabelQuickPanel(QWidget):
         self.platform.currentTextChanged.connect(label.platform.setCurrentText)
         label.platform.currentTextChanged.connect(self.platform.setCurrentText)
         self.platform.setStyleSheet('QComboBox { font-size: 20px; font-weight: bold; }')
-        platform_row = QHBoxLayout()
-        platform_row.addWidget(self.platform, 1)
-        platform_row.addWidget(self.sequence)
-        form.addRow('生产平台', platform_row)
         self.platform_font_height = QDoubleSpinBox()
         self.platform_font_height.setRange(0, 50)
         self.platform_font_height.setDecimals(1)
@@ -96,8 +87,8 @@ class LabelQuickPanel(QWidget):
         self.platform_font_height.setValue(label.platform_font_height.value())
         self.platform_font_height.valueChanged.connect(label.platform_font_height.setValue)
         label.platform_font_height.valueChanged.connect(self.platform_font_height.setValue)
-        form.addRow('平台文字高度', self.platform_font_height)
-        form.addRow("当前机器号", self.machine)
+        from .quick_fields import quick_fields
+        form = quick_fields(self, date_button, window)
         # Advanced controls live in the canonical print-parameter dialogs.
         # Retain these mirrored objects for compatibility, never show duplicates.
         for control in (
