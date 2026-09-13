@@ -7,7 +7,8 @@ analysis = Analysis(
     [str(project_root / "run_app.py")],
     pathex=[str(project_root)],
     binaries=[],
-    datas=[(str(project_root / "assets" / "ha-icon.ico"), "assets")],
+    datas=[(str(project_root / "assets" / name), "assets")
+           for name in ("ha-icon.ico", "ha-icon.png")],
     hiddenimports=[],
     hookspath=[],
     hooksconfig={},

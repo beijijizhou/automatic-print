@@ -21,6 +21,7 @@ from PySide6.QtWidgets import (
 )
 
 from .. import __version_display__
+from ..branding import application_icon
 from ..automation_dialog import AutomationDialog
 from ..layout import png_engine_name
 from .generation_actions import GenerationActionsMixin
@@ -43,6 +44,7 @@ class MainWindow(
     def __init__(self, preferences=None) -> None:
         super().__init__()
         self.setWindowTitle("本地排版工作台")
+        self.setWindowIcon(application_icon())
         self.resize(980, 700)
         self.thread: QThread | None = None
         self.worker = None
