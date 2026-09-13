@@ -116,7 +116,7 @@ def generate_layout(
         validate_canvas_pixels(canvas, cut_check, progress)
     else:
         validate_vips_canvas(canvas, cut_check)
-    phase('二维码与辅助线处理')
+    phase('膜标签与辅助线处理')
     guide_spans, missing_guides = collect_guides(planned, settings, progress)
     guide_boxes = list(dot_boxes(guide_spans, settings.dpi))
     canvas = paint_guides(canvas, guide_boxes, use_vips)

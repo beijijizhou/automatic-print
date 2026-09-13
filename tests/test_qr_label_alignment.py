@@ -87,17 +87,12 @@ def test_missing_qr_uses_configured_fallback_position(
 
 def test_detector_finds_qr_in_unicode_filename(tmp_path):
     path = tmp_path / "蜂鸟膜标签.png"
-    qr = cv2.QRCodeEncoder_create().encode("HALOO-AUTOMATIC-PRINT")
-    canvas = cv2.copyMakeBorder(
-        qr, 30, 30, 50, 180, cv2.BORDER_CONSTANT, value=255
-    )
-    canvas = cv2.resize(
-        canvas, None, fx=5, fy=5, interpolation=cv2.INTER_NEAREST
-    )
-    assert cv2.imencode(".png", canvas)[1].tofile(str(path)) is None
+    canvas = Image.new('RGBA', (1000, 1400), 'blue')
+    canvas.paste('white', (50, 30, 300, 180))
+    canvas.save(path)
 
     location = detect_qr_location(path)
 
     assert location is not None
     assert location.x_ratio < 0.5
-    assert 0.4 < location.y_ratio < 0.6
+    assert 0 < location.y_ratio < 0.2

@@ -30,14 +30,14 @@ class LabelSettingsDialog(QDialog):
         self.platform = QComboBox()
         self.platform.setEditable(True)
         self.platform.addItem('隆丰')
-        self.platform_enabled = QCheckBox('在二维码旁打印平台名称（高度不超过二维码）')
+        self.platform_enabled = QCheckBox('在膜标签旁打印平台名称（高度不超过标签）')
         self.platform_enabled.setChecked(True)
         self.platform_font_height = self._box(6, 0, 50)
         self.platform_font_height.setSuffix(' 毫米')
-        self.platform_font_height.setSpecialValueText('自动：二维码等高')
+        self.platform_font_height.setSpecialValueText('自动：膜标签等高')
         self.platform_font_height.setToolTip('平台字独立大小，默认高度 6 毫米；0 为自动等高。不会改变标签或序号字号。')
         self.follow_qr = QCheckBox(
-            "自动识别膜标签二维码，并让文字与二维码水平对齐"
+            "优先搜索顶部膜标签区域，并让文字与标签水平对齐，不识别二维码"
         )
         self.follow_qr.setChecked(True)
         self.machine = QComboBox()
@@ -57,7 +57,7 @@ class LabelSettingsDialog(QDialog):
         help_label.setWordWrap(True)
         help_label.setTextInteractionFlags(Qt.TextSelectableByMouse)
         qr_help = QLabel(
-            "识别成功时放在二维码附近，避免另起一行；未识别时自动使用下方设置的位置。"
+            "找到膜标签时放在标签附近，避免另起一行；未找到时使用下方设置的位置。"
         )
         qr_help.setWordWrap(True)
         qr_help.setTextInteractionFlags(Qt.TextSelectableByMouse)
@@ -80,7 +80,7 @@ class LabelSettingsDialog(QDialog):
         self.fit_height = QCheckBox("限制整段文字高度（字号不超过手动设置）")
         self.fit_height.setChecked(True)
         self.reference_height = self._box(10, 2, 100)
-        self.reference_height.setToolTip("填写原图膜标签的实际高度；二维码定位只确定位置，不代表整条膜标签的高度。")
+        self.reference_height.setToolTip("填写原图膜标签的实际高度；程序优先搜索顶部标签卡片，不验证二维码。")
         self.gap = self._box(5, 0, 100)
         self.offset_x = self._box(0, -100, 100)
         self.offset_y = self._box(0, -100, 100)
@@ -95,7 +95,7 @@ class LabelSettingsDialog(QDialog):
             ('平台标记', self.platform_enabled),
             ('平台文字高度', self.platform_font_height),
             ("机器号", self.machine),
-            ("二维码自动定位", self.follow_qr),
+            ("膜标签区域定位", self.follow_qr),
             ("", qr_help),
             ("标签文字", self.text_template),
             ("", help_label),

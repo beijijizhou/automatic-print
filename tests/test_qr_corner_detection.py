@@ -1,71 +1,69 @@
-from pathlib import Path
-
-import numpy as np
 from PIL import Image
 import pytest
 
-from automatic_print.layout_engine import qr_corners
+from automatic_print.layout_engine.header_region import search_header
 from automatic_print.layout_engine.cut_guide_geometry import detect_guide_band
 from automatic_print.layout_engine.qr_detection import detect_qr_location
 from automatic_print.layout_engine.membrane_region import detect_membrane_region
 
 
 @pytest.mark.parametrize('side', ['left', 'right'])
-def test_real_header_corners_share_boundary_and_center(tmp_path, side, monkeypatch):
+def test_plain_label_without_any_qr_is_found_in_preferred_region(tmp_path, side, monkeypatch):
     cv2 = pytest.importorskip('cv2')
-    qr = Image.fromarray(cv2.QRCodeEncoder_create().encode('CORNER123')).resize(
-        (174, 174), Image.Resampling.NEAREST).convert('RGBA')
+    def forbidden(*args, **kwargs):
+        raise AssertionError('No QR structure detector may run')
+    monkeypatch.setattr(cv2, 'QRCodeDetector', forbidden)
     source = Image.new('RGBA', (1000, 1400))
-    x = 40 if side == 'left' else 780
-    source.paste(qr, (x, 30))
-    source.paste('blue', (100, 400, 900, 1400))
+    x = 20 if side == 'left' else 680
+    source.paste('white', (x, 10, x+300, 140))
+    source.paste('red', (x+30, 30, x+200, 60))
+    source.paste('blue', (100, 600, 900, 1400))
     path = tmp_path/f'{side}.png'
     source.save(path)
-    original, calls = qr_corners._detect_points, []
-    def counted(gray):
-        calls.append(gray.shape)
-        return original(gray)
-    monkeypatch.setattr(qr_corners, '_detect_points', counted)
-    band = detect_guide_band(path)
-    assert band is not None
-    count = len(calls)
+    region = search_header(path)
+    assert region.left == pytest.approx(x/1000)
+    assert region.right == pytest.approx((x+300)/1000)
+    assert region.top == pytest.approx(10/1400)
+    assert region.bottom == pytest.approx(140/1400)
+    assert detect_guide_band(path) == detect_membrane_region(path) == region
     center = detect_qr_location(path)
-    assert center.x_ratio == pytest.approx((band.left+band.right)/2)
-    assert center.y_ratio == pytest.approx((band.top+band.bottom)/2)
-    assert len(calls) == count
-    assert detect_membrane_region(path) is not None
-    assert len(calls) == count
-    assert (center.x_ratio < .5) == (side == 'left')
-    assert center.y_ratio < .2
-    # All detector inputs are bounded corner crops, never a full-source scan.
-    assert all(h*w < 1000*1400/2 for h, w in calls)
+    assert center.x_ratio == pytest.approx((region.left+region.right)/2)
 
 
-def test_missing_header_does_not_search_lower_artwork(tmp_path):
-    cv2 = pytest.importorskip('cv2')
-    qr = Image.fromarray(cv2.QRCodeEncoder_create().encode('NOT-A-HEADER')).resize(
-        (100, 100), Image.Resampling.NEAREST)
+def test_does_not_search_lower_artwork_or_treat_transparency_as_paper(tmp_path):
+    for name, fill in [('transparent', (255, 255, 255, 0)), ('faint', (255, 255, 255, 50))]:
+        source = Image.new('RGBA', (1000, 1400), fill)
+        source.paste('white', (450, 1200, 550, 1300))
+        path = tmp_path/f'{name}.png'
+        source.save(path)
+        assert search_header(path) is None
+
+
+def test_short_header_is_not_clipped_at_75_percent_height(tmp_path):
+    source = Image.new('RGBA', (400, 100))
+    source.paste('white', (10, 5, 200, 95))
+    source.paste('black', (40, 20, 80, 70))
+    path = tmp_path/'short.png'
+    source.save(path)
+    region = search_header(path)
+    assert region.bottom == .95
+
+
+def test_adjacent_paper_sections_join_without_inspecting_their_contents(tmp_path):
     source = Image.new('RGBA', (1000, 1400))
-    source.paste(qr, (450, 1200))
-    path = tmp_path/'bottom.png'
+    source.paste('white', (20, 0, 250, 130))
+    source.paste('white', (255, 0, 380, 130))
+    path = tmp_path/'joined.png'
     source.save(path)
-    assert detect_guide_band(path) is None
-    assert detect_qr_location(path) is None
+    region = search_header(path)
+    assert region.left == .02 and region.right == .38
 
 
-def test_crop_scaling_restores_full_source_coordinates(tmp_path, monkeypatch):
-    path = tmp_path/'scaled.png'
-    source = Image.new('RGBA', (4000, 6000), 'white')
-    source.paste('black', (100, 100, 400, 400))
-    source.save(path)
-    calls = []
-    def points(gray):
-        calls.append(gray.shape)
-        return np.array([[100, 100], [200, 100], [200, 200], [100, 200]], np.float32)
-    monkeypatch.setattr(qr_corners, '_detect_points', points)
-    region = qr_corners.detect_source_corners(Path(path))
-    assert calls == [(1200, 1200)]
-    assert region.left == pytest.approx(.05)
-    assert region.top == pytest.approx(1/30)
-    assert region.right == pytest.approx(.10)
-    assert region.bottom == pytest.approx(1/15)
+def test_component_fallback_matches_native_geometry():
+    import numpy as np
+    from automatic_print.layout_engine.header_region import _components
+    mask = np.zeros((80, 120), dtype=bool)
+    mask[5:60, 10:100] = True
+    mask[20:35, 20:80] = False
+    boxes = _components(mask)
+    assert boxes == [[10, 5, 100, 60, int(mask.sum())]]

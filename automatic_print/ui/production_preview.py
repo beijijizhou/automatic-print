@@ -79,7 +79,7 @@ class ProductionPreview(QWidget):
             source = "图片内嵌 DPI" if size.embedded_dpi else "缺少 DPI：尺寸为估算，不能用于切膜生产"
             qr = ""
             if settings.number_images and settings.label_follow_qr and settings.label_position != "block_below":
-                qr = " · 二维码已定位" if detect_qr_location(self.path) else " · 未识别二维码，使用设定位置"
+                qr = " · 膜标签已定位" if detect_qr_location(self.path) else " · 未找到膜标签，使用设定位置"
             self.detail = f"{size.width_mm:.1f} × {size.height_mm:.1f} 毫米 · {source}{qr}"
             if settings.label_detect_region:
                 self.detail += f" · 膜标签已识别 · 文字区 {self.item.label_width*25.4/settings.dpi:.1f} × {self.item.label_height*25.4/settings.dpi:.1f} 毫米"

@@ -48,7 +48,7 @@ class LabelQuickPanel(QWidget):
         label.detect_region.toggled.connect(lambda value: self.font_size.setEnabled(not value))
         self.font_size.setEnabled(not label.detect_region.isChecked())
         self.enabled = self._checkbox("添加标签", label.enabled)
-        self.follow_qr = self._checkbox("自动与二维码水平对齐", label.follow_qr)
+        self.follow_qr = self._checkbox("自动与膜标签水平对齐", label.follow_qr)
         self.follow_qr.setEnabled(label.follow_qr.isEnabled())
         self.machine = QComboBox()
         for index in range(label.machine.count()):
@@ -83,7 +83,7 @@ class LabelQuickPanel(QWidget):
         self.platform_font_height.setRange(0, 50)
         self.platform_font_height.setDecimals(1)
         self.platform_font_height.setSuffix(' 毫米')
-        self.platform_font_height.setSpecialValueText('自动：二维码等高')
+        self.platform_font_height.setSpecialValueText('自动：膜标签等高')
         self.platform_font_height.setValue(label.platform_font_height.value())
         self.platform_font_height.valueChanged.connect(label.platform_font_height.setValue)
         label.platform_font_height.valueChanged.connect(self.platform_font_height.setValue)

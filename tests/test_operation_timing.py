@@ -50,7 +50,7 @@ def test_worker_reports_scan_through_output_and_persists_timings(tmp_path):
     names = [row['name'] for row in result['steps']]
     assert names[0] == '扫描文件名'
     assert {'读取尺寸与标签', '刀位与排版计算', '图片准备与合成',
-            '合成像素安全检查', '二维码与辅助线处理', '保存输出图片'} <= set(names)
+            '合成像素安全检查', '膜标签与辅助线处理', '保存输出图片'} <= set(names)
     assert abs(sum(s['seconds'] for s in result['steps'])-result['total_seconds']) < .01
     assert result['status'] == '已完成'
     manifest = json.loads((tmp_path/'out'/'manifest.json').read_text())

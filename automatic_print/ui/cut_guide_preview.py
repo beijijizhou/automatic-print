@@ -16,11 +16,11 @@ def draw_cut_guides(preview, painter, scale):
         QRectF(0, p.y_px, preview.canvas_width, p.height_px))]
     bands, missing, waiting = preview.cut_guides.request([path for path, _ in visible])
     spans = guide_spans(visible, preview.render_settings, bands)
-    preview.guide_status = '红色刀位点线会写入输出图片，仅限二维码高度范围'
+    preview.guide_status = '红色刀位点线会写入输出图片，仅限膜标签高度范围'
     if waiting:
-        preview.guide_status += f' · 正在识别 {len(waiting)} 张可见图片的二维码'
+        preview.guide_status += f' · 正在搜索 {len(waiting)} 张可见图片的膜标签'
     if missing:
-        preview.guide_status += f' · {len(missing)} 张未识别二维码，未猜测点线范围'
+        preview.guide_status += f' · {len(missing)} 张未找到膜标签，未猜测点线范围'
     painter.save()
     try:
         painter.setPen(Qt.NoPen)

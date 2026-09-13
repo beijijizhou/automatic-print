@@ -6,7 +6,6 @@ from pathlib import Path
 
 from .membrane_region import MembraneRegion
 from .models import mm_to_px
-from .qr_detection import cv2, np
 
 
 @dataclass(frozen=True)
@@ -17,20 +16,18 @@ class GuideSpan:
 
 
 def detect_guide_band(path: Path):
-    """Measure the QR's bounding box, never infer a default header height."""
-    if cv2 is None or np is None:
-        return None
+    """Legacy name: return the preferred label card band, without QR recognition."""
     try:
         stat = path.stat()
         return _cached(str(path), stat.st_mtime_ns, stat.st_size)
-    except (OSError, ValueError, cv2.error):
+    except (OSError, ValueError):
         return None
 
 
 @lru_cache(maxsize=512)
 def _cached(path, _mtime, _size):
-    from .qr_corners import detect_source_corners
-    return detect_source_corners(Path(path))
+    from .header_region import search_header
+    return search_header(Path(path))
 
 
 def guide_spans(planned, settings, bands):

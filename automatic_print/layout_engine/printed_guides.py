@@ -21,7 +21,7 @@ def collect_guides(planned, settings, progress=None):
     for index, path in enumerate(paths, 1):
         bands[path] = detect_guide_band(path)
         if progress:
-            progress('识别输出辅助线', index, len(paths), path.name)
+            progress('搜索标签辅助线', index, len(paths), path.name)
     return guide_spans(planned, settings, bands), [p.name for p in paths if bands[p] is None]
 
 

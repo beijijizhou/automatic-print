@@ -28,7 +28,7 @@ def platform_badge(text, target_height):
 def _badge_data(text, target_height):
     # Cache immutable pixels, never share a font face or mutable image across workers.
     if target_height < 2:
-        raise ValueError('二维码打印高度太小，无法显示可读的平台名称。')
+        raise ValueError('膜标签打印高度太小，无法显示可读的平台名称。')
     measure = ImageDraw.Draw(Image.new('L', (1, 1)))
     low, high, best = 1, target_height*3, None
     while low <= high:
@@ -41,7 +41,7 @@ def _badge_data(text, target_height):
         else:
             high = size-1
     if best is None:
-        raise ValueError('二维码高度不足以容纳平台名称。')
+        raise ValueError('膜标签高度不足以容纳平台名称。')
     font, box = best
     badge = Image.new('RGBA', (box[2]-box[0], target_height))
     ImageDraw.Draw(badge).text((-box[0], (target_height-(box[3]-box[1]))//2-box[1]),

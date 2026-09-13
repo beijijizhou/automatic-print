@@ -1,9 +1,9 @@
-"""Conservative QR-anchored header detection, separate from production artwork."""
+"""Preferred label card bounds and legacy ink-band geometry helpers."""
 from dataclasses import dataclass
 from functools import lru_cache
 from pathlib import Path
 
-from .qr_detection import cv2, np
+import numpy as np
 
 
 @dataclass(frozen=True)
@@ -24,33 +24,17 @@ class MembraneRegion:
 
 
 def detect_membrane_region(path: Path):
-    if cv2 is None or np is None:
-        return None
     try:
         stat = path.stat()
         return _cached(str(path), stat.st_mtime_ns, stat.st_size)
-    except (OSError, ValueError, cv2.error):
+    except (OSError, ValueError):
         return None
 
 
 @lru_cache(maxsize=4096)
 def _cached(path, _mtime, _size):
-    from .cut_guide_geometry import detect_guide_band
-    from .measurement_session import source_pixels
-    qr = detect_guide_band(Path(path))
-    if qr is None:
-        return None
-    with source_pixels(Path(path)) as source:
-        with source.copy() as small:
-            small.thumbnail((1800, 1800))
-            with small.convert('RGBA') as rgba:
-                pixels = np.asarray(rgba)
-                alpha = pixels[:, :, 3:4].astype(np.float32)/255
-                rgb = pixels[:, :, :3]*alpha+255*(1-alpha)
-                gray = cv2.cvtColor(rgb.astype(np.uint8), cv2.COLOR_RGB2GRAY)
-    height, width = gray.shape
-    points = np.array([[qr.left*width, qr.top*height], [qr.right*width, qr.bottom*height]])
-    return region_from_ink(gray < 225, points)
+    from .header_region import search_header
+    return search_header(Path(path))
 
 
 def region_from_ink(ink, points):
