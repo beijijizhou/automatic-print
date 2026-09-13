@@ -1,6 +1,8 @@
 from PySide6.QtCore import QObject, Slot
+from pathlib import Path
 
 from .preview_snapshot import install_snapshot
+from ..layout import discover_images
 from ..layout_engine.order_groups import detail_members
 
 
@@ -15,24 +17,34 @@ class GenerationPreviewController(QObject):
         bridge = window.worker_bridge
         bridge.layout_preview.connect(self.ready)
         bridge.layout_analysis.connect(self.panel.analysis.show_report)
+        bridge.layout_analysis.connect(self.panel.summary.show_analysis)
+        bridge.layout_finished.connect(self.panel.summary.finished)
         bridge.layout_progress.connect(self.progress)
         for signal in (bridge.layout_finished, bridge.layout_cancelled):
             signal.connect(self.end)
         bridge.layout_failed.connect(self.failed)
+        bridge.layout_cancelled.connect(self.cancelled)
 
     def start(self):
         self.payload = None
         self.panel.analysis.clear()
+        folder = self.window.folder.text().strip()
+        self.panel.summary.start(folder, len(discover_images(Path(folder))))
+        self.panel.preview_scroll.verticalScrollBar().setValue(0)
         self.preview.clear_for_generation()
         self.preview.production_active = True
         self.preview.production_stage = "正在读取整批图片并计算固定刀位…"
         self.panel.manual_rotation.setEnabled(False)
         self.preview.update()
         self.window.settings_dialog.hide()
+        self.window.automation_home.workbench_scroll.verticalScrollBar().setValue(0)
 
     @Slot(object)
     def ready(self, payload):
         self.payload = payload
+        self.preview.production_stage = '本批次排版已确定，正在处理输出…'
+        self.panel.analysis.show_report(payload['analysis'])
+        self.panel.summary.show_plan(payload)
         self.preview.batch_payload = payload
         if payload["settings"].cutter_mode == "dual":
             self.window.cutter_settings.knife.setValue(payload["settings"].cutter_knife_mm)
@@ -60,6 +72,7 @@ class GenerationPreviewController(QObject):
         if not self.preview.production_active:
             return
         self.preview.production_stage = filename if stage == "批次刀位已确定" else f"{stage} · {current}/{total}"
+        self.panel.summary.progress.setText(f'{self.preview.production_stage} · {filename}')
         if stage == "合成图片":
             self.show_pair(current-1)
         self.preview.update()
@@ -73,5 +86,10 @@ class GenerationPreviewController(QObject):
     @Slot(str)
     def failed(self, message):
         self.panel.analysis.failed(message)
+        self.panel.summary.progress.setText(f'生成失败，禁止打印：{message}')
         self.preview.warning = f"生成失败，禁止打印：{message}"
         self.end()
+
+    @Slot()
+    def cancelled(self):
+        self.panel.summary.progress.setText('当前排版已停止；已计算的本批次信息保留，未完成结果不可打印。')

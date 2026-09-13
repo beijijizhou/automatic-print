@@ -2,11 +2,12 @@ from pathlib import Path
 
 from PySide6.QtWidgets import (
     QCheckBox, QComboBox, QDoubleSpinBox, QFormLayout, QGroupBox,
-    QHBoxLayout, QLineEdit, QPushButton, QVBoxLayout, QWidget,
+    QHBoxLayout, QLineEdit, QPushButton, QScrollArea, QVBoxLayout, QWidget,
 )
 
 from .pair_preview import PairProductionPreview
 from .batch_analysis_panel import BatchAnalysisPanel
+from .batch_summary import BatchSummaryPanel
 from .manual_rotation import ManualRotationPanel
 from ..layout_engine.labels import compact_label_text
 
@@ -87,7 +88,9 @@ class LabelQuickPanel(QWidget):
         self.preview = PairProductionPreview(window._layout_settings, self)
         self.preview.overview = True
         self.analysis = BatchAnalysisPanel(self)
+        self.summary = BatchSummaryPanel(self)
         self.preview.analysis_ready.connect(self.analysis.show_report)
+        self.preview.analysis_ready.connect(self.summary.show_analysis)
         self.preview.analysis_failed.connect(self.analysis.failed)
         self.preview.analysis_started.connect(self.analysis.clear)
         self.analysis.source_selected.connect(self._select_analysis_source)
@@ -102,13 +105,18 @@ class LabelQuickPanel(QWidget):
                        cutter.knife.valueChanged, cutter.safety.valueChanged,
                        cutter.marker_offset.valueChanged, window.spacing.valueChanged):
             signal.connect(self.preview.schedule_refresh)
-        group = QGroupBox("两张生产图片 · 分区、切割线、标签与色块预览")
-        QVBoxLayout(group).addWidget(self.preview)
+        group = QGroupBox("本批次真实预览 · 分区、刀位、标签与色块")
+        self.preview_scroll = QScrollArea()
+        self.preview_scroll.setWidgetResizable(True)
+        self.preview_scroll.setWidget(self.preview)
+        self.preview_scroll.setMinimumHeight(460)
+        self.preview_scroll.setMaximumHeight(520)
+        QVBoxLayout(group).addWidget(self.preview_scroll)
         self.preview.use_folder(window.folder.text())
         layout = QVBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
         layout.addLayout(form)
-        layout.addWidget(self.analysis)
+        layout.addWidget(self.summary)
         self.manual_rotation = ManualRotationPanel(window, self.preview, self)
         layout.addWidget(self.manual_rotation)
         overview = QCheckBox("显示整批总览（向下滚动查看全部；取消勾选查看双图细节）")
@@ -116,6 +124,7 @@ class LabelQuickPanel(QWidget):
         overview.toggled.connect(self.preview.set_overview)
         layout.addWidget(overview)
         layout.addWidget(group)
+        layout.addWidget(self.analysis)
 
     def _select_analysis_source(self, path):
         combo = self.manual_rotation.images

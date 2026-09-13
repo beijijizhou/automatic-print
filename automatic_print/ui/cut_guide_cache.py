@@ -21,7 +21,12 @@ class BandTask(QRunnable):
             band = detect_guide_band(self.key[0])
         except Exception:
             band = None
-        self.signals.ready.emit(self.key, band)
+        try:
+            self.signals.ready.emit(self.key, band)
+        except RuntimeError:
+            # Window/app shutdown may destroy the signal object during QR detection.
+            # A late thumbnail result is disposable; never touch closed GUI objects.
+            pass
 
 
 class CutGuideCache(QObject):

@@ -142,6 +142,7 @@ class AutomationDialog(
             layout.addWidget(self.platform)
         layout.addWidget(self.loading_panel)
         scroll = QScrollArea()
+        self.workbench_scroll = scroll
         scroll.setWidgetResizable(True)
         scroll.setWidget(self.main_tabs)
         layout.addWidget(scroll)
