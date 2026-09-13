@@ -44,10 +44,6 @@ def plan_tail_rotation(paths, settings, progress):
         normal = [(path, replace(p, cut_zone='常规区', cut_knife_x_px=normal_knife))
                   for path, p in baseline[0] if path not in target_set]
         boundary = max(p.row_y_px+p.footprint_height_px for _, p in normal)+margin+spacing if normal else 0
-        if normal and settings.transition_lines:
-            boundary = max(boundary, max(p.y_px+p.height_px for _, p in normal)
-                           +mm_to_px(settings.transition_gap_mm, settings.dpi)
-                           +max(1, mm_to_px(settings.transition_line_mm, settings.dpi)))
         planned = normal+[(path, replace(p, y_px=p.y_px+boundary, row_y_px=p.row_y_px+boundary,
                             number_y_px=p.number_y_px+boundary, color_block_y_px=p.color_block_y_px+boundary,
                             platform_y_px=p.platform_y_px+boundary,

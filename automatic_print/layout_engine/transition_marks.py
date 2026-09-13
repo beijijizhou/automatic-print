@@ -7,18 +7,11 @@ from .models import mm_to_px
 def transition_rects(planned, settings, width, end_notice='批次结束'):
     if not settings.transition_lines or not planned:
         return []
-    groups = {}
-    for _, p in planned:
-        groups.setdefault(p.cut_zone, []).append(p)
-    ordered = sorted(groups.values(), key=lambda rows: min(p.row_y_px for p in rows))
     gap = mm_to_px(settings.transition_gap_mm, settings.dpi)
     thickness = max(1, mm_to_px(settings.transition_line_mm, settings.dpi))
-    rects = []
-    for index, rows in enumerate(ordered):
-        end = max(p.y_px+p.height_px for p in rows)
-        kind = end_notice if index == len(ordered)-1 else '进入旋转区 / 换刀'
-        rects.append({'x': 0, 'y': end+gap, 'width': width, 'height': thickness,
-                      'kind': kind})
+    end = max(p.y_px+p.height_px for _, p in planned)
+    rects = [{'x': 0, 'y': end+gap, 'width': width, 'height': thickness,
+              'kind': end_notice}]
     for r in rects:
         for path, p in planned:
             for name, y, w, h in (

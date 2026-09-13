@@ -102,10 +102,6 @@ def plan_rotation_zones(paths, settings, progress, analysis=None, analysis_ready
     rotated = _rotated(rotated_paths, base_settings, (rotated_items, rotated_labels))
     spacing = mm_to_px(settings.spacing_mm, settings.dpi)
     boundary = normal_result[3]+spacing if normal_result else 0
-    if normal_result and settings.transition_lines:
-        end = max(p.y_px+p.height_px for _, p in normal_result[0])
-        boundary = max(boundary, end+mm_to_px(settings.transition_gap_mm, settings.dpi)
-                       +max(1, mm_to_px(settings.transition_line_mm, settings.dpi)))
     new_height = boundary+rotated[2]
     if baseline and new_height >= baseline[3]:
         return _baseline_result(baseline, _normal(paths, base_settings, (options, labels))[1], progress)

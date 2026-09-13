@@ -30,10 +30,11 @@ def test_preview_uses_real_batch_not_selected_picture_end():
         _transition_lines(preview, painter)
     finally:
         painter.end()
-    for y in (83, 193):
+    for y in (193,):
         assert image.pixelColor(0, y).getRgb() == (255, 0, 0, 255)
         assert image.pixelColor(599, y).getRgb() == (255, 0, 0, 255)
     assert image.pixelColor(0, 82).alpha() == 0
+    assert image.pixelColor(0, 83).alpha() == 0
 
 
 def test_exact_horizontal_mask_does_not_allow_extra_pixels():

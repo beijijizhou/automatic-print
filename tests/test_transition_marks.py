@@ -54,9 +54,9 @@ def test_full_outputs_have_exact_red_lines_and_shifted_rotation_markers(tmp_path
                     alpha = image.crop((left, y, right, y+1)).getchannel('A').getextrema()[1]
                     assert alpha == (255 if y in marks else 0)
     if parts == 1:
-        assert len(result['transition_marks']) == 2
-        normal = [p for p in result['placements'] if p['cut_zone'] == '常规区']
-        assert result['transition_marks'][0]['y'] == max(p['y_px']+p['height_px'] for p in normal)+3
+        assert len(result['transition_marks']) == 1
+        assert result['transition_marks'][0]['y'] == max(
+            p['y_px']+p['height_px'] for p in result['placements'])+3
 
 
 def test_independent_validation_rejects_wrong_shift_and_colliding_line(tmp_path):
