@@ -13,9 +13,9 @@ class FilmComparisonTable(QTableWidget):
         self.verticalHeader().hide()
         self.setMinimumHeight(165)
         self.setMaximumHeight(180)
-        self.reset()
+        self.reset_rows()
 
-    def reset(self, text='等待开始排版'):
+    def reset_rows(self, text='等待开始排版'):
         self.clearContents()
         for row, name in enumerate(('60厘米 常规', '60厘米 允许旋转', '45厘米 常规', '45厘米 允许旋转')):
             for col, value in enumerate((name, text, '—', '—', '—')):

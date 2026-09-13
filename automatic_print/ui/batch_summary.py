@@ -28,7 +28,7 @@ class BatchSummaryPanel(QGroupBox):
         layout.addWidget(self.film_table)
 
     def start(self, folder, count=None):
-        self.film_table.reset()
+        self.film_table.reset_rows()
         self.cutting.clear()
         self.cutting.hide()
         path = Path(folder)
@@ -63,7 +63,7 @@ class BatchSummaryPanel(QGroupBox):
     def _show_comparison(self, report):
         self.film_table.show_comparison(report.get('film_comparison'))
         if report.get('stage') == '排版结果' and not report.get('film_comparison'):
-            self.film_table.reset('比较未启用')
+            self.film_table.reset_rows('比较未启用')
         comparison = report.get('rotation_comparison')
         if comparison:
             normal = comparison['normal_m']

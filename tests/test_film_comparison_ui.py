@@ -10,7 +10,7 @@ from automatic_print.ui.batch_summary import BatchSummaryPanel
 from test_film_comparison import sources
 
 
-def test_four_options_are_visible_and_copyable(tmp_path):
+def test_four_options_are_visible_and_copyable(tmp_path, capfd):
     app = QApplication.instance() or QApplication([])
     reports = []
     settings = LayoutSettings(dpi=25.4, media_width_mm=580, cutter_mode='dual',
@@ -18,6 +18,8 @@ def test_four_options_are_visible_and_copyable(tmp_path):
                               number_images=False, compare_film_sizes=True)
     plan_layout(sources(tmp_path), settings, None, reports.append)
     panel = BatchSummaryPanel()
+    for _ in range(3):
+        panel.film_table.reset_rows()
     panel.start(tmp_path)
     panel.show_analysis(reports[-1])
     panel.resize(1300, 470)
@@ -32,3 +34,4 @@ def test_four_options_are_visible_and_copyable(tmp_path):
     assert panel.metrics.textInteractionFlags() & Qt.TextSelectableByMouse
     assert panel.grab().save(str(tmp_path/'four-film-comparison.png'))
     panel.close()
+    assert 'Error calling Python override' not in capfd.readouterr().err

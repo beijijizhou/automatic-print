@@ -16,6 +16,7 @@ class UpdateActionsMixin:
     def build_update_status(self):
         self.source_update_applying = False
         self.pending_source_update = None
+        self.completed_source_check = None
         self.update_restart_pending = False
         self.update_started = None
         self.update_message = '源码安装可直接更新代码，无需下载安装包。' if source_install() else '当前使用安装包更新。'
@@ -89,21 +90,13 @@ class UpdateActionsMixin:
                 self.show_update_progress('代码和依赖已更新，正在安全重启…')
                 self.update_restart_pending = True
                 return
+            self.completed_source_check = update
             if not update.needs_update:
                 self.show_update_progress(f'源码已是最新 · {update.display_version}')
-                return
-            self.show_update_progress(f'发现源码更新：{update.display_version} · {update.commits} 个新提交')
-            if self.update_is_silent:
-                return
-            if self.source_update_busy():
+            elif not self.update_is_silent and self.source_update_busy():
                 self.show_update_progress('发现新代码；请等待排版/保存完成，或停止后台预览，再点击检查更新。')
-                return
-            answer = QMessageBox.question(self, '发现源码更新',
-                f'新版本：{update.display_version}\n当前版本：{__version_display__}\n\n'
-                '直接更新代码和运行依赖，完成后安全重启；无需安装包。\n是否立即更新？',
-                QMessageBox.Yes | QMessageBox.No)
-            if answer == QMessageBox.Yes:
-                self.pending_source_update = update
+            else:
+                self.show_update_progress(f'发现源码更新：{update.display_version} · {update.commits} 个新提交')
             return
         if version_tuple(update.version) > version_tuple(__version__):
             answer = QMessageBox.question(self, '发现新版本',
@@ -113,6 +106,23 @@ class UpdateActionsMixin:
                 QDesktopServices.openUrl(QUrl(update.download_url))
         else:
             self.show_update_progress(f'已经是最新版 · {__version_display__}')
+
+    def confirm_source_check(self, update):
+        if not update.needs_update:
+            self.show_update_progress(f'源码已是最新 · {update.display_version}')
+            return
+        self.show_update_progress(f'发现源码更新：{update.display_version} · {update.commits} 个新提交')
+        if self.update_is_silent:
+            return
+        if self.source_update_busy():
+            self.show_update_progress('发现新代码；请等待排版/保存完成，或停止后台预览，再点击检查更新。')
+            return
+        answer = QMessageBox.question(self, '发现源码更新',
+            f'新版本：{update.display_version}\n当前版本：{__version_display__}\n\n'
+            '直接更新代码和运行依赖，完成后安全重启；无需安装包。\n是否立即更新？',
+            QMessageBox.Yes | QMessageBox.No)
+        if answer == QMessageBox.Yes:
+            self.pending_source_update = update
 
     def apply_source_update(self):
         info = self.pending_source_update
@@ -131,6 +141,7 @@ class UpdateActionsMixin:
     @Slot(str)
     def update_check_failed(self, message):
         self.pending_source_update = None
+        self.completed_source_check = None
         self.show_update_progress(f'更新未完成：{message}\n可重新点击检查更新重试；不会覆盖本地修改。')
         if not self.update_is_silent or self.source_update_applying:
             QMessageBox.warning(self, '更新未完成', message)
@@ -158,4 +169,8 @@ class UpdateActionsMixin:
         self.source_update_applying = False
         self.automation_home.setEnabled(True)
         self.settings_dialog.setEnabled(True)
+        update = self.completed_source_check
+        self.completed_source_check = None
+        if update is not None:
+            self.confirm_source_check(update)
         self.apply_source_update()

@@ -51,6 +51,38 @@ def test_button_updates_source_then_restarts_without_browser(tmp_path, monkeypat
     window.close()
 
 
+def test_single_click_applies_after_confirmation_runs_nested_event_loop(tmp_path, monkeypatch):
+    window, info = window_for_test(tmp_path, monkeypatch)
+    applied, restarted = [], []
+    def confirm(*args):
+        # A real modal dialog pumps events: the check thread can finish and its
+        # cleanup run before the user presses Yes. Never lose the continuation.
+        wait_until(lambda: window.update_thread is None)
+        APP.processEvents()
+        return QMessageBox.Yes
+    monkeypatch.setattr(QMessageBox, 'question', confirm)
+    monkeypatch.setattr(SourceUpdater, 'apply', lambda self, update: applied.append(update) or update)
+    monkeypatch.setattr(update_actions, 'restart_updated_app', lambda w: restarted.append(w))
+    window.check_update_button.click()
+    wait_until(lambda: bool(restarted))
+    assert applied == [info]
+    assert restarted == [window]
+    window.close()
+
+
+def test_declining_update_does_not_apply_or_leave_pending_state(tmp_path, monkeypatch):
+    window, _info = window_for_test(tmp_path, monkeypatch)
+    applied = []
+    monkeypatch.setattr(QMessageBox, 'question', lambda *args: QMessageBox.No)
+    monkeypatch.setattr(SourceUpdater, 'apply', lambda self, info: applied.append(info))
+    window.check_update_button.click()
+    wait_until(lambda: window.update_thread is None and window.check_update_button.isEnabled())
+    assert applied == []
+    assert window.pending_source_update is None
+    assert window.completed_source_check is None
+    window.close()
+
+
 def test_busy_production_task_never_applies_update(tmp_path, monkeypatch):
     window, info = window_for_test(tmp_path, monkeypatch)
     monkeypatch.setattr(QMessageBox, 'question', lambda *args: pytest_fail())

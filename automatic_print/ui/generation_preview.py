@@ -84,7 +84,7 @@ class GenerationPreviewController(QObject):
         if not self.preview.production_active:
             return
         if stage == '膜规格比较' and current == 0:
-            self.panel.summary.film_table.reset('正在计算')
+            self.panel.summary.film_table.reset_rows('正在计算')
         self.preview.production_stage = filename if stage == "批次刀位已确定" else f"{stage} · {current}/{total}"
         self.panel.summary.progress.setText(f'{self.preview.production_stage} · {filename}')
         if stage == "合成图片":
