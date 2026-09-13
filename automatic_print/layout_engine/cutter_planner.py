@@ -3,57 +3,38 @@ from dataclasses import replace
 from math import ceil
 
 from .images import print_dimensions
+from .order_groups import ordered_paths, order_key
 from .item_factory import read_items
 from .models import mm_to_px
 from .units import UnitChoice, UnitMember, build_units
+from .single_order_sequence import arrange_groups
 
 
-def plan_cutter_layout(paths, settings, progress):
+def plan_cutter_layout(paths, settings, progress, prepared=None, preserve_sequence=False):
     from .planner import _place_choice, _used_canvas_width
 
+    settings = replace(settings, sequence_numbers=settings.sequence_numbers or
+                       tuple((str(path.resolve()), i) for i, path in enumerate(paths, 1)))
+    paths = ordered_paths(paths)
     width = mm_to_px(settings.media_width_mm, settings.dpi)
     spacing = mm_to_px(settings.spacing_mm, settings.dpi)
     margin = mm_to_px(settings.margin_mm, settings.dpi)
-    if settings.cutter_mode not in {"single", "dual"}:
-        raise ValueError("未知的切膜排版模式。")
-    if not settings.color_block_enabled:
-        raise ValueError("切膜模式必须启用左侧识别色块。")
-    safe_settings = replace(
-        settings, allow_rotation=False, color_block_position="left_top",
-        color_block_offset_y_mm=0,
-    )
-    dimensions = [print_dimensions(path, settings.dpi) for path in paths]
-    missing = [path.name for path, size in zip(paths, dimensions) if not size.embedded_dpi]
-    if missing:
-        raise ValueError(
-            "以下图片没有可靠的内嵌 DPI，无法确认打印尺寸；请先补充图片 DPI：\n"
-            + "\n".join(missing[:20])
-        )
-    items, labels = read_items(paths, safe_settings, progress)
+    items, labels = prepared if prepared is not None else read_cutter_items(paths, settings, progress)
     units = build_units(items, spacing)
     groups = [[member.item for member in choices[0].members] for choices in units]
+    if settings.cutter_mode == "dual" and settings.cutter_auto_knife:
+        from .knife_optimizer import select_batch_knife
+        settings = select_batch_knife(groups, settings, spacing, progress)
     lanes = _lanes(settings, width)
-    costs, plans = [float("inf")] * (len(groups) + 1), [None] * len(groups)
-    costs[-1] = 0
-    for index in range(len(groups) - 1, -1, -1):
-        candidates = [(1, row) for row in _group_rows(groups[index], lanes, spacing)]
-        if settings.cutter_mode == "dual" and index + 1 < len(groups):
-            if len(groups[index]) == len(groups[index + 1]) == 1:
-                row = _horizontal(groups[index] + groups[index + 1], lanes)
-                if row:
-                    candidates.append((2, row))
-        for count, row in candidates:
-            cost = row.height + spacing + costs[index + count]
-            if cost < costs[index]:
-                costs[index], plans[index] = cost, (count, row)
-        if plans[index] is None:
-            item = groups[index][0]
-            raise ValueError(
-                f"{item.path.name} 无法安全放入固定分区。图片打印尺寸 "
-                f"{item.width * 25.4 / settings.dpi:.1f} × "
-                f"{item.height * 25.4 / settings.dpi:.1f} 毫米；"
-                "分区检查同时包含标签、色块和安全区，请调整刀位或膜规格。"
-            )
+    if not preserve_sequence:
+        groups = arrange_groups(groups, lanes, settings)
+    if progress:
+        progress("批次刀位已确定", mm_to_px(settings.cutter_knife_mm, settings.dpi),
+                 settings.dpi, f"整批固定刀位 {settings.cutter_knife_mm:.2f} 毫米")
+    solution = solve_groups(groups, lanes, spacing)
+    if solution is None:
+        raise ValueError("图片无法安全放入固定分区，请调整刀位或膜规格。")
+    _, plans = solution
     planned, index, y = [], 0, margin
     while index < len(groups):
         count, row = plans[index]
@@ -66,8 +47,33 @@ def plan_cutter_layout(paths, settings, progress):
         for group in groups
     ) - spacing + 2 * margin
     if progress:
-        progress("切膜安全检查", len(paths), len(paths), "方向不变，刀位及右侧色块基准整批固定")
-    return planned, labels, min(width, _used_canvas_width(planned)), height, baseline
+        progress("切膜安全检查", len(paths), len(paths), "刀位及左右色块基准整批固定")
+    output_width = width if settings.cutter_mode == "dual" else min(width, _used_canvas_width(planned))
+    return planned, labels, output_width, height, baseline
+
+
+def solve_groups(groups, lanes, spacing):
+    from collections import Counter
+    counts = Counter(order_key(item.path) for group in groups for item in group)
+    costs, plans = [float("inf")] * (len(groups) + 1), [None] * len(groups)
+    costs[-1] = 0
+    for index in range(len(groups) - 1, -1, -1):
+        candidates = [(1, row) for row in _group_rows(groups[index], lanes, spacing)]
+        if len(lanes) == 2 and index + 1 < len(groups):
+            if len(groups[index]) == len(groups[index + 1]) == 1:
+                pair = groups[index] + groups[index + 1]
+                keys = [order_key(item.path) for item in pair]
+                share = keys[0] == keys[1] or all(counts[key] == 1 for key in keys)
+                row = _horizontal(pair, lanes) if share else None
+                if row:
+                    candidates.insert(0, (2, row))
+        for count, row in candidates:
+            cost = row.height + spacing + costs[index + count]
+            if cost < costs[index]:
+                costs[index], plans[index] = cost, (count, row)
+        if plans[index] is None:
+            return None
+    return costs[0], plans
 
 
 def _lanes(settings, width):
@@ -101,14 +107,16 @@ def _row(members):
 
 
 def _horizontal(group, lanes):
-    if len(lanes) != 2:
+    if len(lanes) != 2 or any(item.rotation_degrees for item in group):
         return None
     members = [_member(item, lane) for item, lane in zip(group, lanes)]
     if any(member is None for member in members):
-        return None
-    anchor_y = max(member.item.block_ry for member in members)
+        members = [_member(item, lane) for item, lane in zip(group, reversed(lanes))]
+        if any(member is None for member in members):
+            return None
+    anchor_y = max(member.item.image_ry for member in members)
     return _row([
-        replace(member, y=anchor_y - member.item.block_ry)
+        replace(member, y=anchor_y - member.item.image_ry)
         for member in members
     ])
 
@@ -118,7 +126,7 @@ def _group_rows(group, lanes, spacing):
     if len(group) == 2:
         horizontal = _horizontal(group, lanes)
         if horizontal:
-            rows.append(horizontal)
+            return [horizontal]
     for lane in lanes:
         members, y = [], 0
         for item in group:
@@ -130,3 +138,22 @@ def _group_rows(group, lanes, spacing):
         if len(members) == len(group):
             rows.append(_row(members))
     return rows
+
+
+def read_cutter_items(paths, settings, progress):
+    if settings.cutter_mode not in {"single", "dual"}:
+        raise ValueError("未知的切膜排版模式。")
+    if not settings.color_block_enabled:
+        raise ValueError("切膜模式必须启用左侧识别色块。")
+    safe_settings = replace(
+        settings, allow_rotation=False, color_block_position="left_top",
+        color_block_offset_y_mm=0,
+    )
+    dimensions = [print_dimensions(path, settings.dpi) for path in paths]
+    missing = [path.name for path, size in zip(paths, dimensions) if not size.embedded_dpi]
+    if missing:
+        raise ValueError(
+            "以下图片没有可靠的内嵌 DPI，无法确认打印尺寸；请先补充图片 DPI：\n"
+            + "\n".join(missing[:20])
+        )
+    return read_items(paths, safe_settings, progress)

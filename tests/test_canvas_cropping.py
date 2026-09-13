@@ -35,7 +35,7 @@ def test_unused_right_side_is_not_added_to_output(tmp_path, engine) -> None:
     assert result["width_px"] - placement["x_px"] - 250 == 0
     assert result["maximum_width_mm"] == 114.3
     assert result["trimmed_right_mm"] == 50.8
-    with Image.open(tmp_path / "output" / "print.png") as output:
+    with Image.open(tmp_path / "output" / result["filename"]) as output:
         assert output.width == 250
 
 

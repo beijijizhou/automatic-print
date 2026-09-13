@@ -1,15 +1,20 @@
 from __future__ import annotations
 
-from dataclasses import asdict
+from dataclasses import asdict, replace
+from datetime import datetime
 from pathlib import Path
 from time import perf_counter
 from typing import Iterable
 
 from .models import LayoutSettings, ProgressCallback
 from .images import print_dimensions
-from .labels import normalize_machine_number
+from .labels import normalize_machine_number, format_label
+from .output_name import label_output_name, unused_output_path
+from .cut_validation import validate_cut_corridor, validate_canvas_pixels, validate_vips_output
 from .metrics import saving_metrics
+from .order_validation import validate_order_placements
 from .pillow_renderer import build_pillow_canvas
+from .printed_guides import collect_guides, dot_boxes, paint_guides, validate_vips_canvas
 from .planner import plan_layout
 from .save_progress import monitor_save
 from .vips_renderer import available, build_vips_canvas
@@ -24,14 +29,46 @@ def generate_layout(
     output_dir: Path,
     settings: LayoutSettings,
     progress: ProgressCallback | None = None,
+    plan_ready=None,
+    preview_only=False,
+    analysis_ready=None,
 ) -> dict:
     total_started = perf_counter()
-    output_dir.mkdir(parents=True, exist_ok=True)
+    if not preview_only:
+        output_dir.mkdir(parents=True, exist_ok=True)
     reading_started = perf_counter()
     paths = list(image_paths)
+    effective = [settings]
+    def report(stage, current, total, filename):
+        if stage == "批次刀位已确定":
+            effective[0] = replace(settings, cutter_knife_mm=current*25.4/total)
+        if progress:
+            progress(stage, current, total, filename)
+    analysis = []
+    def analyzed(data):
+        analysis[:] = [data]
+        if analysis_ready:
+            analysis_ready(data)
     planned, labels, width, height, baseline_height = plan_layout(
-        paths, settings, progress
+        paths, settings, report, analysis_ready=analyzed
     )
+    settings = effective[0]
+    warning, order_check = "", {}
+    try:
+        order_check = validate_order_placements(paths, planned)
+        cut_check = validate_cut_corridor(planned, settings, width)
+    except ValueError as error:
+        if not preview_only:
+            raise
+        warning = f"仅供检查，禁止输出：{error}"
+    label_text = labels.get(1) or format_label(settings.label_text_template, 1, paths[0],
+                    datetime.now().astimezone(), settings.label_date_format, settings.machine_number)
+    output_path = unused_output_path(output_dir, label_output_name(label_text))
+    if plan_ready:
+        plan_ready({"planned": planned, "labels": labels, "settings": settings, "warning": warning, "order_check": order_check, "analysis": analysis[-1],
+                    "saved_meters": max(0,baseline_height-height)*25.4/settings.dpi/1000})
+    if preview_only:
+        return {"preview_only": True, "width_px": width, "height_px": height, "analysis": analysis[-1]}
     reading_seconds = perf_counter() - reading_started
 
     combining_started = perf_counter()
@@ -41,10 +78,16 @@ def generate_layout(
         planned, labels, (width, height), settings, progress
     )
     combining_seconds = perf_counter() - combining_started
+    if not use_vips:
+        validate_canvas_pixels(canvas, cut_check, progress)
+    else:
+        validate_vips_canvas(canvas, cut_check)
+    guide_spans, missing_guides = collect_guides(planned, settings, progress)
+    guide_boxes = list(dot_boxes(guide_spans, settings.dpi))
+    canvas = paint_guides(canvas, guide_boxes, use_vips)
 
-    filename = "print.png"
+    filename = output_path.name
     saving_started = perf_counter()
-    output_path = output_dir / filename
     with monitor_save(output_path, progress):
         if use_vips:
             canvas.pngsave(
@@ -60,11 +103,16 @@ def generate_layout(
             )
             canvas.close()
     saving_seconds = perf_counter() - saving_started
+    if use_vips:
+        validate_vips_output(output_path, cut_check, progress, guide_boxes)
     size = output_path.stat().st_size
     result = {
         "filename": filename,
         "machine_number": normalize_machine_number(settings.machine_number),
         "cutter_mode": settings.cutter_mode,
+        "cut_corridor": cut_check,
+        "printed_guides": {"span_count": len(guide_spans), "dot_count": len(guide_boxes),
+                           "missing_qr": missing_guides},
         "cutter_knife_mm": settings.cutter_knife_mm if settings.cutter_mode == "dual" else None,
         "cutter_safety_mm": settings.cutter_safety_mm,
         "right_marker_mm": (
@@ -94,6 +142,7 @@ def generate_layout(
         "output_megapixels_per_second": round(
             width * height / 1_000_000 / max(saving_seconds, 0.001), 1
         ),
+        "order_check": order_check, "analysis": analysis[-1],
         "placements": [asdict(item) for _, item in planned],
         "rotation_count": sum(
             bool(item.rotation_degrees) for _, item in planned

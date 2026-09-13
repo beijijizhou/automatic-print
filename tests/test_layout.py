@@ -69,7 +69,7 @@ def test_generate_layout_uses_libvips_and_preserves_transparency(tmp_path) -> No
     )
 
     assert result["png_engine"] == "libvips"
-    with Image.open(output / "print.png") as generated:
+    with Image.open(output / result["filename"]) as generated:
         assert generated.mode == "RGBA"
         assert generated.getpixel((0, 0))[3] == 0
         placement = result["placements"][0]
@@ -107,7 +107,7 @@ def test_generate_layout_can_number_images(tmp_path) -> None:
     )
 
     assert [item["sequence_number"] for item in result["placements"]] == [1, 2]
-    with Image.open(output / "print.png") as generated:
+    with Image.open(output / result["filename"]) as generated:
         second = result["placements"][1]
         sample = generated.crop(
             (
@@ -151,7 +151,7 @@ def test_layout_rotates_left_without_stretching(tmp_path) -> None:
     placement = result["placements"][0]
     assert placement["rotation_degrees"] == 90
     assert (placement["width_px"], placement["height_px"]) == (30, 80)
-    with Image.open(output / "print.png") as generated:
+    with Image.open(output / result["filename"]) as generated:
         assert generated.getpixel((15, 5))[:3] == (0, 0, 255)
         assert generated.getpixel((15, 75))[:3] == (255, 0, 0)
 

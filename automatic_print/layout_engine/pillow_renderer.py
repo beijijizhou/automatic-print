@@ -6,13 +6,13 @@ from pathlib import Path
 from PIL import Image, ImageColor, ImageDraw
 
 from .images import normalized_image
-from .labels import settings_label_badge
+from .dynamic_label import source_label_badge
 from .models import LayoutSettings, Placement, ProgressCallback
 
 
 def _prepare(item: tuple[Path, Placement]):
     path, placement = item
-    rotated = bool(placement.rotation_degrees)
+    rotated = bool(placement.rotation_degrees % 180)
     size = (
         (placement.height_px, placement.width_px)
         if rotated
@@ -23,6 +23,8 @@ def _prepare(item: tuple[Path, Placement]):
         image = image.transpose(Image.Transpose.ROTATE_90)
     elif placement.rotation_degrees == -90:
         image = image.transpose(Image.Transpose.ROTATE_270)
+    elif placement.rotation_degrees == 180:
+        image = image.transpose(Image.Transpose.ROTATE_180)
     return image, placement
 
 
@@ -42,9 +44,11 @@ def build_pillow_canvas(
             canvas.paste(image, (placement.x_px, placement.y_px))
             image.close()
             if settings.number_images:
-                badge = settings_label_badge(
+                badge = source_label_badge(
                     labels[placement.sequence_number],
                     settings,
+                    planned[index-1][0],
+                    placement.rotation_degrees,
                 )
                 canvas.alpha_composite(
                     badge,

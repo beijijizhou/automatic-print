@@ -1,4 +1,4 @@
-from PySide6.QtWidgets import QComboBox, QDoubleSpinBox, QFormLayout, QLabel, QWidget
+from PySide6.QtWidgets import QCheckBox, QComboBox, QDoubleSpinBox, QFormLayout, QLabel, QWidget
 
 
 class CutterSettingsPanel(QWidget):
@@ -14,24 +14,30 @@ class CutterSettingsPanel(QWidget):
         self.film.addItem("60 厘米膜", 600)
         self.mode = QComboBox()
         self.knife = self._box(300, 1, 599)
+        self.auto_knife = QCheckBox("按整批图片自动计算统一刀位")
+        self.auto_knife.setChecked(preferences.value("cutter/auto_knife", True, bool))
+        self.rotation_zone = QCheckBox("省膜时启用独立旋转区（每行一张，换刀一次）")
+        self.rotation_zone.setChecked(preferences.value("cutter/rotation_zone", True, bool))
         self.safety = self._box(3, 0.1, 30)
         self.marker_offset = self._box(0, 0, 100)
         note = QLabel(
             "先选择膜规格，再选择排版模式。固定双列的刀位整批不变；"
             "右侧色块左边缘 = 刀位 + 安全距离 + 色块偏移。"
-            "切膜模式禁止旋转，必须有可靠的图片 DPI。初始刀位需按设备校准。"
+            "常规区保持固定刀位；旋转区每行一张，完整订单迁移。图片必须有可靠 DPI。"
         )
         note.setWordWrap(True)
         form = QFormLayout(self)
         for text, control in (
             ("膜规格", self.film), ("生产排版模式", self.mode),
+            ("刀位选择", self.auto_knife),
+            ("旋转区域", self.rotation_zone),
             ("刀位距膜左边（毫米）", self.knife),
             ("刀位两侧安全距离（毫米）", self.safety),
             ("右侧色块基准偏移（毫米）", self.marker_offset), ("", note),
         ):
             form.addRow(text, control)
         previous_width = int(width.value())
-        default_film = previous_width if previous_width in {450, 600} else 450
+        default_film = previous_width if previous_width in {450, 600} else 600
         film = preferences.value("cutter/film_mm", default_film, int)
         self.film.setCurrentIndex(max(0, self.film.findData(film)))
         self._initializing = True
@@ -47,6 +53,7 @@ class CutterSettingsPanel(QWidget):
         self._initializing = False
         self.film.currentIndexChanged.connect(self._film_changed)
         self.mode.currentIndexChanged.connect(self._mode_changed)
+        self.auto_knife.toggled.connect(self._mode_changed)
         self._mode_changed()
 
     def _film_changed(self, *_args):
@@ -72,6 +79,9 @@ class CutterSettingsPanel(QWidget):
         mode = self.mode.currentData()
         for control in (self.knife, self.safety, self.marker_offset):
             control.setEnabled(mode == "dual")
+        self.auto_knife.setEnabled(mode == "dual")
+        self.rotation_zone.setEnabled(mode == "dual")
+        self.knife.setEnabled(mode == "dual" and not self.auto_knife.isChecked())
         self.rotation.setEnabled(mode == "free")
         self.direction.setEnabled(mode == "free")
         if mode != "free":
@@ -87,6 +97,8 @@ class CutterSettingsPanel(QWidget):
     def save(self):
         for key, value in {
             "film_mm": self.film.currentData(), "mode": self.mode.currentData(),
+            "auto_knife": self.auto_knife.isChecked(),
+            "rotation_zone": self.rotation_zone.isChecked(),
             "knife_mm": self.knife.value(), "safety_mm": self.safety.value(),
             "marker_offset_mm": self.marker_offset.value(),
         }.items():

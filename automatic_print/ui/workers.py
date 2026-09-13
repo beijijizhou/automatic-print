@@ -13,6 +13,8 @@ from ..updater import fetch_latest_release
 
 
 class GenerateWorker(QObject):
+    preview_ready = Signal(object)
+    analysis_ready = Signal(object)
     progress = Signal(str, int, object, str)
     finished = Signal(str, object)
     failed = Signal(str)
@@ -25,6 +27,7 @@ class GenerateWorker(QObject):
         output: Path,
         job_id: str,
         settings: LayoutSettings,
+        preview_only=False,
     ) -> None:
         super().__init__()
         self.images = images
@@ -32,6 +35,7 @@ class GenerateWorker(QObject):
         self.output = output
         self.job_id = job_id
         self.settings = settings
+        self.preview_only = preview_only
         self.cancellation = Cancellation()
 
     def request_cancel(self) -> None:
@@ -44,10 +48,16 @@ class GenerateWorker(QObject):
     @Slot()
     def run(self) -> None:
         try:
+            self.cancellation.check()
             result = generate_layout(
-                self.images, self.output, self.settings, self._progress
+                self.images, self.output, self.settings, self._progress,
+                plan_ready=self.preview_ready.emit, preview_only=self.preview_only,
+                analysis_ready=self.analysis_ready.emit,
             )
             self.cancellation.check()
+            if self.preview_only:
+                self.finished.emit("", result)
+                return
             manifest = {
                 "job_id": self.job_id,
                 "created_at": datetime.now().astimezone().isoformat(),

@@ -23,7 +23,7 @@ class GenerationActionsMixin:
     def _layout_settings(self) -> LayoutSettings:
         return settings_from_window(self)
 
-    def generate(self) -> None:
+    def generate(self, checked=False, *, preview_only=False) -> None:
         if self.thread is not None and not discard_stopped_thread(
             self, "thread", "worker"
         ):
@@ -46,12 +46,13 @@ class GenerationActionsMixin:
             )
             return
         base = Path(self.output_location.text().strip())
-        if not base.is_dir():
+        if not preview_only and not base.is_dir():
             QMessageBox.warning(
                 self, "请选择保存位置", "请选择有效的任务保存位置。"
             )
             return
         settings = self._layout_settings()
+        self.generation_preview.start()
         job_id = datetime.now().strftime("JOB_%Y%m%d_%H%M%S")
         output = base / job_id
         self.preferences.setValue("source_location", str(source))
@@ -77,13 +78,15 @@ class GenerationActionsMixin:
         self.clock.start()
         self.thread = QThread(self)
         self.worker = GenerateWorker(
-            images, source, output, job_id, settings
+            images, source, output, job_id, settings, preview_only=preview_only
         )
         self.worker.moveToThread(self.thread)
         self.thread.started.connect(self.worker.run)
         queued = Qt.ConnectionType.QueuedConnection
         bridge = self.worker_bridge
         self.worker.progress.connect(bridge.layout_progress, queued)
+        self.worker.preview_ready.connect(bridge.layout_preview, queued)
+        self.worker.analysis_ready.connect(bridge.layout_analysis, queued)
         self.worker.finished.connect(bridge.layout_finished, queued)
         self.worker.failed.connect(bridge.layout_failed, queued)
         self.worker.cancelled.connect(bridge.layout_cancelled, queued)
@@ -100,11 +103,11 @@ class GenerationActionsMixin:
     def update_progress(
         self, stage: str, current: int, total: int, filename: str
     ) -> None:
-        if stage == "读取图片尺寸":
-            percent = round(current / total * 45)
+        if stage in {"分析批次", "读取图片尺寸"}:
+            percent = round(current / total * 20) if stage == "分析批次" else 20 + round(current / total * 25)
         elif stage == "识别膜标签":
             percent = 45
-        elif stage in {"整理双面图片", "切膜安全检查"}:
+        elif stage in {"整理双面图片", "切膜安全检查", "计算批次刀位", "批次刀位已确定", "比较旋转区域"}:
             percent = 45
         elif stage == "合成图片":
             percent = 45 + round(current / total * 45)
@@ -117,6 +120,7 @@ class GenerationActionsMixin:
         self.current_count = current
         self.current_total = total
         if stage == "保存图片":
+            self.active_output_filename = filename
             self.progress.setRange(0, 0)
             self.progress.setFormat("正在保存图片…")
         else:
@@ -157,7 +161,7 @@ class GenerationActionsMixin:
     def _saving_detail(self) -> str:
         if self.current_stage != "保存图片":
             return ""
-        path = Path(self.job_path.text()) / "print.png"
+        path = Path(self.job_path.text()) / getattr(self, "active_output_filename", "")
         size = path.stat().st_size if path.is_file() else 0
         return f" · 已写入 {file_size_text(size)}"
 
@@ -175,6 +179,15 @@ class GenerationActionsMixin:
     @Slot(str, object)
     def generation_finished(self, output: str, result: dict) -> None:
         self.clock.stop()
+        if result.get("preview_only"):
+            self.progress.setRange(0, 100)
+            self.progress.setValue(100)
+            self.progress.setFormat("预览完成")
+            self.status.setText("整批预览完成，未生成最终文件；尚未进行输出像素验收。")
+            self.job_path.clear()
+            self.generate_button.setEnabled(True)
+            self.stop_generation_button.setEnabled(False)
+            return
         timings = result["timings_seconds"]
         self.progress.setRange(0, 100)
         self.progress.setValue(100)
@@ -185,7 +198,7 @@ class GenerationActionsMixin:
             f" · 保存 {duration_text(timings['saving_png'])}"
             f" · 总计 {duration_text(timings['total'])}"
         )
-        self.current_file.setText("当前文件：print.png")
+        self.current_file.setText(f"当前文件：{result['filename']}")
         self.run_log.appendPlainText(
             f"输出：{result['width_px']} × {result['height_px']} 像素"
             f" | 文件大小 {file_size_text(result['file_size_bytes'])}"

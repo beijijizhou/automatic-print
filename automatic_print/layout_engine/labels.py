@@ -31,7 +31,7 @@ def _font(size: int):
 
 
 def label_badge(text: str, dpi: int, size_mm: float, max_width_px=None) -> Image.Image:
-    size = max(10, mm_to_px(size_mm, dpi))
+    size = max(1, mm_to_px(size_mm, dpi))
     font = _font(size)
     text = text or " "
     measure = ImageDraw.Draw(Image.new("L", (1, 1)))
@@ -64,6 +64,22 @@ def label_badge(text: str, dpi: int, size_mm: float, max_width_px=None) -> Image
 
 
 def settings_label_badge(text, settings):
+    if settings.label_fit_height:
+        target = mm_to_px(settings.label_reference_height_mm, settings.dpi)
+        low, high, best = 0.5, settings.number_font_size_mm, None
+        for _ in range(14):
+            size = (low + high) / 2
+            badge = label_badge(text, settings.dpi, size)
+            if badge.height <= target:
+                if best is not None:
+                    best.close()
+                best, low = badge, size
+            else:
+                badge.close()
+                high = size
+        if best is None:
+            raise ValueError("文字无法在膜标签高度内保持可读字号，请减少文字或换行。")
+        return best
     maximum = (
         mm_to_px(settings.color_block_width_mm, settings.dpi)
         if settings.label_position == "block_below" else None

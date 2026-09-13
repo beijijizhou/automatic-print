@@ -60,6 +60,6 @@ def test_marker_output_retains_transparency_and_machine_record(tmp_path, engine)
     )
     assert result["machine_number"] == "M7"
     placement = result["placements"][0]
-    with Image.open(tmp_path / "out" / "print.png") as output:
+    with Image.open(tmp_path / "out" / result["filename"]) as output:
         assert output.getpixel((placement["x_px"], placement["y_px"])) == (255, 255, 255, 255)
         assert output.getpixel((placement["x_px"] + 10, placement["y_px"] + 10))[3] == 0

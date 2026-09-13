@@ -1,6 +1,9 @@
 from __future__ import annotations
 
 from pathlib import Path
+from dataclasses import replace
+from .order_groups import ordered_paths
+from .batch_analysis import analyze_batch, finish_analysis
 
 from .item_factory import read_items
 from .metrics import basic_ordered_height
@@ -13,8 +16,23 @@ def plan_layout(
     paths: list[Path],
     settings: LayoutSettings,
     progress: ProgressCallback | None,
+    analysis_ready=None,
 ) -> tuple[list[tuple[Path, Placement]], dict[int, str], int, int, int]:
+    settings = replace(settings, sequence_numbers=settings.sequence_numbers or
+                       tuple((str(path.resolve()), i) for i, path in enumerate(paths, 1)))
+    paths = ordered_paths(paths)
+    analysis = analyze_batch(paths, settings, progress, analysis_ready)
+    result = _plan_layout(paths, settings, progress, analysis, analysis_ready)
+    if analysis_ready:
+        analysis_ready(finish_analysis(analysis, result[0], settings, result[3], result[4]))
+    return result
+
+
+def _plan_layout(paths, settings, progress, analysis, analysis_ready):
     if settings.cutter_mode != "free":
+        if settings.cutter_rotation_zone and settings.cutter_mode == "dual":
+            from .rotation_zones import plan_rotation_zones
+            return plan_rotation_zones(paths, settings, progress, analysis, analysis_ready)
         from .cutter_planner import plan_cutter_layout
         return plan_cutter_layout(paths, settings, progress)
     canvas_width = mm_to_px(settings.media_width_mm, settings.dpi)

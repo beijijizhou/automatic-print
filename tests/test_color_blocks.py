@@ -36,7 +36,7 @@ def test_red_color_block_is_same_height_and_exact_size(
     )
     assert placement["color_block_x_px"] < placement["x_px"]
     assert placement["footprint_height_px"] == placement["height_px"]
-    with Image.open(tmp_path / "output" / "print.png") as output:
+    with Image.open(tmp_path / "output" / result["filename"]) as output:
         assert output.getpixel(
             (
                 placement["color_block_x_px"],

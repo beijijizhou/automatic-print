@@ -1,4 +1,5 @@
 from __future__ import annotations
+import json
 
 from ..layout import LayoutSettings
 
@@ -19,6 +20,10 @@ def settings_from_window(window) -> LayoutSettings:
         number_images=window.number_images.isChecked(),
         number_gap_mm=label.gap.value(),
         number_font_size_mm=label.font_size.value(),
+        label_fit_height=label.fit_height.isChecked(),
+        label_detect_region=label.detect_region.isChecked(),
+        manual_rotations=tuple(json.loads(window.preferences.value("layout/manual_rotations", "{}", str)).items()),
+        label_reference_height_mm=label.reference_height.value(),
         label_text_template=label.text_template.text(),
         label_position=label.position.currentData(),
         label_offset_x_mm=label.offset_x.value(),
@@ -35,6 +40,8 @@ def settings_from_window(window) -> LayoutSettings:
         color_block_offset_y_mm=block.offset_y.value(),
         cutter_mode=window.cutter_settings.mode.currentData(),
         cutter_knife_mm=window.cutter_settings.knife.value(),
+        cutter_auto_knife=window.cutter_settings.auto_knife.isChecked(),
+        cutter_rotation_zone=window.cutter_settings.rotation_zone.isChecked(),
         cutter_safety_mm=window.cutter_settings.safety.value(),
         cutter_marker_offset_mm=window.cutter_settings.marker_offset.value(),
         machine_number=label.machine.currentData(),

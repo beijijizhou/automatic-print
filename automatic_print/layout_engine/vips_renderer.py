@@ -5,7 +5,7 @@ from pathlib import Path
 
 from PIL import ImageColor
 
-from .labels import settings_label_badge
+from .dynamic_label import source_label_badge
 from .models import LayoutSettings, Placement, ProgressCallback, mm_to_px
 
 try:
@@ -25,7 +25,7 @@ def _rgba(path: Path, width: int, height: int, rotation_degrees: int):
     }:
         image = image.colourspace("srgb")
     target_width, target_height = (
-        (height, width) if rotation_degrees else (width, height)
+        (height, width) if rotation_degrees % 180 else (width, height)
     )
     image = image.thumbnail_image(
         target_width, height=target_height, size="force", no_rotate=True
@@ -34,6 +34,8 @@ def _rgba(path: Path, width: int, height: int, rotation_degrees: int):
         image = image.rot("d270")
     elif rotation_degrees == -90:
         image = image.rot("d90")
+    elif rotation_degrees == 180:
+        image = image.rot("d180")
     if image.format != "uchar":
         image = image.cast("uchar")
     if image.bands == 1:
@@ -81,9 +83,10 @@ def build_vips_canvas(
             xs.append(placement.x_px)
             ys.append(placement.y_px - row_y)
             if settings.number_images:
-                badge = settings_label_badge(
+                badge = source_label_badge(
                     labels[placement.sequence_number],
                     settings,
+                    path, placement.rotation_degrees,
                 )
                 layers.append(
                     pyvips.Image.new_from_memory(

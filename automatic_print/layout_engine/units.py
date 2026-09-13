@@ -1,12 +1,9 @@
 from __future__ import annotations
 
-import re
 from dataclasses import dataclass
 
 from .item_factory import LayoutItem
-
-
-SIDE = re.compile(r"^(?P<job>.+-NO\d+)-(?P<side>[12])$", re.IGNORECASE)
+from .order_groups import is_double_pair
 
 
 @dataclass(frozen=True)
@@ -51,14 +48,7 @@ def optimizer_options(units):
 
 
 def _is_double_pair(first: LayoutItem, second: LayoutItem) -> bool:
-    one = SIDE.match(first.path.stem)
-    two = SIDE.match(second.path.stem)
-    return bool(
-        one
-        and two
-        and one.group("job").casefold() == two.group("job").casefold()
-        and {one.group("side"), two.group("side")} == {"1", "2"}
-    )
+    return is_double_pair(first.path, second.path)
 
 
 def _single(item: LayoutItem) -> UnitChoice:

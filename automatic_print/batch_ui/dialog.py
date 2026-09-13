@@ -52,7 +52,10 @@ class AutomationDialog(
         self.worker_bridge = BatchWorkerBridge(self)
         self.records = []
         self.pending_batch_plan = None
-        self.preferences = QSettings("AutomaticPrint", "AutomaticPrint")
+        self.preferences = (
+            parent.preferences if parent is not None and hasattr(parent, "preferences")
+            else QSettings("AutomaticPrint", "AutomaticPrint")
+        )
         self._connect_worker_bridge()
         self._build_controls()
         self._build_tabs()
@@ -166,6 +169,8 @@ class AutomationDialog(
         self.refresh_current_section()
 
     def refresh_current_section(self) -> None:
+        if self.local_only:
+            return
         if self.thread is not None:
             return
         if self.main_tabs.currentIndex() == 0:

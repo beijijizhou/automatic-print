@@ -16,8 +16,7 @@ def build_local_page(owner) -> QWidget:
     page = QWidget()
     layout = QVBoxLayout(page)
     intro = QLabel(
-        "选择本机图片文件夹进行排版，或处理已有的本地批次。"
-        "选择批次后先显示全部图片名称；此页面不访问生产平台。"
+        "选择本机图片文件夹，设置标签与打印参数后即可排版。"
     )
     intro.setWordWrap(True)
     owner.manual_layout_button = QPushButton(
@@ -26,6 +25,9 @@ def build_local_page(owner) -> QWidget:
     owner.manual_layout_button.clicked.connect(owner.open_manual_layout)
     direct_actions = QHBoxLayout()
     direct_actions.addWidget(owner.manual_layout_button)
+    preview_button = QPushButton("仅预览整批（不生成文件）")
+    preview_button.clicked.connect(lambda: owner.window().generate(preview_only=True))
+    direct_actions.addWidget(preview_button)
     owner.local_summary = QLabel("尚未读取本地生产批次。")
     owner.local_table = _table(
         ["选择", "来源", "批次号", "图片数", "本地更新时间", "文件夹"],
@@ -55,10 +57,11 @@ def build_local_page(owner) -> QWidget:
     owner.local_test_mode = QCheckBox(
         "快速测试：普通模式首批 5 张；合并模式每批 5 张"
     )
-    owner.local_test_mode.setChecked(True)
+    owner.local_test_mode.setChecked(owner.preferences.value("local/test_mode", True, bool))
     owner.local_merge_batches = QCheckBox(
         "合并选中的批次为一个排版文件"
     )
+    owner.local_merge_batches.setChecked(owner.preferences.value("local/merge_batches", False, bool))
     owner.filename_summary = QLabel("选择一个本地批次查看图片名称。")
     owner.filename_search = QLineEdit()
     owner.filename_search.setPlaceholderText("搜索文件名或尺码…")
@@ -80,20 +83,16 @@ def build_local_page(owner) -> QWidget:
             window.label_settings, window.color_block_settings, page, window=window
         )
         layout.addWidget(owner.label_quick_panel)
-    if getattr(owner, "local_only", False):
-        layout.addWidget(QLabel("已有本地批次 → 来源分类"))
-        layout.addWidget(owner.platform)
-        layout.addWidget(QLabel("本地批次文件所在位置"))
-        layout.addLayout(owner.output_row)
-    layout.addWidget(owner.local_summary)
-    layout.addWidget(owner.local_table)
-    layout.addWidget(owner.local_test_mode)
-    layout.addWidget(owner.local_merge_batches)
-    layout.addLayout(actions)
-    layout.addWidget(QLabel("批次图片名称"))
-    layout.addWidget(owner.filename_summary)
-    layout.addLayout(filename_actions)
-    layout.addWidget(owner.filename_table)
+    # Keep legacy workflow objects available to workers, but out of the workbench.
+    for widget in (
+        owner.platform, owner.output, owner.local_summary, owner.local_table,
+        owner.local_test_mode, owner.local_merge_batches, owner.filename_summary,
+        owner.filename_search, owner.copy_filenames_button, owner.filename_table,
+        owner.local_refresh_button, owner.local_select_button,
+        owner.local_process_button, owner.local_open_button,
+    ):
+        widget.setParent(page)
+        widget.hide()
     if getattr(owner, "local_only", False):
         layout.addWidget(QLabel("排版处理日志"))
         layout.addWidget(owner.log)

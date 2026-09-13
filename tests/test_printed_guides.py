@@ -1,0 +1,56 @@
+from PIL import Image
+from types import SimpleNamespace
+import pytest
+
+from automatic_print.layout import LayoutSettings, generate_layout
+from automatic_print.layout_engine import printed_guides
+from automatic_print.layout_engine.membrane_region import MembraneRegion
+
+
+@pytest.mark.parametrize('engine', ['pillow', 'libvips'])
+def test_saved_png_contains_only_qr_band_dots(tmp_path, monkeypatch, engine):
+    if engine == 'libvips':
+        pytest.importorskip('pyvips')
+    paths = []
+    for i in range(4):
+        path = tmp_path / f'B{i}-1-T-White-M-NO1-1.png'
+        Image.new('RGBA', (180, 250), 'blue').save(path, dpi=(25.4, 25.4))
+        paths.append(path)
+    monkeypatch.setattr(printed_guides, 'detect_guide_band',
+                        lambda path: MembraneRegion(.6, .04, .9, .2))
+    settings = LayoutSettings(dpi=25.4, margin_mm=0, cutter_mode='dual',
+                              number_images=False, png_engine=engine)
+    result = generate_layout(paths, tmp_path/'out', settings)
+    assert result['printed_guides']['span_count'] == 2
+    assert result['cut_corridor']['pixel_verified']
+    with Image.open(tmp_path/'out'/result['filename']) as image:
+        red_y = [y for y in range(image.height) if image.getpixel((300, y))[3]]
+        assert red_y
+        rows = sorted(set(p['y_px'] for p in result['placements']))
+        assert all(any(top+10 <= y < top+50 for top in rows) for y in red_y)
+        assert all(image.getpixel((300, y)) == (255, 0, 0, 255) for y in red_y)
+        assert len(red_y) < 80
+
+
+def test_vips_allowlist_does_not_hide_artwork_or_extra_red_ink():
+    pyvips = pytest.importorskip('pyvips')
+    check = {'safe_left_px': 47, 'safe_right_px': 53}
+    canvas = pyvips.Image.black(100, 100, bands=4).copy(interpretation='srgb')
+    boxes = [(49, 10, 3), (49, 20, 3)]
+    printed_guides.validate_vips_canvas(canvas, check)
+    marked = printed_guides.paint_guides(canvas, boxes, True)
+    assert printed_guides.vips_corridor_is_clear(marked, check, boxes)
+    assert not printed_guides.vips_corridor_is_clear(marked, check)
+    extra = marked.draw_rect([255, 0, 0, 255], 50, 60, 1, 1, fill=True)
+    assert not printed_guides.vips_corridor_is_clear(extra, check, boxes)
+    with pytest.raises(ValueError, match='禁止保存'):
+        printed_guides.validate_vips_canvas(marked, check)
+
+
+def test_missing_qr_is_reported_without_fallback(tmp_path, monkeypatch):
+    monkeypatch.setattr(printed_guides, 'detect_guide_band', lambda path: None)
+    path = tmp_path/'missing.png'
+    placement = SimpleNamespace(cut_zone='', y_px=0)
+    spans, missing = printed_guides.collect_guides([(path, placement)], LayoutSettings(cutter_mode='dual'))
+    assert spans == []
+    assert missing == ['missing.png']

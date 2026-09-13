@@ -1,9 +1,13 @@
+from pathlib import Path
+
 from PySide6.QtWidgets import (
     QCheckBox, QComboBox, QDoubleSpinBox, QFormLayout, QGroupBox,
     QHBoxLayout, QLineEdit, QPushButton, QVBoxLayout, QWidget,
 )
 
-from .production_preview import ProductionPreview
+from .pair_preview import PairProductionPreview
+from .batch_analysis_panel import BatchAnalysisPanel
+from .manual_rotation import ManualRotationPanel
 from ..layout_engine.labels import compact_label_text
 
 
@@ -26,6 +30,20 @@ class LabelQuickPanel(QWidget):
         self.font_size.setValue(label.font_size.value())
         self.font_size.valueChanged.connect(label.font_size.setValue)
         label.font_size.valueChanged.connect(self.font_size.setValue)
+        self.fit_height = self._checkbox("限制整段高度，字号不超过手动设置", label.fit_height)
+        self.detect_region = self._checkbox("识别膜标签并动态等高适配", label.detect_region)
+        self.reference_height = QDoubleSpinBox()
+        self.reference_height.setRange(2, 100)
+        self.reference_height.setDecimals(1)
+        self.reference_height.setValue(label.reference_height.value())
+        self.reference_height.valueChanged.connect(label.reference_height.setValue)
+        label.reference_height.valueChanged.connect(self.reference_height.setValue)
+        label.detect_region.toggled.connect(lambda value: self.reference_height.setEnabled(not value))
+        self.reference_height.setEnabled(not label.detect_region.isChecked())
+        label.detect_region.toggled.connect(lambda value: self.fit_height.setEnabled(not value))
+        self.fit_height.setEnabled(not label.detect_region.isChecked())
+        label.detect_region.toggled.connect(lambda value: self.font_size.setEnabled(not value))
+        self.font_size.setEnabled(not label.detect_region.isChecked())
         self.enabled = self._checkbox("添加标签", label.enabled)
         self.follow_qr = self._checkbox("自动与二维码水平对齐", label.follow_qr)
         self.follow_qr.setEnabled(label.follow_qr.isEnabled())
@@ -55,33 +73,55 @@ class LabelQuickPanel(QWidget):
         text_row.addWidget(self.text)
         text_row.addWidget(date_button)
         text_row.addWidget(machine_button)
-        toggles = QHBoxLayout()
-        toggles.addWidget(self.enabled)
-        toggles.addWidget(self.follow_qr)
-        toggles.addStretch()
         form = QFormLayout()
-        compact_button = QPushButton("紧凑字号（3毫米）")
-        compact_button.clicked.connect(lambda: self.font_size.setValue(3))
-        font_row = QHBoxLayout()
-        font_row.addWidget(self.font_size)
-        font_row.addWidget(compact_button)
         form.addRow("标签与文字", text_row)
         form.addRow("当前机器号", self.machine)
-        form.addRow("文字大小（毫米）", font_row)
-        form.addRow("标签位置", self.position)
-        form.addRow("", toggles)
-        self.preview = ProductionPreview(window._layout_settings, self)
-        label.settings_changed.connect(self.preview.refresh)
-        block.settings_changed.connect(self.preview.refresh)
+        # Advanced controls live in the canonical print-parameter dialogs.
+        # Retain these mirrored objects for compatibility, never show duplicates.
+        for control in (
+            self.font_size, self.fit_height, self.detect_region,
+            self.reference_height, self.position, self.enabled, self.follow_qr,
+        ):
+            control.setParent(self)
+            control.hide()
+        self.preview = PairProductionPreview(window._layout_settings, self)
+        self.preview.overview = True
+        self.analysis = BatchAnalysisPanel(self)
+        self.preview.analysis_ready.connect(self.analysis.show_report)
+        self.preview.analysis_failed.connect(self.analysis.failed)
+        self.preview.analysis_started.connect(self.analysis.clear)
+        self.analysis.source_selected.connect(self._select_analysis_source)
+        label.settings_changed.connect(self.preview.schedule_refresh)
+        block.settings_changed.connect(self.preview.schedule_refresh)
         window.folder.textChanged.connect(self.preview.use_folder)
-        window.dpi.valueChanged.connect(self.preview.refresh)
-        group = QGroupBox("生产图片样板 · 标签与色块联合预览")
+        window.dpi.valueChanged.connect(self.preview.schedule_refresh)
+        cutter = window.cutter_settings
+        for signal in (cutter.film.currentIndexChanged, cutter.mode.currentIndexChanged,
+                       cutter.auto_knife.toggled,
+                       cutter.rotation_zone.toggled,
+                       cutter.knife.valueChanged, cutter.safety.valueChanged,
+                       cutter.marker_offset.valueChanged, window.spacing.valueChanged):
+            signal.connect(self.preview.schedule_refresh)
+        group = QGroupBox("两张生产图片 · 分区、切割线、标签与色块预览")
         QVBoxLayout(group).addWidget(self.preview)
         self.preview.use_folder(window.folder.text())
         layout = QVBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
         layout.addLayout(form)
+        layout.addWidget(self.analysis)
+        self.manual_rotation = ManualRotationPanel(window, self.preview, self)
+        layout.addWidget(self.manual_rotation)
+        overview = QCheckBox("显示整批总览（向下滚动查看全部；取消勾选查看双图细节）")
+        overview.setChecked(True)
+        overview.toggled.connect(self.preview.set_overview)
+        layout.addWidget(overview)
         layout.addWidget(group)
+
+    def _select_analysis_source(self, path):
+        combo = self.manual_rotation.images
+        index = combo.findData(str(Path(path).resolve()))
+        if index >= 0:
+            combo.setCurrentIndex(index)
 
     def _add_date(self):
         if "{日期}" not in self.text.text():

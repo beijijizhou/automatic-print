@@ -9,6 +9,9 @@ from .labels import format_label, settings_label_badge, label_layout
 from .decorations import combined_footprint, outside_position
 from .models import LayoutSettings, mm_to_px
 from .qr_detection import QrLocation, detect_qr_location
+from .dynamic_label import source_label_badge
+from .membrane_region import detect_membrane_region
+from .qr_placement import signed_mm as _signed_mm, rotated_qr as _rotated_qr, qr_label_layout as _qr_label_layout
 
 
 @dataclass(frozen=True)
@@ -41,29 +44,34 @@ def read_items(paths, settings, progress):
     offset_x = _signed_mm(settings.label_offset_x_mm, settings.dpi)
     offset_y = _signed_mm(settings.label_offset_y_mm, settings.dpi)
     qr_attempted = (
-        settings.number_images and settings.label_follow_qr
-        and settings.label_position != "block_below"
+        settings.number_images and settings.cutter_mode == "free" and (settings.label_detect_region or settings.label_fit_height or (
+            settings.label_follow_qr and settings.label_position != "block_below"
+        ))
     )
     qr_detected = 0
     for index, path in enumerate(paths, start=1):
+        number = dict(settings.sequence_numbers).get(str(path.resolve()), index)
         size = print_dimensions(path, settings.dpi)
         width = max(1, mm_to_px(size.width_mm, settings.dpi))
         height = max(1, mm_to_px(size.height_mm, settings.dpi))
+        manual = dict(settings.manual_rotations).get(str(path.resolve()), 0)
+        if manual % 180:
+            width, height = height, width
         qr_location = None
         if qr_attempted:
             qr_location = detect_qr_location(path)
             qr_detected += qr_location is not None
         choices = [
             _make_item(
-                path, index, width, height, settings, labels,
-                created_at, gap, offset_x, offset_y, 0, qr_location,
+                path, number, width, height, settings, labels,
+                created_at, gap, offset_x, offset_y, manual, qr_location,
             )
         ]
-        if settings.allow_rotation and width != height:
+        if settings.allow_rotation and not manual and width != height:
             degrees = 90 if settings.rotation_direction == "left" else -90
             choices.append(
                 _make_item(
-                    path, index, height, width, settings, labels,
+                    path, number, height, width, settings, labels,
                     created_at, gap, offset_x, offset_y, degrees,
                     qr_location,
                 )
@@ -108,7 +116,24 @@ def _make_item(
     block_x, block_y = _block_position(
         (width, height), (block_width, block_height), settings
     )
-    if settings.number_images and settings.label_position == "block_below":
+    if settings.number_images and settings.cutter_mode != "free":
+        label_x = block_x
+        label_y = block_y + block_height + gap
+    elif settings.number_images and (settings.label_detect_region or settings.label_fit_height):
+        # Keep text outside the artwork and marker, inside the image's vertical span.
+        label_x = min(-gap, block_x if block_width else -gap) - label_width - gap
+        center = _rotated_qr(qr_location, rotation_degrees)[1] if qr_location else 0
+        if settings.label_detect_region:
+            region = detect_membrane_region(path).rotated(rotation_degrees)
+            center = (region.top+region.bottom)/2
+            if (region.left+region.right)/2 >= 0.5:
+                label_x = width + gap
+            # The original header's side is transformed with the artwork;
+            # marker position remains independent and always on the left.
+        label_y = min(max(0, round(center * height - label_height / 2)), height - label_height)
+        if label_height > height:
+            raise ValueError("膜标签高度超过图片高度，请调整膜标签实际高度。")
+    elif settings.number_images and settings.label_position == "block_below":
         if not block_width:
             raise ValueError("标签放在色块下方时，必须启用色块。")
         label_x = block_x + block_width - label_width + min(0, offset_x)
@@ -168,7 +193,7 @@ def _label_values(
         settings.machine_number,
     )
     labels[index] = text
-    badge = settings_label_badge(text, settings)
+    badge = source_label_badge(text, settings, path, rotation_degrees)
     label_width, label_height = badge.size
     badge.close()
     if qr_location is not None:
@@ -191,48 +216,3 @@ def _label_values(
             offset_y,
         )
     return *layout[:4], label_width, label_height, *layout[4:]
-
-
-def _qr_label_layout(
-    image_size, label_size, location, rotation_degrees,
-    gap, offset_x, offset_y,
-):
-    width, height = image_size
-    label_width, label_height = label_size
-    x_ratio, y_ratio = _rotated_qr(location, rotation_degrees)
-    if x_ratio < 0.5:
-        label_x = -gap - label_width
-    else:
-        label_x = width + gap
-    label_y = round(y_ratio * height - label_height / 2)
-    label_y = min(max(0, label_y), max(0, height - label_height))
-    label_x += offset_x
-    label_y += offset_y
-    image_rx, image_ry, footprint_width, footprint_height = (
-        combined_footprint(
-            image_size,
-            [(label_x, label_y, label_width, label_height)],
-        )
-    )
-    return (
-        image_rx,
-        image_ry,
-        label_x + image_rx,
-        label_y + image_ry,
-        footprint_width,
-        footprint_height,
-    )
-
-
-def _rotated_qr(location: QrLocation, rotation_degrees: int):
-    x_ratio, y_ratio = location.x_ratio, location.y_ratio
-    if rotation_degrees == 90:
-        return y_ratio, 1 - x_ratio
-    if rotation_degrees == -90:
-        return 1 - y_ratio, x_ratio
-    return x_ratio, y_ratio
-
-
-def _signed_mm(value: float, dpi: int) -> int:
-    pixels = mm_to_px(abs(value), dpi)
-    return -pixels if value < 0 else pixels

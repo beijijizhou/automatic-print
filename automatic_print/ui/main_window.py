@@ -28,6 +28,8 @@ from .color_block_settings import ColorBlockSettingsDialog
 from .cutter_settings import CutterSettingsPanel
 from .label_settings import LabelSettingsDialog
 from .preferences import PreferencesMixin
+from .preference_autosave import PreferenceAutosave
+from .generation_preview import GenerationPreviewController
 from .update_actions import UpdateActionsMixin
 from .worker_bridge import MainWindowWorkerBridge
 
@@ -38,7 +40,7 @@ class MainWindow(
     UpdateActionsMixin,
     QMainWindow,
 ):
-    def __init__(self) -> None:
+    def __init__(self, preferences=None) -> None:
         super().__init__()
         self.setWindowTitle("本地排版工作台")
         self.resize(980, 700)
@@ -55,16 +57,21 @@ class MainWindow(
         self.current_total = 0
         self.active_png_compression = 1
         self.active_png_engine = "pillow"
-        self.preferences = QSettings("AutomaticPrint", "AutomaticPrint")
+        self.preferences = preferences if preferences is not None else QSettings("AutomaticPrint", "AutomaticPrint")
         self._connect_worker_bridge()
         self.clock = QTimer(self)
         self.clock.setInterval(1000)
         self.clock.timeout.connect(self.refresh_timing)
         self._build_settings()
         self._build_home()
+        self.preference_autosave = PreferenceAutosave(self)
+        self.generation_preview = GenerationPreviewController(self)
         for label in self.findChildren(QLabel):
             label.setTextInteractionFlags(Qt.TextSelectableByMouse)
-        QTimer.singleShot(2500, lambda: self.check_for_updates(True))
+        self.startup_update_timer = QTimer(self)
+        self.startup_update_timer.setSingleShot(True)
+        self.startup_update_timer.timeout.connect(lambda: self.check_for_updates(True) if self.isVisible() else None)
+        self.startup_update_timer.start(2500)
 
     def _connect_worker_bridge(self) -> None:
         bridge = self.worker_bridge
@@ -84,7 +91,7 @@ class MainWindow(
         folder_row = QHBoxLayout()
         folder_row.addWidget(self.folder)
         folder_row.addWidget(browse)
-        self.width = self._box(450, 50, 5000)
+        self.width = self._box(600, 50, 5000)
         self.spacing = self._box(8, 0, 100)
         self.margin = self._box(3, 0, 100)
         self.margin.setToolTip(
@@ -158,7 +165,9 @@ class MainWindow(
         self.run_log = QPlainTextEdit()
         self.run_log.setReadOnly(True)
         self.run_log.setMaximumHeight(115)
-        self.generate_button = QPushButton("开始本地排版")
+        preview_button = QPushButton("仅预览整批（不生成文件）")
+        preview_button.clicked.connect(lambda: self.generate(preview_only=True))
+        self.generate_button = QPushButton("生成最终打印文件")
         self.generate_button.clicked.connect(self.generate)
         self.stop_generation_button = QPushButton("停止当前排版")
         self.stop_generation_button.setEnabled(False)
@@ -173,6 +182,7 @@ class MainWindow(
             self.status,
             self.current_file,
             self.run_log,
+            preview_button,
             self.generate_button,
             self.stop_generation_button,
             save_button,
@@ -216,6 +226,7 @@ class MainWindow(
         )
 
     def closeEvent(self, event) -> None:
+        self.startup_update_timer.stop()
         if self.has_active_tasks():
             event.ignore()
             self.automation_home.loading_label.setText(
@@ -223,6 +234,7 @@ class MainWindow(
             )
             self.automation_home.loading_panel.show()
             return
+        self.preference_autosave.flush()
         event.accept()
 
     @staticmethod

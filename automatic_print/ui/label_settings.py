@@ -62,7 +62,13 @@ class LabelSettingsDialog(QDialog):
             ("右下角（图片外）", "bottom_right"),
         ):
             self.position.addItem(text, value)
-        self.font_size = self._box(3, 2, 50)
+        self.font_size = self._box(7.5 * 25.4 / 72, 0.5, 50)
+        self.detect_region = QCheckBox("识别原图膜标签，文字区域与其等高并限制宽度")
+        self.detect_region.setChecked(True)
+        self.fit_height = QCheckBox("限制整段文字高度（字号不超过手动设置）")
+        self.fit_height.setChecked(True)
+        self.reference_height = self._box(10, 2, 100)
+        self.reference_height.setToolTip("填写原图膜标签的实际高度；二维码定位只确定位置，不代表整条膜标签的高度。")
         self.gap = self._box(5, 0, 100)
         self.offset_x = self._box(0, -100, 100)
         self.offset_y = self._box(0, -100, 100)
@@ -79,6 +85,9 @@ class LabelSettingsDialog(QDialog):
             ("", help_label),
             ("标签位置", self.position),
             ("文字大小（毫米）", self.font_size),
+            ("高度适配", self.fit_height),
+            ("动态识别", self.detect_region),
+            ("膜标签实际高度（毫米）", self.reference_height),
             ("与图片距离（毫米）", self.gap),
             ("水平微调（毫米）", self.offset_x),
             ("垂直微调（毫米）", self.offset_y),
@@ -122,6 +131,8 @@ class LabelSettingsDialog(QDialog):
         for box in (self.font_size, self.gap, self.offset_x, self.offset_y):
             box.valueChanged.connect(self.preview.update)
         signals = [
+            self.detect_region.toggled,
+            self.fit_height.toggled, self.reference_height.valueChanged,
             self.enabled.toggled, self.follow_qr.toggled,
             self.text_template.textChanged, self.position.currentIndexChanged,
             self.date_format.textChanged,
@@ -132,6 +143,15 @@ class LabelSettingsDialog(QDialog):
         for signal in signals:
             signal.connect(lambda *_args: self.settings_changed.emit())
         self._sync_position()
+        self.fit_height.toggled.connect(self._sync_fit)
+        self.detect_region.toggled.connect(self._sync_fit)
+        self._sync_fit()
+
+    def _sync_fit(self, *_args):
+        dynamic = self.detect_region.isChecked()
+        self.font_size.setEnabled(not dynamic)
+        self.fit_height.setEnabled(not dynamic)
+        self.reference_height.setEnabled(not dynamic and self.fit_height.isChecked())
 
     def _sync_position(self, *_args):
         below = self.position.currentData() == "block_below"

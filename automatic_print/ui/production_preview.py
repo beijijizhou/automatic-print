@@ -4,13 +4,14 @@ from pathlib import Path
 
 from PIL.ImageQt import ImageQt
 from PySide6.QtCore import QRectF, QSize, Qt
-from PySide6.QtGui import QColor, QImage, QImageReader, QPainter, QPen
+from PySide6.QtGui import QColor, QImage, QImageReader, QPainter, QPen, QTransform
 from PySide6.QtWidgets import QWidget
 
 from ..layout import discover_images
 from ..layout_engine.images import print_dimensions
 from ..layout_engine.item_factory import read_items
 from ..layout_engine.labels import format_label, settings_label_badge
+from ..layout_engine.dynamic_label import source_label_badge
 from ..layout_engine.qr_detection import detect_qr_location
 
 
@@ -71,7 +72,7 @@ class ProductionPreview(QWidget):
             choices, labels = read_items([self.path], settings, None)
             self.item = choices[0][0]
             if settings.number_images:
-                badge = settings_label_badge(labels[1], settings)
+                badge = source_label_badge(labels[1], settings, self.path, self.item.rotation_degrees)
                 self.badge = QImage(ImageQt(badge)).copy()
                 badge.close()
             size = print_dimensions(self.path, self.settings_getter().dpi)
@@ -80,7 +81,11 @@ class ProductionPreview(QWidget):
             if settings.number_images and settings.label_follow_qr and settings.label_position != "block_below":
                 qr = " · 二维码已定位" if detect_qr_location(self.path) else " · 未识别二维码，使用设定位置"
             self.detail = f"{size.width_mm:.1f} × {size.height_mm:.1f} 毫米 · {source}{qr}"
-            if settings.label_position == "block_below":
+            if settings.label_detect_region:
+                self.detail += f" · 膜标签已识别 · 文字区 {self.item.label_width*25.4/settings.dpi:.1f} × {self.item.label_height*25.4/settings.dpi:.1f} 毫米"
+            elif settings.label_fit_height:
+                self.detail += f" · 整段文字高度 ≤ {settings.label_reference_height_mm:g} 毫米"
+            elif settings.label_position == "block_below":
                 self.detail += " · 标签固定于色块下方"
         except (OSError, ValueError) as error:
             self.item = None
@@ -120,7 +125,7 @@ class ProductionPreview(QWidget):
             )
             painter.scale(scale, scale)
             image_rect = QRectF(item.image_rx, item.image_ry, item.width, item.height)
-            painter.drawImage(image_rect, self.thumbnail)
+            painter.drawImage(image_rect, self.thumbnail.transformed(QTransform().rotate(-item.rotation_degrees)))
             painter.setPen(QPen(QColor("#cbd5e1"), 0))
             painter.drawRect(image_rect)
             if not self.badge.isNull():

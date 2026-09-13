@@ -9,7 +9,7 @@ ProgressCallback = Callable[[str, int, int, str], None]
 
 @dataclass(frozen=True)
 class LayoutSettings:
-    media_width_mm: float = 450
+    media_width_mm: float = 600
     spacing_mm: float = 8
     margin_mm: float = 3
     dpi: int = 300
@@ -18,7 +18,7 @@ class LayoutSettings:
     worker_threads: int = 8
     number_images: bool = True
     number_gap_mm: float = 5
-    number_font_size_mm: float = 3
+    number_font_size_mm: float = 7.5 * 25.4 / 72
     label_text_template: str = "{编号}"
     label_position: str = "bottom"
     label_offset_x_mm: float = 0
@@ -40,6 +40,13 @@ class LayoutSettings:
     cutter_safety_mm: float = 3
     cutter_marker_offset_mm: float = 0
     machine_number: str = "M1"
+    label_fit_height: bool = False
+    label_reference_height_mm: float = 10
+    label_detect_region: bool = False
+    manual_rotations: tuple[tuple[str, int], ...] = ()
+    cutter_auto_knife: bool = False
+    cutter_rotation_zone: bool = False
+    sequence_numbers: tuple[tuple[str, int], ...] = ()
 
 
 @dataclass(frozen=True)
@@ -62,6 +69,8 @@ class Placement:
     color_block_y_px: int = 0
     color_block_width_px: int = 0
     color_block_height_px: int = 0
+    cut_zone: str = ""
+    cut_knife_x_px: int | None = None
 
 
 def mm_to_px(value: float, dpi: int) -> int:

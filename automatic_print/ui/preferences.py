@@ -36,10 +36,8 @@ class PreferencesMixin:
         self.settings_dialog.activateWindow()
 
     def load_layout_preferences(self) -> None:
-        self._migrate_layout_defaults()
-        self._migrate_450_width()
         values = (
-            (self.width, "layout/media_width_mm", 450, float),
+            (self.width, "layout/media_width_mm", 600, float),
             (self.spacing, "layout/spacing_mm", 8, float),
             (self.margin, "layout/margin_mm", 3, float),
             (self.dpi, "layout/dpi", 300, int),
@@ -72,7 +70,10 @@ class PreferencesMixin:
             max(0, self.png_engine.findData(engine))
         )
         label = self.label_settings
-        migrated = self.preferences.value("label/compact_marking_applied", False, bool)
+        label.detect_region.setChecked(self.preferences.value("label/detect_region", True, bool))
+        label.fit_height.setChecked(self.preferences.value("label/fit_height", True, bool))
+        label.reference_height.setValue(self.preferences.value("label/reference_height_mm", 10, float))
+        label._sync_fit()
         label.machine.setCurrentIndex(max(0, label.machine.findData(
             self.preferences.value("layout/machine_number", "M1", str).upper()
         )))
@@ -90,29 +91,17 @@ class PreferencesMixin:
         }
         for old, new in aliases.items():
             template = template.replace(old, new)
-        if not migrated and template == "{编号}":
-            template = "CY 1001Mt26"
         template = re.sub(r"_{2,}", "", template)
         label.text_template.setText(template)
         position = self.preferences.value(
             "label/position", "block_below", str
         )
-        if not migrated:
-            position = "block_below"
-            self.preferences.setValue("label/compact_marking_applied", True)
         label.position.setCurrentIndex(
             max(0, label.position.findData(position))
         )
         label._sync_position()
-        if not migrated:
-            self.preferences.setValue("label/text_template", template)
-            self.preferences.setValue("label/position", position)
-        if not self.preferences.value("label/default_font_3_applied", False, bool):
-            if self.preferences.value("label/font_size_mm", 3, float) == 10:
-                self.preferences.setValue("label/font_size_mm", 3)
-            self.preferences.setValue("label/default_font_3_applied", True)
         for widget, key, default in (
-            (label.font_size, "label/font_size_mm", 3),
+            (label.font_size, "label/font_size_mm", 7.5 * 25.4 / 72),
             (label.gap, "label/gap_mm", 5),
             (label.offset_x, "label/offset_x_mm", 0),
             (label.offset_y, "label/offset_y_mm", 0),
@@ -157,37 +146,15 @@ class PreferencesMixin:
         ):
             widget.setValue(self.preferences.value(key, default, float))
 
-    def _migrate_layout_defaults(self) -> None:
-        key = "layout/defaults_580_8_applied"
-        if self.preferences.value(key, False, bool):
-            return
-        width = self.preferences.value(
-            "layout/media_width_mm", 600, float
-        )
-        spacing = self.preferences.value("layout/spacing_mm", 3, float)
-        if width == 600:
-            self.preferences.setValue("layout/media_width_mm", 580)
-        if spacing == 3:
-            self.preferences.setValue("layout/spacing_mm", 8)
-        self.preferences.setValue(key, True)
-
-    def _migrate_450_width(self) -> None:
-        key = "layout/defaults_450_width_applied"
-        if self.preferences.value(key, False, bool):
-            return
-        width = self.preferences.value(
-            "layout/media_width_mm", 580, float
-        )
-        if width == 580:
-            self.preferences.setValue("layout/media_width_mm", 450)
-        self.preferences.remove("layout/left_margin_mm")
-        self.preferences.remove("layout/right_margin_mm")
-        self.preferences.setValue(key, True)
-
-    def save_layout_preferences(self) -> None:
+    def save_layout_preferences(self, *_args, notify=True) -> None:
         self.cutter_settings.save()
         label = self.label_settings
         values = {
+            "source_location": self.folder.text().strip(),
+            "output_location": self.output_location.text().strip(),
+            "automation/output_location": self.automation_home.output.text().strip(),
+            "local/test_mode": self.automation_home.local_test_mode.isChecked(),
+            "local/merge_batches": self.automation_home.local_merge_batches.isChecked(),
             "layout/media_width_mm": self.width.value(),
             "layout/spacing_mm": self.spacing.value(),
             "layout/margin_mm": self.margin.value(),
@@ -204,6 +171,9 @@ class PreferencesMixin:
             "label/follow_qr": label.follow_qr.isChecked(),
             "label/position": label.position.currentData(),
             "label/font_size_mm": label.font_size.value(),
+            "label/fit_height": label.fit_height.isChecked(),
+            "label/detect_region": label.detect_region.isChecked(),
+            "label/reference_height_mm": label.reference_height.value(),
             "label/gap_mm": label.gap.value(),
             "label/offset_x_mm": label.offset_x.value(),
             "label/offset_y_mm": label.offset_y.value(),
@@ -225,8 +195,5 @@ class PreferencesMixin:
         for key, value in values.items():
             self.preferences.setValue(key, value)
         self.preferences.sync()
-        QMessageBox.information(
-            self,
-            "参数已保存",
-            "以后下载生产批次后，会自动使用这些参数排版。",
-        )
+        if notify:
+            QMessageBox.information(self, "参数已保存", "参数已保存，下次打开会恢复；日常修改也会自动保存。")
