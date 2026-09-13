@@ -7,7 +7,7 @@ Windows desktop application for combining a folder of images into print-ready la
 在测试电脑上打开 PowerShell，复制并运行：
 
 ```powershell
-powershell -ExecutionPolicy Bypass -Command "irm 'https://raw.githubusercontent.com/beijijizhou/automatic-print/main/windows/bootstrap-test-computer.ps1?v=0.1.72' | iex"
+powershell -ExecutionPolicy Bypass -Command "irm 'https://raw.githubusercontent.com/beijijizhou/automatic-print/main/windows/bootstrap-test-computer.ps1?v=0.1.73' | iex"
 ```
 
 同一条命令既可首次安装，也可在以后下载最新代码并更新运行环境。
@@ -16,7 +16,7 @@ powershell -ExecutionPolicy Bypass -Command "irm 'https://raw.githubusercontent.
 
 本地工作台点击“开始排版”直接使用当前已保存参数生成文件，不打开参数确认窗口。主界面显示整批真实排版和逐张处理进度：待处理图片淡化，已处理图片为绿色边框；保存大图时保留整批预览。该缩略图展示引擎处理进度，不是大图磁盘写入的像素回读。
 
-默认输出到图片文件夹所在的同级目录，并创建独立任务文件夹；例如读取 `D:\订单\批次123`，输出到 `D:\订单\JOB_时间\标签名.png`。打印参数可关闭同级默认并指定其他位置。
+默认输出到图片文件夹所在的同级目录，并创建带原文件夹名的独立任务文件夹；例如读取 `D:\订单\批次123`，输出到 `D:\订单\批次123_JOB_时间\批次123_标签名.png`。打印参数可关闭同级默认并指定其他位置，文件夹名和标签名仍保留，重名不覆盖旧图。
 它会自动准备 Git、Python 3.12、Google Chrome、Playwright 及项目所需依赖，
 然后创建带有 HA 图标的“Haloo Automatic”桌面入口并启动程序。
 以后可以直接双击桌面入口打开。
@@ -121,7 +121,7 @@ source version instead of reinstalling every build.
 Open PowerShell on the test computer and run:
 
 ```powershell
-powershell -ExecutionPolicy Bypass -Command "irm 'https://raw.githubusercontent.com/beijijizhou/automatic-print/main/windows/bootstrap-test-computer.ps1?v=0.1.72' | iex"
+powershell -ExecutionPolicy Bypass -Command "irm 'https://raw.githubusercontent.com/beijijizhou/automatic-print/main/windows/bootstrap-test-computer.ps1?v=0.1.73' | iex"
 ```
 
 The script installs or checks Git, Python 3.12, and Google Chrome; clones or

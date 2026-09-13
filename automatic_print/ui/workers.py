@@ -62,6 +62,7 @@ class GenerateWorker(QObject):
                 self.images, self.output, self.settings, self._progress,
                 plan_ready=self.preview_ready.emit, preview_only=self.preview_only,
                 analysis_ready=self.analysis_ready.emit,
+                batch_name=self.source.resolve().name,
             )
             self.cancellation.check()
             if self.preview_only:

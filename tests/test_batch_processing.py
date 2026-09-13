@@ -13,9 +13,10 @@ def test_selected_batches_are_merged_in_selection_order(
     (second / "ORDER-B-White-M-NO1-1.png").touch()
     captured = {}
 
-    def generate(images, destination, _settings, progress):
+    def generate(images, destination, _settings, progress, *, batch_name=""):
         captured["names"] = [image.name for image in images]
         captured["destination"] = destination
+        captured["batch_name"] = batch_name
         progress("合成图片", len(images), len(images), images[-1].name)
         return {"file": "print.png"}
 
@@ -39,6 +40,7 @@ def test_selected_batches_are_merged_in_selection_order(
         "ORDER-B-White-M-NO1-1.png",
         "ORDER-A-Black-S-NO1-1.png",
     ]
-    assert captured["destination"].name.startswith("MERGED_")
+    assert captured["destination"].name.startswith("607250203002_607250203001_MERGED_")
+    assert captured["batch_name"] == "607250203002_607250203001"
     assert result["merged_batches"] == ["607250203002", "607250203001"]
     assert any("正在合并 2 个批次" in message for message in messages)

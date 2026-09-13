@@ -32,6 +32,7 @@ def generate_layout(
     plan_ready=None,
     preview_only=False,
     analysis_ready=None,
+    batch_name="",
 ) -> dict:
     total_started = perf_counter()
     if not preview_only:
@@ -63,7 +64,7 @@ def generate_layout(
         warning = f"仅供检查，禁止输出：{error}"
     label_text = labels.get(1) or format_label(settings.label_text_template, 1, paths[0],
                     datetime.now().astimezone(), settings.label_date_format, settings.machine_number)
-    output_path = unused_output_path(output_dir, label_output_name(label_text))
+    output_path = unused_output_path(output_dir, label_output_name(label_text, batch_name))
     if plan_ready:
         plan_ready({"planned": planned, "labels": labels, "settings": settings, "warning": warning, "order_check": order_check, "analysis": analysis[-1],
                     "saved_meters": max(0,baseline_height-height)*25.4/settings.dpi/1000})

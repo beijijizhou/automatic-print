@@ -11,6 +11,7 @@ from ..automation.batch_naming import (
     sort_multi_piece_images,
 )
 from ..layout import discover_images, generate_layout
+from ..layout_engine.output_name import batch_directory_name
 
 
 def process_local_batches(
@@ -109,13 +110,14 @@ def _render_merged(prepared, destination_root, settings, progress):
     ]
     codes = [folder.name for folder, _images in prepared]
     stamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    destination = destination_root / f"MERGED_{stamp}_{len(codes)}批次"
+    destination = destination_root / batch_directory_name("_".join(codes), f"MERGED_{stamp}")
     progress(f"[1/1] 正在合并 {len(codes)} 个批次、{len(images)} 张图片")
     result = generate_layout(
         images,
         destination,
         settings,
         _layout_progress(progress, "合并批次"),
+        batch_name="_".join(codes),
     )
     return [("合并批次", result)]
 
@@ -132,6 +134,7 @@ def _render_separately(prepared, destination_root, settings, progress):
             destination_root / folder.name,
             settings,
             _layout_progress(progress, folder.name),
+            batch_name=folder.name,
         )
         completed.append((folder.name, result))
     return completed

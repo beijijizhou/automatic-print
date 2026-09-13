@@ -10,6 +10,7 @@ from PySide6.QtWidgets import QMessageBox
 
 from ..layout import LayoutSettings
 from ..layout_engine.metrics import saving_text
+from ..layout_engine.output_name import batch_output_directory
 from .workers import GenerateWorker
 from .layout_values import settings_from_window
 from .output_location import output_base
@@ -49,7 +50,7 @@ class GenerationActionsMixin:
             return
         self.generation_preview.start()
         job_id = datetime.now().strftime("JOB_%Y%m%d_%H%M%S")
-        output = base / job_id
+        output = batch_output_directory(base, source.resolve().name, job_id)
         self.preferences.setValue("source_location", str(source))
         self.preferences.setValue("output_location", str(base))
         self.job_path.setText(str(output))
