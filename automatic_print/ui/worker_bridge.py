@@ -12,6 +12,7 @@ class MainWindowWorkerBridge(QObject):
     layout_cancelled = Signal()
     update_finished = Signal(object)
     update_failed = Signal(str)
+    update_progress = Signal(str)
 
 
 class BatchWorkerBridge(QObject):

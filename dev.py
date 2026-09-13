@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import subprocess
+import os
 import sys
 import time
 from pathlib import Path
@@ -14,6 +15,7 @@ PROJECT_ROOT = Path(__file__).resolve().parent
 WATCHED_FOLDER = PROJECT_ROOT / "automatic_print"
 RESTART_REQUEST = PROJECT_ROOT / ".restart-request"
 LOG_FILE = latest_log_path()
+UPDATE_GUARD = PROJECT_ROOT / '.update-in-progress'
 
 
 def snapshot() -> dict[Path, int]:
@@ -30,13 +32,16 @@ def main() -> int:
 
     while True:
         RESTART_REQUEST.unlink(missing_ok=True)
-        process = subprocess.Popen([sys.executable, "-m", "automatic_print"])
+        environment = dict(os.environ, AUTOMATIC_PRINT_DEV='1')
+        process = subprocess.Popen([sys.executable, "-m", "automatic_print"], env=environment)
         restart = False
 
         while process.poll() is None:
             time.sleep(0.5)
+            if UPDATE_GUARD.exists():
+                continue
             new_state = snapshot()
-            if new_state != state:
+            if new_state != state or RESTART_REQUEST.exists():
                 state = new_state
                 restart = True
                 print("Code changed. Requesting a safe restart…")
@@ -49,6 +54,9 @@ def main() -> int:
                     process.wait()
                 break
 
+        if RESTART_REQUEST.exists() and not UPDATE_GUARD.exists():
+            restart = True
+            state = snapshot()
         if not restart:
             if process.returncode:
                 print(f"The app stopped unexpectedly. Startup log: {LOG_FILE}")

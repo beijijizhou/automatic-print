@@ -14,3 +14,4 @@ output/
 downloads/
 installer-dist/
 .restart-request
+.update-in-progress

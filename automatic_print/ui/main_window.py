@@ -81,6 +81,7 @@ class MainWindow(
         bridge.layout_cancelled.connect(self.generation_cancelled)
         bridge.update_finished.connect(self.update_check_finished)
         bridge.update_failed.connect(self.update_check_failed)
+        bridge.update_progress.connect(self.show_update_progress)
 
     def _build_settings(self) -> None:
         self.folder = QLineEdit(
@@ -211,6 +212,7 @@ class MainWindow(
         footer.addStretch()
         footer.addWidget(self.check_update_button)
         layout = QVBoxLayout()
+        layout.addWidget(self.build_update_status())
         layout.addWidget(self.automation_home)
         layout.addLayout(footer)
         container = QWidget()
