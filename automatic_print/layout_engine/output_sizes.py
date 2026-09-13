@@ -43,6 +43,8 @@ def cutting_report(result):
     review = quality.get('text', '')
     from .film_comparison import comparison_text
     review += '\n'+comparison_text(result.get('analysis', {}).get('film_comparison'))
+    from .image_anomalies import anomaly_text
+    review += '\n'+anomaly_text(result.get('analysis', {}))
     comparison = result.get('analysis', {}).get('rotation_comparison')
     if comparison:
         normal = comparison['normal_m']

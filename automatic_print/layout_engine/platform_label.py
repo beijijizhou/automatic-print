@@ -57,7 +57,8 @@ def platform_geometry(path, settings, width, height, degrees):
         return 0, 0, 0, 0
     region = detect_guide_band(path)
     if region is None:
-        raise ValueError(f'{path.name}：未识别到二维码，无法确定平台文字高度；请检查图片或关闭平台标记。')
+        # Preserve the source, but never invent the platform badge's geometry.
+        return 0, 0, 0, 0
     region = region.rotated(degrees)
     top = round(region.top*height)
     target = max(1, round(region.bottom*height)-top)

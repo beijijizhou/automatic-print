@@ -36,6 +36,8 @@ def _measured_plan(paths, settings, progress, analysis_ready):
     if settings.compare_film_sizes and settings.cutter_mode != 'free':
         from .film_comparison import compare_films
         analysis['film_comparison'] = compare_films(paths, settings, progress)
+    from .image_anomalies import collect_image_anomalies
+    analysis['image_anomalies'] = collect_image_anomalies(paths, settings)
     if analysis_ready:
         analysis_ready(finish_analysis(analysis, result[0], settings, result[3], result[4]))
     return result

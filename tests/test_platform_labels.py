@@ -75,12 +75,13 @@ def test_rotated_platform_uses_actual_rotated_qr_height(tmp_path, degrees, engin
         assert output.crop(box).getchannel('A').getbbox() is not None
 
 
-def test_missing_qr_blocks_output_and_sequence_is_not_duplicated(tmp_path):
+def test_missing_qr_warns_without_blocking_and_sequence_is_not_duplicated(tmp_path):
     path = tmp_path/'missing.png'
     Image.new('RGBA', (180, 250), 'blue').save(path, dpi=(25.4, 25.4))
-    with pytest.raises(ValueError, match='未识别到二维码'):
-        generate_layout([path], tmp_path/'out', settings())
-    assert not list((tmp_path/'out').glob('*.png'))
+    result = generate_layout([path], tmp_path/'out', settings())
+    assert (tmp_path/'out'/result['filename']).exists()
+    assert result['placements'][0]['platform_width_px'] == 0
+    assert result['analysis']['image_anomalies'][0]['source'] == path.name
     assert numbered_template(settings(label_text_template='{编号} CY')) == '{编号} CY'
     assert numbered_template(settings(label_sequence_enabled=False)) == 'CY'
     assert numbered_template(settings(label_machine_enabled=True)) == 'CY {机器号} {编号}'

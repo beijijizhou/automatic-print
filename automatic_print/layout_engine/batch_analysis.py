@@ -95,7 +95,7 @@ def finish_analysis(report, planned, settings, height, baseline):
         elif companions:
             reason = '与 '+ '、'.join(sorted(companions)) + ' 安全并排'
         elif order.get('rotation_eligible') is False:
-            reason = '整单中有图片旋转后超过膜宽及安全区，无法整体进入旋转区'
+            reason = '整单中有图片不具备安全旋转条件（二维码或可用空间），无法整体进入旋转区，保留完整订单在常规区'
         elif order.get('rotation_eligible'):
             reason = '尺寸允许旋转；整批比较后保留常规区，避免增加用膜'
         else:
@@ -120,7 +120,7 @@ def attach_rotation_options(report, rotated_items, settings, ready=None):
         order['rotation_unfit'] = unfit
         if unfit:
             order['decision'] = '不适合整单旋转'
-            order['reason'] = '旋转后完整占位超出膜宽及安全区：'+'、'.join(unfit)
+            order['reason'] = '二维码或旋转占位不满足安全条件：'+'、'.join(unfit)
         else:
             order['rotation_length_mm'] = sum(rotated_items[p].footprint_height*25.4/settings.dpi for p in paths)+(len(paths)-1)*spacing+2*settings.margin_mm
             order['decision'] = '可以整单旋转，比较整批长度'

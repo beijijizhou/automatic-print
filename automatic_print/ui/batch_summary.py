@@ -4,6 +4,7 @@ from pathlib import Path
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import QGroupBox, QLabel, QPlainTextEdit, QVBoxLayout
 from ..layout_engine.output_sizes import cutting_report
+from ..layout_engine.image_anomalies import anomaly_text
 
 
 class BatchSummaryPanel(QGroupBox):
@@ -12,6 +13,11 @@ class BatchSummaryPanel(QGroupBox):
         self.info = QLabel('请选择本地图片文件夹。')
         self.metrics = QLabel('排版后显示总长度、节省用膜和旋转数量。')
         self.progress = QLabel('尚未开始')
+        self.anomalies = QLabel()
+        self.anomalies.setWordWrap(True)
+        self.anomalies.setTextInteractionFlags(Qt.TextSelectableByMouse)
+        self.anomalies.setStyleSheet('color: #a35400; background: #fff3d6; padding: 6px;')
+        self.anomalies.hide()
         from .film_comparison_table import FilmComparisonTable
         self.film_table = FilmComparisonTable(self)
         self.cutting = QPlainTextEdit()
@@ -25,11 +31,14 @@ class BatchSummaryPanel(QGroupBox):
             label.setTextInteractionFlags(Qt.TextSelectableByMouse)
             layout.addWidget(label)
         layout.addWidget(self.cutting)
+        layout.addWidget(self.anomalies)
         layout.addWidget(self.film_table)
 
     def start(self, folder, count=None):
         self.film_table.reset_rows()
         self.cutting.clear()
+        self.anomalies.clear()
+        self.anomalies.hide()
         self.cutting.hide()
         path = Path(folder)
         quantity = f'{count} 张图片' if count is not None else '正在读取图片名称'
@@ -59,6 +68,8 @@ class BatchSummaryPanel(QGroupBox):
                                  f" · 常规基准 {report['height_m']+saved:.3f} 米"
                                  f" · 节省用膜 {saved:.3f} 米")
         self._show_comparison(report)
+        self.anomalies.setText(anomaly_text(report))
+        self.anomalies.setVisible(bool(self.anomalies.text()))
 
     def _show_comparison(self, report):
         self.film_table.show_comparison(report.get('film_comparison'))
@@ -76,6 +87,8 @@ class BatchSummaryPanel(QGroupBox):
                 '\n可在打印参数取消旋转区，选择常规方案；仅预览不会生成文件。')
 
     def finished(self, output, result):
+        self.anomalies.setText(anomaly_text(result.get('analysis', {})))
+        self.anomalies.setVisible(bool(self.anomalies.text()))
         if result.get('preview_only'):
             self.progress.setText('整批预览完成，未生成文件；本批次预览和总结已保留。')
             return

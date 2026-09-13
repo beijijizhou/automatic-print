@@ -10,8 +10,7 @@ def rotated_marks(path, width, height, degrees, settings, block, label, platform
         return None
     qr = detect_guide_band(path)
     if qr is None:
-        if settings.platform_name:
-            raise ValueError(f'{path.name}：旋转图片未识别到二维码，无法安全定位刀码与文字。')
+        # Keep the existing external left marker/label, without QR-relative placement.
         return None
     qr = qr.rotated(degrees)
     bx, _, bw, bh = block

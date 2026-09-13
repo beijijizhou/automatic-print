@@ -45,10 +45,12 @@ def plan_cutter_layout(paths, settings, progress, prepared=None, preserve_sequen
         y += row.height + spacing
         index += count
     height = y - spacing + margin
-    baseline = sum(
-        min(row.height for row in _group_rows(group, lanes, spacing)) + spacing
-        for group in groups
-    ) - spacing + 2 * margin
+    independent = [min((row.height for row in _group_rows(group, lanes, spacing)),
+                       default=None) for group in groups]
+    # A wide item may safely pair on the right but cannot stand alone on the left.
+    # No independent baseline exists then; never crash or invent a saving.
+    baseline = (sum(h+spacing for h in independent)-spacing+2*margin
+                if all(h is not None for h in independent) else height)
     if progress:
         progress("切膜安全检查", len(paths), len(paths), "刀位及左右色块基准整批固定")
     output_width = width if settings.cutter_mode == "dual" else min(width, _used_canvas_width(planned))
