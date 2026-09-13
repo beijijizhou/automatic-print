@@ -4,6 +4,7 @@ from functools import lru_cache
 
 from .cut_guide_geometry import detect_guide_band
 from .models import mm_to_px
+from .platform_space import header_space
 
 
 def _font(size):
@@ -63,7 +64,10 @@ def platform_geometry(path, settings, width, height, degrees):
     badge_width = badge.width
     badge.close()
     gap = mm_to_px(settings.platform_gap_mm, settings.dpi)
-    x = -gap-badge_width if (region.left+region.right)/2 < .5 else width+gap
+    x = header_space(path, region, width, height, badge_width, target, gap, degrees)
+    if x is None:
+        # Never append a wide platform name to the artwork's right edge.
+        x = -gap-badge_width
     return x, top, badge_width, target
 
 

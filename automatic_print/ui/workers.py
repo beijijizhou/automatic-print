@@ -104,8 +104,8 @@ class GenerateWorker(QObject):
                 report_text += timing_report(part['operation_timings']).replace(
                     '计时从文件名扫描开始，到批次信息整理完成',
                     '本段计时从复用整批排版开始，到本段信息整理完成')
-            (self.output / '耗时报告.txt').write_text(report_text, encoding='utf-8')
-            (self.output / '切割说明.txt').write_text(cutting_report(result), encoding='utf-8')
+            combined = cutting_report(result) + '\n\n耗时与并行处理\n' + report_text
+            (self.output / '排版报告.txt').write_text(combined, encoding='utf-8')
         except TaskCancelled:
             self.timings_ready.emit(self.timing.finish('已停止'))
             self.cancelled.emit()
