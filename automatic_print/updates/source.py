@@ -5,6 +5,7 @@ import re
 import shutil
 import subprocess
 import sys
+from ..versioning import release_display
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 REMOTE_URLS = {'https://github.com/beijijizhou/automatic-print.git',
@@ -25,6 +26,7 @@ class SourceUpdateInfo:
     release_date: str
     commits: int
     repair: bool = False
+    release_iteration: int = 0
 
     @property
     def needs_update(self):
@@ -32,7 +34,7 @@ class SourceUpdateInfo:
 
     @property
     def display_version(self):
-        return f'{self.version} · 发版日期 {self.release_date}'
+        return release_display(self.release_date, self.release_iteration)
 
 
 class SourceUpdater:
@@ -90,10 +92,12 @@ class SourceUpdater:
         content = self.git_run('show', f'{target}:automatic_print/__init__.py')
         version = re.search(r'__version__\s*=\s*[\'"]([^\'"]+)', content)
         date = re.search(r'__release_date__\s*=\s*[\'"]([^\'"]+)', content)
+        iteration = re.search(r'__release_iteration__\s*=\s*(\d+)', content)
         return SourceUpdateInfo(current, target, version[1] if version else '待确认',
                                 date[1] if date else self.git_run('show', '-s', '--format=%cs', target),
                                 int(self.git_run('rev-list', '--count', f'{current}..{target}')),
-                                (self.root/LOCK_NAME).exists())
+                                (self.root/LOCK_NAME).exists(),
+                                int(iteration[1]) if iteration else 0)
 
     def apply(self, info):
         self.progress('正在复核本地代码及待更新版本…')

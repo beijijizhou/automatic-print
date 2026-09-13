@@ -30,7 +30,7 @@ def repositories(tmp_path, monkeypatch):
 
 
 def publish(seed):
-    (seed/'automatic_print/__init__.py').write_text('__version__ = "0.1.2"\n__release_date__ = "2026-09-14"\n')
+    (seed/'automatic_print/__init__.py').write_text('__version__ = "0.1.2"\n__release_date__ = "2026-09-14"\n__release_iteration__ = 2\n')
     git(seed, 'add', '.'); git(seed, 'commit', '-m', 'update'); git(seed, 'push', 'origin', 'main')
 
 
@@ -42,7 +42,8 @@ def test_check_and_apply_fast_forward_without_installer(repositories, monkeypatc
     publish(seed)
     info = updater.check()
     assert info.needs_update and info.commits == 1
-    assert info.display_version == '0.1.2 · 发版日期 2026-09-14'
+    assert info.display_version == '2026-09-14 · 第02次更新'
+    assert info.version == '0.1.2' and info.release_iteration == 2
     original, commands = updater.run, []
     def run(args, **kwargs):
         commands.append(args)
