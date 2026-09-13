@@ -34,6 +34,8 @@ class GenerationPreviewController(QObject):
         self.preview.clear_for_generation()
         self.preview.source_folder = Path(folder)
         self.preview.production_active = True
+        self.preview.composed_count = 0
+        self.window.automation_home.start_layout_button.setEnabled(False)
         self.preview.production_stage = "正在读取整批图片并计算固定刀位…"
         self.panel.manual_rotation.setEnabled(False)
         self.preview.update()
@@ -77,11 +79,14 @@ class GenerationPreviewController(QObject):
         self.preview.production_stage = filename if stage == "批次刀位已确定" else f"{stage} · {current}/{total}"
         self.panel.summary.progress.setText(f'{self.preview.production_stage} · {filename}')
         if stage == "合成图片":
+            self.preview.composed_count = current
             self.show_pair(current-1)
         self.preview.update()
 
     def end(self, *_args):
         self.preview.production_active = False
+        self.preview.composed_count = None
+        self.window.automation_home.start_layout_button.setEnabled(True)
         self.preview.production_stage = "本次任务预览（保留实际刀位与排版位置）"
         self.panel.manual_rotation.setEnabled(True)
         self.preview.update()

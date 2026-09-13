@@ -121,6 +121,9 @@ class LabelQuickPanel(QWidget):
         layout.setContentsMargins(0, 0, 0, 0)
         layout.addLayout(form)
         layout.addWidget(self.summary)
+        from .generation_panel import build_generation_panel
+        layout.addWidget(build_generation_panel(window))
+        layout.addWidget(group)
         self.manual_rotation = ManualRotationPanel(window, self.preview, self)
         layout.addWidget(self.manual_rotation)
         overview = QCheckBox("显示整批总览（向下滚动查看全部；取消勾选查看双图细节）")
@@ -133,7 +136,6 @@ class LabelQuickPanel(QWidget):
         stop_preview = QPushButton('停止后台预览计算')
         stop_preview.clicked.connect(self.preview.stop_loading)
         layout.addWidget(stop_preview)
-        layout.addWidget(group)
         layout.addWidget(self.analysis)
 
     def _select_analysis_source(self, path):

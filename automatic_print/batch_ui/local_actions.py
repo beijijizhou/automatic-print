@@ -32,8 +32,8 @@ def image_name_rows(folder: Path) -> list[tuple[str, str]]:
 class LocalActionsMixin:
     def open_manual_layout(self) -> None:
         window = self.window()
-        window.choose_folder()
-        window.open_settings_dialog()
+        if window.choose_folder():
+            window.generate()
 
     def open_color_block_settings(self) -> None:
         window = self.window()

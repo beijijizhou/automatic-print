@@ -26,6 +26,7 @@ class PairProductionPreview(ProductionPreview):
         self.canvas_width, self.canvas_height = 1, 1
         self.render_settings, self.warning, self.overflow = None, "", []
         self.production_active, self.production_stage = False, ""
+        self.composed_count = None
         self.source_folder = None
         self.overview, self.batch_payload, self.batch_labels = False, None, {}
         super().__init__(settings_getter, parent)
@@ -144,6 +145,9 @@ class PairProductionPreview(ProductionPreview):
             painter.setPen(QPen(QColor("#64748b"), 0))
             painter.drawRect(QRectF(0, 0, self.film_width, self.canvas_height))
             settings = self.render_settings
+            count = self.composed_count
+            composed = {item.sequence_number for _, item in
+                        (self.batch_payload or {}).get('planned', [])[:count]} if count is not None else set()
             for path, p in self.planned:
                 rect = QRectF(p.x_px, p.y_px, p.width_px, p.height_px)
                 if self.overview and not painter.clipBoundingRect().intersects(QRectF(0,p.row_y_px,self.canvas_width,p.footprint_height_px)):
@@ -151,8 +155,11 @@ class PairProductionPreview(ProductionPreview):
                 source = visible_assets(self, path, p) if self.overview else self.images[path]
                 image = source.transformed(QTransform().rotate(-p.rotation_degrees))
                 painter.drawImage(rect, image)
-                painter.setPen(QPen(QColor("#94a3b8"), 0))
+                pending = count is not None and p.sequence_number not in composed
+                painter.setPen(QPen(QColor("#94a3b8" if pending or count is None else "#16a34a"), 0))
                 painter.drawRect(rect)
+                if pending:
+                    painter.fillRect(rect, QColor(248, 250, 252, 180))
                 if path in self.badges:
                     painter.drawImage(QRectF(p.number_x_px, p.number_y_px,
                                             p.number_width_px, p.number_height_px), self.badges[path])

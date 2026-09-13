@@ -5,7 +5,7 @@ from PySide6.QtWidgets import QFileDialog, QMessageBox
 
 
 class PreferencesMixin:
-    def choose_folder(self) -> None:
+    def choose_folder(self) -> bool:
         start = self.folder.text().strip()
         if not Path(start).is_dir():
             start = self.preferences.value("source_location", "", str)
@@ -19,6 +19,8 @@ class PreferencesMixin:
                 self.generation_preview.preview.use_folder(folder)
             self.preferences.setValue("source_location", folder)
             self.status.setText('已选择文件夹，正在后台读取图片名称和批次信息…')
+            return True
+        return False
 
     def choose_output_location(self) -> None:
         folder = QFileDialog.getExistingDirectory(

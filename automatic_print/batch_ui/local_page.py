@@ -16,15 +16,18 @@ def build_local_page(owner) -> QWidget:
     page = QWidget()
     layout = QVBoxLayout(page)
     intro = QLabel(
-        "选择本机图片文件夹，设置标签与打印参数后即可排版。"
+        "选择本机图片文件夹，点击开始排版；使用已保存参数，合成过程直接显示在主界面。"
     )
     intro.setWordWrap(True)
     owner.manual_layout_button = QPushButton(
-        "选择任意本地图片文件夹并排版…"
+        "选择图片文件夹…"
     )
-    owner.manual_layout_button.clicked.connect(owner.open_manual_layout)
+    owner.manual_layout_button.clicked.connect(lambda: owner.window().choose_folder())
     direct_actions = QHBoxLayout()
     direct_actions.addWidget(owner.manual_layout_button)
+    owner.start_layout_button = QPushButton('开始排版')
+    owner.start_layout_button.clicked.connect(lambda: owner.window().generate())
+    direct_actions.addWidget(owner.start_layout_button)
     preview_button = QPushButton("仅预览整批（不生成文件）")
     preview_button.clicked.connect(lambda: owner.window().generate(preview_only=True))
     direct_actions.addWidget(preview_button)
