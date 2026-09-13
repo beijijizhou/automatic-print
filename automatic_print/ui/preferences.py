@@ -5,6 +5,10 @@ from PySide6.QtWidgets import QFileDialog, QMessageBox
 
 
 class PreferencesMixin:
+    def build_reset_button(self):
+        from .settings_reset import reset_button
+        return reset_button(self)
+
     def choose_folder(self) -> bool:
         start = self.folder.text().strip()
         if not Path(start).is_dir():

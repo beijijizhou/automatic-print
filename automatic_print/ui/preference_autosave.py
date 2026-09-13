@@ -32,8 +32,10 @@ class PreferenceAutosave(QObject):
             signal.connect(self.schedule)
 
     def schedule(self, *_args):
-        self.timer.start()
+        if not getattr(self.window, 'settings_reset_pending', False):
+            self.timer.start()
 
     def flush(self):
         self.timer.stop()
-        self.window.save_layout_preferences(notify=False)
+        if not getattr(self.window, 'settings_reset_pending', False):
+            self.window.save_layout_preferences(notify=False)

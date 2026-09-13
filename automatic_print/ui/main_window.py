@@ -190,6 +190,7 @@ class MainWindow(
         ):
             body.addWidget(widget)
         container = QWidget()
+        body.addWidget(self.build_reset_button())
         container.setLayout(body)
         self.settings_dialog = QDialog(self)
         self.settings_dialog.setWindowTitle("自动排版参数设置")
