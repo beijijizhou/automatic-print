@@ -4,7 +4,7 @@ from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
 
-from .images import target_size
+from .images import print_dimensions
 from .labels import format_label, label_badge, label_layout
 from .decorations import combined_footprint, outside_position
 from .models import LayoutSettings, mm_to_px
@@ -43,7 +43,9 @@ def read_items(paths, settings, progress):
     qr_attempted = settings.number_images and settings.label_follow_qr
     qr_detected = 0
     for index, path in enumerate(paths, start=1):
-        width, height = target_size(path, settings.dpi)
+        size = print_dimensions(path, settings.dpi)
+        width = max(1, mm_to_px(size.width_mm, settings.dpi))
+        height = max(1, mm_to_px(size.height_mm, settings.dpi))
         qr_location = None
         if qr_attempted:
             qr_location = detect_qr_location(path)
@@ -65,7 +67,11 @@ def read_items(paths, settings, progress):
             )
         items.append(choices)
         if progress:
-            progress("读取图片尺寸", index, len(paths), path.name)
+            source = "图片内嵌 DPI" if size.embedded_dpi else "缺少 DPI，按输出 DPI 估算"
+            progress(
+                "读取图片尺寸", index, len(paths),
+                f"{path.name} · {size.width_mm:.1f} × {size.height_mm:.1f} 毫米 · {source}",
+            )
     if progress and qr_attempted:
         progress(
             "识别膜标签",

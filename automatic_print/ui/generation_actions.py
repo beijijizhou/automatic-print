@@ -104,7 +104,7 @@ class GenerationActionsMixin:
             percent = round(current / total * 45)
         elif stage == "识别膜标签":
             percent = 45
-        elif stage == "整理双面图片":
+        elif stage in {"整理双面图片", "切膜安全检查"}:
             percent = 45
         elif stage == "合成图片":
             percent = 45 + round(current / total * 45)

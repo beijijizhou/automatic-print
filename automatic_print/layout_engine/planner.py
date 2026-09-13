@@ -14,6 +14,9 @@ def plan_layout(
     settings: LayoutSettings,
     progress: ProgressCallback | None,
 ) -> tuple[list[tuple[Path, Placement]], dict[int, str], int, int, int]:
+    if settings.cutter_mode != "free":
+        from .cutter_planner import plan_cutter_layout
+        return plan_cutter_layout(paths, settings, progress)
     canvas_width = mm_to_px(settings.media_width_mm, settings.dpi)
     spacing = mm_to_px(settings.spacing_mm, settings.dpi)
     margin = mm_to_px(settings.margin_mm, settings.dpi)

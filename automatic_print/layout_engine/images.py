@@ -1,17 +1,42 @@
 from pathlib import Path
+from dataclasses import dataclass
+import math
 
 from PIL import Image
 
 
-def target_size(path: Path, target_dpi: int) -> tuple[int, int]:
+@dataclass(frozen=True)
+class PrintDimensions:
+    width_mm: float
+    height_mm: float
+    x_dpi: float
+    y_dpi: float
+    embedded_dpi: bool
+
+
+def print_dimensions(path: Path, fallback_dpi: int) -> PrintDimensions:
     with Image.open(path) as image:
-        source_dpi = image.info.get("dpi", (target_dpi, target_dpi))
-        x_dpi = float(source_dpi[0] or target_dpi)
-        y_dpi = float(source_dpi[1] or target_dpi)
-        return (
-            max(1, round(image.width * target_dpi / x_dpi)),
-            max(1, round(image.height * target_dpi / y_dpi)),
+        source = image.info.get("dpi")
+        try:
+            x_dpi, y_dpi = float(source[0]), float(source[1])
+            valid = all(math.isfinite(v) and v > 0 for v in (x_dpi, y_dpi))
+        except (TypeError, ValueError, IndexError):
+            valid = False
+        if not valid:
+            x_dpi = y_dpi = float(fallback_dpi)
+        return PrintDimensions(
+            image.width * 25.4 / x_dpi,
+            image.height * 25.4 / y_dpi,
+            x_dpi, y_dpi, valid,
         )
+
+
+def target_size(path: Path, target_dpi: int) -> tuple[int, int]:
+    size = print_dimensions(path, target_dpi)
+    return (
+        max(1, round(size.width_mm * target_dpi / 25.4)),
+        max(1, round(size.height_mm * target_dpi / 25.4)),
+    )
 
 
 def normalized_image(

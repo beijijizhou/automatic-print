@@ -13,6 +13,7 @@ from PySide6.QtWidgets import (
     QMainWindow,
     QPlainTextEdit,
     QProgressBar,
+    QScrollArea,
     QPushButton,
     QSpinBox,
     QVBoxLayout,
@@ -24,6 +25,7 @@ from ..automation_dialog import AutomationDialog
 from ..layout import png_engine_name
 from .generation_actions import GenerationActionsMixin
 from .color_block_settings import ColorBlockSettingsDialog
+from .cutter_settings import CutterSettingsPanel
 from .label_settings import LabelSettingsDialog
 from .preferences import PreferencesMixin
 from .update_actions import UpdateActionsMixin
@@ -113,10 +115,14 @@ class MainWindow(
         if png_engine_name() == "大图节省内存模式":
             self.png_engine.addItem("大图节省内存模式", "libvips")
         self.load_layout_preferences()
+        self.cutter_settings = CutterSettingsPanel(
+            self.preferences, self.width, self.allow_rotation,
+            self.rotation_direction, self, block=self.color_block_settings,
+        )
         form = QFormLayout()
         for label, widget in (
             ("图片文件夹", folder_row),
-            ("排版最大宽度（毫米）", self.width),
+            ("膜与切膜规则", self.cutter_settings),
             ("图片间距（毫米）", self.spacing),
             ("批次开头与结尾留白（毫米）", self.margin),
             ("输出分辨率", self.dpi),
@@ -177,7 +183,10 @@ class MainWindow(
         self.settings_dialog = QDialog(self)
         self.settings_dialog.setWindowTitle("自动排版参数设置")
         self.settings_dialog.resize(760, 650)
-        QVBoxLayout(self.settings_dialog).addWidget(container)
+        scroll = QScrollArea()
+        scroll.setWidgetResizable(True)
+        scroll.setWidget(container)
+        QVBoxLayout(self.settings_dialog).addWidget(scroll)
 
     def _build_home(self) -> None:
         self.automation_home = AutomationDialog(self)

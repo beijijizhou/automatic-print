@@ -166,6 +166,7 @@ class PreferencesMixin:
         self.preferences.setValue(key, True)
 
     def save_layout_preferences(self) -> None:
+        self.cutter_settings.save()
         label = self.label_settings
         values = {
             "layout/media_width_mm": self.width.value(),

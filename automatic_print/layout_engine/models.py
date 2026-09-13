@@ -35,6 +35,10 @@ class LayoutSettings:
     color_block_gap_mm: float = 5
     color_block_offset_x_mm: float = 0
     color_block_offset_y_mm: float = 0
+    cutter_mode: str = "free"
+    cutter_knife_mm: float = 300
+    cutter_safety_mm: float = 3
+    cutter_marker_offset_mm: float = 0
 
 
 @dataclass(frozen=True)

@@ -6,6 +6,7 @@ from time import perf_counter
 from typing import Iterable
 
 from .models import LayoutSettings, ProgressCallback
+from .images import print_dimensions
 from .metrics import saving_metrics
 from .pillow_renderer import build_pillow_canvas
 from .planner import plan_layout
@@ -26,8 +27,9 @@ def generate_layout(
     total_started = perf_counter()
     output_dir.mkdir(parents=True, exist_ok=True)
     reading_started = perf_counter()
+    paths = list(image_paths)
     planned, labels, width, height, baseline_height = plan_layout(
-        list(image_paths), settings, progress
+        paths, settings, progress
     )
     reading_seconds = perf_counter() - reading_started
 
@@ -60,6 +62,18 @@ def generate_layout(
     size = output_path.stat().st_size
     result = {
         "filename": filename,
+        "cutter_mode": settings.cutter_mode,
+        "cutter_knife_mm": settings.cutter_knife_mm if settings.cutter_mode == "dual" else None,
+        "cutter_safety_mm": settings.cutter_safety_mm,
+        "right_marker_mm": (
+            settings.cutter_knife_mm + settings.cutter_safety_mm
+            + settings.cutter_marker_offset_mm
+            if settings.cutter_mode == "dual" else None
+        ),
+        "source_dimensions": [
+            {"source": path.name, **asdict(print_dimensions(path, settings.dpi))}
+            for path in paths
+        ],
         "width_px": width,
         "height_px": height,
         "width_mm": round(width * 25.4 / settings.dpi, 1),

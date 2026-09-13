@@ -33,4 +33,8 @@ def settings_from_window(window) -> LayoutSettings:
         color_block_gap_mm=block.gap.value(),
         color_block_offset_x_mm=block.offset_x.value(),
         color_block_offset_y_mm=block.offset_y.value(),
+        cutter_mode=window.cutter_settings.mode.currentData(),
+        cutter_knife_mm=window.cutter_settings.knife.value(),
+        cutter_safety_mm=window.cutter_settings.safety.value(),
+        cutter_marker_offset_mm=window.cutter_settings.marker_offset.value(),
     )
