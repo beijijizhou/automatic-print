@@ -57,6 +57,16 @@ def rotation_marker_item(item, settings):
     if not shift or not item.block_width:
         return item
     block = item.block_rx+shift
+    from .rotated_marks import qr_relative_item
+    if qr_relative_item(item):
+        from .marker_space import transparent_rect
+        if item.platform_width and block < item.platform_rx+item.platform_width and block+item.block_width > item.platform_rx and item.block_ry < item.platform_ry+item.platform_height and item.block_ry+item.block_height > item.platform_ry:
+            raise ValueError(f'{item.path.name}：旋转区刀码偏移会覆盖平台文字，禁止输出。')
+        if block+item.block_width > item.image_rx and not transparent_rect(
+            item.path, item.width, item.height, item.rotation_degrees,
+            (block-item.image_rx, item.block_ry-item.image_ry, item.block_width, item.block_height)):
+            raise ValueError(f'{item.path.name}：旋转区刀码偏移会覆盖原图，禁止输出。')
+        return replace(item, block_rx=block)
     label = item.label_rx+shift
     if block+item.block_width > item.image_rx or (item.label_width and label+item.label_width > item.image_rx):
         from .marker_space import can_embed_marker

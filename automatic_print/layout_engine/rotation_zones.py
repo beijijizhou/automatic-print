@@ -24,16 +24,31 @@ def _normal(paths, settings, prepared=None, preserve_sequence=False):
 
 
 def rotation_items(paths, settings, progress=None):
+    from .cut_guide_geometry import detect_guide_band
+    sequence = settings.sequence_numbers or tuple((str(p.resolve()), i)
+                                                for i, p in enumerate(paths, 1))
+    if settings.platform_name:
+        paths = [p for p in paths if detect_guide_band(p) is not None]
+    if not paths:
+        return {}, {}
     manual = dict(settings.manual_rotations)
     direction = 90 if settings.rotation_direction == 'left' else -90
     rotations = tuple((str(p.resolve()), manual.get(str(p.resolve())) or direction) for p in paths)
     rotated = replace(settings, allow_rotation=False, manual_rotations=rotations,
-                      color_block_position='left_top', color_block_offset_y_mm=0)
+                      color_block_position='left_top', color_block_offset_y_mm=0,
+                      sequence_numbers=sequence)
     options, labels = read_items(paths, rotated, progress)
     width = mm_to_px(settings.media_width_mm, settings.dpi)
     safety = ceil(settings.cutter_safety_mm*settings.dpi/25.4)
-    items = {row[0].path: rotation_marker_item(row[0], settings) for row in options
-             if row[0].footprint_width+2*safety < width}
+    items = {}
+    for row in options:
+        if row[0].footprint_width+2*safety >= width:
+            continue
+        try:
+            items[row[0].path] = rotation_marker_item(row[0], settings)
+        except ValueError:
+            # Unsafe automatic candidates stay in the normal zone, never disappear.
+            continue
     return items, labels
 
 

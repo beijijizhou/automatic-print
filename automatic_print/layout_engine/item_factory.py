@@ -13,6 +13,7 @@ from .dynamic_label import source_label_badge
 from .membrane_region import detect_membrane_region
 from .platform_label import platform_geometry, numbered_template
 from .marker_space import can_embed_marker
+from .rotated_marks import rotated_marks
 from .qr_placement import signed_mm as _signed_mm, rotated_qr as _rotated_qr, qr_label_layout as _qr_label_layout
 
 
@@ -150,7 +151,12 @@ def _make_item(
             raise ValueError("标签放在色块下方时，必须启用色块。")
         label_x = block_x + block_width - label_width + min(0, offset_x)
         label_y = block_y + block_height + gap + max(0, offset_y)
-    if settings.cutter_mode != 'free' and can_embed_marker(
+    rotated = rotated_marks(path, width, height, rotation_degrees, settings,
+        (block_x, block_y, block_width, block_height),
+        (label_x, label_y, label_width, label_height), (px, py, pw, ph))
+    if rotated:
+        block_x, block_y, label_x, label_y = rotated
+    elif settings.cutter_mode != 'free' and can_embed_marker(
         path, width, height, rotation_degrees,
         (0, block_y, block_width, block_height),
         (0, label_y, label_width, label_height), (px, py, pw, ph),

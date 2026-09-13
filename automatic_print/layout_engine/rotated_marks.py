@@ -1,0 +1,42 @@
+"""QR-relative rotated labels, independent of the fixed left sensor marker."""
+from math import ceil
+
+from .cut_guide_geometry import detect_guide_band
+from .marker_space import transparent_rect
+
+
+def rotated_marks(path, width, height, degrees, settings, block, label, platform):
+    if not degrees % 360 or settings.cutter_mode == 'free':
+        return None
+    qr = detect_guide_band(path)
+    if qr is None:
+        if settings.platform_name:
+            raise ValueError(f'{path.name}：旋转图片未识别到二维码，无法安全定位刀码与文字。')
+        return None
+    qr = qr.rotated(degrees)
+    bx, _, bw, bh = block
+    _, _, lw, lh = label
+    px, py, pw, ph = platform
+    by = max(0, round(qr.top*height))
+    lx = max(0, round(qr.left*width))
+    ly = ceil(qr.bottom*height) + max(1, round(settings.number_gap_mm*settings.dpi/25.4))
+
+    def clear(rect):
+        x, y, w, h = rect
+        return transparent_rect(path, width, height, degrees, rect) and not (
+            pw and w and h and x < px+pw and x+w > px and y < py+ph and y+h > py)
+
+    # Search only directly below the QR, never horizontally away from it.
+    if lw and lh:
+        while ly+lh <= height and not clear((lx, ly, lw, lh)):
+            ly += max(1, round(settings.dpi/25.4))
+        if ly+lh > height:
+            ly = height + max(1, round(settings.number_gap_mm*settings.dpi/25.4))
+    # Marker origin cannot follow the QR horizontally; outside fallback is safe.
+    if not (pw and px < 0) and clear((0, by, bw, bh)):
+        bx = 0
+    return bx, by, lx, ly
+
+
+def qr_relative_item(item):
+    return bool(item.rotation_degrees % 360 and detect_guide_band(item.path))

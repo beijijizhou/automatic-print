@@ -41,6 +41,18 @@ def can_embed_marker(path, width, height, degrees, block, label, platform):
 def validate_embedded_marks(planned):
     """Recheck every source rectangle independently of the packing decision."""
     for path, p in planned:
+        if p.rotation_degrees % 360:
+            from .cut_guide_geometry import detect_guide_band
+            qr = detect_guide_band(path)
+            if qr:
+                qr = qr.rotated(p.rotation_degrees)
+                if p.color_block_width_px and p.color_block_y_px != p.y_px+round(qr.top*p.height_px):
+                    raise ValueError(f'{path.name}：旋转刀码未与二维码同高，禁止输出。')
+                if p.number_width_px and (
+                    p.number_x_px != p.x_px+round(qr.left*p.width_px)
+                    or p.number_y_px < p.y_px+ceil(qr.bottom*p.height_px)
+                ):
+                    raise ValueError(f'{path.name}：旋转文字未放在二维码下方，禁止输出。')
         for x, y, w, h in ((p.color_block_x_px, p.color_block_y_px,
                            p.color_block_width_px, p.color_block_height_px),
                           (p.number_x_px, p.number_y_px,
