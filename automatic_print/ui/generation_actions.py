@@ -12,6 +12,7 @@ from ..layout import LayoutSettings, discover_images, discovered_extensions
 from ..layout_engine.metrics import saving_text
 from .workers import GenerateWorker
 from .layout_values import settings_from_window
+from .output_location import output_base
 from .progress_format import duration_text, file_size_text
 from .thread_lifecycle import (
     defer_finished_thread_cleanup,
@@ -45,7 +46,7 @@ class GenerationActionsMixin:
                 f"实际发现的文件类型：{found}",
             )
             return
-        base = Path(self.output_location.text().strip())
+        base = output_base(self, source)
         if not preview_only and not base.is_dir():
             QMessageBox.warning(
                 self, "请选择保存位置", "请选择有效的任务保存位置。"

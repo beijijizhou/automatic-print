@@ -146,14 +146,8 @@ class MainWindow(
         default = QStandardPaths.writableLocation(
             QStandardPaths.DesktopLocation
         )
-        self.output_location = QLineEdit(
-            self.preferences.value("output_location", default, str)
-        )
-        output_button = QPushButton("选择保存位置…")
-        output_button.clicked.connect(self.choose_output_location)
-        output_row = QHBoxLayout()
-        output_row.addWidget(self.output_location)
-        output_row.addWidget(output_button)
+        from .output_location import build_output_location
+        output_row = build_output_location(self, default)
         form.addRow("任务保存位置", output_row)
         self.job_path = QLineEdit()
         self.job_path.setReadOnly(True)

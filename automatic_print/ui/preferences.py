@@ -154,6 +154,8 @@ class PreferencesMixin:
         values = {
             "source_location": self.folder.text().strip(),
             "output_location": self.output_location.text().strip(),
+            "output/beside_source": self.output_beside_source.isChecked(),
+            "output/custom_location": self.custom_output_location,
             "automation/output_location": self.automation_home.output.text().strip(),
             "local/test_mode": self.automation_home.local_test_mode.isChecked(),
             "local/merge_batches": self.automation_home.local_merge_batches.isChecked(),
