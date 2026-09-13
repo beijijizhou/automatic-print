@@ -1,5 +1,6 @@
 """Filename facts and geometric hints; hints never replace measured cut safety."""
 import re
+from functools import lru_cache
 
 from .order_groups import production_stem, _size_rank
 
@@ -14,6 +15,7 @@ def canonical_size(value):
     return value
 
 
+@lru_cache(maxsize=4096)
 def source_size(path):
     parts = production_stem(path).split('-')
     if len(parts) >= 5 and re.fullmatch(r'no\d+', parts[-2]):

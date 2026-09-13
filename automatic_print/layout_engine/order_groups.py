@@ -1,6 +1,7 @@
 """Production identity is independent of the per-image export sequence prefix."""
 from collections import OrderedDict
 import re
+from functools import lru_cache
 
 PREFIX = re.compile(r"^(?:CVC面料\d+-|A\d+-(?!\d+-))", re.I)
 SIDE = re.compile(r"^(?P<job>.+-NO\d+)-(?P<side>[12])$", re.I)
@@ -10,11 +11,13 @@ def production_stem(path):
     return PREFIX.sub("", path.stem, count=1).casefold()
 
 
+@lru_cache(maxsize=4096)
 def order_key(path):
     stem = production_stem(path)
     return stem.split("-", 1)[0] if "-" in stem else "未识别订单组"
 
 
+@lru_cache(maxsize=4096)
 def pair_identity(path):
     match = SIDE.fullmatch(production_stem(path))
     return (match['job'], match['side']) if match else None

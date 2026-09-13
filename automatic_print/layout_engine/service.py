@@ -34,7 +34,13 @@ def generate_layout(
     analysis_ready=None,
     batch_name="",
     phase_ready=None,
+    prepared_plan=None,
+    filename_suffix="",
 ) -> dict:
+    if settings.output_parts > 1 and not preview_only and prepared_plan is None:
+        from .segmented_output import generate_segments
+        return generate_segments(list(image_paths), output_dir, settings, progress,
+                                 plan_ready, analysis_ready, batch_name, phase_ready)
     total_started = perf_counter()
     if not preview_only:
         output_dir.mkdir(parents=True, exist_ok=True)
@@ -53,9 +59,13 @@ def generate_layout(
         analysis[:] = [data]
         if analysis_ready:
             analysis_ready(data)
-    planned, labels, width, height, baseline_height = plan_layout(
-        paths, settings, report, analysis_ready=analyzed
-    )
+    if prepared_plan is None:
+        planned, labels, width, height, baseline_height = plan_layout(
+            paths, settings, report, analysis_ready=analyzed)
+    else:
+        planned, labels, width, height, baseline_height = prepared_plan['plan']
+        effective[0] = prepared_plan['settings']
+        analysis[:] = [prepared_plan['analysis']]
     settings = effective[0]
     phase('坐标与订单安全检查')
     warning, order_check = "", {}
@@ -68,10 +78,11 @@ def generate_layout(
         warning = f"仅供检查，禁止输出：{error}"
     label_text = labels.get(1) or format_label(settings.label_text_template, 1, paths[0],
                     datetime.now().astimezone(), settings.label_date_format, settings.machine_number)
-    output_path = unused_output_path(output_dir, label_output_name(label_text, batch_name))
+    output_path = unused_output_path(output_dir, label_output_name(label_text+filename_suffix, batch_name))
     if plan_ready:
         plan_ready({"planned": planned, "labels": labels, "settings": settings, "warning": warning, "order_check": order_check, "analysis": analysis[-1],
-                    "saved_meters": max(0,baseline_height-height)*25.4/settings.dpi/1000})
+                    "saved_meters": max(0,baseline_height-height)*25.4/settings.dpi/1000,
+                    "canvas": (width, height, baseline_height)})
     if preview_only:
         return {"preview_only": True, "width_px": width, "height_px": height, "analysis": analysis[-1]}
     reading_seconds = perf_counter() - reading_started

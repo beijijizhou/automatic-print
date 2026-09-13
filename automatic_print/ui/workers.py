@@ -94,8 +94,13 @@ class GenerateWorker(QObject):
             (self.output / "manifest.json").write_text(
                 json.dumps(manifest, indent=2), encoding="utf-8"
             )
-            (self.output / '耗时报告.txt').write_text(
-                timing_report(result['operation_timings']), encoding='utf-8')
+            report_text = timing_report(result['operation_timings'])
+            for part in result.get('parts', []):
+                report_text += f"\n\n第{part['segment_index']:03d}段：{part['filename']}\n"
+                report_text += timing_report(part['operation_timings']).replace(
+                    '计时从文件名扫描开始，到批次信息整理完成',
+                    '本段计时从复用整批排版开始，到本段信息整理完成')
+            (self.output / '耗时报告.txt').write_text(report_text, encoding='utf-8')
         except TaskCancelled:
             self.timings_ready.emit(self.timing.finish('已停止'))
             self.cancelled.emit()

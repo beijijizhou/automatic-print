@@ -41,6 +41,7 @@ class OperationTimingPanel(QGroupBox):
         self.data = None
         self.table.setRowCount(0)
         self.summary.setText('正在开始，等待后台计时…')
+        self.note.setText('按实际执行阶段计时；大图延迟计算可能计入安全检查或保存。未执行的旋转比较不计时。')
 
     @Slot(object)
     def receive(self, data):
@@ -64,6 +65,8 @@ class OperationTimingPanel(QGroupBox):
                 self.table.setItem(index, column, QTableWidgetItem(text))
         slowest = rows[values.index(max(values))]['name'] if values else '等待开始'
         self.summary.setText(f"{self.data['status']} · 总计 {total:.2f} 秒 · 最耗时：{slowest}")
+        if any(row['name'] == '分段合成、安全检查与保存' for row in rows):
+            self.note.setText('分段并行阶段显示实际总耗时，不把重叠时间相加；每段详细耗时和真实文件名记录在批次记录中。')
 
     def copy_report(self):
         lines = [self.summary.text()]

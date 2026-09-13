@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from concurrent.futures import ThreadPoolExecutor
+from contextlib import closing
 from pathlib import Path
 
 from PIL import Image, ImageColor, ImageDraw
@@ -8,6 +8,7 @@ from PIL import Image, ImageColor, ImageDraw
 from .images import normalized_image
 from .dynamic_label import source_label_badge
 from .models import LayoutSettings, Placement, ProgressCallback
+from .image_pipeline import prepared_images
 
 
 def _prepare(item: tuple[Path, Placement]):
@@ -37,9 +38,9 @@ def build_pillow_canvas(
 ) -> Image.Image:
     canvas = Image.new("RGBA", canvas_size, (0, 0, 0, 0))
     workers = max(1, min(settings.worker_threads, len(planned)))
-    with ThreadPoolExecutor(max_workers=workers) as executor:
+    with closing(prepared_images(_prepare, planned, workers)) as images:
         for index, (image, placement) in enumerate(
-            executor.map(_prepare, planned), start=1
+            images, start=1
         ):
             canvas.paste(image, (placement.x_px, placement.y_px))
             image.close()

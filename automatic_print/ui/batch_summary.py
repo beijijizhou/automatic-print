@@ -54,5 +54,8 @@ class BatchSummaryPanel(QGroupBox):
                              f" · 节省用膜 {result['saved_length_m']:.3f} 米"
                              f"（{result['saved_percent']:.1f}%） · 旋转 {result['rotation_count']} 张")
         self.progress.setText(f"已完成 · 输出：{Path(output)/result['filename']}")
+        if result.get('segment_count', 1) > 1:
+            self.progress.setText(f"已完成 · {result['segment_count']} 个连续文件"
+                                 f" · 同时处理 {result['actual_save_parallelism']} 段 · {output}")
         if 'maximum_width_mm' in result:
             self.metrics.setText(self.metrics.text()+f" · 可用宽度 {result['maximum_width_mm']:g} 毫米")

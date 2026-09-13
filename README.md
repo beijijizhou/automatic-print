@@ -7,7 +7,7 @@ Windows desktop application for combining a folder of images into print-ready la
 在测试电脑上打开 PowerShell，复制并运行：
 
 ```powershell
-powershell -ExecutionPolicy Bypass -Command "irm 'https://raw.githubusercontent.com/beijijizhou/automatic-print/main/windows/bootstrap-test-computer.ps1?v=0.1.77' | iex"
+powershell -ExecutionPolicy Bypass -Command "irm 'https://raw.githubusercontent.com/beijijizhou/automatic-print/main/windows/bootstrap-test-computer.ps1?v=0.1.78' | iex"
 ```
 
 同一条命令既可首次安装，也可在以后下载最新代码并更新运行环境。
@@ -32,6 +32,10 @@ powershell -ExecutionPolicy Bypass -Command "irm 'https://raw.githubusercontent.
 图片间距默认 5 毫米；已保存的自定义间距继续保留，可在打印参数中修改。
 
 主界面增加“分步耗时”：从扫描文件名开始记录各大步骤的秒数、占比及最耗时步骤，支持复制；输出目录保存 `耗时报告.txt`，批次记录保存详细计时。大图延迟计算可能计入安全检查或保存，不能将保存阶段当作纯磁盘耗时。报告/批次记录自身写入和独立缩略图不计入该总时间。
+
+刀位搜索复用订单与尺码分析，配对使用数值几何而非重复构造排版对象，并合并左右可放置状态等价的候选刀位；保留原搜索目标和整批真实像素安全检查。
+
+打印参数支持可选分段输出：默认 1 个完整文件，可设置多个连续 PNG 和最多 2 段同时处理。按完整订单和整行边界切分，所有文件沿用整批刀位；估算画布和准备缓冲超过可设的内存预算（默认 512MiB）时自动串行。预算不是实际峰值内存保证，切勿盲目增大。每段均检查像素安全，失败/停止后本次输出标记为禁止打印并保留。报告包含每段耗时；并行不保证提速，兼容状态栏的保存耗时包含分段合成与检查。
 
 ## Current features
 
@@ -127,7 +131,7 @@ source version instead of reinstalling every build.
 Open PowerShell on the test computer and run:
 
 ```powershell
-powershell -ExecutionPolicy Bypass -Command "irm 'https://raw.githubusercontent.com/beijijizhou/automatic-print/main/windows/bootstrap-test-computer.ps1?v=0.1.77' | iex"
+powershell -ExecutionPolicy Bypass -Command "irm 'https://raw.githubusercontent.com/beijijizhou/automatic-print/main/windows/bootstrap-test-computer.ps1?v=0.1.78' | iex"
 ```
 
 The script installs or checks Git, Python 3.12, and Google Chrome; clones or

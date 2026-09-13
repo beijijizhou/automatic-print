@@ -22,6 +22,7 @@ from PySide6.QtWidgets import (
 
 from .. import __version_display__
 from ..branding import application_icon
+from .segmented_output import SegmentedOutputSettings
 from ..automation_dialog import AutomationDialog
 from ..layout import png_engine_name
 from .generation_actions import GenerationActionsMixin
@@ -104,6 +105,7 @@ class MainWindow(
         self.dpi.setRange(72, 1200)
         self.worker_threads = QSpinBox()
         self.worker_threads.setRange(1, 32)
+        self.segmented_output = SegmentedOutputSettings(self.preferences, self)
         self.allow_rotation = QCheckBox("允许旋转以节省材料")
         self.allow_rotation.setChecked(True)
         self.rotation_direction = QComboBox()
@@ -143,6 +145,7 @@ class MainWindow(
             ("剪膜机色块", color_block_button),
             ("图片保存方式", self.png_engine),
             ("图片压缩", self.png_compression),
+            ("分段与并行保存", self.segmented_output),
         ):
             form.addRow(label, widget)
         default = QStandardPaths.writableLocation(

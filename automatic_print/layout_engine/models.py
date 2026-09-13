@@ -16,6 +16,9 @@ class LayoutSettings:
     png_compression_level: int = 1
     png_engine: str = "pillow"
     worker_threads: int = 8
+    output_parts: int = 1
+    save_parallelism: int = 2
+    save_memory_mb: int = 512
     number_images: bool = True
     number_gap_mm: float = 5
     number_font_size_mm: float = 7.5 * 25.4 / 72
