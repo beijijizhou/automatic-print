@@ -7,7 +7,7 @@ Windows desktop application for combining a folder of images into print-ready la
 在测试电脑上打开 PowerShell，复制并运行：
 
 ```powershell
-powershell -ExecutionPolicy Bypass -Command "irm 'https://raw.githubusercontent.com/beijijizhou/automatic-print/main/windows/bootstrap-test-computer.ps1?v=0.1.75' | iex"
+powershell -ExecutionPolicy Bypass -Command "irm 'https://raw.githubusercontent.com/beijijizhou/automatic-print/main/windows/bootstrap-test-computer.ps1?v=0.1.76' | iex"
 ```
 
 同一条命令既可首次安装，也可在以后下载最新代码并更新运行环境。
@@ -28,6 +28,8 @@ powershell -ExecutionPolicy Bypass -Command "irm 'https://raw.githubusercontent.
 单件订单按尺码从小到大连续排版，包含单件双面；小图不跨尺码配对。同尺码单件也不能拆到不同旋转区域，输出前会按实际位置检查，违规禁止保存。
 
 单排图片的色块和标签固定在输出文件最左边缘，不允许独占右分区。右侧色块仅用于真正并排的右图；手动左分区放不下时提示调整刀位或使用单列，不能绕过安全检查。
+
+图片间距默认 5 毫米；已保存的自定义间距继续保留，可在打印参数中修改。
 
 ## Current features
 
@@ -123,7 +125,7 @@ source version instead of reinstalling every build.
 Open PowerShell on the test computer and run:
 
 ```powershell
-powershell -ExecutionPolicy Bypass -Command "irm 'https://raw.githubusercontent.com/beijijizhou/automatic-print/main/windows/bootstrap-test-computer.ps1?v=0.1.75' | iex"
+powershell -ExecutionPolicy Bypass -Command "irm 'https://raw.githubusercontent.com/beijijizhou/automatic-print/main/windows/bootstrap-test-computer.ps1?v=0.1.76' | iex"
 ```
 
 The script installs or checks Git, Python 3.12, and Google Chrome; clones or

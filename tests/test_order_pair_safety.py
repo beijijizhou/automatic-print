@@ -46,9 +46,9 @@ def test_two_orders_can_rotate_together_when_neither_single_move_saves(tmp_path)
     baseline = plan_layout(paths, normal_settings, None)
     for path in paths:
         remaining = [p for p in paths if p != path]
-        assert _normal(remaining, normal_settings)[0][3] + 8 + _rotated([path], normal_settings)[2] > baseline[3]
+        assert _normal(remaining, normal_settings)[0][3] + normal_settings.spacing_mm + _rotated([path], normal_settings)[2] > baseline[3]
     planned, _, _, height, _ = plan_layout(paths, settings(), None)
-    assert height == 208
+    assert height == 200 + normal_settings.spacing_mm
     assert height < baseline[3]
     assert all(p.cut_zone == '旋转区' for _, p in planned)
 
@@ -65,7 +65,7 @@ def test_assignment_matches_exhaustive_whole_order_comparison(tmp_path):
         rotated = [p for use, order in zip(mask, orders) if use for p in order]
         n = _normal(normal, base)[0][3] if normal else 0
         r = _rotated(rotated, base)[2] if rotated else 0
-        heights.append(n+r+(8 if normal and rotated else 0))
+        heights.append(n+r+(base.spacing_mm if normal and rotated else 0))
     assert plan_layout(paths, settings(margin_mm=3), None)[3] == min(heights)
 
 

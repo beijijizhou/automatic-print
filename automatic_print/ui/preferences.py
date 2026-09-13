@@ -44,7 +44,7 @@ class PreferencesMixin:
     def load_layout_preferences(self) -> None:
         values = (
             (self.width, "layout/media_width_mm", 600, float),
-            (self.spacing, "layout/spacing_mm", 8, float),
+            (self.spacing, "layout/spacing_mm", 5, float),
             (self.margin, "layout/margin_mm", 3, float),
             (self.dpi, "layout/dpi", 300, int),
             (self.worker_threads, "layout/worker_threads", 8, int),

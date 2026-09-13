@@ -33,7 +33,7 @@ def test_whole_batch_knife_is_asymmetric_fixed_and_recorded(tmp_path):
     result = generate_layout(paths, tmp_path / "out", _settings(), plan_ready=payloads.append)
     knife = round(result["cutter_knife_mm"], 6)
     assert knife != 300
-    assert result["height_px"] == 608
+    assert result["height_px"] == 600 + _settings().spacing_mm
     assert payloads[0]["settings"].cutter_knife_mm == pytest.approx(knife)
     right_markers = [p["color_block_x_px"] for p in result["placements"] if p["x_px"] > knife]
     assert len(right_markers) == 2
