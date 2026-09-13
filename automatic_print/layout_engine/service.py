@@ -7,6 +7,7 @@ from typing import Iterable
 
 from .models import LayoutSettings, ProgressCallback
 from .images import print_dimensions
+from .labels import normalize_machine_number
 from .metrics import saving_metrics
 from .pillow_renderer import build_pillow_canvas
 from .planner import plan_layout
@@ -62,7 +63,7 @@ def generate_layout(
     size = output_path.stat().st_size
     result = {
         "filename": filename,
-        "machine_number": settings.machine_number,
+        "machine_number": normalize_machine_number(settings.machine_number),
         "cutter_mode": settings.cutter_mode,
         "cutter_knife_mm": settings.cutter_knife_mm if settings.cutter_mode == "dual" else None,
         "cutter_safety_mm": settings.cutter_safety_mm,

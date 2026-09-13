@@ -13,7 +13,7 @@ def test_label_cleanup_and_machine_variable():
     assert format_label(
         "CY 1001Mt______26 {机器号}", 1, Path("image.png"),
         datetime(2026, 9, 12), "%Y-%m-%d", "m11",
-    ) == "CY 1001Mt26 m11"
+    ) == "CY 1001Mt26 M11"
     with pytest.raises(ValueError, match="机器号"):
         format_label("{机器号}", 1, Path("a.png"), datetime.now(), "%Y", "m12")
 
@@ -58,7 +58,7 @@ def test_marker_output_retains_transparency_and_machine_record(tmp_path, engine)
             number_font_size_mm=3, machine_number="m7",
         ),
     )
-    assert result["machine_number"] == "m7"
+    assert result["machine_number"] == "M7"
     placement = result["placements"][0]
     with Image.open(tmp_path / "out" / "print.png") as output:
         assert output.getpixel((placement["x_px"], placement["y_px"])) == (255, 255, 255, 255)

@@ -29,7 +29,7 @@ class SettingPreview(QWidget):
             "{date}": today,
             "{filename}": "B9UV77Y-黑色-XL-NO1-1.png",
             "{stem}": "B9UV77Y-黑色-XL-NO1-1",
-            "{机器号}": self.values().get("machine_number", "m1"),
+            "{机器号}": self.values().get("machine_number", "M1").upper(),
         }
         for field, value in replacements.items():
             template = template.replace(field, value)

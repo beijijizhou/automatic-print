@@ -107,3 +107,21 @@ def test_main_label_edits_and_parameter_edits_share_live_preview_state():
     assert panel.preview.settings_getter().color_block_color == "#00ff00"
     assert not _render(panel.preview).isNull()
     window.close()
+
+
+def test_old_default_font_and_lowercase_machine_are_migrated(tmp_path):
+    from automatic_print.ui.main_window import MainWindow
+
+    _app()
+    window = MainWindow()
+    window.preferences = QSettings(str(tmp_path / "legacy.ini"), QSettings.Format.IniFormat)
+    window.preferences.setValue("label/font_size_mm", 10)
+    window.preferences.setValue("layout/machine_number", "m7")
+    window.load_layout_preferences()
+    assert window.label_settings.font_size.value() == 3
+    assert window.label_settings.machine.currentData() == "M7"
+    window.preferences.setValue("label/default_font_3_applied", False)
+    window.preferences.setValue("label/font_size_mm", 5)
+    window.load_layout_preferences()
+    assert window.label_settings.font_size.value() == 5
+    window.close()

@@ -31,7 +31,7 @@ class LabelSettingsDialog(QDialog):
         self.follow_qr.setChecked(True)
         self.machine = QComboBox()
         for index in range(1, 12):
-            self.machine.addItem(f"m{index}", f"m{index}")
+            self.machine.addItem(f"M{index}", f"M{index}")
         self.text_template = QLineEdit("CY 1001Mt26")
         self.text_template.setPlaceholderText(
             "例如：{编号}  或  {编号}－{日期}"
@@ -62,7 +62,7 @@ class LabelSettingsDialog(QDialog):
             ("右下角（图片外）", "bottom_right"),
         ):
             self.position.addItem(text, value)
-        self.font_size = self._box(10, 2, 50)
+        self.font_size = self._box(3, 2, 50)
         self.gap = self._box(5, 0, 100)
         self.offset_x = self._box(0, -100, 100)
         self.offset_y = self._box(0, -100, 100)

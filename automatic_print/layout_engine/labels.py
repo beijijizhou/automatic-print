@@ -97,10 +97,9 @@ def format_label(
     path: Path,
     created_at: datetime,
     date_format: str,
-    machine_number: str = "m1",
+    machine_number: str = "M1",
 ) -> str:
-    if machine_number not in {f"m{i}" for i in range(1, 12)}:
-        raise ValueError("机器号必须是 m1 到 m11。")
+    machine_number = normalize_machine_number(machine_number)
     aliases = {
         "{编号}": "{number}",
         "{日期}": "{date}",
@@ -124,6 +123,13 @@ def format_label(
             "标签文字模板无效。可用内容："
             "{编号}、{日期}、{完整文件名}、{文件名}、{机器号}。"
         ) from error
+
+
+def normalize_machine_number(value):
+    value = value.upper()
+    if value not in {f"M{i}" for i in range(1, 12)}:
+        raise ValueError("机器号必须是 M1 到 M11。")
+    return value
 
 
 def label_layout(

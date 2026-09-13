@@ -74,7 +74,7 @@ class PreferencesMixin:
         label = self.label_settings
         migrated = self.preferences.value("label/compact_marking_applied", False, bool)
         label.machine.setCurrentIndex(max(0, label.machine.findData(
-            self.preferences.value("layout/machine_number", "m1", str)
+            self.preferences.value("layout/machine_number", "M1", str).upper()
         )))
         label.follow_qr.setChecked(
             self.preferences.value("label/follow_qr", True, bool)
@@ -107,8 +107,12 @@ class PreferencesMixin:
         if not migrated:
             self.preferences.setValue("label/text_template", template)
             self.preferences.setValue("label/position", position)
+        if not self.preferences.value("label/default_font_3_applied", False, bool):
+            if self.preferences.value("label/font_size_mm", 3, float) == 10:
+                self.preferences.setValue("label/font_size_mm", 3)
+            self.preferences.setValue("label/default_font_3_applied", True)
         for widget, key, default in (
-            (label.font_size, "label/font_size_mm", 10),
+            (label.font_size, "label/font_size_mm", 3),
             (label.gap, "label/gap_mm", 5),
             (label.offset_x, "label/offset_x_mm", 0),
             (label.offset_y, "label/offset_y_mm", 0),

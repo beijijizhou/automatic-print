@@ -18,7 +18,7 @@ class LayoutSettings:
     worker_threads: int = 8
     number_images: bool = True
     number_gap_mm: float = 5
-    number_font_size_mm: float = 10
+    number_font_size_mm: float = 3
     label_text_template: str = "{编号}"
     label_position: str = "bottom"
     label_offset_x_mm: float = 0
@@ -39,7 +39,7 @@ class LayoutSettings:
     cutter_knife_mm: float = 300
     cutter_safety_mm: float = 3
     cutter_marker_offset_mm: float = 0
-    machine_number: str = "m1"
+    machine_number: str = "M1"
 
 
 @dataclass(frozen=True)
