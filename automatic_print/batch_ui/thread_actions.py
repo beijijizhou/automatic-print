@@ -168,7 +168,7 @@ class ThreadActionsMixin:
             self.local_merge_batches,
             self.local_open_button,
             self.manual_layout_button,
-            self.color_block_button,
+            getattr(self, "label_quick_panel", self.settings_button),
         ):
             widget.setEnabled(enabled)
         plan = self.pending_batch_plan

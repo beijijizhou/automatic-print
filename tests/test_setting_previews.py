@@ -84,3 +84,27 @@ def test_home_hides_online_workflows_and_keeps_local_logs():
     assert home.thread is None
     assert home.log.parent() is home.main_tabs.widget(0)
     window.close()
+
+
+def test_main_label_edits_and_parameter_edits_share_live_preview_state():
+    from automatic_print.ui.main_window import MainWindow
+    from PySide6.QtTest import QSignalSpy
+
+    _app()
+    window = MainWindow()
+    panel = window.automation_home.label_quick_panel
+    label, block = window.label_settings, window.color_block_settings
+    panel.text.setText("{编号}－测试")
+    assert label.text_template.text() == "{编号}－测试"
+    assert panel.label_preview.sample_text() == "12－测试"
+    panel.font_size.setValue(15)
+    assert label.font_size.value() == 15
+    label.text_template.setText("主界面同步")
+    assert panel.text.text() == "主界面同步"
+    spy = QSignalSpy(block.settings_changed)
+    block.set_color("#00ff00")
+    assert spy.count() == 1
+    assert panel.block_preview.values()["color"] == "#00ff00"
+    assert not _render(panel.label_preview).isNull()
+    assert not _render(panel.block_preview).isNull()
+    window.close()

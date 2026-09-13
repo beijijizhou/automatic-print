@@ -1,4 +1,4 @@
-from PySide6.QtCore import Qt
+from PySide6.QtCore import Qt, Signal
 from PySide6.QtWidgets import (
     QCheckBox,
     QComboBox,
@@ -16,6 +16,8 @@ from .setting_preview import SettingPreview
 
 
 class LabelSettingsDialog(QDialog):
+    settings_changed = Signal()
+
     def __init__(self, parent: QWidget | None = None) -> None:
         super().__init__(parent)
         self.setWindowTitle("标签与文字设置")
@@ -107,6 +109,15 @@ class LabelSettingsDialog(QDialog):
         self.date_format.textChanged.connect(self.preview.update)
         for box in (self.font_size, self.gap, self.offset_x, self.offset_y):
             box.valueChanged.connect(self.preview.update)
+        signals = [
+            self.enabled.toggled, self.follow_qr.toggled,
+            self.text_template.textChanged, self.position.currentIndexChanged,
+            self.date_format.textChanged,
+        ] + [box.valueChanged for box in (
+            self.font_size, self.gap, self.offset_x, self.offset_y
+        )]
+        for signal in signals:
+            signal.connect(lambda *_args: self.settings_changed.emit())
 
     @staticmethod
     def _box(value, minimum, maximum) -> QDoubleSpinBox:

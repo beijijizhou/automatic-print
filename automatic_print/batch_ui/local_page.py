@@ -9,6 +9,7 @@ from PySide6.QtWidgets import (
 )
 
 from .pages import _table
+from ..ui.label_quick_panel import LabelQuickPanel
 
 
 def build_local_page(owner) -> QWidget:
@@ -23,14 +24,8 @@ def build_local_page(owner) -> QWidget:
         "选择任意本地图片文件夹并排版…"
     )
     owner.manual_layout_button.clicked.connect(owner.open_manual_layout)
-    owner.color_block_button = QPushButton("设置剪膜机色块…")
-    owner.color_block_button.clicked.connect(owner.open_color_block_settings)
-    label_button = QPushButton("设置标签与文字…")
-    label_button.clicked.connect(owner.open_label_settings)
     direct_actions = QHBoxLayout()
     direct_actions.addWidget(owner.manual_layout_button)
-    direct_actions.addWidget(owner.color_block_button)
-    direct_actions.addWidget(label_button)
     owner.local_summary = QLabel("尚未读取本地生产批次。")
     owner.local_table = _table(
         ["选择", "来源", "批次号", "图片数", "本地更新时间", "文件夹"],
@@ -79,6 +74,12 @@ def build_local_page(owner) -> QWidget:
     layout.addWidget(QLabel("本地图片排版"))
     layout.addWidget(intro)
     layout.addLayout(direct_actions)
+    window = owner.window()
+    if hasattr(window, "label_settings"):
+        owner.label_quick_panel = LabelQuickPanel(
+            window.label_settings, window.color_block_settings, page
+        )
+        layout.addWidget(owner.label_quick_panel)
     if getattr(owner, "local_only", False):
         layout.addWidget(QLabel("已有本地批次 → 来源分类"))
         layout.addWidget(owner.platform)

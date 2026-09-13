@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from PySide6.QtGui import QColor
+from PySide6.QtCore import Signal
 from PySide6.QtWidgets import (
     QCheckBox,
     QColorDialog,
@@ -19,6 +20,8 @@ from .setting_preview import SettingPreview
 
 
 class ColorBlockSettingsDialog(QDialog):
+    settings_changed = Signal()
+
     def __init__(self, parent: QWidget | None = None) -> None:
         super().__init__(parent)
         self.setWindowTitle("色块设置")
@@ -91,6 +94,12 @@ class ColorBlockSettingsDialog(QDialog):
             self.width, self.height, self.gap, self.offset_x, self.offset_y
         ):
             box.valueChanged.connect(self.preview.update)
+        signals = [self.enabled.toggled, self.position.currentIndexChanged]
+        signals += [box.valueChanged for box in (
+            self.width, self.height, self.gap, self.offset_x, self.offset_y
+        )]
+        for signal in signals:
+            signal.connect(lambda *_args: self.settings_changed.emit())
 
     def choose_color(self) -> None:
         color = QColorDialog.getColor(QColor(self.color), self, "选择色块颜色")
@@ -112,6 +121,7 @@ class ColorBlockSettingsDialog(QDialog):
         )
         if hasattr(self, "preview"):
             self.preview.update()
+        self.settings_changed.emit()
 
     @staticmethod
     def _box(value, minimum, maximum) -> QDoubleSpinBox:
