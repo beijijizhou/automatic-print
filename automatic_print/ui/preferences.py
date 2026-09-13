@@ -79,8 +79,12 @@ class PreferencesMixin:
         label = self.label_settings
         label.sequence.setChecked(self.preferences.value('label/sequence_enabled', True, bool))
         label.platform_enabled.setChecked(self.preferences.value('label/platform_enabled', True, bool))
-        label.platform.setCurrentIndex(max(0, label.platform.findText(
-            self.preferences.value('label/platform_name', '隆丰', str))))
+        platform = self.preferences.value('label/platform_name', '隆丰', str).strip()
+        if not platform or platform.casefold() in {'蜂鸟', 'haloo'}:
+            platform = '隆丰'
+        if label.platform.findText(platform) < 0:
+            label.platform.addItem(platform)
+        label.platform.setCurrentText(platform)
         label.detect_region.setChecked(self.preferences.value("label/detect_region", True, bool))
         label.fit_height.setChecked(self.preferences.value("label/fit_height", True, bool))
         label.reference_height.setValue(self.preferences.value("label/reference_height_mm", 10, float))
@@ -92,7 +96,7 @@ class PreferencesMixin:
             self.preferences.value("label/follow_qr", True, bool)
         )
         template = self.preferences.value(
-            "label/text_template", "CY 1001Mt26", str
+            "label/text_template", "", str
         )
         aliases = {
             "{number}": "{编号}",

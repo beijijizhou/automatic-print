@@ -31,8 +31,9 @@ def settings(**values):
 def test_full_batch_platform_badges_and_numbers_are_printed_safely(tmp_path, engine):
     paths = [qr_image(tmp_path/f'B{i}-1-T-Black-M-NO1-1.png') for i in range(12)]
     payloads = []
-    result = generate_layout(paths, tmp_path/'out', settings(png_engine=engine), plan_ready=payloads.append)
-    assert payloads[0]['labels'] == {i: f'CY {i}' for i in range(1, 13)}
+    result = generate_layout(paths, tmp_path/'out', settings(png_engine=engine,
+        label_machine_enabled=True, machine_number='M11'), plan_ready=payloads.append)
+    assert payloads[0]['labels'] == {i: f'CY M11 {i}' for i in range(1, 13)}
     assert result['cut_corridor']['pixel_verified']
     first_path, first = payloads[0]['planned'][0]
     with pytest.raises(ValueError, match='平台名称进入整批切割安全通道'):
@@ -82,6 +83,9 @@ def test_missing_qr_blocks_output_and_sequence_is_not_duplicated(tmp_path):
     assert not list((tmp_path/'out').glob('*.png'))
     assert numbered_template(settings(label_text_template='{编号} CY')) == '{编号} CY'
     assert numbered_template(settings(label_sequence_enabled=False)) == 'CY'
+    assert numbered_template(settings(label_machine_enabled=True)) == 'CY {机器号} {编号}'
+    assert numbered_template(settings(label_machine_enabled=True,
+        label_text_template='CY {机器号} {编号}')) == 'CY {机器号} {编号}'
     badge = platform_badge('隆丰', 40)
     assert badge.height == 40
     assert badge.getchannel('A').getbbox()[3]-badge.getchannel('A').getbbox()[1] >= 38
@@ -92,7 +96,9 @@ def test_missing_qr_blocks_output_and_sequence_is_not_duplicated(tmp_path):
 def test_parallel_segments_keep_global_numbers_and_platform_coordinates(tmp_path, engine):
     paths = [qr_image(tmp_path/f'B{i}-1-T-Black-M-NO1-1.png') for i in range(4)]
     result = generate_layout(paths, tmp_path/'out', settings(png_engine=engine,
-        output_parts=2, save_parallelism=2, save_memory_unlimited=True))
+        output_parts=2, save_parallelism=2, save_memory_unlimited=True,
+        label_machine_enabled=True, machine_number='M11'))
+    assert all(part['machine_number'] == 'M11' for part in result['parts'])
     assert result['actual_save_parallelism'] == 2
     assert sorted(p['sequence_number'] for p in result['placements']) == [1, 2, 3, 4]
     for part in result['parts']:

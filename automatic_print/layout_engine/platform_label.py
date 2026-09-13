@@ -69,6 +69,8 @@ def platform_geometry(path, settings, width, height, degrees):
 
 def numbered_template(settings):
     template = settings.label_text_template
+    if settings.label_machine_enabled and not any(token in template for token in ('{机器号}', '{machine}')):
+        template = (template.strip()+' {机器号}').strip()
     if settings.label_sequence_enabled and not any(token in template for token in ('{编号}', '{number}')):
-        return (template.strip()+' {编号}').strip()
+        template = (template.strip()+' {编号}').strip()
     return template

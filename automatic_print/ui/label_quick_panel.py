@@ -21,7 +21,7 @@ class LabelQuickPanel(QWidget):
         super().__init__(parent)
         self.label = label
         self.text = QLineEdit(label.text_template.text())
-        self.text.setPlaceholderText("标签文字：可使用 {编号}、{日期}、{文件名}")
+        self.text.setPlaceholderText("手动输入标签文字；机器号和序号自动显示")
         self.text.textChanged.connect(label.text_template.setText)
         label.text_template.textChanged.connect(self.text.setText)
         self.text.editingFinished.connect(
@@ -70,21 +70,19 @@ class LabelQuickPanel(QWidget):
         )
         date_button = QPushButton("添加日期")
         date_button.clicked.connect(self._add_date)
-        machine_button = QPushButton("添加机器号")
-        machine_button.clicked.connect(self._add_machine)
         text_row = QHBoxLayout()
         text_row.addWidget(self.text)
         text_row.addWidget(date_button)
-        text_row.addWidget(machine_button)
         form = QFormLayout()
         form.addRow("标签与文字", text_row)
         self.sequence = self._checkbox('序号从 1 到最后一张', label.sequence)
         self.platform = QComboBox()
+        self.platform.setEditable(True)
         for index in range(label.platform.count()):
             self.platform.addItem(label.platform.itemText(index))
-        self.platform.setCurrentIndex(label.platform.currentIndex())
-        self.platform.currentIndexChanged.connect(label.platform.setCurrentIndex)
-        label.platform.currentIndexChanged.connect(self.platform.setCurrentIndex)
+        self.platform.setCurrentText(label.platform.currentText())
+        self.platform.currentTextChanged.connect(label.platform.setCurrentText)
+        label.platform.currentTextChanged.connect(self.platform.setCurrentText)
         self.platform.setStyleSheet('QComboBox { font-size: 20px; font-weight: bold; }')
         platform_row = QHBoxLayout()
         platform_row.addWidget(self.platform, 1)
@@ -182,10 +180,6 @@ class LabelQuickPanel(QWidget):
     def _add_date(self):
         if "{日期}" not in self.text.text():
             self.text.setText(self.text.text().rstrip() + "－{日期}")
-
-    def _add_machine(self):
-        if "{机器号}" not in self.text.text():
-            self.text.setText(self.text.text().rstrip() + "－{机器号}")
 
     @staticmethod
     def _checkbox(text, source):

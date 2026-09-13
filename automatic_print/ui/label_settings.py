@@ -28,7 +28,8 @@ class LabelSettingsDialog(QDialog):
         self.sequence = QCheckBox('自动添加序号（每批从 1 到最后一张，不重复添加）')
         self.sequence.setChecked(True)
         self.platform = QComboBox()
-        self.platform.addItems(['隆丰', '蜂鸟'])
+        self.platform.setEditable(True)
+        self.platform.addItem('隆丰')
         self.platform_enabled = QCheckBox('在二维码旁打印平台名称，整段文字与二维码等高')
         self.platform_enabled.setChecked(True)
         self.follow_qr = QCheckBox(
@@ -38,15 +39,16 @@ class LabelSettingsDialog(QDialog):
         self.machine = QComboBox()
         for index in range(1, 12):
             self.machine.addItem(f"M{index}", f"M{index}")
-        self.text_template = QLineEdit("CY 1001Mt26")
+        self.text_template = QLineEdit()
         self.text_template.setPlaceholderText(
-            "例如：{编号}  或  {编号}－{日期}"
+            "手动输入标签文字；机器号和序号自动显示"
         )
         self.text_template.editingFinished.connect(
             lambda: self.text_template.setText(compact_label_text(self.text_template.text()))
         )
         help_label = QLabel(
-            "可复制使用：{编号}、{日期}、{完整文件名}、{文件名}、{机器号}"
+            "平台名、当前机器号和序号自动显示，无需写入标签。"
+            "可选变量：{日期}、{完整文件名}、{文件名}。"
         )
         help_label.setWordWrap(True)
         help_label.setTextInteractionFlags(Qt.TextSelectableByMouse)
@@ -128,6 +130,7 @@ class LabelSettingsDialog(QDialog):
             "date_format": self.date_format.text(),
             "machine_number": self.machine.currentData(),
             'sequence_enabled': self.sequence.isChecked(),
+            'machine_enabled': True,
             'platform_name': self.platform.currentText() if self.platform_enabled.isChecked() else '',
         }
 
@@ -138,14 +141,14 @@ class LabelSettingsDialog(QDialog):
         self.position.currentIndexChanged.connect(self.preview.update)
         self.machine.currentIndexChanged.connect(self.preview.update)
         self.sequence.toggled.connect(self.preview.update)
-        self.platform.currentIndexChanged.connect(self.preview.update)
+        self.platform.currentTextChanged.connect(self.preview.update)
         self.platform_enabled.toggled.connect(self.preview.update)
         self.position.currentIndexChanged.connect(self._sync_position)
         self.date_format.textChanged.connect(self.preview.update)
         for box in (self.font_size, self.gap, self.offset_x, self.offset_y):
             box.valueChanged.connect(self.preview.update)
         signals = [
-            self.sequence.toggled, self.platform.currentIndexChanged, self.platform_enabled.toggled,
+            self.sequence.toggled, self.platform.currentTextChanged, self.platform_enabled.toggled,
             self.detect_region.toggled,
             self.fit_height.toggled, self.reference_height.valueChanged,
             self.enabled.toggled, self.follow_qr.toggled,

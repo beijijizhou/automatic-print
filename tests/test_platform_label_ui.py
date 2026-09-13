@@ -1,7 +1,7 @@
 import os
 os.environ.setdefault('QT_QPA_PLATFORM', 'offscreen')
 from PySide6.QtCore import QSettings
-from PySide6.QtWidgets import QApplication
+from PySide6.QtWidgets import QApplication, QPushButton
 from automatic_print.ui.main_window import MainWindow
 
 APP = QApplication.instance() or QApplication([])
@@ -20,16 +20,33 @@ def test_platform_and_sequence_default_and_persist(tmp_path):
     assert window._layout_settings().platform_name == '隆丰'
     assert window._layout_settings().label_sequence_enabled
     assert panel.text.text() == '自定义标签'
-    panel.platform.setCurrentIndex(panel.platform.findText('蜂鸟'))
+    assert panel.platform.findText('蜂鸟') == -1
+    assert window._layout_settings().label_machine_enabled
+    assert not any(b.text() == '添加机器号' for b in window.findChildren(QPushButton))
+    panel.platform.setCurrentText('测试平台')
+    panel.machine.setCurrentIndex(panel.machine.findText('M11'))
     panel.sequence.setChecked(False)
     window.close()
     reopened = MainWindow(prefs)
     WINDOWS.append(reopened)
     reopened.startup_update_timer.stop()
-    assert reopened._layout_settings().platform_name == '蜂鸟'
+    assert reopened._layout_settings().platform_name == '测试平台'
+    assert reopened._layout_settings().machine_number == 'M11'
     assert not reopened._layout_settings().label_sequence_enabled
     assert reopened.label_settings.text_template.text() == '自定义标签'
     reopened.close()
+
+
+def test_old_erp_selection_is_corrected_and_new_manual_label_starts_empty(tmp_path):
+    prefs = QSettings(str(tmp_path/'old.ini'), QSettings.IniFormat)
+    prefs.setValue('label/platform_name', '蜂鸟')
+    window = MainWindow(prefs)
+    WINDOWS.append(window)
+    window.startup_update_timer.stop()
+    assert window.label_settings.platform.currentText() == '隆丰'
+    assert window.label_settings.text_template.text() == ''
+    assert window.label_settings.preview.sample_text() == 'M1 12'
+    window.close()
 
 
 def test_real_preview_includes_platform_beside_qr(tmp_path):

@@ -57,6 +57,7 @@ class LayoutSettings:
     cutter_tail_rotation: bool = False
     sequence_numbers: tuple[tuple[str, int], ...] = ()
     label_sequence_enabled: bool = False
+    label_machine_enabled: bool = False
     platform_name: str = ''
     platform_gap_mm: float = 2
 

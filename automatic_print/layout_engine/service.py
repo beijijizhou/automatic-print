@@ -82,7 +82,7 @@ def generate_layout(
         warning = f"仅供检查，禁止输出：{error}"
     label_text = labels.get(1) or format_label(settings.label_text_template, 1, paths[0],
                     datetime.now().astimezone(), settings.label_date_format, settings.machine_number)
-    if settings.label_sequence_enabled and not any(t in settings.label_text_template for t in ('{编号}', '{number}')):
+    if settings.label_machine_enabled or settings.label_sequence_enabled:
         label_text = format_label(settings.label_text_template, 1, paths[0],
             datetime.now().astimezone(), settings.label_date_format, settings.machine_number)
     sizes = size_range_label([path for path, p in sorted(planned, key=lambda entry: (entry[1].row_y_px, entry[1].x_px))])

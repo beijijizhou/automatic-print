@@ -7,6 +7,12 @@ from ..layout import LayoutSettings
 def settings_from_window(window) -> LayoutSettings:
     label = window.label_settings
     block = window.color_block_settings
+    platform = label.platform.currentText().strip()
+    if label.enabled.isChecked() and label.platform_enabled.isChecked():
+        if not platform:
+            raise ValueError('请填写实际生产平台名称。')
+        if platform.casefold() in {'蜂鸟', 'haloo'}:
+            raise ValueError('蜂鸟是 ERP，不是生产平台；请填写实际平台名称。')
     return LayoutSettings(
         media_width_mm=window.cutter_settings.printable.effective_width(),
         spacing_mm=window.spacing.value(),
@@ -34,7 +40,8 @@ def settings_from_window(window) -> LayoutSettings:
         label_reference_height_mm=label.reference_height.value(),
         label_text_template=label.text_template.text(),
         label_sequence_enabled=label.sequence.isChecked(),
-        platform_name=label.platform.currentText() if label.enabled.isChecked() and label.platform_enabled.isChecked() else '',
+        label_machine_enabled=True,
+        platform_name=platform if label.enabled.isChecked() and label.platform_enabled.isChecked() else '',
         label_position=label.position.currentData(),
         label_offset_x_mm=label.offset_x.value(),
         label_offset_y_mm=label.offset_y.value(),
