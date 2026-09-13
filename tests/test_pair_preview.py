@@ -9,6 +9,7 @@ from automatic_print.layout import LayoutSettings
 from automatic_print.ui.pair_preview import PairProductionPreview
 from dataclasses import replace
 import pytest
+from preview_wait import wait_preview
 from automatic_print.layout_engine.planner import plan_layout
 
 
@@ -20,6 +21,7 @@ def test_two_image_preview_uses_fixed_partition_marker_groups(tmp_path):
                               label_detect_region=True, label_text_template="CY M1 26")
     preview = PairProductionPreview(lambda: settings)
     preview.use_folder(str(tmp_path))
+    wait_preview(preview)
     assert len(preview.planned) == 2
     left, right = [p for _, p in preview.planned]
     assert left.row_y_px == right.row_y_px
@@ -43,9 +45,11 @@ def test_invalid_parameters_keep_two_images_and_mark_overflow(tmp_path):
     state = [LayoutSettings(media_width_mm=600, dpi=100, cutter_mode="dual")]
     preview = PairProductionPreview(lambda: state[0])
     preview.use_folder(str(tmp_path))
+    wait_preview(preview)
     assert not preview.warning
     state[0] = replace(state[0], media_width_mm=300, cutter_knife_mm=150)
     preview.refresh()
+    wait_preview(preview)
     assert len(preview.planned) == 2
     assert len(preview.images) == 2
     assert preview.item is not None
@@ -55,6 +59,7 @@ def test_invalid_parameters_keep_two_images_and_mark_overflow(tmp_path):
         plan_layout(sorted(tmp_path.glob("*.png")), state[0], None)
     state[0] = replace(state[0], media_width_mm=600, cutter_knife_mm=300)
     preview.refresh()
+    wait_preview(preview)
     assert not preview.warning
     assert not preview.overflow
     preview.close()
@@ -66,10 +71,12 @@ def test_failed_image_read_keeps_previous_snapshot(tmp_path):
         Image.new("RGBA", (180, 250), "blue").save(tmp_path / f"{i}.png", dpi=(25.4, 25.4))
     preview = PairProductionPreview(lambda: LayoutSettings(cutter_mode="dual"))
     preview.use_folder(str(tmp_path))
+    wait_preview(preview)
     previous = preview.planned
     (tmp_path / "1.png").unlink()
     (tmp_path / "0.png").unlink()
     preview.refresh()
+    wait_preview(preview)
     assert preview.planned == previous
     assert "保留上次预览" in preview.warning
     preview.close()
@@ -85,6 +92,7 @@ def test_detail_preview_finds_actual_sides_across_export_prefixes(tmp_path):
     preview = PairProductionPreview(lambda: LayoutSettings(dpi=25.4,
         cutter_mode='dual', cutter_auto_knife=True, number_images=False))
     preview.use_folder(str(tmp_path))
+    wait_preview(preview)
     assert [p for p, _ in preview.planned] == [first, second]
     assert preview.planned[0][1].y_px == preview.planned[1][1].y_px
     preview.set_overview(True)

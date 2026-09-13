@@ -1,15 +1,11 @@
 import json
 from pathlib import Path
-from dataclasses import replace
 
-from PySide6.QtWidgets import QWidget, QComboBox, QPushButton, QHBoxLayout, QMessageBox
-
-from ..layout import discover_images
-from ..layout_engine.planner import plan_layout
+from PySide6.QtWidgets import QWidget, QComboBox, QPushButton, QHBoxLayout
 
 
 class ManualRotationPanel(QWidget):
-    """Per-source overrides, validated against the same production planner."""
+    """Per-source overrides; asynchronous whole-batch checks report unsafe choices."""
 
     def __init__(self, window, preview, parent=None):
         super().__init__(parent)
@@ -24,13 +20,19 @@ class ManualRotationPanel(QWidget):
             button.clicked.connect(lambda _checked=False, step=change: self.apply(step))
             layout.addWidget(button)
         window.folder.textChanged.connect(self.use_folder)
-        self.use_folder(window.folder.text())
+        preview.sources_ready.connect(self.populate)
 
     def use_folder(self, folder):
+        self.images.blockSignals(True)
         self.images.clear()
-        paths = discover_images(Path(folder)) if folder and Path(folder).is_dir() else []
+        self.images.blockSignals(False)
+
+    def populate(self, paths):
+        self.images.blockSignals(True)
+        self.images.clear()
         for path in paths:
             self.images.addItem(path.name, str(path.resolve()))
+        self.images.blockSignals(False)
 
     def show_selected(self, *_args):
         self.preview.set_sample(self.images.currentData())
@@ -44,12 +46,6 @@ class ManualRotationPanel(QWidget):
         rotations[path] = (rotations.get(path, 0) + step) % 360 if step is not None else 0
         if rotations[path] == 270:
             rotations[path] = -90
-        settings = replace(self.window._layout_settings(), manual_rotations=tuple(rotations.items()), allow_rotation=False)
-        try:
-            plan_layout([Path(path)], settings, None)
-        except ValueError as error:
-            QMessageBox.warning(self, "无法安全应用旋转", str(error))
-            return
         preferences.setValue("layout/manual_rotations", json.dumps(rotations))
         preferences.sync()
-        self.preview.refresh()
+        self.preview.schedule_refresh()

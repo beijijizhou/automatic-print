@@ -48,6 +48,8 @@ class GenerationPreviewController(QObject):
         self.preview.batch_payload = payload
         if payload["settings"].cutter_mode == "dual":
             self.window.cutter_settings.knife.setValue(payload["settings"].cutter_knife_mm)
+        self.preview.refresh_timer.stop()
+        self.preview.sources_ready.emit(list(dict.fromkeys(path for path, _ in payload['planned'])))
         self.show_pair(0)
 
     def show_pair(self, index):

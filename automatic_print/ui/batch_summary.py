@@ -17,9 +17,10 @@ class BatchSummaryPanel(QGroupBox):
             label.setTextInteractionFlags(Qt.TextSelectableByMouse)
             layout.addWidget(label)
 
-    def start(self, folder, count):
+    def start(self, folder, count=None):
         path = Path(folder)
-        self.info.setText(f'批次 / 文件夹：{path.name} · {count} 张图片\n来源：{path}')
+        quantity = f'{count} 张图片' if count is not None else '正在读取图片名称'
+        self.info.setText(f'批次 / 文件夹：{path.name} · {quantity}\n来源：{path}')
         self.metrics.setText('正在计算本批次长度和省膜结果…')
         self.progress.setText('正在读取本批次；旧预览已清除。')
 

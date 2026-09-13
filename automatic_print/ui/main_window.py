@@ -236,6 +236,7 @@ class MainWindow(
             self.automation_home.loading_panel.show()
             return
         self.preference_autosave.flush()
+        self.automation_home.label_quick_panel.preview.loader.shutdown()
         event.accept()
 
     @staticmethod

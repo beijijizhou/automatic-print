@@ -1,4 +1,5 @@
 import os
+from preview_wait import wait_preview
 os.environ.setdefault('QT_QPA_PLATFORM', 'offscreen')
 
 from PIL import Image
@@ -51,6 +52,7 @@ def test_worker_analysis_reaches_gui_and_image_selection_matches_rotation_contro
     window=MainWindow(preferences=prefs)
     window.folder.setText(str(folder))
     panel=window.automation_home.label_quick_panel
+    wait_preview(panel.preview)
     assert panel.analysis.report['stage']=='排版结果'
     panel.analysis.source_selected.emit(str(paths[1]))
     assert panel.manual_rotation.images.currentData()==str(paths[1])

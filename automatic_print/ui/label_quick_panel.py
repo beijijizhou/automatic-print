@@ -89,10 +89,13 @@ class LabelQuickPanel(QWidget):
         self.preview.overview = True
         self.analysis = BatchAnalysisPanel(self)
         self.summary = BatchSummaryPanel(self)
+        self.preview.loading_status.connect(self.summary.progress.setText)
+        self.preview.plan_loaded.connect(self.summary.show_plan)
         self.preview.analysis_ready.connect(self.analysis.show_report)
         self.preview.analysis_ready.connect(self.summary.show_analysis)
         self.preview.analysis_failed.connect(self.analysis.failed)
         self.preview.analysis_started.connect(self.analysis.clear)
+        self.preview.analysis_started.connect(lambda: self.summary.start(window.folder.text()))
         self.analysis.source_selected.connect(self._select_analysis_source)
         label.settings_changed.connect(self.preview.schedule_refresh)
         block.settings_changed.connect(self.preview.schedule_refresh)
@@ -123,6 +126,9 @@ class LabelQuickPanel(QWidget):
         overview.setChecked(True)
         overview.toggled.connect(self.preview.set_overview)
         layout.addWidget(overview)
+        stop_preview = QPushButton('停止后台预览计算')
+        stop_preview.clicked.connect(self.preview.stop_loading)
+        layout.addWidget(stop_preview)
         layout.addWidget(group)
         layout.addWidget(self.analysis)
 

@@ -3,6 +3,7 @@ from pathlib import Path
 
 import pytest
 from PIL import Image
+from preview_wait import wait_preview
 
 from automatic_print.layout import LayoutSettings
 from automatic_print.layout_engine.planner import plan_layout
@@ -49,6 +50,7 @@ def test_overview_contains_whole_batch_but_loads_bounded_thumbnails(tmp_path):
     preview.resize(800,440)
     preview.overview = True
     preview.use_folder(str(tmp_path))
+    wait_preview(preview)
     assert len(preview.planned) == 16
     assert preview.minimumHeight() > 440
     canvas = QImage(preview.size(), QImage.Format_ARGB32)
