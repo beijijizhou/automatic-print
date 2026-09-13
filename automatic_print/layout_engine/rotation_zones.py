@@ -10,6 +10,7 @@ from .planner import _place_choice
 from .units import UnitChoice, UnitMember
 from .zone_optimizer import select_zones
 from .batch_analysis import attach_rotation_options
+from .size_policy import ordered_single_blocks
 
 
 def _normal(paths, settings, prepared=None, preserve_sequence=False):
@@ -68,7 +69,7 @@ def plan_rotation_zones(paths, settings, progress, analysis=None, analysis_ready
     except ValueError:
         # A valid rotated zone can fit orders that have no common normal knife.
         pass
-    orders = complete_orders(paths)
+    orders = ordered_single_blocks(complete_orders(paths), coalesce=True)
     mask, knife, _, sequence = select_zones(orders, normal_items, rotated_items, base_settings, progress)
     orders = [orders[i] for i in sequence]
     if not mask:

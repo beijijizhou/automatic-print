@@ -13,7 +13,8 @@ def _sources(tmp_path):
     paths = []
     for order,width,height in (("BORDER1",100,300),("BORDER2",200,150)):
         for side in (1,2):
-            path = tmp_path/f"{order}-1-T-Black-L-NO1-{side}.png"
+            size = 'L' if order == 'BORDER1' else 'S'
+            path = tmp_path/f"{order}-1-T-Black-{size}-NO1-{side}.png"
             Image.new("RGBA",(width,height),"blue").save(path,dpi=(25.4,25.4))
             paths.append(path)
     return paths

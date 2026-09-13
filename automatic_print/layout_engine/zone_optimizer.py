@@ -5,7 +5,7 @@ from .cutter_planner import _horizontal, _lanes, solve_groups
 from .knife_optimizer import knife_candidates
 from .models import mm_to_px
 from .units import build_units
-from .single_order_sequence import arrange_orders
+from .size_policy import coalesced_size, same_single_size
 
 
 def select_zones(orders, normal_items, rotated_items, settings, progress=None):
@@ -24,9 +24,10 @@ def select_zones(orders, normal_items, rotated_items, settings, progress=None):
     best = None
     for index, knife in enumerate(knives):
         lanes = _lanes(replace(settings, cutter_knife_mm=knife*25.4/settings.dpi), width)
-        sequence = arrange_orders(orders, normal_items, lanes, settings)
+        sequence = list(range(len(orders)))  # Coalesced size blocks are already in production order.
         result = _assign([groups[i] for i in sequence], [rotated_costs[i] for i in sequence],
-                         lanes, spacing, margin)
+                         lanes, spacing, margin,
+                         {pos for pos, i in enumerate(sequence) if coalesced_size(orders[i]) is not None})
         if result is not None:
             height, mask = result
             score = height, mask.bit_count(), abs(knife-width/2), knife
@@ -39,7 +40,7 @@ def select_zones(orders, normal_items, rotated_items, settings, progress=None):
     return best[1], best[2], best[0][0], best[3]
 
 
-def _assign(groups, rotated_costs, lanes, spacing, margin):
+def _assign(groups, rotated_costs, lanes, spacing, margin, sized=frozenset()):
     # A pending single-image order can share the next normal single order's row,
     # including across orders moved to the rotation zone. Multi-piece orders stay closed.
     singles, normal_costs = {}, []
@@ -48,28 +49,30 @@ def _assign(groups, rotated_costs, lanes, spacing, margin):
         normal_costs.append(result[0] if result else None)
         if len(order) == 1 and len(order[0]) == 1:
             singles[index] = order[0][0]
-    states = {(None, False, False): (0, 0)}
+    states = {(None, False, False, False): (0, 0)}
     for index, normal_cost in enumerate(normal_costs):
         following = {}
-        for (pending, normal, rotated), (cost, mask) in states.items():
+        for (pending, normal, rotated, size_rotated), (cost, mask) in states.items():
             rotation_cost = rotated_costs[index]
             if rotation_cost is not None:
-                _keep(following, (pending, normal, True), cost+rotation_cost, mask | (1 << index))
+                _keep(following, (pending, normal, True, size_rotated or index in sized), cost+rotation_cost, mask | (1 << index))
             if normal_cost is None:
                 continue
+            if size_rotated and index in sized:
+                continue  # Normal then rotated blocks must preserve ascending sizes.
             if index in singles:
                 if pending is not None:
-                    row = _horizontal([singles[pending], singles[index]], lanes)
+                    row = _horizontal([singles[pending], singles[index]], lanes) if same_single_size(singles[pending].path, singles[index].path) else None
                     if row:
-                        _keep(following, (None, True, rotated), cost+row.height+spacing, mask)
+                        _keep(following, (None, True, rotated, size_rotated), cost+row.height+spacing, mask)
                 flushed = normal_costs[pending] if pending is not None else 0
-                _keep(following, (index, True, rotated), cost+flushed, mask)
+                _keep(following, (index, True, rotated, size_rotated), cost+flushed, mask)
             else:
                 flushed = normal_costs[pending] if pending is not None else 0
-                _keep(following, (None, True, rotated), cost+flushed+normal_cost, mask)
+                _keep(following, (None, True, rotated, size_rotated), cost+flushed+normal_cost, mask)
         states = following
     results = []
-    for (pending, normal, rotated), (cost, mask) in states.items():
+    for (pending, normal, rotated, _size_rotated), (cost, mask) in states.items():
         cost += normal_costs[pending] if pending is not None else 0
         # Each zone has its own opening/closing margin, plus one boundary gap.
         height = cost-spacing + 2*margin*(int(normal)+int(rotated))

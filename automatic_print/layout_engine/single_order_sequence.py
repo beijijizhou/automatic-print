@@ -1,8 +1,9 @@
 """Keep single-sided single orders in size blocks, pairing safe small companions."""
 from collections import defaultdict
 
-from .order_groups import order_key, pair_identity
-from .source_metadata import is_small_item, size_key, source_size
+from .order_groups import order_key
+from .source_metadata import size_key, source_size
+from .size_policy import single_order_size
 
 
 def arrange_orders(orders, items, lanes, settings):
@@ -10,10 +11,7 @@ def arrange_orders(orders, items, lanes, settings):
 
     locked, sizes = [], defaultdict(list)
     for index, order in enumerate(orders):
-        eligible = (len(order) == 1 and pair_identity(order[0]) is not None
-                    and pair_identity(order[0])[1] == '1'
-                    and order_key(order[0]) != '未识别订单组'
-                    and source_size(order[0]) != '未识别尺码')
+        eligible = single_order_size(order) is not None
         if eligible:
             sizes[source_size(order[0])].append(index)
         else:
@@ -25,12 +23,15 @@ def arrange_orders(orders, items, lanes, settings):
         first = pending.pop(0)
         ordered.append(first)
         a = items[orders[first][0]]
+        if len(orders[first]) != 1:
+            continue
         candidates = []
         for position, index in enumerate(pending):
             b = items[orders[index][0]]
+            if len(orders[index]) != 1:
+                continue
             same = source_size(a.path) == source_size(b.path)
-            small = is_small_item(a, settings.dpi) or is_small_item(b, settings.dpi)
-            if not same and not small:
+            if not same:
                 continue
             row = _horizontal([a, b], lanes)
             if row is None:

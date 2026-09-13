@@ -8,6 +8,7 @@ from .item_factory import read_items
 from .models import mm_to_px
 from .units import UnitChoice, UnitMember, build_units
 from .single_order_sequence import arrange_groups
+from .size_policy import same_single_size
 
 
 def plan_cutter_layout(paths, settings, progress, prepared=None, preserve_sequence=False):
@@ -63,7 +64,8 @@ def solve_groups(groups, lanes, spacing):
             if len(groups[index]) == len(groups[index + 1]) == 1:
                 pair = groups[index] + groups[index + 1]
                 keys = [order_key(item.path) for item in pair]
-                share = keys[0] == keys[1] or all(counts[key] == 1 for key in keys)
+                share = keys[0] == keys[1] or (all(counts[key] == 1 for key in keys)
+                                             and same_single_size(pair[0].path, pair[1].path))
                 row = _horizontal(pair, lanes) if share else None
                 if row:
                     candidates.insert(0, (2, row))

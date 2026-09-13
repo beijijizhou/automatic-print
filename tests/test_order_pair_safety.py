@@ -79,7 +79,7 @@ def test_all_batch_pairs_and_pixel_corridors_are_checked(tmp_path):
     assert result['order_check']['double_pairs'] == 6
     assert result['cut_corridor']['checked_images'] == 12
     assert result['cut_corridor']['pixel_verified']
-    assert all(z['pixel_verified'] for z in result['cut_corridor']['zones'])
+    assert all(z['pixel_verified'] for z in result['cut_corridor'].get('zones', [result['cut_corridor']]))
     for group in complete_orders(paths):
         members = [p for p in result['placements'] if p['source'] in {s.name for s in group}]
         assert len({p['cut_zone'] for p in members}) == 1

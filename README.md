@@ -7,7 +7,7 @@ Windows desktop application for combining a folder of images into print-ready la
 在测试电脑上打开 PowerShell，复制并运行：
 
 ```powershell
-powershell -ExecutionPolicy Bypass -Command "irm 'https://raw.githubusercontent.com/beijijizhou/automatic-print/main/windows/bootstrap-test-computer.ps1?v=0.1.71' | iex"
+powershell -ExecutionPolicy Bypass -Command "irm 'https://raw.githubusercontent.com/beijijizhou/automatic-print/main/windows/bootstrap-test-computer.ps1?v=0.1.72' | iex"
 ```
 
 同一条命令既可首次安装，也可在以后下载最新代码并更新运行环境。
@@ -24,6 +24,8 @@ powershell -ExecutionPolicy Bypass -Command "irm 'https://raw.githubusercontent.
 默认开启“上线快速模式”：选择文件夹不先计算预览，点击开始排版后统一扫描、显示文件名、读取尺寸、排版与保存。不比较自动旋转区域，仍保留统一刀位、订单/双面及输出像素安全检查；高级旋转功能可在打印参数中主动开启。
 
 打印参数可设置 RIIN 已配置的左右预留（默认各 10 毫米）：600 毫米膜按 580 毫米可用宽度排版，450 毫米膜按 430 毫米排版。只扣除容量，不在输出图中重复添加边距；请与 RIIN 实际配置保持一致。
+
+单件订单按尺码从小到大连续排版，包含单件双面；小图不跨尺码配对。同尺码单件也不能拆到不同旋转区域，输出前会按实际位置检查，违规禁止保存。
 
 ## Current features
 
@@ -119,7 +121,7 @@ source version instead of reinstalling every build.
 Open PowerShell on the test computer and run:
 
 ```powershell
-powershell -ExecutionPolicy Bypass -Command "irm 'https://raw.githubusercontent.com/beijijizhou/automatic-print/main/windows/bootstrap-test-computer.ps1?v=0.1.71' | iex"
+powershell -ExecutionPolicy Bypass -Command "irm 'https://raw.githubusercontent.com/beijijizhou/automatic-print/main/windows/bootstrap-test-computer.ps1?v=0.1.72' | iex"
 ```
 
 The script installs or checks Git, Python 3.12, and Google Chrome; clones or

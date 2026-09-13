@@ -2,6 +2,7 @@
 from collections import Counter, defaultdict
 
 from .order_groups import order_key, pair_identity
+from .size_policy import validate_single_size_blocks
 
 
 def validate_order_placements(paths, planned):
@@ -36,5 +37,6 @@ def validate_order_placements(paths, planned):
                     second.y_px+second.height_px <= first.y_px):
                 raise ValueError(f'双面 {key} 错位且存在高度重叠，禁止输出。')
             vertical += 1
-    return {'orders': len(orders), 'double_pairs': horizontal+vertical,
+    size_check = validate_single_size_blocks(paths, planned)
+    return {**size_check, 'orders': len(orders), 'double_pairs': horizontal+vertical,
             'horizontal_pairs': horizontal, 'vertical_pairs': vertical}

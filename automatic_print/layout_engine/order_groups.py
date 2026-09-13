@@ -74,7 +74,8 @@ def ordered_paths(paths):
                     raise ValueError(f"同件商品存在重复面，无法可靠归组：{members[0].name}")
                 members.sort(key=lambda p: pair_identity(p)[1])
             ordered.extend(members)
-    return ordered
+    from .size_policy import ordered_single_blocks
+    return [path for group in ordered_single_blocks(complete_orders(ordered)) for path in group]
 
 
 def detail_members(planned, selected=None, index=0):

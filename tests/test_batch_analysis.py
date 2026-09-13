@@ -51,8 +51,8 @@ def test_small_image_can_pair_with_large_size_without_breaking_a_double(tmp_path
     small=source(tmp_path,'BCHEST','S',w=100,h=160)
     planned=plan_layout([large,*double,small],settings(cutter_rotation_zone=False),None)[0]
     lookup=dict(planned)
-    assert lookup[large].y_px==lookup[small].y_px
-    assert lookup[large].x_px!=lookup[small].x_px
+    assert lookup[large].y_px!=lookup[small].y_px
+    assert planned.index((small, lookup[small])) < planned.index((large, lookup[large]))
     assert abs([p for p,_ in planned].index(double[0])-[p for p,_ in planned].index(double[1]))==1
 
 
@@ -66,8 +66,8 @@ def test_large_size_is_measured_and_slender_order_rotates(tmp_path):
     assert [r['stage'] for r in stages]==['文件名分析','排版前分析','分区候选分析','排版结果']
     orders={o['order']:o for o in result['analysis']['orders']}
     assert orders['BSLENDER']['decision']=='旋转区'
-    assert orders['BLARGE']['decision']=='常规区'
-    assert orders['BCHEST']['companions']==['BLARGE']
+    assert orders['BLARGE']['decision']=='旋转区'  # All following size blocks rotate together.
+    assert orders['BCHEST']['companions']==[]
     assert orders['BLARGE']['large_sizes']==['4XL']
     assert orders['BCHEST']['hints']==['小幅图']
 
