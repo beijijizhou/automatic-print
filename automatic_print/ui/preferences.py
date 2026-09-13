@@ -1,4 +1,5 @@
 from pathlib import Path
+import re
 
 from PySide6.QtWidgets import QFileDialog, QMessageBox
 
@@ -71,11 +72,15 @@ class PreferencesMixin:
             max(0, self.png_engine.findData(engine))
         )
         label = self.label_settings
+        migrated = self.preferences.value("label/compact_marking_applied", False, bool)
+        label.machine.setCurrentIndex(max(0, label.machine.findData(
+            self.preferences.value("layout/machine_number", "m1", str)
+        )))
         label.follow_qr.setChecked(
             self.preferences.value("label/follow_qr", True, bool)
         )
         template = self.preferences.value(
-            "label/text_template", "{编号}", str
+            "label/text_template", "CY 1001Mt26", str
         )
         aliases = {
             "{number}": "{编号}",
@@ -85,13 +90,23 @@ class PreferencesMixin:
         }
         for old, new in aliases.items():
             template = template.replace(old, new)
+        if not migrated and template == "{编号}":
+            template = "CY 1001Mt26"
+        template = re.sub(r"_{2,}", "", template)
         label.text_template.setText(template)
         position = self.preferences.value(
-            "label/position", "bottom", str
+            "label/position", "block_below", str
         )
+        if not migrated:
+            position = "block_below"
+            self.preferences.setValue("label/compact_marking_applied", True)
         label.position.setCurrentIndex(
             max(0, label.position.findData(position))
         )
+        label._sync_position()
+        if not migrated:
+            self.preferences.setValue("label/text_template", template)
+            self.preferences.setValue("label/position", position)
         for widget, key, default in (
             (label.font_size, "label/font_size_mm", 10),
             (label.gap, "label/gap_mm", 5),
@@ -181,6 +196,7 @@ class PreferencesMixin:
             "layout/png_compression_level": self.png_compression.currentData(),
             "layout/png_engine": self.png_engine.currentData(),
             "label/text_template": label.text_template.text(),
+            "layout/machine_number": label.machine.currentData(),
             "label/follow_qr": label.follow_qr.isChecked(),
             "label/position": label.position.currentData(),
             "label/font_size_mm": label.font_size.value(),

@@ -5,7 +5,7 @@ from datetime import datetime
 from pathlib import Path
 
 from .images import print_dimensions
-from .labels import format_label, label_badge, label_layout
+from .labels import format_label, settings_label_badge, label_layout
 from .decorations import combined_footprint, outside_position
 from .models import LayoutSettings, mm_to_px
 from .qr_detection import QrLocation, detect_qr_location
@@ -40,7 +40,10 @@ def read_items(paths, settings, progress):
     gap = mm_to_px(settings.number_gap_mm, settings.dpi)
     offset_x = _signed_mm(settings.label_offset_x_mm, settings.dpi)
     offset_y = _signed_mm(settings.label_offset_y_mm, settings.dpi)
-    qr_attempted = settings.number_images and settings.label_follow_qr
+    qr_attempted = (
+        settings.number_images and settings.label_follow_qr
+        and settings.label_position != "block_below"
+    )
     qr_detected = 0
     for index, path in enumerate(paths, start=1):
         size = print_dimensions(path, settings.dpi)
@@ -105,6 +108,11 @@ def _make_item(
     block_x, block_y = _block_position(
         (width, height), (block_width, block_height), settings
     )
+    if settings.number_images and settings.label_position == "block_below":
+        if not block_width:
+            raise ValueError("标签放在色块下方时，必须启用色块。")
+        label_x = block_x + block_width - label_width + min(0, offset_x)
+        label_y = block_y + block_height + gap + max(0, offset_y)
     decorations = [
         (label_x, label_y, label_width, label_height),
         (block_x, block_y, block_width, block_height),
@@ -157,11 +165,10 @@ def _label_values(
         path,
         created_at,
         settings.label_date_format,
+        settings.machine_number,
     )
     labels[index] = text
-    badge = label_badge(
-        text, settings.dpi, settings.number_font_size_mm
-    )
+    badge = settings_label_badge(text, settings)
     label_width, label_height = badge.size
     badge.close()
     if qr_location is not None:

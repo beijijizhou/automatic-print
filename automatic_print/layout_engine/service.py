@@ -62,6 +62,7 @@ def generate_layout(
     size = output_path.stat().st_size
     result = {
         "filename": filename,
+        "machine_number": settings.machine_number,
         "cutter_mode": settings.cutter_mode,
         "cutter_knife_mm": settings.cutter_knife_mm if settings.cutter_mode == "dual" else None,
         "cutter_safety_mm": settings.cutter_safety_mm,

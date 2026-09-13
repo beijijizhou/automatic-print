@@ -37,4 +37,5 @@ def settings_from_window(window) -> LayoutSettings:
         cutter_knife_mm=window.cutter_settings.knife.value(),
         cutter_safety_mm=window.cutter_settings.safety.value(),
         cutter_marker_offset_mm=window.cutter_settings.marker_offset.value(),
+        machine_number=label.machine.currentData(),
     )

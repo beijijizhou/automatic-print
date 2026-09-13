@@ -39,6 +39,7 @@ class LayoutSettings:
     cutter_knife_mm: float = 300
     cutter_safety_mm: float = 3
     cutter_marker_offset_mm: float = 0
+    machine_number: str = "m1"
 
 
 @dataclass(frozen=True)

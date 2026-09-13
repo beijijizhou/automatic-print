@@ -13,6 +13,7 @@ from PySide6.QtWidgets import (
 )
 
 from .setting_preview import SettingPreview
+from ..layout_engine.labels import compact_label_text
 
 
 class LabelSettingsDialog(QDialog):
@@ -28,12 +29,18 @@ class LabelSettingsDialog(QDialog):
             "自动识别膜标签二维码，并让文字与二维码水平对齐"
         )
         self.follow_qr.setChecked(True)
-        self.text_template = QLineEdit("{编号}")
+        self.machine = QComboBox()
+        for index in range(1, 12):
+            self.machine.addItem(f"m{index}", f"m{index}")
+        self.text_template = QLineEdit("CY 1001Mt26")
         self.text_template.setPlaceholderText(
             "例如：{编号}  或  {编号}－{日期}"
         )
+        self.text_template.editingFinished.connect(
+            lambda: self.text_template.setText(compact_label_text(self.text_template.text()))
+        )
         help_label = QLabel(
-            "可复制使用：{编号}、{日期}、{完整文件名}、{文件名}"
+            "可复制使用：{编号}、{日期}、{完整文件名}、{文件名}、{机器号}"
         )
         help_label.setWordWrap(True)
         help_label.setTextInteractionFlags(Qt.TextSelectableByMouse)
@@ -44,6 +51,7 @@ class LabelSettingsDialog(QDialog):
         qr_help.setTextInteractionFlags(Qt.TextSelectableByMouse)
         self.position = QComboBox()
         for text, value in (
+            ("色块下方（固定标记组）", "block_below"),
             ("图片下方", "bottom"),
             ("图片上方", "top"),
             ("图片左侧", "left"),
@@ -64,6 +72,7 @@ class LabelSettingsDialog(QDialog):
         form = QFormLayout()
         for label, widget in (
             ("启用标签", self.enabled),
+            ("机器号", self.machine),
             ("二维码自动定位", self.follow_qr),
             ("", qr_help),
             ("标签文字", self.text_template),
@@ -99,6 +108,7 @@ class LabelSettingsDialog(QDialog):
             "offset_x": self.offset_x.value(),
             "offset_y": self.offset_y.value(),
             "date_format": self.date_format.text(),
+            "machine_number": self.machine.currentData(),
         }
 
     def _connect_preview(self) -> None:
@@ -106,6 +116,8 @@ class LabelSettingsDialog(QDialog):
         self.follow_qr.toggled.connect(self.preview.update)
         self.text_template.textChanged.connect(self.preview.update)
         self.position.currentIndexChanged.connect(self.preview.update)
+        self.machine.currentIndexChanged.connect(self.preview.update)
+        self.position.currentIndexChanged.connect(self._sync_position)
         self.date_format.textChanged.connect(self.preview.update)
         for box in (self.font_size, self.gap, self.offset_x, self.offset_y):
             box.valueChanged.connect(self.preview.update)
@@ -113,11 +125,19 @@ class LabelSettingsDialog(QDialog):
             self.enabled.toggled, self.follow_qr.toggled,
             self.text_template.textChanged, self.position.currentIndexChanged,
             self.date_format.textChanged,
+            self.machine.currentIndexChanged,
         ] + [box.valueChanged for box in (
             self.font_size, self.gap, self.offset_x, self.offset_y
         )]
         for signal in signals:
             signal.connect(lambda *_args: self.settings_changed.emit())
+        self._sync_position()
+
+    def _sync_position(self, *_args):
+        below = self.position.currentData() == "block_below"
+        self.follow_qr.setEnabled(not below)
+        if below:
+            self.follow_qr.setChecked(False)
 
     @staticmethod
     def _box(value, minimum, maximum) -> QDoubleSpinBox:

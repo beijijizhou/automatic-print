@@ -6,7 +6,7 @@ from pathlib import Path
 from PIL import Image, ImageColor, ImageDraw
 
 from .images import normalized_image
-from .labels import label_badge
+from .labels import settings_label_badge
 from .models import LayoutSettings, Placement, ProgressCallback
 
 
@@ -42,10 +42,9 @@ def build_pillow_canvas(
             canvas.paste(image, (placement.x_px, placement.y_px))
             image.close()
             if settings.number_images:
-                badge = label_badge(
+                badge = settings_label_badge(
                     labels[placement.sequence_number],
-                    settings.dpi,
-                    settings.number_font_size_mm,
+                    settings,
                 )
                 canvas.alpha_composite(
                     badge,

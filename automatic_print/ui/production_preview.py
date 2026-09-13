@@ -10,7 +10,7 @@ from PySide6.QtWidgets import QWidget
 from ..layout import discover_images
 from ..layout_engine.images import print_dimensions
 from ..layout_engine.item_factory import read_items
-from ..layout_engine.labels import format_label, label_badge
+from ..layout_engine.labels import format_label, settings_label_badge
 from ..layout_engine.qr_detection import detect_qr_location
 
 
@@ -57,6 +57,7 @@ class ProductionPreview(QWidget):
         return format_label(
             settings.label_text_template, 1, self.path or Path("样板.png"),
             datetime.now().astimezone(), settings.label_date_format,
+            settings.machine_number,
         )
 
     def refresh(self, *_args):
@@ -70,15 +71,17 @@ class ProductionPreview(QWidget):
             choices, labels = read_items([self.path], settings, None)
             self.item = choices[0][0]
             if settings.number_images:
-                badge = label_badge(labels[1], settings.dpi, settings.number_font_size_mm)
+                badge = settings_label_badge(labels[1], settings)
                 self.badge = QImage(ImageQt(badge)).copy()
                 badge.close()
             size = print_dimensions(self.path, self.settings_getter().dpi)
             source = "图片内嵌 DPI" if size.embedded_dpi else "缺少 DPI：尺寸为估算，不能用于切膜生产"
             qr = ""
-            if settings.number_images and settings.label_follow_qr:
+            if settings.number_images and settings.label_follow_qr and settings.label_position != "block_below":
                 qr = " · 二维码已定位" if detect_qr_location(self.path) else " · 未识别二维码，使用设定位置"
             self.detail = f"{size.width_mm:.1f} × {size.height_mm:.1f} 毫米 · {source}{qr}"
+            if settings.label_position == "block_below":
+                self.detail += " · 标签固定于色块下方"
         except (OSError, ValueError) as error:
             self.item = None
             self.detail = f"样板读取失败：{error}"
@@ -93,6 +96,7 @@ class ProductionPreview(QWidget):
             painter.setRenderHint(QPainter.Antialiasing)
             painter.setRenderHint(QPainter.SmoothPixmapTransform)
             if self.item is not None:
+                self._checkerboard(painter)
                 self._draw_sample(painter)
             painter.setPen(QColor("#475569"))
             painter.drawText(
@@ -116,7 +120,6 @@ class ProductionPreview(QWidget):
             )
             painter.scale(scale, scale)
             image_rect = QRectF(item.image_rx, item.image_ry, item.width, item.height)
-            painter.fillRect(image_rect, QColor("#ffffff"))
             painter.drawImage(image_rect, self.thumbnail)
             painter.setPen(QPen(QColor("#cbd5e1"), 0))
             painter.drawRect(image_rect)
@@ -132,3 +135,9 @@ class ProductionPreview(QWidget):
                 )
         finally:
             painter.restore()
+
+    def _checkerboard(self, painter):
+        for y in range(8, self.height() - 60, 12):
+            for x in range(8, self.width() - 8, 12):
+                color = "#e2e8f0" if ((x - 8) // 12 + (y - 8) // 12) % 2 else "#ffffff"
+                painter.fillRect(QRectF(x, y, 12, 12), QColor(color))

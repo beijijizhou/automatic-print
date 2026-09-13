@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from datetime import datetime
+import re
 
 from PySide6.QtCore import QRectF, Qt
 from PySide6.QtGui import QColor, QFont, QFontMetrics, QPainter, QPen
@@ -28,10 +29,11 @@ class SettingPreview(QWidget):
             "{date}": today,
             "{filename}": "B9UV77Y-黑色-XL-NO1-1.png",
             "{stem}": "B9UV77Y-黑色-XL-NO1-1",
+            "{机器号}": self.values().get("machine_number", "m1"),
         }
         for field, value in replacements.items():
             template = template.replace(field, value)
-        return template or "（空文字）"
+        return re.sub(r"_{2,}", "", template) or "（空文字）"
 
     def paintEvent(self, _event) -> None:
         painter = QPainter()
@@ -107,13 +109,15 @@ class SettingPreview(QWidget):
         rect = self._outside_rect(
             image, label_width, label_height, position, gap, anchor_y
         )
+        if position == "block_below":
+            block = QRectF(image.left() - 27, image.top(), 20, 20)
+            painter.fillRect(block, QColor("#ff0000"))
+            rect.moveTopLeft(block.bottomRight() - rect.bottomRight() + rect.topLeft())
+            rect.moveTop(block.bottom() + gap)
         rect.translate(
             max(-70, min(70, values["offset_x"] * 1.2)),
             max(-70, min(70, values["offset_y"] * 1.2)),
         )
-        painter.setPen(QPen(QColor("#111827"), 1))
-        painter.setBrush(QColor("#ffffff"))
-        painter.drawRoundedRect(rect, 4, 4)
         painter.setPen(QColor("#111827"))
         shown = metrics.elidedText(
             text, Qt.TextElideMode.ElideRight, round(rect.width() - 12)

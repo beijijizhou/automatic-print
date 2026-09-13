@@ -5,7 +5,7 @@ from pathlib import Path
 
 from PIL import ImageColor
 
-from .labels import label_badge
+from .labels import settings_label_badge
 from .models import LayoutSettings, Placement, ProgressCallback, mm_to_px
 
 try:
@@ -81,10 +81,9 @@ def build_vips_canvas(
             xs.append(placement.x_px)
             ys.append(placement.y_px - row_y)
             if settings.number_images:
-                badge = label_badge(
+                badge = settings_label_badge(
                     labels[placement.sequence_number],
-                    settings.dpi,
-                    settings.number_font_size_mm,
+                    settings,
                 )
                 layers.append(
                     pyvips.Image.new_from_memory(
