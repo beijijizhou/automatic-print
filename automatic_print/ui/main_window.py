@@ -67,6 +67,8 @@ class MainWindow(
         self.clock.timeout.connect(self.refresh_timing)
         self._build_settings()
         self._build_home()
+        from .workbench_style import apply_workbench_style
+        apply_workbench_style(self)
         self.preference_autosave = PreferenceAutosave(self)
         self.generation_preview = GenerationPreviewController(self)
         for label in self.findChildren(QLabel):
@@ -85,7 +87,6 @@ class MainWindow(
         bridge.update_finished.connect(self.update_check_finished)
         bridge.update_failed.connect(self.update_check_failed)
         bridge.update_progress.connect(self.show_update_progress)
-
     def _build_settings(self) -> None:
         self.folder = QLineEdit(
             self.preferences.value("source_location", "", str)
@@ -217,7 +218,6 @@ class MainWindow(
         container = QWidget()
         container.setLayout(layout)
         self.setCentralWidget(container)
-
     def has_active_tasks(self) -> bool:
         return any(
             (
