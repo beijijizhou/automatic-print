@@ -2,7 +2,7 @@
 from dataclasses import replace
 
 from .cutter_planner import _horizontal, _lanes, solve_groups
-from .knife_optimizer import knife_candidates
+from .knife_optimizer import distinct_knife_candidates
 from .models import mm_to_px
 from .units import build_units
 from .size_policy import coalesced_size, same_single_size
@@ -16,7 +16,7 @@ def select_zones(orders, normal_items, rotated_items, settings, progress=None):
     for order in orders:
         units = build_units([[normal_items[p]] for p in order], spacing)
         groups.append([[m.item for m in choices[0].members] for choices in units])
-    knives = knife_candidates([g for order in groups for g in order], settings)
+    knives = distinct_knife_candidates([g for order in groups for g in order], settings)
     if not settings.cutter_auto_knife:
         knives = [mm_to_px(settings.cutter_knife_mm, settings.dpi)]
     rotated_costs = [sum(rotated_items[p].footprint_height + spacing for p in order)

@@ -31,6 +31,7 @@ def test_current_batch_preview_and_summary_are_visible_and_retained(tmp_path):
     panel = controller.panel
     window.settings_dialog.show()
     controller.start()
+    assert not panel.summary.progress.isVisible()
     window.worker_bridge.layout_preview.emit(payloads[0])
     app.processEvents()
     assert not window.settings_dialog.isVisible()
@@ -56,6 +57,7 @@ def test_current_batch_preview_and_summary_are_visible_and_retained(tmp_path):
     assert window.grab().save(str(tmp_path/'integrated-workbench.png'))
     panel.summary.finished(str(tmp_path/'out'), result)
     controller.end()
+    assert panel.summary.progress.isVisible()
     assert '节省用膜' in panel.summary.metrics.text()
     assert result['filename'] in panel.summary.progress.text()
     assert result['filename'] in panel.summary.cutting.toPlainText()

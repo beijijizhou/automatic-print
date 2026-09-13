@@ -15,6 +15,11 @@ class PrintDimensions:
 
 
 def print_dimensions(path: Path, fallback_dpi: int) -> PrintDimensions:
+    from .measurement_session import SESSION, identity
+    session = SESSION.get()
+    key = (identity(path), fallback_dpi) if session else None
+    if session and key in session.dimensions:
+        return session.dimensions[key]
     with Image.open(path) as image:
         source = image.info.get("dpi")
         try:
@@ -24,11 +29,14 @@ def print_dimensions(path: Path, fallback_dpi: int) -> PrintDimensions:
             valid = False
         if not valid:
             x_dpi = y_dpi = float(fallback_dpi)
-        return PrintDimensions(
+        result = PrintDimensions(
             image.width * 25.4 / x_dpi,
             image.height * 25.4 / y_dpi,
             x_dpi, y_dpi, valid,
         )
+    if session:
+        session.dimensions[key] = result
+    return result
 
 
 def target_size(path: Path, target_dpi: int) -> tuple[int, int]:

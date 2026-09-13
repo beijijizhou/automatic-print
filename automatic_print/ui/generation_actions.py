@@ -103,9 +103,9 @@ class GenerationActionsMixin:
     ) -> None:
         if stage == '扫描文件夹':
             percent = 0
-        elif stage in {"分析批次", "读取图片尺寸"}:
+        elif stage in {"分析批次", "读取图片尺寸", "测量标签与刀码"}:
             percent = round(current / total * 20) if stage == "分析批次" else 20 + round(current / total * 25)
-        elif stage == "识别膜标签":
+        elif stage in {'识别膜标签', '膜规格比较'}:
             percent = 45
         elif stage in {"整理双面图片", "切膜安全检查", "计算排版", "计算批次刀位", "批次刀位已确定", "比较旋转区域"}:
             percent = 45
@@ -130,7 +130,7 @@ class GenerationActionsMixin:
             self.progress.setRange(0, 100)
             self.progress.setValue(percent)
             self.progress.setFormat(f"{percent}% — {stage}")
-        self.current_file.setText(f"当前文件：{filename}")
+        self.current_file.setText(f"{'当前方案' if stage == '膜规格比较' else '当前文件'}：{filename}")
         self.refresh_timing()
 
     @Slot()

@@ -19,6 +19,12 @@ def plan_layout(
     progress: ProgressCallback | None,
     analysis_ready=None,
 ) -> tuple[list[tuple[Path, Placement]], dict[int, str], int, int, int]:
+    from .measurement_session import measurement_session
+    with measurement_session():
+        return _measured_plan(paths, settings, progress, analysis_ready)
+
+
+def _measured_plan(paths, settings, progress, analysis_ready):
     settings = replace(settings, sequence_numbers=settings.sequence_numbers or
                        tuple((str(path.resolve()), i) for i, path in enumerate(paths, 1)))
     paths = ordered_paths(paths)

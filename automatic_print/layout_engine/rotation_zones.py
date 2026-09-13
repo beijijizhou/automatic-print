@@ -70,14 +70,14 @@ def _rotated(paths, settings, prepared=None):
     return planned, labels, y-spacing+margin, knife
 
 
-def plan_rotation_zones(paths, settings, progress, analysis=None, analysis_ready=None):
+def plan_rotation_zones(paths, settings, progress, analysis=None, analysis_ready=None, prepared=None):
     base_settings = replace(settings, cutter_rotation_zone=False,
                            sequence_numbers=settings.sequence_numbers or tuple(
                                (str(p.resolve()), i) for i, p in enumerate(paths, 1)))
     paths = ordered_paths(paths)
-    options, labels = read_cutter_items(paths, base_settings, progress)
+    options, labels = prepared[:2] if prepared else read_cutter_items(paths, base_settings, progress)
     normal_items = {row[0].path: row[0] for row in options}
-    rotated_items, rotated_labels = rotation_items(paths, base_settings, progress)
+    rotated_items, rotated_labels = prepared[2:] if prepared else rotation_items(paths, base_settings, progress)
     if analysis is not None:
         attach_rotation_options(analysis, rotated_items, settings, analysis_ready)
     baseline, normal_settings = None, base_settings

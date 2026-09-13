@@ -31,6 +31,7 @@ class GenerationPreviewController(QObject):
         self.panel.analysis.clear()
         folder = self.window.folder.text().strip()
         self.panel.summary.start(folder)
+        self.panel.summary.progress.hide()
         self.panel.preview_scroll.verticalScrollBar().setValue(0)
         self.preview.clear_for_generation()
         self.preview.source_folder = Path(folder)
@@ -93,6 +94,7 @@ class GenerationPreviewController(QObject):
         self.preview.update()
 
     def end(self, *_args):
+        self.panel.summary.progress.show()
         self.preview.production_active = False
         self.preview.composed_count = None
         self.window.automation_home.start_layout_button.setEnabled(True)

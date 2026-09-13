@@ -27,7 +27,7 @@ def test_four_real_plans_report_area_not_cross_width_length(tmp_path):
     progress = []
     result = compare_films(paths, settings, lambda *args: progress.append(args))
     assert len(result['rows']) == 4
-    assert result['parallelism'] == 1
+    assert result['parallelism'] == 4
     for row in result['rows']:
         assert not row['error']
         assert row['image_area_m2'] == pytest.approx(6*.260*.320)

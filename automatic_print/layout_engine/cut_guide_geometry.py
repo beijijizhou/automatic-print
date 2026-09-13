@@ -29,7 +29,13 @@ def detect_guide_band(path: Path):
 
 @lru_cache(maxsize=512)
 def _cached(path, _mtime, _size):
-    raw = cv2.imdecode(np.fromfile(path, dtype=np.uint8), cv2.IMREAD_UNCHANGED)
+    from .measurement_session import active_source
+    source = active_source(Path(path))
+    if source is not None:
+        with source.convert('RGBA') as rgba:
+            raw = cv2.cvtColor(np.asarray(rgba), cv2.COLOR_RGBA2BGRA)
+    else:
+        raw = cv2.imdecode(np.fromfile(path, dtype=np.uint8), cv2.IMREAD_UNCHANGED)
     if raw is None:
         return None
     scale = min(1, 1800 / max(raw.shape[:2]))

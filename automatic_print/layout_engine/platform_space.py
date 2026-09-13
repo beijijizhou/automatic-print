@@ -1,8 +1,8 @@
 """Reuse verified transparent QR-header space without extending artwork width."""
 from math import floor, ceil
-from PIL import Image
 import numpy as np
 from .membrane_region import MembraneRegion
+from .measurement_session import source_pixels
 
 
 def header_space(path, qr, width, height, badge_width, badge_height, gap, degrees):
@@ -11,7 +11,7 @@ def header_space(path, qr, width, height, badge_width, badge_height, gap, degree
     left = floor(qr.left*width)-gap-badge_width
     candidates = tuple(right+step for step in range(0, max(8, badge_height), 2)) + tuple(
         left-step for step in range(0, max(8, badge_height), 2))
-    with Image.open(path) as source:
+    with source_pixels(path) as source:
         if 'A' not in source.getbands():
             return None
         candidates += _free_band_candidates(source, qr, width, height,

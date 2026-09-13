@@ -1,7 +1,7 @@
 """Keep cutter marks on lane origins while reusing verified transparent pixels."""
 from math import floor, ceil
-from PIL import Image
 from .membrane_region import MembraneRegion
+from .measurement_session import SESSION, identity, source_pixels
 
 
 def transparent_rect(path, width, height, degrees, rect):
@@ -12,7 +12,11 @@ def transparent_rect(path, width, height, degrees, rect):
         return False
     region = MembraneRegion(x/width, y/height, (x+w)/width, (y+h)/height)
     region = region.rotated((-degrees+180)%360-180)
-    with Image.open(path) as source:
+    session = SESSION.get()
+    key = (identity(path), width, height, degrees, tuple(rect)) if session else None
+    if session and key in session.rectangles:
+        return session.rectangles[key]
+    with source_pixels(path) as source:
         if 'A' not in source.getbands():
             return False
         box = (max(0, floor(region.left*source.width)-3),
@@ -20,7 +24,10 @@ def transparent_rect(path, width, height, degrees, rect):
                min(source.width, ceil(region.right*source.width)+3),
                min(source.height, ceil(region.bottom*source.height)+3))
         with source.crop(box) as crop:
-            return crop.getchannel('A').getextrema()[1] == 0
+            result = crop.getchannel('A').getextrema()[1] == 0
+    if session:
+        session.rectangles[key] = result
+    return result
 
 
 def can_embed_marker(path, width, height, degrees, block, label, platform):

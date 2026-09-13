@@ -1,5 +1,6 @@
 """Concurrent complete-batch comparisons, without sharing mutable plan state."""
 from concurrent.futures import ThreadPoolExecutor
+from contextvars import copy_context
 from dataclasses import replace
 from time import monotonic
 
@@ -41,10 +42,10 @@ def compare_rotation(paths, settings, progress, analysis, analysis_ready):
     if progress:
         progress('比较旋转区域', 0, 2, '正在并行计算常规方案与完整订单旋转方案')
     with ThreadPoolExecutor(max_workers=2, thread_name_prefix='layout-compare') as pool:
-        normal = pool.submit(checked, plan_cutter_layout, normal_settings, normal_progress)
+        normal = pool.submit(copy_context().run, checked, plan_cutter_layout, normal_settings, normal_progress)
         def rotation_plan(paths, config, report):
             return plan_rotation_zones(paths, config, report, analysis, analysis_ready)
-        rotated = pool.submit(checked, rotation_plan, settings, progress)
+        rotated = pool.submit(copy_context().run, checked, rotation_plan, settings, progress)
         normal, rotated = normal.result(), rotated.result()
     if rotated[0] is None:
         raise ValueError('旋转方案无法安全生成：'+rotated[3])

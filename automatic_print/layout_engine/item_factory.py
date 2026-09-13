@@ -15,6 +15,7 @@ from .platform_label import platform_geometry, numbered_template
 from .marker_space import can_embed_marker
 from .rotated_marks import rotated_marks
 from .qr_placement import signed_mm as _signed_mm, rotated_qr as _rotated_qr, qr_label_layout as _qr_label_layout
+from .measurement_session import SESSION, measured_item
 
 
 @dataclass(frozen=True)
@@ -48,7 +49,7 @@ def read_items(paths, settings, progress):
     if progress:
         progress('读取图片尺寸', 0, len(paths), '开始读取尺寸并测量标签占位')
     labels, items = {}, []
-    created_at = datetime.now().astimezone()
+    created_at = SESSION.get().created_at if SESSION.get() else datetime.now().astimezone()
     gap = mm_to_px(settings.number_gap_mm, settings.dpi)
     offset_x = _signed_mm(settings.label_offset_x_mm, settings.dpi)
     offset_y = _signed_mm(settings.label_offset_y_mm, settings.dpi)
@@ -70,17 +71,21 @@ def read_items(paths, settings, progress):
         if qr_attempted:
             qr_location = detect_qr_location(path)
             qr_detected += qr_location is not None
+        if progress:
+            progress('读取图片尺寸', index, len(paths),
+                     f'{path.name} · {size.width_mm:.1f} × {size.height_mm:.1f} 毫米')
+            progress('测量标签与刀码', index-1, len(paths), path.name)
         choices = [
-            _make_item(
-                path, number, width, height, settings, labels,
+            measured_item(
+                _make_item, path, number, width, height, settings, labels,
                 created_at, gap, offset_x, offset_y, manual, qr_location,
             )
         ]
         if settings.allow_rotation and not manual and width != height:
             degrees = 90 if settings.rotation_direction == "left" else -90
             choices.append(
-                _make_item(
-                    path, number, height, width, settings, labels,
+                measured_item(
+                    _make_item, path, number, height, width, settings, labels,
                     created_at, gap, offset_x, offset_y, degrees,
                     qr_location,
                 )
@@ -89,7 +94,7 @@ def read_items(paths, settings, progress):
         if progress:
             source = "图片内嵌 DPI" if size.embedded_dpi else "缺少 DPI，按输出 DPI 估算"
             progress(
-                "读取图片尺寸", index, len(paths),
+                "测量标签与刀码", index, len(paths),
                 f"{path.name} · {size.width_mm:.1f} × {size.height_mm:.1f} 毫米 · {source}",
             )
     if progress and qr_attempted:
