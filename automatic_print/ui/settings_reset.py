@@ -3,7 +3,8 @@ from PySide6.QtCore import QSettings
 from PySide6.QtWidgets import QApplication, QMessageBox, QPushButton
 
 GROUPS = ('layout', 'label', 'color_block', 'cutter', 'riin', 'output')
-KEYS = ('source_location', 'output_location', 'local/test_mode', 'local/merge_batches')
+KEYS = ('source_location', 'output_location', 'local/test_mode', 'local/merge_batches',
+        'dialogs/last_image_directory')
 
 
 def clear_layout_preferences(preferences):

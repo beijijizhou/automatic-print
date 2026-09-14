@@ -6,6 +6,7 @@ from PySide6.QtWidgets import (QDialog, QVBoxLayout, QHBoxLayout, QPushButton,
 from ..cancellation import Cancellation
 from ..history.bulk_analysis import analyze_folders, summary_text
 from .action_icons import action_icon
+from .folder_dialog_paths import image_dialog_start, remember_image_directory, remember_multiple_selection
 
 
 class BulkAnalysisWorker(QObject):
@@ -79,14 +80,19 @@ class BulkFilmAnalysisDialog(QDialog):
         dialog.setOption(QFileDialog.DontUseNativeDialog)
         dialog.setFileMode(QFileDialog.Directory)
         dialog.setOption(QFileDialog.ShowDirsOnly)
+        dialog.setDirectory(image_dialog_start(self.parent()))
         for view in dialog.findChildren(QListView)+dialog.findChildren(QTreeView):
             view.setSelectionMode(QAbstractItemView.ExtendedSelection)
         if dialog.exec():
-            self.add_folders(dialog.selectedFiles())
+            selected = dialog.selectedFiles()
+            self.add_folders(selected)
+            remember_multiple_selection(self.parent(), selected)
 
     def choose_parent(self):
-        folder = QFileDialog.getExistingDirectory(self, '选择包含多个批次的上级目录')
+        folder = QFileDialog.getExistingDirectory(self, '选择包含多个批次的上级目录',
+                                                 image_dialog_start(self.parent()))
         if folder:
+            remember_image_directory(self.parent(), folder)
             self.add_folders(sorted(p for p in Path(folder).iterdir()
                                     if p.is_dir() and p.name != '切膜机文件'))
 

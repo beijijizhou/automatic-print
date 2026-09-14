@@ -10,13 +10,13 @@ class PreferencesMixin:
         return reset_button(self)
 
     def choose_folder(self) -> bool:
-        start = self.folder.text().strip()
-        if not Path(start).is_dir():
-            start = self.preferences.value("source_location", "", str)
+        from .folder_dialog_paths import image_dialog_start, remember_image_directory
+        start = image_dialog_start(self)
         folder = QFileDialog.getExistingDirectory(
             self, "请选择包含图片的文件夹（无需选择单张图片）", start
         )
         if folder:
+            remember_image_directory(self, folder)
             unchanged = self.folder.text() == folder
             self.folder.setText(folder)
             if unchanged:
