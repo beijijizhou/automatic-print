@@ -21,6 +21,8 @@ def build_batch_input(owner, panel):
         button.setIcon(action_icon(icon))
         row.addWidget(button, 1)
     row.addWidget(owner.preview_only)
+    from .header_gap import build_quick_header_gap
+    row.addWidget(build_quick_header_gap(owner.window()))
     owner.start_layout_button.setToolTip('选择图片文件夹后立即开始排版；取消不会启动任务。')
     panel.bulk_generation_button.setToolTip('选择上级目录中的批次；并发参数在打印设置中修改。')
     owner.window().stop_generation_button.setToolTip(

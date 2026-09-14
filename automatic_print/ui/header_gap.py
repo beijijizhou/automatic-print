@@ -1,5 +1,5 @@
 """Persistent minimum label-to-artwork gap, configured with layout rules."""
-from PySide6.QtWidgets import QDoubleSpinBox
+from PySide6.QtWidgets import QDoubleSpinBox, QWidget, QHBoxLayout, QLabel
 
 
 def build_header_gap(window):
@@ -12,3 +12,24 @@ def build_header_gap(window):
     field.valueChanged.connect(lambda value: window.preferences.setValue('layout/membrane_gap_mm', value))
     window.membrane_gap = field
     return field
+
+
+def build_quick_header_gap(window):
+    """Mirror the canonical setting without moving it out of print settings."""
+    group = QWidget()
+    row = QHBoxLayout(group)
+    row.setContentsMargins(0, 0, 0, 0)
+    row.addWidget(QLabel('膜标签与图案间距'))
+    field = QDoubleSpinBox()
+    field.setRange(window.membrane_gap.minimum(), window.membrane_gap.maximum())
+    field.setDecimals(1)
+    field.setSuffix(' 毫米')
+    field.setValue(window.membrane_gap.value())
+    field.setToolTip(window.membrane_gap.toolTip())
+    field.valueChanged.connect(window.membrane_gap.setValue)
+    window.membrane_gap.valueChanged.connect(field.setValue)
+    row.addWidget(field)
+    window.quick_membrane_gap = field
+    window.quick_header_gap_group = group
+    group.hide()
+    return group

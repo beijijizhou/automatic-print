@@ -23,6 +23,7 @@ def test_default_hides_tools_and_gates_direct_open(tmp_path, monkeypatch):
     owner = window(tmp_path/'prefs.ini')
     panel = owner.automation_home.label_quick_panel
     assert not owner.developer_mode_checkbox.isChecked()
+    assert not owner.quick_header_gap_group.isVisible()
     assert panel.summary.film_table.rowCount() == 4
     assert not owner._layout_settings().compare_reference_films
     assert not panel.history_button.isVisible() and not panel.bulk_analysis_button.isVisible()
@@ -42,6 +43,13 @@ def test_toggle_persists_and_existing_history_tab_hides(tmp_path, monkeypatch):
     owner = window(tmp_path/'prefs.ini')
     panel = owner.automation_home.label_quick_panel
     owner.developer_mode_checkbox.setChecked(True)
+    assert owner.quick_header_gap_group.isVisible()
+    assert owner.quick_membrane_gap.value() == 40
+    owner.quick_membrane_gap.setValue(45)
+    assert owner.membrane_gap.value() == 45
+    assert owner._layout_settings().membrane_gap_mm == 45
+    owner.membrane_gap.setValue(42)
+    assert owner.quick_membrane_gap.value() == 42
     assert panel.summary.film_table.rowCount() == 18
     assert owner._layout_settings().compare_reference_films
     assert panel.history_button.isVisible() and panel.bulk_analysis_button.isVisible()
@@ -58,6 +66,8 @@ def test_toggle_persists_and_existing_history_tab_hides(tmp_path, monkeypatch):
     owner.close()
     restored = window(tmp_path/'prefs.ini')
     assert restored.developer_mode_checkbox.isChecked()
+    assert restored.quick_membrane_gap.value() == 42
+    assert restored.quick_header_gap_group.isVisible()
     assert restored.automation_home.label_quick_panel.bulk_analysis_button.isVisible()
     restored.close()
 

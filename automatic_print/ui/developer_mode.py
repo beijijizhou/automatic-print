@@ -23,6 +23,7 @@ def build_developer_mode(window, footer):
             checkbox.blockSignals(False)
             return
         window.developer_mode_enabled = enabled
+        window.quick_header_gap_group.setVisible(enabled)
         panel = window.automation_home.label_quick_panel
         panel.history_button.setVisible(enabled)
         panel.bulk_analysis_button.setVisible(enabled)
