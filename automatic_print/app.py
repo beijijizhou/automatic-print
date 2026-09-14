@@ -13,6 +13,8 @@ def run() -> int:
     if application is None:
         application = QApplication([])
     configure_application(application)
+    from .ui.copyable_text import install_text_copying
+    install_text_copying()
     background = QPixmap(540, 160)
     background.fill(Qt.white)
     splash = QSplashScreen(background)

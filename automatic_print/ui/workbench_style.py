@@ -63,6 +63,8 @@ def button_kind(text):
 
 
 def apply_workbench_style(window):
+    from .copyable_text import install_text_copying
+    install_text_copying()
     from .spinbox_style import spinbox_style
     window.setStyleSheet(WORKBENCH_STYLE + BUTTON_STYLE + spinbox_style())
     for button in window.findChildren(QPushButton):
