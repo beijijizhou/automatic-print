@@ -23,11 +23,8 @@ def build_local_page(owner) -> QWidget:
         "选择图片文件夹…"
     )
     owner.manual_layout_button.clicked.connect(lambda: owner.window().choose_folder())
-    direct_actions = QHBoxLayout()
-    direct_actions.addWidget(owner.manual_layout_button)
     owner.start_layout_button = QPushButton('开始排版')
     owner.start_layout_button.clicked.connect(lambda: owner.window().generate())
-    direct_actions.addWidget(owner.start_layout_button)
     preview_button = QPushButton("仅预览整批（不生成文件）")
     preview_button.clicked.connect(lambda: owner.window().generate(preview_only=True))
     owner.local_summary = QLabel("尚未读取本地生产批次。")
@@ -78,19 +75,16 @@ def build_local_page(owner) -> QWidget:
     )
     layout.addWidget(QLabel("本地图片排版"))
     layout.addWidget(intro)
-    layout.addLayout(direct_actions)
     window = owner.window()
     if hasattr(window, "label_settings"):
         owner.label_quick_panel = LabelQuickPanel(
             window.label_settings, window.color_block_settings, page, window=window
         )
+        from ..ui.batch_input_panel import build_batch_input, build_batch_tools
+        owner.batch_input_panel = build_batch_input(owner, owner.label_quick_panel)
+        layout.addWidget(owner.batch_input_panel)
+        build_batch_tools(owner.label_quick_panel, window.stop_generation_button)
         layout.addWidget(owner.label_quick_panel)
-        direct_actions.addWidget(window.stop_generation_button)
-        direct_actions.addWidget(owner.label_quick_panel.details_button)
-        direct_actions.addWidget(owner.label_quick_panel.bulk_generation_button)
-        direct_actions.addWidget(owner.label_quick_panel.history_button)
-        direct_actions.addWidget(owner.label_quick_panel.bulk_analysis_button)
-        direct_actions.addWidget(owner.label_quick_panel.algorithm_costs_button)
         owner.label_quick_panel.details_dialog.add_page('预览与处理日志', [
             preview_button, window.run_log, owner.log,
         ])
