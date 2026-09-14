@@ -44,7 +44,7 @@ def rotation_items(paths, settings, progress=None):
     items = {}
     for row in options:
         item = rotation_marker_item(row[0], settings)
-        if item.footprint_width+2*safety >= width:
+        if (item.footprint_width > width if settings.cutter_mode == 'single' else item.footprint_width+2*safety >= width):
             continue
         try:
             items[row[0].path] = item

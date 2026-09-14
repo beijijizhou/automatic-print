@@ -38,6 +38,7 @@ def settings_from_window(window) -> LayoutSettings:
         cutter_left_marker_external=True,
         cutter_compare_whole_rotation=True,
         cutter_knife_dots=False,
+        cutter_single_row_rotation=True,
         preserve_header_gap=True,
         cutter_left_marker_lift_mm=window.cutter_settings.left_marker_lift.value(),
         allow_rotation=window.allow_rotation.isChecked() and not window.cutter_settings.quick_mode.isChecked(),

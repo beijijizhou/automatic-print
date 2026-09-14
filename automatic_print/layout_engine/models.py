@@ -52,6 +52,7 @@ class LayoutSettings:
     cutter_left_marker_lift_mm: float = 0
     cutter_compare_whole_rotation: bool = False
     cutter_knife_dots: bool = True
+    cutter_single_row_rotation: bool = False
     preserve_header_gap: bool = False
     cutter_knife_mm: float = 300
     cutter_safety_mm: float = 3

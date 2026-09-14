@@ -20,7 +20,8 @@ def compare_whole(paths, settings, progress, selected, prepared=None):
             progress('比较整批旋转',len(paths),len(paths),f'{len(paths)-len(items)}张无法安全旋转，保留当前方案')
         return selected
     rotated = _rotated(paths, settings, (items, labels))
-    planned = [(path, replace(p, cut_zone='旋转区', cut_knife_x_px=rotated[3]))
+    planned = [(path, replace(p, cut_zone='旋转区' if settings.cutter_mode == 'dual' else '单排区',
+                             cut_knife_x_px=rotated[3] if settings.cutter_mode == 'dual' else None))
                for path, p in rotated[0]]
     width = mm_to_px(settings.media_width_mm, settings.dpi)
     try:

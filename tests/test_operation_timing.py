@@ -53,13 +53,13 @@ def test_worker_reports_scan_through_output_and_persists_timings(tmp_path):
             '合成像素安全检查', '膜标签与辅助线处理', '保存输出图片'} <= set(names)
     assert abs(sum(s['seconds'] for s in result['steps'])-result['total_seconds']) < .01
     assert result['status'] == '已完成'
-    manifest = json.loads((tmp_path/'out'/'manifest.json').read_text())
+    manifest = json.loads((worker.output/'manifest.json').read_text())
     assert manifest['print_image']['operation_timings'] == result
     assert updates[-1] == result
-    report = (tmp_path/'out'/'排版报告.txt').read_text()
+    report = (worker.output/'排版报告.txt').read_text()
     assert '扫描文件名' in report and '最耗时步骤' in report
     assert '耗时与并行处理' in report
-    assert not (tmp_path/'out'/'耗时报告.txt').exists()
+    assert not (worker.output/'耗时报告.txt').exists()
     assert not (tmp_path/'out'/'切割说明.txt').exists()
 
 

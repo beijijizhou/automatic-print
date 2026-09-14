@@ -55,6 +55,9 @@ def _measured_plan(paths, settings, progress, analysis_ready):
 
 def _plan_layout(paths, settings, progress, analysis, analysis_ready):
     if settings.cutter_mode != "free":
+        if settings.cutter_mode == 'single' and settings.cutter_single_row_rotation:
+            from .single_rows import plan_single_rows
+            return plan_single_rows(paths,settings,progress)
         if settings.cutter_rotation_zone and settings.cutter_mode == "dual":
             from .rotation_compare import compare_rotation
             return compare_rotation(paths, settings, progress, analysis, analysis_ready)
