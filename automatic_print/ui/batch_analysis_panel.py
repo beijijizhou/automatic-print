@@ -53,7 +53,7 @@ class BatchAnalysisPanel(QGroupBox):
 
     @Slot(str)
     def failed(self, message):
-        self.summary.setText('本次分析 / 排版未完成：'+message)
+        self.summary.setText('本次分析 / 排版未完成；详细原因见报错诊断区。')
         self.report = None
         self.tree.clear()
         self.sizes.clear()

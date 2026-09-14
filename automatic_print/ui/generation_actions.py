@@ -220,8 +220,8 @@ class GenerationActionsMixin:
         self.clock.stop()
         self.progress.setRange(0, 100)
         self.progress.setFormat("生成失败")
-        self.status.setText(message.splitlines()[0])
-        self.run_log.appendPlainText(f"失败：{message}")
+        self.status.setText('生成失败；请查看报错诊断区。')
+        self.run_log.appendPlainText('生成失败；完整订单、参数及限制见独立报错诊断区。')
         self.generate_button.setEnabled(True)
         self.stop_generation_button.setEnabled(False)
         from .failure_dialog import show_failure_dialog
