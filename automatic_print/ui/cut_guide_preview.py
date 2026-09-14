@@ -39,7 +39,7 @@ def draw_cut_guides(preview, painter, scale):
 def _transition_lines(preview, painter):
     settings = preview.render_settings
     planned = (preview.batch_payload or {}).get('planned') or preview.planned
-    if not planned or not preview.planned or not (settings.transition_lines or settings.batch_footer_enabled):
+    if not planned or not preview.planned or not (settings.transition_lines or settings.batch_footer_enabled or settings.batch_end_block):
         return
     originals = dict(planned)
     path, local = preview.planned[0]

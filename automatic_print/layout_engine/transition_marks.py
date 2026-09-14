@@ -5,7 +5,7 @@ from .models import mm_to_px
 
 
 def transition_rects(planned, settings, width, end_notice='批次结束'):
-    if not planned or not (settings.transition_lines or settings.batch_footer_enabled):
+    if not planned or not (settings.transition_lines or settings.batch_footer_enabled or settings.batch_end_block):
         return []
     gap = mm_to_px(settings.transition_gap_mm, settings.dpi)
     thickness = max(1, mm_to_px(settings.transition_line_mm, settings.dpi))
@@ -23,6 +23,11 @@ def transition_rects(planned, settings, width, end_notice='批次结束'):
     if settings.transition_lines:
         rects.append({'x': 0, 'y': end+gap, 'width': width, 'height': thickness,
                       'kind': end_notice})
+        end = end+gap+thickness
+    if settings.batch_end_block:
+        size = min(width, max(1, mm_to_px(10, settings.dpi)))
+        rects.append({'x': width-size, 'y': end+max(gap, mm_to_px(5, settings.dpi)),
+                      'width': size, 'height': size, 'kind': '批次结束色块'})
     for r in rects:
         for path, p in planned:
             for name, y, w, h in (

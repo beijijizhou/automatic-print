@@ -11,6 +11,10 @@ class TransitionSettings(QGroupBox):
         self.enabled.setChecked(preferences.value('cutter/transition_lines', False, bool))
         self.enabled.toggled.connect(lambda value: preferences.setValue('cutter/transition_lines', value))
         form = QFormLayout(self)
+        self.end_block = QCheckBox('在批次结束右下角添加红色色块（10×10毫米）')
+        self.end_block.setChecked(preferences.value('cutter/batch_end_block', True, bool))
+        self.end_block.toggled.connect(lambda value: preferences.setValue('cutter/batch_end_block', value))
+        form.addRow(self.end_block)
         form.addRow(self.enabled)
         if not preferences.contains('cutter/footer_disabled_pending_test_v1'):
             preferences.setValue('cutter/batch_footer_enabled', False)

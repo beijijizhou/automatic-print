@@ -28,6 +28,7 @@ class LayoutSettings:
     save_memory_mb: int = 512
     save_memory_unlimited: bool = False
     transition_lines: bool = False
+    batch_end_block: bool = False
     transition_gap_mm: float = 3
     transition_line_mm: float = .3
     batch_footer_enabled: bool = False

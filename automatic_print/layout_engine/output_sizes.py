@@ -30,7 +30,7 @@ def cutting_description(result):
                      for z in zones if 'knife_x_px' in z)
     sizes = result.get('size_range') or '尺码待核对'
     notices = '；'.join(('批次信息：\n'+r['text']) if 'text' in r else
-                        f"{r['kind']}红线：距文件顶部 {r['y']*25.4/result['output_dpi']:.1f} 毫米"
+                        f"{r['kind']}{'' if r['kind'] == '批次结束色块' else '红线'}：距文件顶部 {r['y']*25.4/result['output_dpi']:.1f} 毫米"
                         for r in result.get('transition_marks', []))
     rotated = any(p['cut_zone'] == '旋转区' for p in result['placements'])
     shift = ' · 刀码保持左侧固定基准' if rotated else ''

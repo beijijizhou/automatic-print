@@ -119,7 +119,7 @@ class LabelQuickPanel(QWidget):
         label.platform_font_height.valueChanged.connect(refresh_platform_font)
         window.cutter_settings.left_marker_lift.valueChanged.connect(refresh_platform_font)
         transitions = window.cutter_settings.transitions
-        for signal in (transitions.enabled.toggled, transitions.footer.toggled,
+        for signal in (transitions.enabled.toggled, transitions.end_block.toggled, transitions.footer.toggled,
                        transitions.gap.valueChanged, transitions.thickness.valueChanged,
                        transitions.footer_font.valueChanged):
             signal.connect(refresh_platform_font)

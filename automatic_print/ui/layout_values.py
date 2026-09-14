@@ -33,6 +33,7 @@ def settings_from_window(window) -> LayoutSettings:
         save_memory_mb=window.segmented_output.memory.value(),
         save_memory_unlimited=window.segmented_output.unlimited.isChecked(),
         transition_lines=window.cutter_settings.transitions.enabled.isChecked(),
+        batch_end_block=window.cutter_settings.transitions.end_block.isChecked(),
         transition_gap_mm=window.cutter_settings.transitions.gap.value(),
         transition_line_mm=window.cutter_settings.transitions.thickness.value(),
         batch_footer_enabled=window.cutter_settings.transitions.footer.isChecked(),

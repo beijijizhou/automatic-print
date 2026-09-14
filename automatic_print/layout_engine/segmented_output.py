@@ -114,11 +114,13 @@ def generate_segments(paths, output_dir, settings, progress, plan_ready,
                     else:
                         progress(stage, current, total, f'第{index+1:03d}段 · {filename}')
         result = generate_layout([path for path, _ in members], output_dir,
-            replace(base, worker_threads=max(1, settings.worker_threads//parallel)), report,
+            replace(base, worker_threads=max(1, settings.worker_threads//parallel),
+                    batch_end_block=base.batch_end_block and index == len(parts)-1), report,
             batch_name=batch_name, phase_ready=timer.phase,
             filename_suffix=f' 第{index+1:03d}段', prepared_plan={
                 'plan': (members, payload['labels'], width, height, height),
-                'settings': replace(base, worker_threads=max(1, settings.worker_threads//parallel)),
+                'settings': replace(base, worker_threads=max(1, settings.worker_threads//parallel),
+                                    batch_end_block=base.batch_end_block and index == len(parts)-1),
                 'analysis': payload['analysis'], 'end_notice': end_notice,
                 'batch_quantity': batch_quantity})
         result['operation_timings'] = timer.finish()
