@@ -9,8 +9,8 @@ def build_batch_input(owner, panel):
     row = QHBoxLayout(group)
     row.setSpacing(14)
     cards = (
-        ('单批次', '一个图片文件夹，直接排版并在下方查看合成过程。',
-         'singleInput', [owner.manual_layout_button, owner.start_layout_button]),
+        ('单批次', '选择图片文件夹后立即开始排版；取消选择不会启动任务。',
+         'singleInput', [owner.start_layout_button, owner.window().stop_generation_button]),
         ('多批次', '选择上级目录；各批独立输出，完成一批立即补下一批。',
          'multiInput', [panel.bulk_generation_button]),
     )
@@ -25,7 +25,9 @@ def build_batch_input(owner, panel):
         actions = QHBoxLayout()
         for button in buttons:
             button.setMinimumHeight(40)
-            button.setIcon(action_icon('play' if button is owner.start_layout_button else 'folder'))
+            icon = 'stop' if button is owner.window().stop_generation_button else (
+                'play' if button is owner.start_layout_button else 'folder')
+            button.setIcon(action_icon(icon))
             actions.addWidget(button)
         body.addLayout(actions)
         row.addWidget(card, 1)
@@ -42,10 +44,9 @@ def build_batch_input(owner, panel):
     return group
 
 
-def build_batch_tools(panel, stop):
+def build_batch_tools(panel):
     """Secondary actions belong below the data, not alongside input choices."""
     row = QHBoxLayout()
-    row.addWidget(stop)
     row.addStretch()
     row.addWidget(panel.details_button)
     for button in (panel.history_button, panel.bulk_analysis_button, panel.algorithm_costs_button):

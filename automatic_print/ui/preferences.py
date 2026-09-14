@@ -5,6 +5,12 @@ from PySide6.QtWidgets import QFileDialog, QMessageBox
 
 
 class PreferencesMixin:
+    def choose_and_generate(self):
+        if self.has_active_tasks():
+            return
+        if self.choose_folder():
+            self.generate()
+
     def build_reset_button(self):
         from .settings_reset import reset_button
         return reset_button(self)

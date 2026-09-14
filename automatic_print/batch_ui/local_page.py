@@ -19,12 +19,9 @@ def build_local_page(owner) -> QWidget:
         "选择本机图片文件夹，点击开始排版；使用已保存参数，合成过程直接显示在主界面。"
     )
     intro.setWordWrap(True)
-    owner.manual_layout_button = QPushButton(
-        "选择图片文件夹…"
-    )
-    owner.manual_layout_button.clicked.connect(lambda: owner.window().choose_folder())
-    owner.start_layout_button = QPushButton('开始排版')
-    owner.start_layout_button.clicked.connect(lambda: owner.window().generate())
+    owner.start_layout_button = QPushButton('选择文件夹并开始排版…')
+    owner.start_layout_button.clicked.connect(lambda: owner.window().choose_and_generate())
+    owner.manual_layout_button = owner.start_layout_button  # Compatibility: one primary action.
     preview_button = QPushButton("仅预览整批（不生成文件）")
     preview_button.clicked.connect(lambda: owner.window().generate(preview_only=True))
     owner.local_summary = QLabel("尚未读取本地生产批次。")
@@ -83,7 +80,7 @@ def build_local_page(owner) -> QWidget:
         from ..ui.batch_input_panel import build_batch_input, build_batch_tools
         owner.batch_input_panel = build_batch_input(owner, owner.label_quick_panel)
         layout.addWidget(owner.batch_input_panel)
-        build_batch_tools(owner.label_quick_panel, window.stop_generation_button)
+        build_batch_tools(owner.label_quick_panel)
         layout.addWidget(owner.label_quick_panel)
         owner.label_quick_panel.details_dialog.add_page('预览与处理日志', [
             preview_button, window.run_log, owner.log,
