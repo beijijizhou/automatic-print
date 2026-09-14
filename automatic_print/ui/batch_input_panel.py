@@ -28,6 +28,8 @@ def build_batch_input(owner, panel):
     owner.window().stop_generation_button.setToolTip(
         '立即退出软件，不等待任务完成；未完成批次禁止打印，已完成批次保留。')
     owner.start_layout_button.setProperty('importance', 'primary')
+    from .layout_activity import LayoutActivity
+    owner.window().layout_activity = LayoutActivity(owner.start_layout_button, panel.bulk_generation_button, group)
     group.setStyleSheet('''
         QGroupBox#batchInput { border: none; padding-top: 24px; font-weight: bold; }
     ''')

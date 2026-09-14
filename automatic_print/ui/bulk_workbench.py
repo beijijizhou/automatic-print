@@ -47,7 +47,7 @@ class BulkWorkbench(QObject):
         except ValueError as error:
             self.window.status.setText(str(error))
             return
-        self.window.generation_preview.start()
+        self.window.generation_preview.start('multiple')
         self.selector.show()
         self.panel.summary.start(str(parent), 0)
         self.panel.preview.sources_ready.emit([])
