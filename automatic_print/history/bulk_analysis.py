@@ -3,8 +3,7 @@ from uuid import uuid4
 from pathlib import Path
 from dataclasses import replace
 from time import monotonic
-from concurrent.futures import ThreadPoolExecutor, wait, FIRST_COMPLETED
-from ..cancellation import TaskCancelled
+from .batch_queue import run_queue
 from ..layout import discover_images
 from ..layout_engine.batch_analysis import analyze_batch
 from ..layout_engine.film_comparison import compare_films
@@ -12,12 +11,11 @@ from .store import save_run
 
 
 def analyze_folders(folders, settings, progress=None, cancellation=None, path=None, parallelism=4):
-    records, errors, group = [], [], uuid4().hex
+    group = uuid4().hex
     folders = list(dict.fromkeys(Path(folder).resolve() for folder in folders))
     workers = max(1, min(8, int(parallelism), len(folders)))
     settings = replace(settings, compare_reference_films=True, film_geometry_workers=max(1, 4//workers))
     started = monotonic()
-    stopped = False
     def calculate(index, folder):
         def report(stage, current, total, filename):
             if cancellation:
@@ -41,38 +39,11 @@ def analyze_folders(folders, settings, progress=None, cancellation=None, path=No
             progress(index, str(folder), '批次分析完成', len(images), len(images), str(folder))
         return record
 
-    def is_stopped():
-        try:
-            if cancellation:
-                cancellation.check()
-            return False
-        except TaskCancelled:
-            return True
-
-    next_index, pending = 0, {}
-    with ThreadPoolExecutor(max_workers=workers, thread_name_prefix='batch-analysis') as pool:
-        while pending or next_index < len(folders):
-            stopped = stopped or is_stopped()
-            while not stopped and len(pending) < workers and next_index < len(folders):
-                pending[pool.submit(calculate, next_index, folders[next_index])] = next_index
-                next_index += 1
-            if not pending:
-                break
-            done, _ = wait(pending, return_when=FIRST_COMPLETED)
-            for future in done:
-                index = pending.pop(future)
-                try:
-                    records.append(future.result())
-                except TaskCancelled:
-                    stopped = True
-                except Exception as error:
-                    errors.append({'folder': str(folders[index]), 'error': str(error)})
-                    if progress:
-                        progress(index, str(folders[index]), '批次失败，继续下一批', 0, 0, str(error))
-    records.sort(key=lambda record: int(record['id'].rsplit('-', 1)[1]))
-    return {'records': records, 'errors': errors, 'stopped': stopped,
-            'seconds': monotonic()-started, 'group_id': group,
-            'actual_parallelism': min(workers, next_index)}
+    def failed(index, folder, error):
+        if progress:
+            progress(index, str(folder), '批次失败，继续下一批', 0, 0, error)
+    result = run_queue(folders, calculate, workers, cancellation, failed)
+    return dict(result, seconds=monotonic()-started, group_id=group)
 
 
 def summary_text(records):

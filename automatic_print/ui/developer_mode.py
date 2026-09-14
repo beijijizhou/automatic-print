@@ -5,7 +5,8 @@ from PySide6.QtWidgets import QCheckBox
 def developer_task_active(window):
     details = window.automation_home.label_quick_panel.details_dialog
     dialog = getattr(details, 'bulk_dialog', None)
-    return bool(dialog and dialog.thread is not None)
+    production = getattr(details, 'production_bulk_dialog', None)
+    return bool((dialog and dialog.thread is not None) or (production and production.thread is not None))
 
 
 def build_developer_mode(window, footer):

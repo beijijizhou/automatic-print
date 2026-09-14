@@ -41,3 +41,12 @@ class BatchDetailsDialog(QDialog):
             self.bulk_dialog = BulkFilmAnalysisDialog(self.parent())
         self.bulk_dialog.show()
         self.bulk_dialog.raise_()
+
+    def open_bulk_generation(self):
+        if self.parent().has_active_tasks():
+            return
+        if not hasattr(self, 'production_bulk_dialog'):
+            from .bulk_generation import BulkGenerationDialog
+            self.production_bulk_dialog = BulkGenerationDialog(self.parent())
+        self.production_bulk_dialog.show()
+        self.production_bulk_dialog.raise_()

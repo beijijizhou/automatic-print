@@ -119,7 +119,7 @@ class BulkFilmAnalysisDialog(QDialog):
         self.status.setText(f'正在开始：同时分析{self.active_parallelism}批，后台扫描文件名…')
         self.set_busy(True)
         self.thread = QThread(self)
-        self.worker = BulkAnalysisWorker(folders, settings, self.parallelism.value())
+        self.worker = self.make_worker(folders, settings)
         self.worker.moveToThread(self.thread)
         self.thread.started.connect(self.worker.run)
         self.worker.progress.connect(self.progress, Qt.QueuedConnection)
@@ -128,6 +128,9 @@ class BulkFilmAnalysisDialog(QDialog):
         self.worker.finished.connect(self.worker.deleteLater)
         self.thread.finished.connect(self.cleanup)
         self.thread.start()
+
+    def make_worker(self, folders, settings):
+        return BulkAnalysisWorker(folders, settings, self.parallelism.value())
 
     @Slot(int, str, str, int, int, str)
     def progress(self, index, folder, stage, current, total, filename):
