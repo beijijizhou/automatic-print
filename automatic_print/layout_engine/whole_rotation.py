@@ -7,6 +7,34 @@ from .cut_validation import validate_cut_corridor
 from .marker_space import validate_embedded_marks
 
 
+def recover_normal_width(paths,settings,progress,error):
+    from .gap_fallback import width_failure
+    if (settings.cutter_mode!='dual' or not settings.cutter_compare_whole_rotation
+            or settings.manual_rotations or not width_failure(error)):
+        raise error
+    from .order_groups import ordered_paths
+    from .rotation_zones import rotation_items, _rotated
+    paths=ordered_paths(paths)
+    if progress:
+        progress('超宽旋转恢复',0,len(paths),'常规方案不可用，尝试整批旋转单排；不缩小原图')
+    items,labels=rotation_items(paths,settings,progress)
+    missing=[p.name for p in paths if p not in items]
+    if missing:
+        raise ValueError(f'{error}\n已尝试旋转单排，以下图片旋转后仍无安全占位或膜标签数据：'+
+                         '、'.join(missing)+'；未缩小原图。') from error
+    rotated=_rotated(paths,settings,(items,labels))
+    planned=[(path,replace(p,cut_zone='旋转区',cut_knife_x_px=rotated[3]))
+             for path,p in rotated[0]]
+    width=mm_to_px(settings.media_width_mm,settings.dpi)
+    validate_order_placements(paths,planned)
+    validate_cut_corridor(planned,settings,width)
+    validate_embedded_marks(planned,settings)
+    if progress:
+        progress('批次刀位已确定',rotated[3],settings.dpi,'原尺寸旋转单排；整批统一刀位，订单与双面相邻')
+        progress('超宽旋转恢复',len(paths),len(paths),'已采用旋转单排，不缩小；常规方案无解，不计算虚假省膜基准')
+    return planned,labels,width,rotated[2],rotated[2]
+
+
 def compare_whole(paths, settings, progress, selected, prepared=None):
     if not settings.cutter_compare_whole_rotation or any(degrees % 360 for _,degrees in settings.manual_rotations):
         return selected

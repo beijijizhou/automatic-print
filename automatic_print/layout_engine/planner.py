@@ -31,7 +31,12 @@ def _measured_plan(paths, settings, progress, analysis_ready):
                        tuple((resolved_name(path), i) for i, path in enumerate(paths, 1)))
     paths = ordered_paths(paths)
     analysis = analyze_batch(paths, settings, progress, analysis_ready)
-    result = _plan_layout(paths, settings, progress, analysis, analysis_ready)
+    try:
+        result = _plan_layout(paths, settings, progress, analysis, analysis_ready)
+    except ValueError as error:
+        from .whole_rotation import recover_normal_width
+        result = recover_normal_width(paths,settings,progress,error)
+        analysis['rotation_recovery']={'reason':str(error),'action':'常规方案无解，采用原尺寸整批旋转单排；未缩小图片'}
     if settings.cutter_mode in {'single', 'dual'}:
         from .whole_rotation import compare_whole
         result = compare_whole(paths, settings, progress, result)
@@ -48,6 +53,9 @@ def _measured_plan(paths, settings, progress, analysis_ready):
         analysis['film_comparison'] = compare_films(paths, settings, progress)
     from .image_anomalies import collect_image_anomalies
     analysis['image_anomalies'] = collect_image_anomalies(paths, settings)
+    if analysis.get('rotation_recovery'):
+        analysis['image_anomalies'].append({'source':'整批旋转恢复','kind':analysis['rotation_recovery']['action'],
+                                          'action':'请核查旋转区预览与统一刀位；常规基准无解，不显示虚假省膜量'})
     if analysis_ready:
         analysis_ready(finish_analysis(analysis, result[0], settings, result[3], result[4]))
     return result
