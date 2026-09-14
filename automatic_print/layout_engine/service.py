@@ -194,6 +194,8 @@ def generate_layout(
         ),
         "height_mm": round(height * 25.4 / settings.dpi, 1),
         "file_size_bytes": size,
+        "output_format": "PNG", "pixel_format": "RGBA",
+        "bits_per_channel": 8, "alpha_channel": True,
         "png_compression_level": settings.png_compression_level,
         "png_engine": "libvips" if use_vips else "Pillow",
         "png_save_details": save_details,

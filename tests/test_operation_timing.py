@@ -59,6 +59,10 @@ def test_worker_reports_scan_through_output_and_persists_timings(tmp_path):
     report = (worker.output/'排版报告.txt').read_text()
     assert '扫描文件名' in report and '最耗时步骤' in report
     assert '耗时与并行处理' in report
+    assert '输出文件信息' in report
+    assert 'PNG · RGBA · 每通道 8 位' in report
+    assert '文件大小：' in report
+    assert finished[0]['alpha_channel']
     assert not (worker.output/'耗时报告.txt').exists()
     assert not (tmp_path/'out'/'切割说明.txt').exists()
 
@@ -116,4 +120,18 @@ def test_running_phase_is_highlighted_first_without_changing_measurements():
     assert '当前：' not in panel.summary.text()
     panel.reset()
     assert panel.display_phase is None
+    panel.close()
+
+
+def test_copy_timing_includes_output_file_metadata():
+    from test_output_file_info import record
+    from automatic_print.layout_engine.output_file_info import result_file_report
+    bridge = MainWindowWorkerBridge()
+    panel = OperationTimingPanel(bridge)
+    OWNERS.extend((bridge, panel))
+    panel.save_report_provider = lambda: result_file_report(record())
+    panel.copy_report()
+    assert '600.00 MB' in APP.clipboard().text()
+    assert 'PNG · RGBA' in APP.clipboard().text()
+    assert '压缩等级：1' in APP.clipboard().text()
     panel.close()

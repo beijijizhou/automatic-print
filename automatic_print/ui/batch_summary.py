@@ -127,8 +127,8 @@ class BatchSummaryPanel(QGroupBox):
         self._show_quality(result.get('dual_quality', {}))
         self._show_comparison(result.get('analysis', {}))
         from ..layout_engine.png_codecs.fast import timing_text
-        from ..layout_engine.png_codecs.fast import result_timing_text
-        self.save_report = result_timing_text(result)
+        from ..layout_engine.output_file_info import result_file_report
+        self.save_report = result_file_report(result)
         self.metrics.setText(self.metrics.text()+'\n'+timing_text(result.get('png_save_details')))
 
     def _show_quality(self, quality):
