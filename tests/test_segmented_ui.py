@@ -8,6 +8,21 @@ APP = QApplication.instance() or QApplication([])
 OWNERS = []
 
 
+def test_end_line_disabled_once_and_manual_choice_persists(tmp_path):
+    from automatic_print.ui.transition_settings import TransitionSettings
+    prefs = QSettings(str(tmp_path/'end-line.ini'), QSettings.IniFormat)
+    prefs.setValue('cutter/transition_lines', True)
+    prefs.setValue('cutter/transition_gap_mm', 7)
+    widget = TransitionSettings(prefs)
+    assert not widget.enabled.isChecked()
+    assert widget.gap.value() == 7
+    widget.enabled.setChecked(True)
+    prefs.sync()
+    restored = TransitionSettings(QSettings(str(tmp_path/'end-line.ini'), QSettings.IniFormat))
+    assert restored.enabled.isChecked()
+    assert restored.gap.value() == 7
+
+
 def test_segment_settings_default_and_persistence(tmp_path):
     prefs = QSettings(str(tmp_path/'segments.ini'), QSettings.IniFormat)
     window = MainWindow(prefs)
@@ -17,7 +32,7 @@ def test_segment_settings_default_and_persistence(tmp_path):
     assert window._layout_settings().save_memory_unlimited
     assert not window.segmented_output.memory.isEnabled()
     assert window._layout_settings().rotation_marker_shift_mm == 0
-    assert window._layout_settings().transition_lines
+    assert not window._layout_settings().transition_lines
     assert window._layout_settings().cutter_tail_rotation
     window.segmented_output.parts.setValue(3)
     window.segmented_output.workers.setValue(1)

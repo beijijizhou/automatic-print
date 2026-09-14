@@ -5,7 +5,10 @@ class TransitionSettings(QGroupBox):
     def __init__(self, preferences, parent=None):
         super().__init__('批次结束提示', parent)
         self.enabled = QCheckBox('在预览和输出中添加红色横向提示线')
-        self.enabled.setChecked(preferences.value('cutter/transition_lines', True, bool))
+        if not preferences.contains('cutter/end_line_disabled_pending_test_v1'):
+            preferences.setValue('cutter/transition_lines', False)
+            preferences.setValue('cutter/end_line_disabled_pending_test_v1', True)
+        self.enabled.setChecked(preferences.value('cutter/transition_lines', False, bool))
         self.enabled.toggled.connect(lambda value: preferences.setValue('cutter/transition_lines', value))
         form = QFormLayout(self)
         form.addRow(self.enabled)

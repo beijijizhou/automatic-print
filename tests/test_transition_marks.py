@@ -25,6 +25,21 @@ def sources(tmp_path):
 
 @pytest.mark.parametrize('engine', ['pillow', 'libvips'])
 @pytest.mark.parametrize('parts', [1, 2])
+def test_disabled_end_line_preserves_markers_without_printed_lines(tmp_path, engine, parts):
+    result = generate_layout(sources(tmp_path), tmp_path/'out', LayoutSettings(
+        dpi=25.4, cutter_mode='dual', cutter_auto_knife=True,
+        transition_lines=False, cutter_knife_dots=False, output_parts=parts,
+        png_engine=engine, save_memory_unlimited=True))
+    for part in result.get('parts') or [result]:
+        assert not part['transition_marks']
+        with Image.open(tmp_path/'out'/part['filename']) as image:
+            for p in part['placements']:
+                assert image.getpixel((p['color_block_x_px'], p['color_block_y_px'])) == (255, 0, 0, 255)
+            assert image.crop((0, image.height-1, image.width, image.height)).getchannel('A').getextrema()[1] == 0
+
+
+@pytest.mark.parametrize('engine', ['pillow', 'libvips'])
+@pytest.mark.parametrize('parts', [1, 2])
 def test_full_outputs_have_exact_red_lines_and_shifted_rotation_markers(tmp_path, engine, parts):
     paths = sources(tmp_path)
     settings = LayoutSettings(dpi=25.4, margin_mm=0, media_width_mm=600,
