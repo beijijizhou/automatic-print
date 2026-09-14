@@ -15,7 +15,7 @@ from .order_validation import validate_order_placements
 from .cut_validation import validate_cut_corridor
 from .marker_space import validate_embedded_marks
 from .batch_analysis import analyze_batch
-from .film_specs import FILM_WIDTHS, AVAILABLE_WIDTHS, COMPARISON_COUNT, availability_text
+from .film_specs import AVAILABLE_WIDTHS, availability_text, comparison_widths
 
 
 def compare_films(paths, settings, progress=None):
@@ -26,7 +26,9 @@ def compare_films(paths, settings, progress=None):
 def _compare_films(paths, settings, progress):
     rows = []
     started = monotonic()
-    shared = replace(settings, media_width_mm=max(FILM_WIDTHS)-settings.riin_left_mm-settings.riin_right_mm,
+    widths = comparison_widths(settings.compare_reference_films)
+    count = len(widths)*2
+    shared = replace(settings, media_width_mm=max(widths)-settings.riin_left_mm-settings.riin_right_mm,
                      cutter_mode='dual', cutter_auto_knife=True, cutter_rotation_zone=False,
                      cutter_tail_rotation=False, allow_rotation=False,
                      manual_rotations=(), compare_film_sizes=False)
@@ -35,7 +37,7 @@ def _compare_films(paths, settings, progress):
     analysis = analyze_batch(paths, shared)
     measured_seconds = monotonic()-started
     if progress:
-        progress('膜规格比较', 0, COMPARISON_COUNT, '测量已完成，18套参考方案最多四路并行，不合成图片、不切换生产参数')
+        progress('膜规格比较', 0, count, f'测量已完成，{count}套方案最多四路并行，不合成图片、不切换生产参数')
     completed = [0]
     def calculate(film, rotation):
             usable = film-settings.riin_left_mm-settings.riin_right_mm
@@ -49,7 +51,7 @@ def _compare_films(paths, settings, progress):
                 if stage == '批次刀位已确定':
                     effective[0] = replace(config, cutter_knife_mm=current*25.4/total)
                 if progress:
-                    progress('膜规格比较', completed[0], COMPARISON_COUNT, f'{name} · {stage} {current}/{total}')
+                    progress('膜规格比较', completed[0], count, f'{name} · {stage} {current}/{total}')
             row = {'film_mm': film, 'usable_mm': usable, 'rotation_allowed': rotation,
                    'name': name, 'error': '', 'available': film in AVAILABLE_WIDTHS,
                    'availability': availability_text(film)}
@@ -87,14 +89,14 @@ def _compare_films(paths, settings, progress):
             return row
     with ThreadPoolExecutor(max_workers=4, thread_name_prefix='film-geometry') as pool:
         futures = [pool.submit(copy_context().run, calculate, film, rotation)
-                   for film in FILM_WIDTHS for rotation in (False, True)]
+                   for film in widths for rotation in (False, True)]
         for future in as_completed(futures):
             row = future.result()
             rows.append(row)
             completed[0] = len(rows)
             if progress:
-                progress('膜规格比较', len(rows), COMPARISON_COUNT, row['name']+' · '+('无安全方案' if row['error'] else '完成'))
-    rows.sort(key=lambda r: (FILM_WIDTHS.index(r['film_mm']), r['rotation_allowed']))
+                progress('膜规格比较', len(rows), count, row['name']+' · '+('无安全方案' if row['error'] else '完成'))
+    rows.sort(key=lambda r: (widths.index(r['film_mm']), r['rotation_allowed']))
     valid = [r for r in rows if not r['error']]
     best = min(valid, key=lambda r: r['film_area_m2']) if valid else None
     for row in valid:
@@ -109,7 +111,9 @@ def _compare_films(paths, settings, progress):
 def comparison_text(comparison):
     if not comparison:
         return ''
-    lines = ['膜规格比较：40–80厘米、间隔5厘米（分段前，按耗膜面积比较；不自动选择生产方案）']
+    extended = any(r['film_mm'] not in AVAILABLE_WIDTHS for r in comparison['rows'])
+    label = '40–80厘米、间隔5厘米' if extended else '45/60厘米'
+    lines = [f'膜规格比较：{label}（分段前，按耗膜面积比较；不自动选择生产方案）']
     if 'measurement_seconds' in comparison:
         measurement = comparison['measurement_seconds']
         lines.append(f"共享测量 {measurement:.2f} 秒 · 方案并行计算 "

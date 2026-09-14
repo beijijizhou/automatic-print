@@ -13,7 +13,7 @@ from tests.test_film_comparison import sources
 
 
 def record(tmp_path, path, job='job', preview=False):
-    settings = LayoutSettings(dpi=25.4, media_width_mm=580, number_images=False)
+    settings = LayoutSettings(dpi=25.4, media_width_mm=580, number_images=False, compare_reference_films=True)
     result = {'preview_only': preview, 'analysis': {'image_count': 6, 'order_count': 3,
               'film_comparison': compare_films(sources(tmp_path), settings)}}
     return save_run(job, tmp_path, tmp_path/'output', settings, result, path)

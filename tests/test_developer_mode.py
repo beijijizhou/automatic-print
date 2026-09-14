@@ -23,6 +23,8 @@ def test_default_hides_tools_and_gates_direct_open(tmp_path, monkeypatch):
     owner = window(tmp_path/'prefs.ini')
     panel = owner.automation_home.label_quick_panel
     assert not owner.developer_mode_checkbox.isChecked()
+    assert panel.summary.film_table.rowCount() == 4
+    assert not owner._layout_settings().compare_reference_films
     assert not panel.history_button.isVisible() and not panel.bulk_analysis_button.isVisible()
     panel.details_dialog.open_history()
     panel.details_dialog.open_bulk_analysis()
@@ -40,12 +42,15 @@ def test_toggle_persists_and_existing_history_tab_hides(tmp_path, monkeypatch):
     owner = window(tmp_path/'prefs.ini')
     panel = owner.automation_home.label_quick_panel
     owner.developer_mode_checkbox.setChecked(True)
+    assert panel.summary.film_table.rowCount() == 18
+    assert owner._layout_settings().compare_reference_films
     assert panel.history_button.isVisible() and panel.bulk_analysis_button.isVisible()
     panel.history_button.click()
     APP.processEvents()
     details = panel.details_dialog
     assert details.tabs.currentWidget() is details.history_page
     owner.developer_mode_checkbox.setChecked(False)
+    assert panel.summary.film_table.rowCount() == 4
     assert not details.tabs.isTabVisible(details.tabs.indexOf(details.history_page))
     assert not panel.history_button.isVisible()
     details.close()

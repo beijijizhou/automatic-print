@@ -35,7 +35,7 @@ def settings():
     return LayoutSettings(dpi=25.4, media_width_mm=580, cutter_mode='dual',
         cutter_auto_knife=True, allow_rotation=False, platform_name='隆丰',
         platform_font_height_mm=6, label_text_template='CY', label_machine_enabled=True,
-        label_sequence_enabled=True, transition_lines=True)
+        label_sequence_enabled=True, transition_lines=True, compare_reference_films=True)
 
 
 def test_four_workers_simultaneous_and_no_image_io_after_measurement(tmp_path, monkeypatch):

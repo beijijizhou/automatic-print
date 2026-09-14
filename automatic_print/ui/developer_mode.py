@@ -25,6 +25,10 @@ def build_developer_mode(window, footer):
         panel = window.automation_home.label_quick_panel
         panel.history_button.setVisible(enabled)
         panel.bulk_analysis_button.setVisible(enabled)
+        panel.summary.film_table.set_reference_mode(enabled)
+        window.cutter_settings.compare_films.setText(
+            '比较40–80厘米，每隔5厘米：常规与旋转（不自动切换）' if enabled else
+            '比较45/60厘米：常规与旋转（不自动切换）')
         details = panel.details_dialog
         history = getattr(details, 'history_page', None)
         if history is not None:

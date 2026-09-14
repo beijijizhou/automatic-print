@@ -1,6 +1,7 @@
 """Independent folder comparisons, durable partial results and fair totals."""
 from uuid import uuid4
 from pathlib import Path
+from dataclasses import replace
 from time import monotonic
 from ..cancellation import TaskCancelled
 from ..layout import discover_images
@@ -11,6 +12,7 @@ from .store import save_run
 
 def analyze_folders(folders, settings, progress=None, cancellation=None, path=None):
     records, errors, group = [], [], uuid4().hex
+    settings = replace(settings, compare_reference_films=True)
     started = monotonic()
     stopped = False
     for index, folder in enumerate(dict.fromkeys(Path(folder).resolve() for folder in folders)):

@@ -23,7 +23,7 @@ def test_four_real_plans_report_area_not_cross_width_length(tmp_path):
     paths = sources(tmp_path)
     settings = LayoutSettings(dpi=25.4, cutter_mode='dual', media_width_mm=580,
                               cutter_auto_knife=True, allow_rotation=False,
-                              number_images=False, transition_lines=True)
+                              number_images=False, transition_lines=True, compare_reference_films=True)
     progress = []
     result = compare_films(paths, settings, lambda *args: progress.append(args))
     assert len(result['rows']) == 18
@@ -61,7 +61,8 @@ def test_unavailable_width_does_not_hide_other_plans(tmp_path):
 def test_planner_comparison_is_optional_and_preserves_selected_plan(tmp_path):
     paths = sources(tmp_path)
     settings = LayoutSettings(dpi=25.4, cutter_mode='dual', media_width_mm=580,
-                              number_images=False, allow_rotation=False, cutter_auto_knife=True)
+                              number_images=False, allow_rotation=False, cutter_auto_knife=True,
+                              compare_reference_films=True)
     expected = plan_layout(paths, settings, None)
     reports = []
     actual = plan_layout(paths, replace(settings, compare_film_sizes=True), None, reports.append)
@@ -72,7 +73,7 @@ def test_planner_comparison_is_optional_and_preserves_selected_plan(tmp_path):
 def test_future_width_can_fit_without_becoming_production_selection(tmp_path):
     path = tmp_path / 'B1-1-T-Black-M-NO1-1.png'
     Image.new('RGBA', (650, 650), 'blue').save(path, dpi=(25.4, 25.4))
-    settings = LayoutSettings(dpi=25.4, media_width_mm=580, number_images=False)
+    settings = LayoutSettings(dpi=25.4, media_width_mm=580, number_images=False, compare_reference_films=True)
     result = compare_films([path], settings)
     future = [row for row in result['rows'] if row['film_mm'] == 800]
     assert all(not row['error'] and not row['available'] for row in future)
@@ -80,3 +81,10 @@ def test_future_width_can_fit_without_becoming_production_selection(tmp_path):
     assert result['best_name'].startswith('70 厘米')
     assert settings.media_width_mm == 580
     assert '不代表当前设备可生产' in comparison_text(result)
+
+
+def test_normal_comparison_computes_only_current_widths(tmp_path):
+    result = compare_films(sources(tmp_path), LayoutSettings(dpi=25.4, number_images=False))
+    assert len(result['rows']) == 4
+    assert {row['film_mm'] for row in result['rows']} == {450, 600}
+    assert '45/60厘米' in comparison_text(result)
