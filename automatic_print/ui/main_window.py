@@ -97,7 +97,7 @@ class MainWindow(
         folder_row.addWidget(self.folder)
         folder_row.addWidget(browse)
         self.width = self._box(600, 50, 5000)
-        self.spacing = self._box(5, 0, 100)
+        self.spacing = self._box(8, 0, 100)
         self.margin = self._box(3, 0, 100)
         self.margin.setToolTip(
             "只在整张批次排版图的开头和结尾保留空间，不影响图片之间的距离。"

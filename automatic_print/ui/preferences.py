@@ -54,9 +54,11 @@ class PreferencesMixin:
         self.settings_dialog.activateWindow()
 
     def load_layout_preferences(self) -> None:
+        from .spacing_settings import migrate_spacing
+        migrate_spacing(self.preferences)
         values = (
             (self.width, "layout/media_width_mm", 600, float),
-            (self.spacing, "layout/spacing_mm", 5, float),
+            (self.spacing, "layout/spacing_mm", 8, float),
             (self.margin, "layout/margin_mm", 3, float),
             (self.dpi, "layout/dpi", 300, int),
             (self.worker_threads, "layout/worker_threads", 4, int),

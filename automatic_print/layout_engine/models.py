@@ -11,7 +11,7 @@ MAX_SAVE_PARALLELISM = 8
 @dataclass(frozen=True)
 class LayoutSettings:
     media_width_mm: float = 600
-    spacing_mm: float = 5  # Vertical only in cutter modes; both axes in free mode.
+    spacing_mm: float = 8  # Vertical only in cutter modes; both axes in free mode.
     margin_mm: float = 3
     dpi: float = 300
     follow_source_dpi: bool = False  # GUI defaults on; direct API stays compatible.
