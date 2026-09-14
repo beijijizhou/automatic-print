@@ -16,6 +16,7 @@ class LayoutSettings:
     dpi: int = 300
     png_compression_level: int = 1
     png_engine: str = "pillow"
+    png_fast_encoding: bool = False  # GUI opt-in default; preserve direct-call compatibility.
     worker_threads: int = 4
     output_parts: int = 1
     save_parallelism: int = 4

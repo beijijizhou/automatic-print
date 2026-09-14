@@ -47,6 +47,11 @@ def cutting_report(result):
     from .image_anomalies import anomaly_text
     review += '\n'+anomaly_text(result.get('analysis', {}))
     from .measurement_timing import measurement_text
+    from .png_codecs.fast import timing_text
+    for part in parts:
+        details = timing_text(part.get('png_save_details'))
+        if details:
+            review += '\n'+part['filename']+'\n'+details
     review += '\n'+measurement_text(result.get('analysis', {}).get('measurement_timings'))
     comparison = result.get('analysis', {}).get('rotation_comparison')
     if comparison:

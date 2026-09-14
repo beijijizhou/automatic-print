@@ -24,6 +24,7 @@ def settings_from_window(window) -> LayoutSettings:
         dpi=window.dpi.value(),
         png_compression_level=window.png_compression.currentData(),
         png_engine=window.png_engine.currentData(),
+        png_fast_encoding=window.segmented_output.fast_png.isChecked(),
         worker_threads=window.worker_threads.value(),
         output_parts=window.segmented_output.parts.value(),
         save_parallelism=window.segmented_output.workers.value(),

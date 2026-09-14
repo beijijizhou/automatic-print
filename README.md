@@ -7,7 +7,7 @@ Windows desktop application for combining a folder of images into print-ready la
 在测试电脑上打开 PowerShell，复制并运行：
 
 ```powershell
-powershell -ExecutionPolicy Bypass -Command "irm 'https://raw.githubusercontent.com/beijijizhou/automatic-print/main/windows/bootstrap-test-computer.ps1?v=0.1.149' | iex"
+powershell -ExecutionPolicy Bypass -Command "irm 'https://raw.githubusercontent.com/beijijizhou/automatic-print/main/windows/bootstrap-test-computer.ps1?v=0.1.150' | iex"
 ```
 
 同一条命令既可首次安装，也可在以后下载最新代码并更新运行环境。
@@ -147,7 +147,7 @@ source version instead of reinstalling every build.
 Open PowerShell on the test computer and run:
 
 ```powershell
-powershell -ExecutionPolicy Bypass -Command "irm 'https://raw.githubusercontent.com/beijijizhou/automatic-print/main/windows/bootstrap-test-computer.ps1?v=0.1.149' | iex"
+powershell -ExecutionPolicy Bypass -Command "irm 'https://raw.githubusercontent.com/beijijizhou/automatic-print/main/windows/bootstrap-test-computer.ps1?v=0.1.150' | iex"
 ```
 
 The script installs or checks Git, Python 3.12, and Google Chrome; clones or
@@ -172,6 +172,8 @@ computers should continue using tested GitHub Releases.
 ## Output
 
 当前报告统一为 `排版报告.txt`：包含切割说明、总计/分步骤耗时、实际并行数与分段耗时，不再分别输出切割和耗时两个文本文件。旧报告保留。
+
+打印参数 → 输出与并行默认启用“原生快速PNG保存”：固定UP滤波配合libdeflate无损压缩，保持RGBA透明通道及DPI。可取消勾选对比旧方式；缺依赖或超出已设置内存预算时明确回退。该路径需要额外像素/编码缓冲，不是不占内存的流式保存。报告及“复制耗时”包含像素提取、滤波压缩、文件写入子步骤；大图像素提取可能包含延迟合成，多段子步骤不可相加当作总墙钟耗时。
 
 平台字优先复用二维码旁经过源图透明像素检查的空位，不追加到图案右侧。没有安全空位时保守放在图片左侧外部，仍可能影响可并排宽度；不为省材料覆盖原图。旋转后重新检查，实际预览与输出共享坐标。
 

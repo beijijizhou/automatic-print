@@ -103,6 +103,7 @@ class LabelQuickPanel(QWidget):
         self.details_dialog = BatchDetailsDialog(window)
         self.summary = BatchSummaryPanel(self)
         self.timings = OperationTimingPanel(window.worker_bridge, self)
+        self.timings.save_report_provider = lambda: self.summary.save_report
         self.preview.loading_status.connect(self.summary.progress.setText)
         self.preview.plan_loaded.connect(self.summary.show_plan)
         self.preview.analysis_ready.connect(self.analysis.show_report)

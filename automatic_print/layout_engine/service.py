@@ -133,11 +133,20 @@ def generate_layout(
     filename = output_path.name
     saving_started = perf_counter()
     phase('保存输出图片')
-    save_png(canvas, output_path, settings, use_vips, progress)
+    save_details = save_png(canvas, output_path, settings, use_vips, progress)
     saving_seconds = perf_counter() - saving_started
-    if use_vips:
+    if use_vips or (settings.png_fast_encoding and available()):
         phase('输出文件安全复核')
         validate_vips_output(output_path, cut_check, progress, guide_boxes, transitions)
+    elif settings.png_fast_encoding and cut_check:
+        from PIL import Image
+        phase('输出文件安全复核')
+        try:
+            with Image.open(output_path) as saved:
+                validate_marked_pillow(saved, cut_check, guide_boxes, transitions, progress)
+        except ValueError:
+            output_path.rename(output_path.with_suffix('.禁止打印'))
+            raise
     phase('批次信息整理')
     size = output_path.stat().st_size
     result = {
@@ -177,6 +186,7 @@ def generate_layout(
         "file_size_bytes": size,
         "png_compression_level": settings.png_compression_level,
         "png_engine": "libvips" if use_vips else "Pillow",
+        "png_save_details": save_details,
         "output_megabytes_per_second": round(
             size / 1_000_000 / max(saving_seconds, 0.001), 1
         ),

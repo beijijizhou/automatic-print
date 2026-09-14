@@ -7,7 +7,8 @@ from automatic_print.layout import LayoutSettings, generate_layout
 
 
 @pytest.mark.parametrize('engine',['pillow','libvips'])
-def test_single_rows_choose_direction_per_complete_order_without_knife(tmp_path,engine):
+@pytest.mark.parametrize('fast',[False,True])
+def test_single_rows_choose_direction_per_complete_order_without_knife(tmp_path,engine,fast):
     paths=[]
     for order in range(4):
         size,w,h=('M',150,220) if order<2 else ('L',250,120)
@@ -21,10 +22,12 @@ def test_single_rows_choose_direction_per_complete_order_without_knife(tmp_path,
     settings=LayoutSettings(dpi=25.4,media_width_mm=430,cutter_mode='single',
         cutter_single_row_rotation=True,cutter_compare_whole_rotation=True,
         cutter_left_marker_external=True,cutter_left_marker_lift_mm=1.5,
-        preserve_header_gap=True,cutter_knife_dots=False,png_engine=engine,
+        preserve_header_gap=True,cutter_knife_dots=False,png_engine=engine,png_fast_encoding=fast,
         output_parts=3,save_memory_unlimited=True,platform_name='隆丰',platform_font_height_mm=6)
     result=generate_layout(paths,tmp_path/'out',settings)
     for part in result.get('parts') or [result]:
+        if fast:
+            assert '原生快速PNG' in part['png_save_details']['encoder']
         assert part['cutter_knife_mm'] is None and part['cut_corridor'] is None
         with Image.open(tmp_path/'out'/part['filename']) as output:
             for p in part['placements']:

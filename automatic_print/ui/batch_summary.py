@@ -11,6 +11,7 @@ class BatchSummaryPanel(QGroupBox):
     def __init__(self, parent=None):
         super().__init__('本次批次 · 排版总结', parent)
         self.info = QLabel('请选择本地图片文件夹。')
+        self.save_report = ''
         self.info.setTextFormat(Qt.PlainText)
         self.info.setStyleSheet('QLabel { background: #dbeafe; color: #1e3a8a; '
             'border: 2px solid #60a5fa; border-radius: 7px; padding: 9px; '
@@ -43,6 +44,7 @@ class BatchSummaryPanel(QGroupBox):
         layout.addWidget(self.film_table)
 
     def start(self, folder, count=None):
+        self.save_report = ''
         self.measurement.clear()
         self.film_table.reset_rows()
         self.cutting.clear()
@@ -124,6 +126,10 @@ class BatchSummaryPanel(QGroupBox):
             self.cutting.show()
         self._show_quality(result.get('dual_quality', {}))
         self._show_comparison(result.get('analysis', {}))
+        from ..layout_engine.png_codecs.fast import timing_text
+        from ..layout_engine.png_codecs.fast import result_timing_text
+        self.save_report = result_timing_text(result)
+        self.metrics.setText(self.metrics.text()+'\n'+timing_text(result.get('png_save_details')))
 
     def _show_quality(self, quality):
         if quality:

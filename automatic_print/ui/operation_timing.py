@@ -11,6 +11,7 @@ class OperationTimingPanel(QGroupBox):
     def __init__(self, bridge, parent=None):
         super().__init__('本次排版 · 分步耗时', parent)
         self.data = None
+        self.save_report_provider = lambda: ''
         self.summary = QLabel('开始排版后显示各大步骤耗时')
         self.summary.setTextInteractionFlags(Qt.TextSelectableByMouse)
         copy = QPushButton('复制耗时')
@@ -73,4 +74,7 @@ class OperationTimingPanel(QGroupBox):
         lines.extend('：'.join(self.table.item(row, col).text() for col in range(3))
                      for row in range(self.table.rowCount()))
         lines.append(self.note.text())
+        save_report = self.save_report_provider()
+        if save_report:
+            lines.append(save_report)
         QApplication.clipboard().setText('\n'.join(lines))

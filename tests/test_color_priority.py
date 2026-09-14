@@ -30,7 +30,8 @@ def test_uniform_color_multis_and_singles_group_without_splitting_orders():
 
 @pytest.mark.parametrize('mode',['single','dual'])
 @pytest.mark.parametrize('engine',['pillow','libvips'])
-def test_saved_batch_groups_color_before_size_with_complete_double_sides(tmp_path,mode,engine):
+@pytest.mark.parametrize('fast', [False, True])
+def test_saved_batch_groups_color_before_size_with_complete_double_sides(tmp_path,mode,engine,fast):
     paths=[]
     for order,(color,size) in enumerate([('White','L'),('Black','XL'),('白色','S'),('黑色','M')]):
         for face in (1,2):
@@ -44,8 +45,10 @@ def test_saved_batch_groups_color_before_size_with_complete_double_sides(tmp_pat
         cutter_auto_knife=True,cutter_single_row_rotation=True,
         cutter_compare_whole_rotation=True,cutter_left_marker_external=True,
         cutter_left_marker_lift_mm=1.5,preserve_header_gap=True,cutter_knife_dots=False,
-        png_engine=engine,output_parts=3,save_memory_unlimited=True)
+        png_engine=engine,png_fast_encoding=fast,output_parts=3,save_memory_unlimited=True)
     result=generate_layout(paths,tmp_path/'out',settings)
+    if fast:
+        assert all('原生快速PNG' in part['png_save_details']['encoder'] for part in result['parts'])
     actual=[source_block(Path(p['source'])) for p in result['placements']]
     assert actual==[block for block in [('黑色','M'),('黑色','XL'),('白色','S'),('白色','L')] for _ in range(2)]
     for part in result.get('parts') or [result]:

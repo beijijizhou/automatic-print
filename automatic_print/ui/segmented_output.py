@@ -21,6 +21,10 @@ class SegmentedOutputSettings(QGroupBox):
         self.memory.setEnabled(not self.unlimited.isChecked())
         self.unlimited.toggled.connect(lambda value: preferences.setValue('output/save_memory_unlimited', value))
         self.unlimited.toggled.connect(lambda value: self.memory.setEnabled(not value))
+        self.fast_png = QCheckBox('原生快速PNG保存（无损，保留透明度与打印尺寸）')
+        self.fast_png.setChecked(preferences.value('output/fast_png', True, bool))
+        self.fast_png.toggled.connect(lambda value: preferences.setValue('output/fast_png', value))
+        self.fast_png.setToolTip('使用固定UP滤波及原生快速压缩；缺依赖或超出已设置内存预算时兼容回退。可关闭对比耗时。')
         for widget, key in ((self.parts, 'output/parts'), (self.workers, 'output/save_workers'),
                             (self.memory, 'output/save_memory_mb')):
             widget.valueChanged.connect(lambda value, key=key: preferences.setValue(key, value))
@@ -30,5 +34,6 @@ class SegmentedOutputSettings(QGroupBox):
         layout.addRow('期望输出文件数', self.parts)
         layout.addRow('最多同时处理段数', self.workers)
         layout.addRow(self.unlimited)
+        layout.addRow(self.fast_png)
         layout.addRow('并行内存预算（兆字节）', self.memory)
         layout.addRow(note)
