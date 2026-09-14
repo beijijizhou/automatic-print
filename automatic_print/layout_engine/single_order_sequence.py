@@ -42,33 +42,8 @@ def horizontal_savings(a, b, lanes, fits=None):
 
 
 def arrange_orders(orders, items, lanes, settings, prepared=None):
-    locked, pending, order_sizes = prepared or prepare_order_sequence(orders, items)
-    pending = list(pending)
-    fits = {path: tuple(lane_fits(item, lane) for lane in lanes) for path, item in items.items()}
-    ordered = list(locked)
-    while pending:
-        first = pending.pop(0)
-        ordered.append(first)
-        a = items[orders[first][0]]
-        if len(orders[first]) != 1:
-            continue
-        candidates = []
-        for position, index in enumerate(pending):
-            b = items[orders[index][0]]
-            if len(orders[index]) != 1:
-                continue
-            if order_sizes[first] != order_sizes[index]:
-                continue
-            saved = horizontal_savings(a, b, lanes, fits)
-            if saved is None:
-                continue
-            if saved > 0:
-                candidates.append((-saved, position, index))
-        if candidates:
-            partner = min(candidates)[-1]
-            ordered.append(partner)
-            pending.remove(partner)
-    return ordered
+    from .pairing_index import indexed_sequence
+    return indexed_sequence(orders, items, lanes, prepared or prepare_order_sequence(orders, items))
 
 
 def prepare_groups(groups):

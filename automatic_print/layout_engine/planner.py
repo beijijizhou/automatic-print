@@ -11,6 +11,7 @@ from .metrics import basic_ordered_height
 from .models import LayoutSettings, Placement, ProgressCallback, mm_to_px
 from .row_optimizer import optimal_ordered_layout
 from .units import build_units, optimizer_options
+from .measurement_session import resolved_name
 
 
 def plan_layout(
@@ -19,14 +20,16 @@ def plan_layout(
     progress: ProgressCallback | None,
     analysis_ready=None,
 ) -> tuple[list[tuple[Path, Placement]], dict[int, str], int, int, int]:
-    from .measurement_session import measurement_session
+    from .measurement_session import measurement_session, verify_sources
     with measurement_session():
-        return _measured_plan(paths, settings, progress, analysis_ready)
+        result = _measured_plan(paths, settings, progress, analysis_ready)
+        verify_sources()
+        return result
 
 
 def _measured_plan(paths, settings, progress, analysis_ready):
     settings = replace(settings, sequence_numbers=settings.sequence_numbers or
-                       tuple((str(path.resolve()), i) for i, path in enumerate(paths, 1)))
+                       tuple((resolved_name(path), i) for i, path in enumerate(paths, 1)))
     paths = ordered_paths(paths)
     analysis = analyze_batch(paths, settings, progress, analysis_ready)
     result = _plan_layout(paths, settings, progress, analysis, analysis_ready)

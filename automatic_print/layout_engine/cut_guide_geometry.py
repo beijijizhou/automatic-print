@@ -6,6 +6,7 @@ from pathlib import Path
 
 from .membrane_region import MembraneRegion
 from .models import mm_to_px
+from .measurement_session import identity, SESSION
 
 
 @dataclass(frozen=True)
@@ -18,8 +19,14 @@ class GuideSpan:
 def detect_guide_band(path: Path):
     """Legacy name: return the preferred label card band, without QR recognition."""
     try:
-        stat = path.stat()
-        return _cached(str(path), stat.st_mtime_ns, stat.st_size)
+        key = identity(path)
+        session = SESSION.get()
+        if session is not None and key in session.bands:
+            return session.bands[key]
+        band = _cached(str(path), key[1], key[2])
+        if session is not None:
+            session.bands[key] = band
+        return band
     except (OSError, ValueError):
         return None
 

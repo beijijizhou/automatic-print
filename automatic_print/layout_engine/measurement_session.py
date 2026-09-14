@@ -4,6 +4,8 @@ from contextvars import ContextVar
 from datetime import datetime
 from dataclasses import replace
 from PIL import Image
+from threading import RLock
+from concurrent.futures import Future
 
 SESSION = ContextVar('layout_measurements', default=None)
 SOURCE = ContextVar('layout_measurement_source', default=None)
@@ -13,6 +15,8 @@ class Measurements:
     def __init__(self):
         self.created_at = datetime.now().astimezone()
         self.items, self.dimensions, self.rectangles = {}, {}, {}
+        self.bands = {}
+        self.identities, self.identity_lock = {}, RLock()
 
 
 @contextmanager
@@ -28,8 +32,39 @@ def measurement_session():
 
 
 def identity(path):
+    session = SESSION.get()
+    if session is not None:
+        with session.identity_lock:
+            leader = path not in session.identities
+            future = session.identities.setdefault(path, Future())
+        if leader:
+            try:
+                future.set_result(fresh_identity(path))
+            except BaseException as exc:
+                future.set_exception(exc)
+                raise
+        return future.result()
+    return fresh_identity(path)
+
+
+def fresh_identity(path):
     stat = path.stat()
     return str(path.resolve()), stat.st_mtime_ns, stat.st_size
+
+
+def resolved_name(path):
+    session = SESSION.get()
+    if session is not None and path in session.identities:
+        return session.identities[path].result()[0]
+    return str(path.resolve())
+
+
+def verify_sources():
+    session = SESSION.get()
+    if session is not None:
+        for path, expected in session.identities.items():
+            if fresh_identity(path) != expected.result():
+                raise ValueError(f'{path.name}：源文件在排版计算期间发生变化，请重新生成。')
 
 
 def item_settings(settings):

@@ -9,13 +9,14 @@ from .models import mm_to_px
 from .units import UnitChoice, UnitMember, build_units
 from .single_order_sequence import arrange_groups
 from .size_policy import same_single_size
+from .measurement_session import resolved_name
 
 
 def plan_cutter_layout(paths, settings, progress, prepared=None, preserve_sequence=False):
     from .planner import _place_choice, _used_canvas_width
 
     settings = replace(settings, sequence_numbers=settings.sequence_numbers or
-                       tuple((str(path.resolve()), i) for i, path in enumerate(paths, 1)))
+                       tuple((resolved_name(path), i) for i, path in enumerate(paths, 1)))
     paths = ordered_paths(paths)
     width = mm_to_px(settings.media_width_mm, settings.dpi)
     spacing = mm_to_px(settings.spacing_mm, settings.dpi)

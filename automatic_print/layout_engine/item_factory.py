@@ -15,7 +15,7 @@ from .platform_label import platform_geometry, numbered_template
 from .marker_space import can_embed_marker
 from .rotated_marks import rotated_marks
 from .qr_placement import signed_mm as _signed_mm, rotated_qr as _rotated_qr, qr_label_layout as _qr_label_layout
-from .measurement_session import SESSION, measured_item, choice_source
+from .measurement_session import SESSION, measured_item, choice_source, resolved_name
 from .item_block import block_position as _block_position
 
 
@@ -66,11 +66,11 @@ def _read_items(paths, settings, progress):
     )
     qr_detected = 0
     for index, path in enumerate(paths, start=1):
-        number = dict(settings.sequence_numbers).get(str(path.resolve()), index)
+        number = dict(settings.sequence_numbers).get(resolved_name(path), index)
         size = print_dimensions(path, settings.dpi)
         width = max(1, mm_to_px(size.width_mm, settings.dpi))
         height = max(1, mm_to_px(size.height_mm, settings.dpi))
-        manual = dict(settings.manual_rotations).get(str(path.resolve()), 0)
+        manual = dict(settings.manual_rotations).get(resolved_name(path), 0)
         if manual % 180:
             width, height = height, width
         qr_location = None

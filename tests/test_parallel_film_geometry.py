@@ -78,6 +78,27 @@ def test_rotated_transparent_search_decodes_once_and_reuses_item_results(tmp_pat
         assert len(decodes) == count
 
 
+def test_shared_normal_baselines_preserve_all_eighteen_results(tmp_path, monkeypatch):
+    paths = qr_sources(tmp_path)
+    config = replace(settings(), film_geometry_workers=1)
+    normal, calls = film_comparison.plan_cutter_layout, []
+    def counted(*args, **kwargs):
+        calls.append(args[1].media_width_mm)
+        return normal(*args, **kwargs)
+    monkeypatch.setattr(film_comparison, 'plan_cutter_layout', counted)
+    shared = film_comparison.compare_films(paths, config)
+    assert len(calls) == len(set(calls)) == 9
+    rotation = film_comparison.plan_rotation_zones
+    def without_baseline(*args, **kwargs):
+        kwargs.pop('normal_baseline', None)
+        return rotation(*args, **kwargs)
+    monkeypatch.setattr(film_comparison, 'plan_rotation_zones', without_baseline)
+    independent = film_comparison.compare_films(paths, config)
+    for a, b in zip(shared['rows'], independent['rows']):
+        assert {k: v for k, v in a.items() if k != 'seconds'} == {
+            k: v for k, v in b.items() if k != 'seconds'}
+
+
 @pytest.mark.parametrize('engine', ['pillow', 'libvips'])
 def test_comparison_keeps_actual_selected_batch_pixel_corridors(tmp_path, engine):
     paths = qr_sources(tmp_path)

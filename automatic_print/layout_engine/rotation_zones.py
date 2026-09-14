@@ -12,6 +12,7 @@ from .zone_optimizer import select_zones
 from .batch_analysis import attach_rotation_options
 from .size_policy import ordered_single_blocks
 from .transition_marks import rotation_marker_item, marked_height
+from .measurement_session import resolved_name
 
 
 def _normal(paths, settings, prepared=None, preserve_sequence=False):
@@ -25,7 +26,7 @@ def _normal(paths, settings, prepared=None, preserve_sequence=False):
 
 def rotation_items(paths, settings, progress=None):
     from .cut_guide_geometry import detect_guide_band
-    sequence = settings.sequence_numbers or tuple((str(p.resolve()), i)
+    sequence = settings.sequence_numbers or tuple((resolved_name(p), i)
                                                 for i, p in enumerate(paths, 1))
     if settings.platform_name:
         paths = [p for p in paths if detect_guide_band(p) is not None]
@@ -33,7 +34,7 @@ def rotation_items(paths, settings, progress=None):
         return {}, {}
     manual = dict(settings.manual_rotations)
     direction = 90 if settings.rotation_direction == 'left' else -90
-    rotations = tuple((str(p.resolve()), manual.get(str(p.resolve())) or direction) for p in paths)
+    rotations = tuple((resolved_name(p), manual.get(resolved_name(p)) or direction) for p in paths)
     rotated = replace(settings, allow_rotation=False, manual_rotations=rotations,
                       color_block_position='left_top', color_block_offset_y_mm=0,
                       sequence_numbers=sequence)
@@ -70,10 +71,11 @@ def _rotated(paths, settings, prepared=None):
     return planned, labels, y-spacing+margin, knife
 
 
-def plan_rotation_zones(paths, settings, progress, analysis=None, analysis_ready=None, prepared=None):
+def plan_rotation_zones(paths, settings, progress, analysis=None, analysis_ready=None, prepared=None,
+                        normal_baseline=None):
     base_settings = replace(settings, cutter_rotation_zone=False,
                            sequence_numbers=settings.sequence_numbers or tuple(
-                               (str(p.resolve()), i) for i, p in enumerate(paths, 1)))
+                               (resolved_name(p), i) for i, p in enumerate(paths, 1)))
     paths = ordered_paths(paths)
     options, labels = prepared[:2] if prepared else read_cutter_items(paths, base_settings, progress)
     normal_items = {row[0].path: row[0] for row in options}
@@ -81,12 +83,16 @@ def plan_rotation_zones(paths, settings, progress, analysis=None, analysis_ready
     if analysis is not None:
         attach_rotation_options(analysis, rotated_items, settings, analysis_ready)
     baseline, normal_settings = None, base_settings
-    try:
-        baseline, normal_settings = _normal(paths, base_settings, (options, labels))
-    except ValueError:
-        # A valid rotated zone can fit orders that have no common normal knife.
-        pass
+    if normal_baseline is not None:
+        baseline, normal_settings = normal_baseline
+    else:
+        try:
+            baseline, normal_settings = _normal(paths, base_settings, (options, labels))
+        except ValueError:
+            # A valid rotated zone can fit orders that have no common normal knife.
+            pass
     orders = ordered_single_blocks(complete_orders(paths), coalesce=True)
+    baseline_settings = normal_settings
     mask, knife, _, sequence = select_zones(orders, normal_items, rotated_items, base_settings, progress)
     orders = [orders[i] for i in sequence]
     if not mask:
@@ -104,7 +110,7 @@ def plan_rotation_zones(paths, settings, progress, analysis=None, analysis_ready
     boundary = normal_result[3]+spacing if normal_result else 0
     new_height = boundary+rotated[2]
     if baseline and new_height >= baseline[3]:
-        return _baseline_result(baseline, _normal(paths, base_settings, (options, labels))[1], progress)
+        return _baseline_result(baseline, baseline_settings, progress)
     planned = []
     if normal_result:
         planned.extend((path, replace(p, cut_zone='常规区', cut_knife_x_px=knife))
@@ -119,7 +125,7 @@ def plan_rotation_zones(paths, settings, progress, analysis=None, analysis_ready
         new_height = marked_height(planned, settings, width, new_height)
         baseline_height = marked_height(baseline[0], settings, width, baseline[3]) if baseline else new_height
         if baseline and new_height >= baseline_height:
-            return _baseline_result(baseline, _normal(paths, base_settings, (options, labels))[1], progress)
+            return _baseline_result(baseline, baseline_settings, progress)
     if progress:
         progress('批次刀位已确定', knife if normal_result else rotated[3], settings.dpi,
                  '完整订单分区，双面保持相邻；各区刀位固定')

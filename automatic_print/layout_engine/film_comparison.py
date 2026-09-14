@@ -8,7 +8,7 @@ from time import monotonic
 from .cutter_planner import plan_cutter_layout, read_cutter_items
 from .rotation_zones import plan_rotation_zones, rotation_items
 from .models import mm_to_px
-from .measurement_session import measurement_session
+from .measurement_session import measurement_session, verify_sources
 from math import ceil
 from .transition_marks import marked_height
 from .order_validation import validate_order_placements
@@ -16,11 +16,14 @@ from .cut_validation import validate_cut_corridor
 from .marker_space import validate_embedded_marks
 from .batch_analysis import analyze_batch
 from .film_specs import AVAILABLE_WIDTHS, availability_text, comparison_widths
+from .normal_plan_cache import NormalPlans
 
 
 def compare_films(paths, settings, progress=None):
     with measurement_session():
-        return _compare_films(paths, settings, progress)
+        result = _compare_films(paths, settings, progress)
+        verify_sources()
+        return result
 
 
 def _compare_films(paths, settings, progress):
@@ -40,6 +43,7 @@ def _compare_films(paths, settings, progress):
     if progress:
         progress('膜规格比较', 0, count, f'测量已完成，{count}套方案最多{workers}路计算，不合成图片、不切换生产参数')
     completed = [0]
+    normals = NormalPlans(plan_cutter_layout)
     def calculate(film, rotation):
             usable = film-settings.riin_left_mm-settings.riin_right_mm
             name = f'{film/10:g} 厘米 · '+('允许旋转' if rotation else '不旋转')
@@ -60,15 +64,20 @@ def _compare_films(paths, settings, progress):
             try:
                 if usable <= 0:
                     raise ValueError('RIIN 预留之和不小于膜宽')
+                baseline, normal_config, normal_error = normals.get(
+                    film, paths, config, report, (options, labels))
                 if rotation:
                     width = mm_to_px(usable, config.dpi)
                     safety = ceil(config.cutter_safety_mm*config.dpi/25.4)
                     fitting = {p: item for p, item in rotated_items.items()
                                if item.footprint_width+2*safety < width}
                     result = plan_rotation_zones(paths, config, report, deepcopy(analysis), None,
-                                                prepared=(options, labels, fitting, rotated_labels))
+                                                prepared=(options, labels, fitting, rotated_labels),
+                                                normal_baseline=(baseline, normal_config))
                 else:
-                    result = plan_cutter_layout(paths, config, report, prepared=(options, labels))
+                    if normal_error:
+                        raise ValueError(normal_error)
+                    result, effective[0] = baseline, normal_config
                 planned, _, width, height = result[:4]
                 validate_order_placements(paths, planned)
                 validate_cut_corridor(planned, effective[0], width)
@@ -95,11 +104,11 @@ def _compare_films(paths, settings, progress):
             if progress:
                 progress('膜规格比较', len(rows), count, row['name']+' · '+('无安全方案' if row['error'] else '完成'))
     if workers == 1:
-        collect(calculate(film, rotation) for film in widths for rotation in (False, True))
+        collect(calculate(film, rotation) for rotation in (False, True) for film in widths)
     else:
         with ThreadPoolExecutor(max_workers=workers, thread_name_prefix='film-geometry') as pool:
             futures = [pool.submit(copy_context().run, calculate, film, rotation)
-                       for film in widths for rotation in (False, True)]
+                       for rotation in (False, True) for film in widths]
             collect(future.result() for future in as_completed(futures))
     rows.sort(key=lambda r: (widths.index(r['film_mm']), r['rotation_allowed']))
     valid = [r for r in rows if not r['error']]
