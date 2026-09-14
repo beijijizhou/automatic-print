@@ -124,6 +124,33 @@ def test_parallel_stop_does_not_schedule_remaining_folders(tmp_path, monkeypatch
     assert not result['records'] and not result['errors']
 
 
+def test_finished_slot_starts_next_batch_while_other_batch_is_running(tmp_path, monkeypatch):
+    import automatic_print.history.bulk_analysis as module
+    inputs = folders(tmp_path)
+    extra = tmp_path/'extra'
+    extra.mkdir()
+    inputs.append(folders(extra)[0])
+    original = module.compare_films
+    second_started, third_started = Event(), Event()
+    second_finished = Event()
+    def compare(images, options, report):
+        folder = Path(images[0]).parent
+        if folder == inputs[0]:
+            assert second_started.wait(5)
+        elif folder == inputs[1]:
+            second_started.set()
+            assert third_started.wait(5), 'The free slot waited for the slow batch'
+            second_finished.set()
+        else:
+            assert second_started.is_set() and not second_finished.is_set()
+            third_started.set()
+        return original(images, options, report)
+    monkeypatch.setattr(module, 'compare_films', compare)
+    result = analyze_folders(inputs, settings(), path=tmp_path/'history.sqlite3', parallelism=2)
+    assert third_started.is_set() and not result['errors']
+    assert len(result['records']) == 3
+
+
 def test_dialog_runs_off_gui_and_releases_thread(tmp_path, monkeypatch):
     import automatic_print.ui.bulk_film_analysis as module
     app = QApplication.instance() or QApplication([])
