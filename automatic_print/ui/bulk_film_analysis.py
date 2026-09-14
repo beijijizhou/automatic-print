@@ -30,7 +30,7 @@ class BulkAnalysisWorker(QObject):
 class BulkFilmAnalysisDialog(QDialog):
     def __init__(self, parent):
         super().__init__(parent)
-        self.setWindowTitle('批量文件夹 · 用膜分析')
+        self.setWindowTitle('开发者 · 批量用膜数据分析（不生成最终文件）')
         self.setWindowModality(Qt.ApplicationModal)
         self.resize(1000, 750)
         self.thread = self.worker = None
@@ -40,7 +40,7 @@ class BulkFilmAnalysisDialog(QDialog):
         self.add = QPushButton('添加多个文件夹')
         self.parent_add = QPushButton('添加上级目录中的批次')
         self.remove = QPushButton('移除选中')
-        self.start = QPushButton('开始批量分析')
+        self.start = QPushButton('开始数据分析')
         self.stop = QPushButton('停止')
         self.start.setProperty('importance', 'primary')
         self.stop.setProperty('importance', 'danger')

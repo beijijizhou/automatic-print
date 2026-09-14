@@ -23,6 +23,8 @@ class BatchDetailsDialog(QDialog):
         self.activateWindow()
 
     def open_history(self):
+        if not getattr(self.parent(), 'developer_mode_enabled', False):
+            return
         if not hasattr(self, 'history_page'):
             from .film_history import FilmHistoryPage
             self.history_page = FilmHistoryPage(self)
@@ -32,6 +34,8 @@ class BatchDetailsDialog(QDialog):
         self.history_page.refresh()
 
     def open_bulk_analysis(self):
+        if not getattr(self.parent(), 'developer_mode_enabled', False):
+            return
         if not hasattr(self, 'bulk_dialog'):
             from .bulk_film_analysis import BulkFilmAnalysisDialog
             self.bulk_dialog = BulkFilmAnalysisDialog(self.parent())

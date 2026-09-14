@@ -212,6 +212,8 @@ class MainWindow(
         footer.addWidget(self.version_label)
         footer.addStretch()
         footer.addWidget(self.check_update_button)
+        from .developer_mode import build_developer_mode
+        build_developer_mode(self, footer)
         layout = QVBoxLayout()
         layout.addWidget(self.build_update_status())
         layout.addWidget(self.automation_home)
@@ -220,13 +222,9 @@ class MainWindow(
         container.setLayout(layout)
         self.setCentralWidget(container)
     def has_active_tasks(self) -> bool:
-        return any(
-            (
-                self.thread is not None,
-                self.update_thread is not None,
-                self.automation_home.thread is not None,
-            )
-        )
+        from .developer_mode import developer_task_active
+        return any((self.thread is not None, self.update_thread is not None,
+                    self.automation_home.thread is not None, developer_task_active(self)))
 
     def closeEvent(self, event) -> None:
         self.startup_update_timer.stop()
