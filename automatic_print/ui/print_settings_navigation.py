@@ -11,7 +11,7 @@ def build_settings_navigation(window, source):
         forms[name].setFieldGrowthPolicy(QFormLayout.AllNonFixedFieldsGrow)
         tabs.addTab(page, name)
     film = {window.cutter_settings.film, window.cutter_settings.printable}
-    layout = {window.spacing, window.margin, window.allow_rotation, window.rotation_direction, window.membrane_gap}
+    layout = {window.spacing, window.margin, window.allow_rotation, window.rotation_direction, window.membrane_gap, window.auto_fit_width}
     labels = {'标签与文字', '剪膜机色块'}
 
     def transfer(form, classify):

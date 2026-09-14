@@ -3,6 +3,8 @@ from PySide6.QtWidgets import QDoubleSpinBox, QWidget, QHBoxLayout, QLabel
 
 
 def build_header_gap(window):
+    from .width_fit import build_width_fit
+    build_width_fit(window)
     field = QDoubleSpinBox()
     field.setRange(0, 200)
     field.setDecimals(1)

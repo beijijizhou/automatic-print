@@ -18,6 +18,8 @@ class LayoutSettings:
     output_dpi_origin: str = 'manual'
     output_dpi_notice: str = ''
     developer_gap_loss: bool = False
+    auto_fit_width: bool = False
+    width_adjustments: tuple = ()
     png_compression_level: int = 1
     png_engine: str = "pillow"
     png_fast_encoding: bool = False  # GUI opt-in default; preserve direct-call compatibility.

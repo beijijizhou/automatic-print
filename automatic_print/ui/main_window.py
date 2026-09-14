@@ -142,6 +142,7 @@ class MainWindow(
             ("膜与切膜规则", self.cutter_settings),
             ("上下垂直间距（毫米）", self.spacing),
             ("膜标签与图案最小间距", self.membrane_gap),
+            ("超宽恢复", self.auto_fit_width),
             ("批次开头与结尾留白（毫米）", self.margin),
             ("输出分辨率", self.output_dpi_control),
             ("并行处理线程数", self.worker_threads),

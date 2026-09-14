@@ -1,0 +1,60 @@
+import os
+os.environ.setdefault('QT_QPA_PLATFORM','offscreen')
+from PIL import Image
+import pytest
+from automatic_print.layout import LayoutSettings,generate_layout
+from automatic_print.layout_engine import width_fit
+
+
+def source(path,size):
+    with Image.new('RGBA',size,(10,20,30,255)) as image:
+        image.save(path,dpi=(25.4,25.4))
+    return path
+
+
+def test_rotation_is_forced_before_any_scaling(tmp_path,monkeypatch):
+    path=source(tmp_path/'B1-1-T-Black-M-NO1-1.png',(300,100))
+    monkeypatch.setattr(width_fit,'scaled_copy',lambda *args:pytest.fail('旋转可放下，不应缩小'))
+    settings=LayoutSettings(dpi=25.4,media_width_mm=150,cutter_mode='single',
+        cutter_left_marker_external=True,auto_fit_width=True,allow_rotation=False,number_images=False)
+    plans=[]
+    result=generate_layout([path],tmp_path/'out',settings,plan_ready=plans.append)
+    p=plans[0]['planned'][0][1]
+    assert p.rotation_degrees==90 and (p.width_px,p.height_px)==(100,300)
+    assert '等比比例100.00%' in result['analysis']['width_adjustments'][0][1]
+
+
+@pytest.mark.parametrize('engine',['pillow','libvips'])
+@pytest.mark.parametrize('mode',['single','dual'])
+def test_full_double_batch_short_side_scaling_and_saved_pixels(tmp_path,monkeypatch,engine,mode):
+    monkeypatch.setattr(width_fit,'cache_root',lambda:tmp_path/'cache')
+    paths=[source(tmp_path/f'B{o}-1-T-Black-M-NO1-{f}.png',(500,300)) for o in range(4) for f in (1,2)]
+    originals=[p.read_bytes() for p in paths]
+    settings=LayoutSettings(dpi=25.4,media_width_mm=150,cutter_mode=mode,cutter_auto_knife=True,
+        cutter_left_marker_external=True,auto_fit_width=True,allow_rotation=False,number_images=False,png_engine=engine)
+    plans=[]
+    result=generate_layout(paths,tmp_path/'out',settings,plan_ready=plans.append)
+    assert result['order_check']['double_pairs']==4
+    assert len(result['analysis']['width_adjustments'])==8
+    with Image.open(tmp_path/'out'/result['filename']) as output:
+        for path,p in plans[0]['planned']:
+            assert p.rotation_degrees==90 and p.color_block_x_px==0
+            assert p.x_px+p.width_px<=150
+            with Image.open(path) as prepared:
+                assert abs(prepared.width/prepared.height-500/300)<.02
+                rotated=prepared.rotate(90,expand=True)
+                actual=output.crop((p.x_px,p.y_px,p.x_px+rotated.width,p.y_px+rotated.height))
+                assert actual.tobytes()==rotated.tobytes()
+        check=result.get('cut_corridor')
+        if check:
+            for zone in check.get('zones',[check]):
+                assert output.crop((zone['safe_left_px'],0,zone['safe_right_px'],output.height)).getchannel('A').getextrema()[1]==0
+    assert [p.read_bytes() for p in paths]==originals
+    assert '缩小会改变实际烫印尺寸' in result['analysis']['image_anomalies'][0]['kind']
+
+
+def test_feature_can_be_disabled_without_silent_resize(tmp_path):
+    path=source(tmp_path/'B1-1-T-Black-M-NO1-1.png',(500,300))
+    with pytest.raises(ValueError):
+        generate_layout([path],tmp_path/'out',LayoutSettings(dpi=25.4,media_width_mm=150,
+            allow_rotation=False,auto_fit_width=False,number_images=False,color_block_enabled=False))
