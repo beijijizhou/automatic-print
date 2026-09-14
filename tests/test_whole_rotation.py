@@ -25,6 +25,7 @@ def config():
     return LayoutSettings(dpi=25.4,media_width_mm=580,cutter_mode='dual',
         cutter_auto_knife=True,cutter_tail_rotation=False,cutter_rotation_zone=False,
         cutter_compare_whole_rotation=True,cutter_left_marker_external=True,
+        cutter_knife_dots=False,
         cutter_left_marker_lift_mm=1.5,preserve_header_gap=True,
         platform_name='隆丰',platform_font_height_mm=6)
 
@@ -68,6 +69,8 @@ def test_complete_double_orders_and_blank_gap_protected_in_saved_parts(tmp_path,
     result=generate_layout(paths,tmp_path/'out',settings)
     assert all(p['rotation_degrees']==90 for p in result['placements'])
     for part in result.get('parts') or [result]:
+        assert part['printed_guides']['dot_count']==0
+        assert {p['color_block_x_px'] for p in part['placements']}=={0}
         with Image.open(tmp_path/'out'/part['filename']) as output:
             for p in part['placements']:
                 assert p['number_x_px']+p['number_width_px']<=p['x_px']

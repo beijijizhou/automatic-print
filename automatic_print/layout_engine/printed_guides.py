@@ -14,7 +14,7 @@ def dot_boxes(spans, dpi):
 
 
 def collect_guides(planned, settings, progress=None):
-    if settings.cutter_mode != 'dual':
+    if settings.cutter_mode != 'dual' or not settings.cutter_knife_dots:
         return [], []
     paths = list(dict.fromkeys(path for path, _ in planned))
     bands = {}

@@ -35,11 +35,13 @@ def test_full_batch_left_external_right_unchanged_and_pixels_safe(tmp_path, engi
         cutter_auto_knife=True, cutter_rotation_zone=rotation,
         cutter_left_marker_external=True, color_block_gap_mm=5,
         cutter_left_marker_lift_mm=1.5,
+        cutter_knife_dots=False,
         platform_name='隆丰', platform_font_height_mm=6,
         output_parts=3, png_engine=engine, save_memory_unlimited=True)
     result = generate_layout(paths,tmp_path/'out',settings)
     right_count = 0
     for part in result.get('parts') or [result]:
+        assert part['printed_guides']['dot_count']==0
         planned = []
         with Image.open(tmp_path/'out'/part['filename']) as output:
             for p in part['placements']:

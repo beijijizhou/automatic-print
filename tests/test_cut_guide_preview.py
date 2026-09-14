@@ -79,3 +79,23 @@ def test_preview_has_red_dots_only_inside_qr_band_without_green_body_overlay(tmp
     assert len(red)<max(red)-min(red)  # explicit gaps between dots
     assert '会写入输出图片' in preview.guide_status
     preview.close()
+
+
+def test_disabled_knife_dots_do_not_draw_or_search_headers():
+    from types import SimpleNamespace
+    from PySide6.QtGui import QPainter
+    from automatic_print.ui.cut_guide_preview import draw_cut_guides
+    settings=LayoutSettings(cutter_knife_dots=False)
+    class NoSearch:
+        def request(self,*args):
+            raise AssertionError('Disabled knife dots must not search image headers')
+    preview=SimpleNamespace(render_settings=settings,planned=[],batch_payload=None,cut_guides=NoSearch())
+    image=QImage(100,100,QImage.Format_RGBA8888)
+    image.fill(0)
+    painter=QPainter(image)
+    try:
+        draw_cut_guides(preview,painter,1)
+    finally:
+        painter.end()
+    assert '刀位由刀码指示' in preview.guide_status
+    assert all(image.pixelColor(x,y).alpha()==0 for x in range(100) for y in range(100))

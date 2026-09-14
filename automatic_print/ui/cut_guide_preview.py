@@ -9,6 +9,9 @@ from ..layout_engine.transition_marks import transition_rects
 
 def draw_cut_guides(preview, painter, scale):
     _transition_lines(preview, painter)
+    if not preview.render_settings.cutter_knife_dots:
+        preview.guide_status = '刀位由刀码指示；左侧刀码整批固定在文件左边缘'
+        return
     if preview.render_settings.cutter_mode != 'dual':
         preview.guide_status = ''
         return
