@@ -25,6 +25,8 @@ class PreferencesMixin:
             remember_image_directory(self, folder)
             unchanged = self.folder.text() == folder
             self.folder.setText(folder)
+            from .quick_fields import show_selected_source
+            show_selected_source(self.automation_home.label_quick_panel, folder, window=self)
             if unchanged:
                 preview = self.generation_preview.preview
                 if self.cutter_settings.quick_mode.isChecked():

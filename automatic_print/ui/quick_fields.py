@@ -4,6 +4,20 @@ from PySide6.QtCore import Qt
 from PySide6.QtWidgets import QHBoxLayout, QLabel, QVBoxLayout
 
 
+def show_selected_source(panel, value, mode='single', window=None):
+    """Input root is distinct from the currently rendered child batch."""
+    path = Path(str(value).strip()) if str(value).strip() else None
+    prefix = '已选择多批次目录' if mode == 'multiple' else '已选择'
+    panel.selected_source.setText(f'{prefix}：{path.name}  ·  {path}' if path else '尚未选择图片文件夹')
+    panel.selected_source.setStyleSheet('QLabel { background: #dbeafe; color: #1e40af; '
+        'border: 1px solid #60a5fa; border-radius: 5px; padding: 7px; font-weight: bold; }'
+        if path else 'QLabel { color: #64748b; padding: 5px; }')
+    if window is not None:
+        window.preferences.setValue('layout/input_root', str(path) if path else '')
+        window.preferences.setValue('layout/input_mode', mode)
+        window.preferences.sync()
+
+
 def quick_fields(panel, date_button, window):
     row = QHBoxLayout()
     controls = (("标签与文字", panel.text, 3), ("生产平台", panel.platform, 1),
@@ -25,13 +39,10 @@ def quick_fields(panel, date_button, window):
     panel.selected_source.setWordWrap(True)
     panel.selected_source.setTextInteractionFlags(Qt.TextSelectableByMouse)
     def show_source(value):
-        path = Path(value.strip()) if value.strip() else None
-        panel.selected_source.setText(f'已选择：{path.name}  ·  {path}' if path else '尚未选择图片文件夹')
-        panel.selected_source.setStyleSheet('QLabel { background: #dbeafe; color: #1e40af; '
-            'border: 1px solid #60a5fa; border-radius: 5px; padding: 7px; font-weight: bold; }'
-            if path else 'QLabel { color: #64748b; padding: 5px; }')
+        show_selected_source(panel, value, window=window)
     window.folder.textChanged.connect(show_source)
-    show_source(window.folder.text())
+    show_selected_source(panel, window.preferences.value('layout/input_root', window.folder.text(), str),
+                         window.preferences.value('layout/input_mode', 'single', str))
     layout = QVBoxLayout()
     layout.addLayout(row)
     layout.addWidget(panel.selected_source)
