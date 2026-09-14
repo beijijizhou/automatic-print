@@ -100,7 +100,7 @@ class CutterSettingsPanel(QWidget):
             if film == 450 else
             [("固定双列切膜（默认）", "dual"), ("单列切膜", "single")]
         )
-        for text, value in modes + [("自由排版（不使用固定刀位）", "free")]:
+        for text, value in modes + [("正常排版（无刀码）", "free")]:
             self.mode.addItem(text, value)
         self.mode.blockSignals(False)
         self.printable.refresh()
@@ -130,11 +130,14 @@ class CutterSettingsPanel(QWidget):
             self.rotation.setChecked(False)
         if self.block is not None:
             for control in (self.block.enabled, self.block.position, self.block.offset_y):
-                control.setEnabled(mode == "free")
+                control.setEnabled(False)
+            if mode=='free':
+                self.block.enabled.setChecked(False)
             if mode != "free":
                 self.block.enabled.setChecked(True)
                 self.block.position.setCurrentIndex(self.block.position.findData("left_top"))
                 self.block.offset_y.setValue(0)
+        self.transitions.setEnabled(mode!='free')
 
     def save(self):
         self.printable.save()

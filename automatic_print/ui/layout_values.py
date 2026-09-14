@@ -7,6 +7,7 @@ from ..layout import LayoutSettings
 def settings_from_window(window) -> LayoutSettings:
     label = window.label_settings
     block = window.color_block_settings
+    cutting=window.cutter_settings.mode.currentData()!='free'
     platform = label.platform.currentText().strip()
     if label.enabled.isChecked() and label.platform_enabled.isChecked():
         if not platform:
@@ -32,14 +33,14 @@ def settings_from_window(window) -> LayoutSettings:
         save_parallelism=window.segmented_output.workers.value(),
         save_memory_mb=window.segmented_output.memory.value(),
         save_memory_unlimited=window.segmented_output.unlimited.isChecked(),
-        transition_lines=window.cutter_settings.transitions.enabled.isChecked(),
-        batch_end_block=window.cutter_settings.transitions.end_block.isChecked(),
+        transition_lines=cutting and window.cutter_settings.transitions.enabled.isChecked(),
+        batch_end_block=cutting and window.cutter_settings.transitions.end_block.isChecked(),
         transition_gap_mm=window.cutter_settings.transitions.gap.value(),
         transition_line_mm=window.cutter_settings.transitions.thickness.value(),
         batch_footer_enabled=window.cutter_settings.transitions.footer.isChecked(),
         batch_footer_font_mm=window.cutter_settings.transitions.footer_font.value(),
         rotation_marker_shift_mm=0,
-        cutter_left_marker_external=True,
+        cutter_left_marker_external=cutting,
         cutter_compare_whole_rotation=True,
         cutter_knife_dots=False,
         cutter_single_row_rotation=True,
@@ -47,7 +48,7 @@ def settings_from_window(window) -> LayoutSettings:
         auto_fit_width=window.auto_fit_width.isChecked(),
         developer_gap_loss=getattr(window, 'developer_mode_enabled', False),
         platform_below_marker=True,
-        membrane_gap_mm=window.membrane_gap.value() if getattr(window, 'developer_mode_enabled', False) else 0,
+        membrane_gap_mm=window.membrane_gap.value() if cutting and getattr(window, 'developer_mode_enabled', False) else 0,
         cutter_left_marker_lift_mm=window.cutter_settings.left_marker_lift.value(),
         allow_rotation=window.allow_rotation.isChecked() and not window.cutter_settings.quick_mode.isChecked(),
         rotation_direction=window.rotation_direction.currentData(),
@@ -63,12 +64,12 @@ def settings_from_window(window) -> LayoutSettings:
         label_machine_enabled=True,
         platform_name=platform if label.enabled.isChecked() and label.platform_enabled.isChecked() else '',
         platform_font_height_mm=label.platform_font_height.value(),
-        label_position=label.position.currentData(),
+        label_position='top_left' if not cutting and label.position.currentData()=='block_below' else label.position.currentData(),
         label_offset_x_mm=label.offset_x.value(),
         label_offset_y_mm=label.offset_y.value(),
         label_date_format=label.date_format.text().strip() or "%Y-%m-%d",
         label_follow_qr=label.follow_qr.isChecked(),
-        color_block_enabled=block.enabled.isChecked(),
+        color_block_enabled=cutting and block.enabled.isChecked(),
         color_block_color=block.color,
         color_block_width_mm=block.width.value(),
         color_block_height_mm=block.height.value(),

@@ -36,7 +36,7 @@ def rotation_items(paths, settings, progress=None):
     direction = 90 if settings.rotation_direction == 'left' else -90
     rotations = tuple((resolved_name(p), manual.get(resolved_name(p)) or direction) for p in paths)
     rotated = replace(settings, allow_rotation=False, manual_rotations=rotations,
-                      cutter_mode='single' if settings.cutter_mode=='free' else settings.cutter_mode,
+                      cutter_mode='single' if settings.cutter_mode=='free' and settings.color_block_enabled else settings.cutter_mode,
                       color_block_position='left_top', color_block_offset_y_mm=0,
                       sequence_numbers=sequence)
     options, labels = read_items(paths, rotated, progress)
