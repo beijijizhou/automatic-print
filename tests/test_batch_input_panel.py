@@ -13,8 +13,9 @@ def test_input_cards_group_single_and_multiple_while_details_stay_below(tmp_path
     assert not inputs.isAncestorOf(panel.details_button)
     assert panel.summary.isAncestorOf(panel.details_button)
     assert inputs.isAncestorOf(owner.stop_generation_button)
-    assert inputs.findChild(type(inputs), 'singleInput') is not None
-    assert inputs.findChild(type(inputs), 'multiInput') is not None
+    assert home.start_layout_button.text() == '单批次'
+    assert panel.bulk_generation_button.text() == '多批次'
+    assert owner.stop_generation_button.text() == '暂停批次'
     assert panel.details_button.mapTo(owner, QPoint()).y() > inputs.mapTo(owner, QPoint()).y()
     assert not panel.history_button.isVisible()
     assert not panel.algorithm_costs_button.isVisible()

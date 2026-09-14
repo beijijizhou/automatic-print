@@ -57,7 +57,7 @@ class PreferencesMixin:
             (self.spacing, "layout/spacing_mm", 5, float),
             (self.margin, "layout/margin_mm", 3, float),
             (self.dpi, "layout/dpi", 300, int),
-            (self.worker_threads, "layout/worker_threads", 8, int),
+            (self.worker_threads, "layout/worker_threads", 4, int),
         )
         for widget, key, default, value_type in values:
             widget.setValue(self.preferences.value(key, default, value_type))
@@ -188,6 +188,7 @@ class PreferencesMixin:
             "layout/margin_mm": self.margin.value(),
             "layout/dpi": self.dpi.value(),
             "layout/worker_threads": self.worker_threads.value(),
+            "developer/bulk_parallelism": self.bulk_parallelism.value(),
             "layout/number_images": self.number_images.isChecked(),
             "layout/allow_rotation": self.allow_rotation.isChecked(),
             "layout/rotation_direction":

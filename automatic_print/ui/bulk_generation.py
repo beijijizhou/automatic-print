@@ -15,7 +15,13 @@ class BulkGenerationDialog(BulkFilmAnalysisDialog):
         self.layout().itemAt(0).widget().setText(
             '选择上级目录；每批独立读取、排版、保存PNG及报告，完成一批立即补下一批。')
         self.start.setText('开始批量排版')
-        self.layout().itemAt(2).layout().itemAt(0).widget().setText('同时生成批次数')
+        self.stop.setText('暂停批次')
+        self.stop.setToolTip('安全停止，不再启动后续批次；保留已完成文件，暂不支持断点续跑。')
+        concurrency = self.layout().itemAt(2).layout()
+        for index in range(concurrency.count()):
+            widget = concurrency.itemAt(index).widget()
+            if widget:
+                widget.hide()
         self.status.setText('确认批次及打印参数后直接开始；输出到各批同级的“切膜机文件”。')
         self.results.setMaximumHeight(180)
         self.payloads = {}
@@ -44,6 +50,7 @@ class BulkGenerationDialog(BulkFilmAnalysisDialog):
 
     def begin(self):
         parent = self.parent()
+        self.parallelism.setValue(parent.bulk_parallelism.value())
         if not parent.output_beside_source.isChecked() and not Path(parent.output_location.text().strip()).is_dir():
             self.status.setText('自定义保存位置不存在，请先在打印参数中修改。')
             return

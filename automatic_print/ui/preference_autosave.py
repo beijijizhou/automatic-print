@@ -15,7 +15,7 @@ class PreferenceAutosave(QObject):
         signals = [label.settings_changed, block.settings_changed]
         signals += [control.valueChanged for control in (
             window.width, window.spacing, window.margin, window.dpi,
-            window.worker_threads, cutter.knife, cutter.safety, cutter.marker_offset,
+            window.worker_threads, window.bulk_parallelism, cutter.knife, cutter.safety, cutter.marker_offset,
             cutter.printable.left, cutter.printable.right,
         )]
         signals += [control.currentIndexChanged for control in (

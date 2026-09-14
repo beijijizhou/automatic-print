@@ -39,7 +39,7 @@ def test_reset_clears_residual_parameters_without_autosave_restoring_them(tmp_pa
     OWNERS.append(fresh)
     fresh.startup_update_timer.stop()
     settings = fresh._layout_settings()
-    assert settings.output_parts == 1 and settings.save_parallelism == 2
+    assert settings.output_parts == 1 and settings.save_parallelism == 4
     assert settings.spacing_mm == 5 and settings.riin_left_mm == 10
     assert settings.compare_film_sizes and not settings.cutter_rotation_zone
     assert settings.platform_name == '隆丰' and settings.machine_number == 'M1'

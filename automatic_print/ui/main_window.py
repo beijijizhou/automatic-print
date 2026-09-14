@@ -176,7 +176,8 @@ class MainWindow(
         save_button = QPushButton("保存参数")
         save_button.clicked.connect(self.save_layout_preferences)
         body = QVBoxLayout()
-        body.addLayout(form)
+        from .print_settings_navigation import build_settings_navigation
+        body.addWidget(build_settings_navigation(self, form))
         body.addStretch()
         for widget in (
             self.progress,

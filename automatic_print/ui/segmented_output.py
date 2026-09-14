@@ -11,7 +11,7 @@ class SegmentedOutputSettings(QGroupBox):
         self.workers = QSpinBox()
         self.workers.setRange(1, MAX_SAVE_PARALLELISM)
         self.workers.setToolTip('可选择 1–8 段，实际并行不超过实际输出文件数；选择的上限自动保存。')
-        self.workers.setValue(preferences.value('output/save_workers', 2, int))
+        self.workers.setValue(preferences.value('output/save_workers', 4, int))
         self.memory = QSpinBox()
         self.memory.setRange(128, 16384)
         self.memory.setSingleStep(256)

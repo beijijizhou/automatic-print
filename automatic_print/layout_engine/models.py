@@ -16,9 +16,9 @@ class LayoutSettings:
     dpi: int = 300
     png_compression_level: int = 1
     png_engine: str = "pillow"
-    worker_threads: int = 8
+    worker_threads: int = 4
     output_parts: int = 1
-    save_parallelism: int = 2
+    save_parallelism: int = 4
     save_memory_mb: int = 512
     save_memory_unlimited: bool = False
     transition_lines: bool = False
