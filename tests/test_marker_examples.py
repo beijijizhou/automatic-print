@@ -112,12 +112,13 @@ def test_annotation_is_preview_only_and_keeps_raw_pixels(tmp_path):
 @pytest.mark.parametrize('mode',['free','single','dual'])
 @pytest.mark.parametrize('side',['left','right'])
 @pytest.mark.parametrize('degrees',[0,90])
-def test_example_text_offsets_match_actual_output_plan(tmp_path,mode,side,degrees):
+@pytest.mark.parametrize('stack',[False,True])
+def test_example_text_offsets_match_actual_output_plan(tmp_path,mode,side,degrees,stack):
     from automatic_print.layout import generate_layout
     paths=sources(tmp_path)
     path=paths[0 if side=='left' else 1]
     config=replace(settings(),cutter_mode=mode,cutter_left_marker_external=True,
-        preserve_header_gap=True,label_fit_height=True,
+        preserve_header_gap=True,label_fit_height=True,platform_below_marker=stack,
         manual_rotations=((str(path.resolve()),degrees),))
     row=next(r for r in build_examples(paths,config) if r['side']==side and r['degrees']==degrees)
     payload=[]

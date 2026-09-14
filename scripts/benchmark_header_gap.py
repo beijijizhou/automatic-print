@@ -36,7 +36,7 @@ def verify_copies(records):
     return count
 
 
-def run(source, output, cache):
+def run(source, output, cache, stack_platform=False):
     paths = sorted(source.glob('*.png'))
     if not paths:
         raise ValueError('源目录没有PNG')
@@ -47,7 +47,8 @@ def run(source, output, cache):
         cutter_knife_dots=False, preserve_header_gap=True, cutter_compare_whole_rotation=True,
         cutter_tail_rotation=True, png_engine='libvips', platform_name='隆丰',
         platform_font_height_mm=8, label_text_template='CY 1001Mt26',
-        label_machine_enabled=True, label_sequence_enabled=True, compare_film_sizes=True)
+        label_machine_enabled=True, label_sequence_enabled=True, compare_film_sizes=True,
+        platform_below_marker=stack_platform)
     started = perf_counter()
     result = generate_layout(paths, output, settings, batch_name=source.name)
     generation = perf_counter()-started
@@ -82,5 +83,6 @@ if __name__ == '__main__':
     parser.add_argument('--source', type=Path, required=True)
     parser.add_argument('--output', type=Path, required=True)
     parser.add_argument('--cache', type=Path, required=True)
+    parser.add_argument('--stack-platform', action='store_true')
     args = parser.parse_args()
-    run(args.source, args.output, args.cache)
+    run(args.source, args.output, args.cache, args.stack_platform)

@@ -45,6 +45,7 @@ class LayoutItem:
     left_marker_gap_px: int = 0
     left_marker_lift_px: int = 0
     preserve_header_gap: bool = False
+    platform_below_marker: bool = False
 
 
 def read_items(paths, settings, progress):
@@ -177,6 +178,9 @@ def _make_item(
         (0, label_y, label_width, label_height), (px, py, pw, ph),
     ):
         block_x = label_x = 0
+    from .marker_stack import stacked_coordinates
+    block_x, block_y, label_x, label_y, px, py = stacked_coordinates(settings,
+        (block_x, block_y, block_width, block_height), (label_x, label_y, label_width, label_height), (px, py, pw, ph))
     decorations = [
         (px, py, pw, ph),
         (label_x, label_y, label_width, label_height),
@@ -197,6 +201,7 @@ def _make_item(
         mm_to_px(settings.cutter_left_marker_lift_mm, settings.dpi)
         if settings.cutter_left_marker_external and settings.cutter_mode != 'free' else 0,
         settings.preserve_header_gap,
+        settings.platform_below_marker,
     )
 
 

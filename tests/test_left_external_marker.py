@@ -98,7 +98,7 @@ def test_lift_reuses_row_spacing_and_is_persistent(tmp_path):
     assert original[2:] == raised[2:]
     assert [(p.y_px,p.row_y_px) for _,p in original[0]] == [(p.y_px,p.row_y_px) for _,p in raised[0]]
     with pytest.raises(ValueError,match='垂直间距'):
-        head_margin(replace(base,cutter_left_marker_lift_mm=6))
+        head_margin(replace(base,cutter_left_marker_lift_mm=base.spacing_mm+1))
     prefs = QSettings(str(tmp_path/'lift.ini'),QSettings.IniFormat)
     controls = (QDoubleSpinBox(),QCheckBox(),QComboBox())
     panel = CutterSettingsPanel(prefs,*controls)

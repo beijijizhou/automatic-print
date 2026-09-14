@@ -30,7 +30,7 @@ class LabelSettingsDialog(QDialog):
         self.platform = QComboBox()
         self.platform.setEditable(True)
         self.platform.addItem('隆丰')
-        self.platform_enabled = QCheckBox('在膜标签旁打印平台名称（高度不超过标签）')
+        self.platform_enabled = QCheckBox('在刀码下方打印平台名称，与标签纵向排列')
         self.platform_enabled.setChecked(True)
         self.platform_font_height = self._box(6, 0, 50)
         self.platform_font_height.setSuffix(' 毫米')
