@@ -50,16 +50,20 @@ def build_examples(paths, settings):
         for side, degrees in CASES:
             path = samples.get(side, fallback[side])
             config = replace(settings, allow_rotation=False, cutter_mode='dual',
+                cutter_left_marker_external=True,
                 color_block_position='left_top', color_block_offset_y_mm=0,
                 manual_rotations=((str(path.resolve()), degrees),),
                 sequence_numbers=((str(path.resolve()), 1),))
             choices, labels = read_items([path], config, None)
             item = choices[0][0]
+            from ..layout_engine.left_marker import external_left_item
+            item = external_left_item(item)
             pixels, size = render_example(path, item, labels, config)
             region = detect_guide_band(path).rotated(degrees)
             results.append({'side': side, 'degrees': degrees, 'production': side in samples,
                 'source': str(path) if side in samples else '', 'item': item,
                 'region': region, 'pixels': pixels, 'size': size,
                 'detail': f'刀码：左基准，距图顶 {(item.block_ry-item.image_ry)*25.4/config.dpi:.1f}毫米'
+                          f' · 图外间隙 {(item.image_rx-item.block_rx-item.block_width)*25.4/config.dpi:.1f}毫米'
                           f' · 标签距图顶 {(item.label_ry-item.image_ry)*25.4/config.dpi:.1f}毫米'})
         return results

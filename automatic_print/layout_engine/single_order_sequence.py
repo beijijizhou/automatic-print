@@ -23,6 +23,9 @@ def prepare_order_sequence(orders, items):
 
 def lane_fits(item, lane):
     start, end, marker = lane
+    if marker is None:
+        from .left_marker import external_left_item
+        item = external_left_item(item)
     x = start if marker is None else marker-item.block_rx
     return x >= start and x+item.footprint_width <= end
 

@@ -4,6 +4,7 @@ from math import ceil
 
 from .models import mm_to_px
 from .single_order_sequence import arrange_groups, prepare_groups
+from .left_marker import external_left_item
 
 
 def select_batch_knife(groups, settings, spacing, progress=None):
@@ -38,7 +39,7 @@ def distinct_knife_candidates(groups, settings):
     for index, item in enumerate(item for group in groups for item in group):
         # Left lane fits from this lower boundary onward. Right lane fits up
         # to its upper boundary, provided the fixed marker origin is valid.
-        events.append((item.footprint_width+safety, 1 << (2*index), True))
+        events.append((external_left_item(item).footprint_width+safety, 1 << (2*index), True))
         if item.block_rx <= offset:
             bit = 1 << (2*index+1)
             signature |= bit
@@ -64,6 +65,6 @@ def knife_candidates(groups, settings):
     candidates = {width//2, mm_to_px(settings.cutter_knife_mm, settings.dpi)}
     for group in groups:
         for item in group:
-            candidates.add(item.footprint_width+safety)
+            candidates.add(external_left_item(item).footprint_width+safety)
             candidates.add(width-item.footprint_width-safety-offset+item.block_rx)
     return sorted(k for k in candidates if safety < k < width-safety-offset)

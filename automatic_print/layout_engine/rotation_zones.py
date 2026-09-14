@@ -43,10 +43,11 @@ def rotation_items(paths, settings, progress=None):
     safety = ceil(settings.cutter_safety_mm*settings.dpi/25.4)
     items = {}
     for row in options:
-        if row[0].footprint_width+2*safety >= width:
+        item = rotation_marker_item(row[0], settings)
+        if item.footprint_width+2*safety >= width:
             continue
         try:
-            items[row[0].path] = rotation_marker_item(row[0], settings)
+            items[row[0].path] = item
         except ValueError:
             # Unsafe automatic candidates stay in the normal zone, never disappear.
             continue

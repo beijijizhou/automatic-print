@@ -45,6 +45,7 @@ def test_four_cases_use_production_geometry_and_never_modify_sources(tmp_path):
         item = row['item']
         assert item.rotation_degrees == row['degrees']
         assert item.block_rx == 0
+        assert item.image_rx >= item.block_width+5
         assert len(row['pixels']) == row['size'][0]*row['size'][1]*4
         if row['degrees']:
             assert item.block_ry == item.image_ry

@@ -70,4 +70,5 @@ def paint_transition_lines(canvas, rects, use_vips=False):
 
 def rotation_marker_item(item, settings):
     # Retain the caller contract; the old deliberate sensor offset is suspended.
-    return item
+    from .left_marker import external_left_item
+    return external_left_item(item)

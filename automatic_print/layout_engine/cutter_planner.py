@@ -99,6 +99,9 @@ def _lanes(settings, width):
 
 def _member(item, lane, y=0):
     start, end, marker = lane
+    if marker is None:
+        from .left_marker import external_left_item
+        item = external_left_item(item)
     x = start if marker is None else marker - item.block_rx
     if x < start or x + item.footprint_width > end:
         return None
