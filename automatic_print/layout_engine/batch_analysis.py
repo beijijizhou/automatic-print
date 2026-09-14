@@ -78,22 +78,28 @@ def analyze_batch(paths, settings, progress=None, ready=None):
 def finish_analysis(report, planned, settings, height, baseline):
     result = deepcopy(report)
     placements = {str(path): p for path, p in planned}
-    for order in result['orders']:
+    owners = {image['path']: index for index, order in enumerate(result['orders'])
+              for item in order['items'] for image in item['images']}
+    rows = {}
+    for path, p in planned:
+        rows.setdefault((p.cut_zone, p.row_y_px), {})[owners[str(path)]] = order_key(path).upper()
+    peers = [{} for _ in result['orders']]
+    for row in rows.values():
+        for index in row:
+            for other, name in row.items():
+                if index != other:
+                    peers[index][name] = None
+    for index, order in enumerate(result['orders']):
         members = [placements[image['path']] for item in order['items'] for image in item['images']]
         zones = {p.cut_zone or '常规区' for p in members}
         order['decision'] = ' / '.join(sorted(zones))
-        companions = set()
-        for path, p in planned:
-            if str(path) in {im['path'] for it in order['items'] for im in it['images']}:
-                continue
-            if any(p.cut_zone == m.cut_zone and p.row_y_px == m.row_y_px for m in members):
-                companions.add(order_key(path).upper())
-        order['companions'] = sorted(companions)
+        companions = list(peers[index])
+        order['companions'] = companions
         if zones == {'旋转区'}:
             reason = ('整单旋转后可安全放入；计入区域间隔后整批方案更短' if baseline > height
                       else '整单旋转后可安全放入；常规区没有可行的整批固定刀位')
         elif companions:
-            reason = '与 '+ '、'.join(sorted(companions)) + ' 安全并排'
+            reason = '与 '+ '、'.join(companions) + ' 安全并排'
         elif order.get('rotation_eligible') is False:
             reason = '整单中有图片不具备安全旋转条件（膜标签或可用空间），无法整体进入旋转区，保留完整订单在常规区'
         elif order.get('rotation_eligible'):
@@ -101,7 +107,7 @@ def finish_analysis(report, planned, settings, height, baseline):
         else:
             reason = '按当前模式保持整单，旋转区未启用'
         if order['kind'] == '单件单面':
-            reason += '；同尺码优先，小幅图允许跨尺码搭配'
+            reason += '；同尺码保持连续，不跨尺码搭配'
         if order.get('large_sizes'):
             reason += '；'+ '/'.join(order['large_sizes'])+' 已核对实际宽度'
         order['reason'] = reason
