@@ -1,3 +1,6 @@
+import os
+os.environ.setdefault('QT_QPA_PLATFORM', 'offscreen')
+
 from automatic_print.layout_engine import measurement_timing as timing
 from automatic_print.layout_engine.measurement_session import measurement_session
 from automatic_print.layout_engine import planner
