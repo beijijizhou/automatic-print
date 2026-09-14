@@ -28,7 +28,7 @@ class CutterSettingsPanel(QWidget):
         self.safety = self._box(3, 0.1, 30)
         self.marker_offset = self._box(0, 0, 100)
         self.transitions = TransitionSettings(preferences, self)
-        self.compare_films = QCheckBox('计算 45/60 厘米：常规与旋转四方案（额外计算，不保存比较图）')
+        self.compare_films = QCheckBox('比较 40/45/60/80 厘米常规与旋转（40/80仅供参考，不自动切换）')
         if not preferences.value('cutter/film_comparison_default_v2', False, bool):
             preferences.setValue('cutter/compare_films', True)
             preferences.setValue('cutter/film_comparison_default_v2', True)

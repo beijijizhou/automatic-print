@@ -28,7 +28,7 @@ def test_one_row_highlight_and_default_comparison_migration(tmp_path):
     assert '#dbeafe' in panel.selected_source.styleSheet()
     assert not panel.preview.loader.active and not panel.preview.batch_payload
     assert window._layout_settings().compare_film_sizes
-    assert panel.summary.film_table.rowCount() == 4
+    assert panel.summary.film_table.rowCount() == 8
     viewport = window.automation_home.workbench_scroll.viewport()
     assert panel.summary.film_table.mapTo(viewport, QPoint(0, panel.summary.film_table.height())).y() < viewport.height()
     window.cutter_settings.compare_films.setChecked(False)
