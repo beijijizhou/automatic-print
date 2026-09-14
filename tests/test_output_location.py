@@ -87,7 +87,8 @@ def test_generated_png_is_beside_source_in_independent_job(tmp_path, monkeypatch
     job = Path(window.job_path.text())
     assert job.parent == source.parent / '切膜机文件'
     assert job != source
-    assert job.name.startswith('batch123_JOB_')
+    assert job.name == next(job.glob('*.png')).stem
+    assert 'JOB_' not in job.name
     assert all(path.name.startswith('batch123_') for path in job.glob('*.png'))
     assert list(job.glob('*.png'))
     assert image.is_file()

@@ -31,8 +31,21 @@ def label_output_name(text, batch_name=""):
 
 
 def batch_directory_name(batch_name, job_id):
-    """Keep source identity in a portable, timestamped task directory."""
-    return f"{label_output_name(batch_name)[:-4]}_{job_id}"
+    """Initial directory keeps source identity, never an internal job identifier."""
+    return label_output_name(batch_name)[:-4]
+
+
+def finish_output_directory(directory, filename):
+    """Name the completed directory after its PNG, preserving old outputs."""
+    from pathlib import Path
+    name = Path(filename).stem
+    target, index = directory.parent/name, 2
+    if target == directory:
+        return directory
+    while target.exists():
+        target = directory.parent/f'{name} ({index})'
+        index += 1
+    return directory.rename(target)
 
 
 def batch_output_directory(base, batch_name, job_id, relative_parts=()):

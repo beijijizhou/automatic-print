@@ -182,6 +182,7 @@ class GenerationActionsMixin:
             self.stop_generation_button.setEnabled(False)
             return
         timings = result["timings_seconds"]
+        self.job_path.setText(output)
         self.progress.setRange(0, 100)
         self.progress.setValue(100)
         self.progress.setFormat("100% — 已完成")

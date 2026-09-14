@@ -98,6 +98,11 @@ class GenerateWorker(QObject):
                 self._save_history(result)
                 self.finished.emit("", result)
                 return
+            from ..layout_engine.output_name import finish_output_directory
+            self._progress('整理输出文件夹',0,1,'按输出图片名称保存文件夹')
+            self.output = finish_output_directory(self.output,result['filename'])
+            marker = self.output/marker.name
+            self._progress('整理输出文件夹',1,1,str(self.output))
             manifest = {
                 "job_id": self.job_id,
                 "created_at": datetime.now().astimezone().isoformat(),

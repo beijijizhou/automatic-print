@@ -51,7 +51,7 @@ def test_generation_uses_label_name_without_overwriting_existing_file(tmp_path):
 
 
 def test_batch_name_is_in_directory_and_png(tmp_path):
-    assert batch_directory_name('批次123', 'JOB_20260913_120000') == '批次123_JOB_20260913_120000'
+    assert batch_directory_name('批次123', 'JOB_20260913_120000') == '批次123'
     assert label_output_name('CY26 M1', '批次123') == '批次123_CY26 M1.png'
     assert label_output_name('CY26', '批次/123') == '批次 123_CY26.png'
     path = tmp_path / 'source.png'
@@ -79,3 +79,20 @@ def test_different_batches_share_cutting_container(tmp_path):
     second = batch_output_directory(tmp_path, '批次456', 'JOB_2')
     assert first.parent == second.parent == tmp_path / '切膜机文件'
     assert first != second
+
+
+def test_finished_directory_matches_png_and_preserves_existing_output(tmp_path):
+    from automatic_print.layout_engine.output_name import finish_output_directory
+    stage = tmp_path/'批次123'
+    stage.mkdir()
+    filename = '批次123_批次4单 CY26 M1 M-XL.png'
+    Image.new('RGBA',(1,1),'red').save(stage/filename)
+    final = finish_output_directory(stage,filename)
+    assert final.name == filename[:-4]
+    assert (final/filename).is_file() and not stage.exists()
+    stage.mkdir()
+    Image.new('RGBA',(1,1),'blue').save(stage/filename)
+    second = finish_output_directory(stage,filename)
+    assert second.name == final.name+' (2)'
+    with Image.open(final/filename) as old:
+        assert old.getpixel((0,0)) == (255,0,0,255)

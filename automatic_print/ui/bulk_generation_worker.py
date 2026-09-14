@@ -60,7 +60,7 @@ class BulkGenerationWorker(QObject):
         record = dict(results[0], folder=str(folder))
         self.completed.emit(index, record)
         self.progress.emit(index, str(folder), '批次预览完成' if self.preview_only else '批次生成完成', 1, 1,
-                           '未生成文件' if self.preview_only else str(output))
+                           '未生成文件' if self.preview_only else results[0]['output'])
         return record
 
     @Slot()
