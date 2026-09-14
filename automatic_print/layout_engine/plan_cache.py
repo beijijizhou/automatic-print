@@ -10,6 +10,7 @@ from .measurement_session import identity
 from .models import Placement
 
 SCHEMA = 1
+TTL_SECONDS = 24 * 60 * 60
 
 
 def cache_directory():
@@ -42,6 +43,10 @@ def connect():
         connection.execute('PRAGMA journal_mode=WAL')
         connection.execute('CREATE TABLE IF NOT EXISTS plans '
                            '(key TEXT PRIMARY KEY, payload TEXT NOT NULL, digest TEXT NOT NULL, updated REAL NOT NULL)')
+        connection.execute('CREATE INDEX IF NOT EXISTS plans_updated ON plans(updated)')
+        # Absolute lifetime from save, not extended by hits; no startup scan or VACUUM.
+        with connection:
+            connection.execute('DELETE FROM plans WHERE updated <= ?', (time()-TTL_SECONDS,))
     except sqlite3.Error:
         connection.close()
         raise
@@ -51,7 +56,8 @@ def connect():
 def load(key):
     connection = connect()
     try:
-        row = connection.execute('SELECT payload, digest FROM plans WHERE key=?', (key,)).fetchone()
+        row = connection.execute('SELECT payload, digest FROM plans WHERE key=? AND updated > ?',
+                                 (key, time()-TTL_SECONDS)).fetchone()
         if not row or sha256(row[0].encode()).hexdigest() != row[1]:
             return None
         data = json.loads(row[0])
