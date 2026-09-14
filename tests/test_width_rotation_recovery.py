@@ -4,7 +4,8 @@ from automatic_print.layout import LayoutSettings,generate_layout
 
 
 @pytest.mark.parametrize('engine',['pillow','libvips'])
-def test_failed_normal_batch_rotates_without_resizing(tmp_path,engine):
+@pytest.mark.parametrize('mode',['free','single','dual'])
+def test_failed_normal_batch_rotates_without_resizing(tmp_path,engine,mode):
     paths=[]
     for order in range(3):
         for face in (1,2):
@@ -14,8 +15,8 @@ def test_failed_normal_batch_rotates_without_resizing(tmp_path,engine):
             paths.append(path)
     original=[p.read_bytes() for p in paths]
     plans=[]
-    settings=LayoutSettings(dpi=25.4,media_width_mm=430,cutter_mode='dual',
-        cutter_auto_knife=True,cutter_compare_whole_rotation=True,
+    settings=LayoutSettings(dpi=25.4,media_width_mm=430,cutter_mode=mode,
+        cutter_auto_knife=True,cutter_compare_whole_rotation=False,
         cutter_left_marker_external=True,number_images=False,allow_rotation=False,
         auto_fit_width=True,png_engine=engine)
     result=generate_layout(paths,tmp_path/'out',settings,plan_ready=plans.append)
@@ -26,12 +27,13 @@ def test_failed_normal_batch_rotates_without_resizing(tmp_path,engine):
     with Image.open(tmp_path/'out'/result['filename']) as output:
         for path,p in plans[0]['planned']:
             assert p.rotation_degrees==90 and (p.width_px,p.height_px)==(234,563)
-            assert p.color_block_x_px==0 and p.cut_zone=='旋转区'
+            assert p.color_block_x_px==0
+            assert p.cut_zone==('旋转区' if mode=='dual' else '单排区')
             with Image.open(path) as source:
                 rotated=source.rotate(90,expand=True)
                 assert output.crop((p.x_px,p.y_px,p.x_px+234,p.y_px+563)).tobytes()==rotated.tobytes()
-        zones=result['cut_corridor']['zones']
-        assert len(zones)==1
+        zones=result['cut_corridor']['zones'] if mode=='dual' else []
+        assert len(zones)==(1 if mode=='dual' else 0)
         for zone in zones:
             assert output.crop((zone['safe_left_px'],0,zone['safe_right_px'],output.height)).getchannel('A').getextrema()[1]==0
 

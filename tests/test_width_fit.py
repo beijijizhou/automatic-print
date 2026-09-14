@@ -21,7 +21,8 @@ def test_rotation_is_forced_before_any_scaling(tmp_path,monkeypatch):
     result=generate_layout([path],tmp_path/'out',settings,plan_ready=plans.append)
     p=plans[0]['planned'][0][1]
     assert p.rotation_degrees==90 and (p.width_px,p.height_px)==(100,300)
-    assert '等比比例100.00%' in result['analysis']['width_adjustments'][0][1]
+    assert '未缩小图片' in result['analysis']['rotation_recovery']['action']
+    assert not result['analysis'].get('width_adjustments')
 
 
 @pytest.mark.parametrize('engine',['pillow','libvips'])
