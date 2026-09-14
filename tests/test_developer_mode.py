@@ -33,6 +33,16 @@ def test_default_hides_tools_and_gates_direct_open(tmp_path, monkeypatch):
     assert not hasattr(panel.details_dialog, 'bulk_dialog')
     assert panel.summary.isVisible() and panel.preview_tabs.isVisible()
     assert owner.developer_mode_checkbox.isVisible()
+    settings_button = owner.automation_home.settings_button
+    assert settings_button.parentWidget() is owner.centralWidget()
+    before = settings_button.mapTo(owner, settings_button.rect().topLeft())
+    owner.automation_home.workbench_scroll.verticalScrollBar().setValue(999999)
+    APP.processEvents()
+    assert settings_button.mapTo(owner, settings_button.rect().topLeft()) == before
+    assert settings_button.isVisible()
+    settings_button.click()
+    assert owner.settings_dialog.isVisible()
+    owner.settings_dialog.hide()
     assert owner.grab().save(str(tmp_path/'developer-off.png'))
     owner.close()
 
