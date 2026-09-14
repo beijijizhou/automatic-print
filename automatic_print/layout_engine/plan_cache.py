@@ -24,7 +24,7 @@ def cache_key(paths, settings, created_at, progress=None):
     date = created_at.strftime(settings.label_date_format) if ('{日期}' in template or '{date' in template) else ''
     settings = replace(settings, worker_threads=1, output_parts=1, save_parallelism=1,
                        save_memory_mb=512, save_memory_unlimited=False, png_engine='pillow',
-                       png_compression_level=1, png_fast_encoding=False, film_geometry_workers=1)
+                       png_compression_level=1, png_fast_encoding=False, png_streaming=False, film_geometry_workers=1)
     files = []
     for index, path in enumerate(paths, 1):
         files.append(identity(path))

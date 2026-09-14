@@ -38,8 +38,12 @@ def save_png(canvas, target, settings, use_vips, progress):
                 else:
                     canvas.save(pending, format='PNG', dpi=(settings.dpi, settings.dpi),
                                 compress_level=settings.png_compression_level)
-                details = {'encoder': '大图兼容PNG' if use_vips else '标准兼容PNG',
-                    'steps': [{'name': '兼容编码与写入（含可能的延迟合成）', 'seconds': perf_counter()-start}]}
+                encoder = ('原生分块流式PNG' if getattr(settings, 'png_streaming', False)
+                           else '大图兼容PNG') if use_vips else '标准兼容PNG'
+                name = ('流式合成、编码与写入' if use_vips and getattr(settings, 'png_streaming', False)
+                        else '兼容编码与写入（含可能的延迟合成）')
+                details = {'encoder': encoder,
+                    'steps': [{'name': name, 'seconds': perf_counter()-start}]}
             if reason:
                 details['fallback_reason'] = reason
     finally:

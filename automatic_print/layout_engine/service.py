@@ -109,7 +109,9 @@ def generate_layout(
 
     combining_started = perf_counter()
     phase('图片准备与合成')
-    use_vips = settings.png_engine == "libvips" and available()
+    streaming = settings.png_streaming and not settings.png_fast_encoding
+    use_vips = available() and (settings.png_engine == 'libvips' or
+                               (streaming and width*height*4 >= 64*1024*1024))
     builder = build_vips_canvas if use_vips else build_pillow_canvas
     canvas = builder(
         planned, labels, (width, height), settings, progress
@@ -118,7 +120,7 @@ def generate_layout(
     phase('合成像素安全检查')
     if not use_vips:
         validate_canvas_pixels(canvas, cut_check, progress)
-    else:
+    elif not streaming:
         validate_vips_canvas(canvas, cut_check)
     phase('膜标签与辅助线处理')
     guide_spans, missing_guides = collect_guides(planned, settings, progress)
@@ -129,13 +131,21 @@ def generate_layout(
     canvas = paint_transition_lines(canvas, transitions, use_vips)
     if not use_vips:
         validate_marked_pillow(canvas, cut_check, guide_boxes, transitions, progress)
+    elif streaming:
+        from .png_codecs.streaming import validate_final_canvas
+        phase('最终画布刀位检查')
+        validate_final_canvas(canvas, cut_check, guide_boxes, transitions, progress)
 
     filename = output_path.name
     saving_started = perf_counter()
     phase('保存输出图片')
     save_details = save_png(canvas, output_path, settings, use_vips, progress)
     saving_seconds = perf_counter() - saving_started
-    if use_vips or (settings.png_fast_encoding and available()):
+    if streaming:
+        from .png_codecs.streaming import validate_header
+        phase('输出尺寸核对')
+        validate_header(output_path, width, height)
+    elif use_vips or (settings.png_fast_encoding and available()):
         phase('输出文件安全复核')
         validate_vips_output(output_path, cut_check, progress, guide_boxes, transitions)
     elif settings.png_fast_encoding and cut_check:

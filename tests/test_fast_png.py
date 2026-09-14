@@ -61,9 +61,10 @@ def test_gui_fast_save_defaults_and_persists(tmp_path):
     from test_developer_mode import window
     owner = window(tmp_path/'prefs.ini')
     assert owner.segmented_output.fast_png.isChecked()
-    assert owner._layout_settings().png_fast_encoding
-    owner.segmented_output.fast_png.setChecked(False)
+    assert owner._layout_settings().png_streaming
     assert not owner._layout_settings().png_fast_encoding
+    owner.segmented_output.fast_png.setChecked(False)
+    assert not owner._layout_settings().png_streaming
     owner.close()
     fresh = window(tmp_path/'prefs.ini')
     assert not fresh.segmented_output.fast_png.isChecked()

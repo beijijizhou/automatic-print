@@ -21,10 +21,10 @@ class SegmentedOutputSettings(QGroupBox):
         self.memory.setEnabled(not self.unlimited.isChecked())
         self.unlimited.toggled.connect(lambda value: preferences.setValue('output/save_memory_unlimited', value))
         self.unlimited.toggled.connect(lambda value: self.memory.setEnabled(not value))
-        self.fast_png = QCheckBox('原生快速PNG保存（无损，保留透明度与打印尺寸）')
-        self.fast_png.setChecked(preferences.value('output/fast_png', True, bool))
-        self.fast_png.toggled.connect(lambda value: preferences.setValue('output/fast_png', value))
-        self.fast_png.setToolTip('使用固定UP滤波及原生快速压缩；缺依赖或超出已设置内存预算时兼容回退。可关闭对比耗时。')
+        self.fast_png = QCheckBox('大图分块流式合成与保存（无损，不复制整张像素）')
+        self.fast_png.setChecked(preferences.value('output/stream_png', True, bool))
+        self.fast_png.toggled.connect(lambda value: preferences.setValue('output/stream_png', value))
+        self.fast_png.setToolTip('大图使用原生分块流水线；检查最终画布全部刀位通道，不再保存后重新解压整图。保留透明度和打印尺寸。')
         for widget, key in ((self.parts, 'output/parts'), (self.workers, 'output/save_workers'),
                             (self.memory, 'output/save_memory_mb')):
             widget.valueChanged.connect(lambda value, key=key: preferences.setValue(key, value))

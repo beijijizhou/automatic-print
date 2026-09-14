@@ -17,6 +17,7 @@ class LayoutSettings:
     png_compression_level: int = 1
     png_engine: str = "pillow"
     png_fast_encoding: bool = False  # GUI opt-in default; preserve direct-call compatibility.
+    png_streaming: bool = False  # GUI defaults on; native bounded-memory path for large images.
     worker_threads: int = 4
     output_parts: int = 1
     save_parallelism: int = 4
