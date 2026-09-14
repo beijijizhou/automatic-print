@@ -6,7 +6,7 @@ from pathlib import Path
 from time import perf_counter
 from typing import Iterable
 
-from .models import LayoutSettings, ProgressCallback
+from .models import LayoutSettings, ProgressCallback, mm_to_px
 from .images import print_dimensions
 from .labels import normalize_machine_number, format_label
 from .output_name import label_output_name, unused_output_path, order_quantity
@@ -82,6 +82,8 @@ def generate_layout(
         effective[0] = prepared_plan['settings']
         analysis[:] = [prepared_plan['analysis']]
     settings = effective[0]
+    if settings.batch_end_block:
+        width = mm_to_px(settings.media_width_mm,settings.dpi)
     height = marked_height(planned, settings, width, height,
                            (prepared_plan or {}).get('end_notice', '批次结束'))
     phase('坐标与订单安全检查')

@@ -46,6 +46,8 @@ def _measured_plan(paths, settings, progress, analysis_ready):
             comparison['saved_m'] = (comparison['normal_m']-comparison['rotation_m']) if comparison['normal_m'] is not None else None
             comparison['rotated_images'] = sum(bool(p.rotation_degrees) for _,p in result[0])
     planned, labels, width, height, baseline = result
+    if settings.batch_end_block:
+        width = mm_to_px(settings.media_width_mm,settings.dpi)
     extra = marked_height(planned, settings, width, height)-height
     result = planned, labels, width, height+extra, baseline+extra
     if settings.compare_film_sizes and settings.cutter_mode != 'free':

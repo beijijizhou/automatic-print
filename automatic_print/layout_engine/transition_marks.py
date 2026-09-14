@@ -25,8 +25,9 @@ def transition_rects(planned, settings, width, end_notice='批次结束'):
                       'kind': end_notice})
         end = end+gap+thickness
     if settings.batch_end_block:
-        size = min(width, max(1, mm_to_px(10, settings.dpi)))
-        rects.append({'x': width-size, 'y': end+max(gap, mm_to_px(5, settings.dpi)),
+        film_width = mm_to_px(settings.media_width_mm, settings.dpi)
+        size = min(film_width, max(1, mm_to_px(10, settings.dpi)))
+        rects.append({'x': film_width-size, 'y': end+max(gap, mm_to_px(5, settings.dpi)),
                       'width': size, 'height': size, 'kind': '批次结束色块'})
     for r in rects:
         for path, p in planned:
