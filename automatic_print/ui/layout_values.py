@@ -43,6 +43,7 @@ def settings_from_window(window) -> LayoutSettings:
         cutter_knife_dots=False,
         cutter_single_row_rotation=True,
         preserve_header_gap=True,
+        developer_gap_loss=getattr(window, 'developer_mode_enabled', False),
         platform_below_marker=True,
         membrane_gap_mm=window.membrane_gap.value(),
         cutter_left_marker_lift_mm=window.cutter_settings.left_marker_lift.value(),

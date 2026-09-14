@@ -68,7 +68,7 @@ def generate_layout(
     analysis = []
     def analyzed(data):
         from .header_gap import annotate_analysis
-        annotate_analysis(data, gap_records)
+        annotate_analysis(data, gap_records, settings, progress)
         analysis[:] = [data]
         if analysis_ready:
             analysis_ready(data)

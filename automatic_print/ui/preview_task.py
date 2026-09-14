@@ -58,7 +58,9 @@ class PreviewTask(QRunnable):
 
             def analysis(report):
                 from ..layout_engine.header_gap import annotate_analysis
-                annotate_analysis(report, gap_records)
+                annotate_analysis(report, gap_records, self.settings,
+                    lambda stage, current, total, name: self.emit(self.signals.progress,
+                        f'{stage} · {current}/{total} · {name}'))
                 reports[:] = [report]
                 self.emit(self.signals.analysis, report)
 

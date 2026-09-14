@@ -48,6 +48,8 @@ def cutting_report(result):
     review += '\n'+anomaly_text(result.get('analysis', {}))
     from .header_gap import gap_report
     review += '\n'+gap_report(result.get('analysis', {}).get('header_gap', []))
+    from .gap_loss import gap_loss_text
+    review += '\n'+gap_loss_text(result.get('analysis', {}).get('gap_loss'))
     from .measurement_timing import measurement_text
     from .output_file_info import result_file_report
     review += '\n'+result_file_report(result)

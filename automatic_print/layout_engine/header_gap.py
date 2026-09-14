@@ -160,8 +160,15 @@ def verify_records(records):
                 raise ValueError(f'{original.name}：补足间距后源文件发生变化，请重新生成')
 
 
-def annotate_analysis(data, records):
+def annotate_analysis(data, records, settings=None, progress=None):
     data['header_gap'] = records
+    if settings and settings.developer_gap_loss and 'height_m' in data:
+        from .gap_loss import compare_gap_loss
+        if progress:
+            progress('间距额外用膜比较', 0, 1, '原间距参考，仅几何计算，不生成图片')
+        data['gap_loss'] = compare_gap_loss(records, settings, data['height_m'], progress)
+        if progress:
+            progress('间距额外用膜比较', 1, 1, '原间距参考计算完成')
     rows = data.setdefault('image_anomalies', [])
     existing = {(row['source'], row['kind']) for row in rows}
     for record in records:

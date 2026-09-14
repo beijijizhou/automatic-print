@@ -25,6 +25,7 @@ def build_developer_mode(window, footer):
         window.developer_mode_enabled = enabled
         window.quick_header_gap_group.setVisible(enabled)
         panel = window.automation_home.label_quick_panel
+        panel.summary.gap_loss.setVisible(enabled)
         panel.history_button.setVisible(enabled)
         panel.bulk_analysis_button.setVisible(enabled)
         panel.algorithm_costs_button.setVisible(enabled)
