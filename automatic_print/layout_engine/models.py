@@ -16,6 +16,7 @@ class LayoutSettings:
     dpi: float = 300
     follow_source_dpi: bool = False  # GUI defaults on; direct API stays compatible.
     output_dpi_origin: str = 'manual'
+    output_dpi_notice: str = ''
     developer_gap_loss: bool = False
     png_compression_level: int = 1
     png_engine: str = "pillow"

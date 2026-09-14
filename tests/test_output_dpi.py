@@ -30,7 +30,7 @@ def test_follow_preserves_native_pixels_and_physical_dimensions(tmp_path, engine
         assert image.getpixel((90,180)) == (0,0,255,255)
 
 
-@pytest.mark.parametrize('kind', ['mixed','missing','anisotropic'])
+@pytest.mark.parametrize('kind', ['missing','anisotropic'])
 def test_invalid_source_dpi_is_not_guessed(tmp_path,kind):
     a=source(tmp_path/'B1-1-T-Black-M-NO1-1.png')
     if kind=='mixed':
@@ -44,6 +44,21 @@ def test_invalid_source_dpi_is_not_guessed(tmp_path,kind):
     with pytest.raises(ValueError, match='手动指定统一输出DPI'):
         generate_layout(paths,tmp_path/'out',LayoutSettings(follow_source_dpi=True))
     assert not (tmp_path/'out').exists()
+
+
+@pytest.mark.parametrize('engine',['pillow','libvips'])
+def test_mixed_dpi_continues_with_midpoint_and_visible_notice(tmp_path,engine):
+    paths=[source(tmp_path/'B1-1-T-Black-M-NO1-1.png',(100,100)),
+           source(tmp_path/'B2-1-T-Black-M-NO1-1.png',(200,200))]
+    settings=LayoutSettings(follow_source_dpi=True,number_images=False,
+        color_block_enabled=False,allow_rotation=False,png_engine=engine)
+    result=generate_layout(paths,tmp_path/'out',settings)
+    assert result['output_dpi']==150
+    assert result['output_dpi_origin']=='mixed_source'
+    assert '100 DPI：1张；200 DPI：1张' in result['analysis']['output_dpi_notice']
+    assert '中间值 150 DPI' in result['analysis']['output_dpi_notice']
+    with Image.open(tmp_path/'out'/result['filename']) as image:
+        assert image.info['dpi'][0]==pytest.approx(150,abs=.02)
 
 
 def test_manual_dpi_does_not_rescan_source_headers(monkeypatch):

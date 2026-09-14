@@ -22,6 +22,16 @@ def resolve_output_dpi(paths, settings, progress=None):
             nominal = round(dimensions.x_dpi)
             groups[nominal].append(path.name)
             actual_dpi.setdefault(nominal, dimensions.x_dpi)
+    if not failures and len(groups) > 1:
+        dpi = (min(groups)+max(groups))/2
+        distribution = '；'.join(f'{value} DPI：{len(names)}张' for value,names in sorted(groups.items()))
+        notice = (f'原图DPI混合（{distribution}），已自动采用中间值 {dpi:g} DPI继续排版。'
+                  '按各图原DPI保持毫米尺寸并重采样，低DPI图会插值、高DPI图会降采样；'
+                  '可在打印参数取消跟随原图DPI并手动指定。')
+        if progress:
+            progress('读取原图DPI',len(paths),len(paths),notice)
+        return replace(settings,dpi=dpi,follow_source_dpi=False,
+                       output_dpi_origin='mixed_source',output_dpi_notice=notice)
     if failures or len(groups) != 1:
         messages = failures[:5]
         messages += [f'{dpi} DPI：{len(names)} 张，例如 {names[0]}'

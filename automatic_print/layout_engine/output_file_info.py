@@ -15,7 +15,11 @@ def file_information_text(result):
         lines.append(f'像素尺寸：{width} × {height} 像素')
     if dpi is not None:
         lines.append(f'写入打印分辨率：水平 {dpi:g} DPI · 垂直 {dpi:g} DPI')
-        lines.append('输出DPI模式：'+('跟随原图' if result.get('output_dpi_origin') == 'source' else '手动指定'))
+        origin = result.get('output_dpi_origin')
+        lines.append('输出DPI模式：'+({'source':'跟随原图','mixed_source':'混合原图自动中间值'}.get(origin,'手动指定')))
+        notice = result.get('analysis', {}).get('output_dpi_notice')
+        if notice:
+            lines.append(notice)
     if result.get('pixel_format'):
         bits = result.get('bits_per_channel', '未记录')
         lines.append(f"图片格式：{result.get('output_format', '未记录')} · {result['pixel_format']} · 每通道 {bits} 位")

@@ -170,6 +170,11 @@ def annotate_analysis(data, records, settings=None, progress=None):
         if progress:
             progress('间距额外用膜比较', 1, 1, '原间距参考计算完成')
     rows = data.setdefault('image_anomalies', [])
+    if settings and settings.output_dpi_notice:
+        data['output_dpi_notice'] = settings.output_dpi_notice
+        if not any(row.get('kind') == settings.output_dpi_notice for row in rows):
+            rows.append({'source': '整批输出DPI', 'path': '',
+                         'kind': settings.output_dpi_notice, 'action': '已自动继续，可手动修改输出DPI'})
     existing = {(row['source'], row['kind']) for row in rows}
     for record in records:
         warning = record['warning']
