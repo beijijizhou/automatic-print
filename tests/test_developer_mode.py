@@ -35,17 +35,18 @@ def test_default_hides_tools_and_gates_direct_open(tmp_path, monkeypatch):
     assert owner.developer_mode_checkbox.isVisible()
     settings_button = owner.automation_home.settings_button
     assert settings_button.parentWidget() is owner.centralWidget()
-    assert owner.fixed_pause_button.parentWidget() is owner.centralWidget()
-    assert not owner.fixed_pause_button.isEnabled()
+    from PySide6.QtWidgets import QPushButton
+    pauses = [b for b in owner.findChildren(QPushButton) if b.text() == '暂停批次']
+    assert pauses == [owner.stop_generation_button]
+    assert owner.stop_generation_button.parentWidget().objectName() == 'batchInput'
     owner.stop_generation_button.setEnabled(True)
-    assert owner.fixed_pause_button.isEnabled()
     from automatic_print.ui import immediate_exit
     exits = []
     monkeypatch.setattr(immediate_exit, 'exit_now', exits.append)
-    owner.fixed_pause_button.click()
+    owner.stop_generation_button.click()
     assert exits == [owner]
     owner.stop_generation_button.setEnabled(False)
-    assert not owner.fixed_pause_button.isEnabled()
+    assert not owner.stop_generation_button.isEnabled()
     before = settings_button.mapTo(owner, settings_button.rect().topLeft())
     owner.automation_home.workbench_scroll.verticalScrollBar().setValue(999999)
     APP.processEvents()
