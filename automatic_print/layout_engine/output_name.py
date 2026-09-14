@@ -24,8 +24,12 @@ def batch_directory_name(batch_name, job_id):
     return f"{label_output_name(batch_name)[:-4]}_{job_id}"
 
 
-def batch_output_directory(base, batch_name, job_id):
+def batch_output_directory(base, batch_name, job_id, relative_parts=()):
     base = base / "切膜机文件"
+    for part in relative_parts:
+        if part in ('', '.', '..') or '/' in part or '\\' in part:
+            raise ValueError('输出目录层级无效')
+        base = base / part
     name = batch_directory_name(batch_name, job_id)
     path, index = base / name, 2
     while path.exists():

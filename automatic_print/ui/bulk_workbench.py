@@ -28,22 +28,17 @@ class BulkWorkbench(QObject):
         self.window = window
         self.panel = window.automation_home.label_quick_panel
         self.thread = self.worker = None
+        self.folders, self.inventory = [], {}
         self.selector = BatchStatusBoard()
         self.selector.setToolTip('切换当前批次，查看同一主界面的进度、耗时、预览与总结。')
         self.panel.summary.layout().insertWidget(0, self.selector)
         self.selector.currentIndexChanged.connect(self.select)
 
     def begin(self, parent):
-        self.folders = sorted(p for p in parent.iterdir() if p.is_dir() and p.name != '切膜机文件')
+        self.root, self.folders, self.inventory = parent, [], {}
         self.payloads, self.records, self.stages, self.timing_data = {}, {}, {}, {}
         self.selector.reset(self.folders)
         self.selector.show()
-        if not self.folders:
-            self.window.generation_preview.payload = None
-            self.panel.preview.clear_for_generation()
-            self.panel.summary.start(str(parent), 0)
-            self.window.status.setText('上级目录没有可处理的批次文件夹。')
-            return
         try:
             settings = self.window._layout_settings()
             custom = None if self.window.output_beside_source.isChecked() else Path(self.window.output_location.text())
@@ -54,15 +49,17 @@ class BulkWorkbench(QObject):
             return
         self.window.generation_preview.start()
         self.selector.show()
-        self.select(0)
+        self.panel.summary.start(str(parent), 0)
+        self.panel.preview.sources_ready.emit([])
         self.window.stop_generation_button.setEnabled(True)
-        self.window.status.setText(f'正在开始多批次排版：共{len(self.folders)}批，后台滚动处理…')
+        self.window.status.setText('正在后台扫描各层批次目录与图片文件名…')
         self.worker = BulkGenerationWorker(self.folders, settings, self.window.bulk_parallelism.value(),
-                                           custom, self.window.automation_home.preview_only.isChecked())
+                                           custom, self.window.automation_home.preview_only.isChecked(), parent)
         self.thread = QThread(self)
         self.worker.moveToThread(self.thread)
         self.thread.started.connect(self.worker.run)
-        for signal, slot in ((self.worker.progress, self.progress), (self.worker.preview, self.preview),
+        for signal, slot in ((self.worker.discovered, self.discovered),
+                             (self.worker.progress, self.progress), (self.worker.preview, self.preview),
                              (self.worker.completed, self.completed), (self.worker.timings, self.timings),
                              (self.worker.finished, self.complete)):
             signal.connect(slot, Qt.QueuedConnection)
@@ -71,16 +68,25 @@ class BulkWorkbench(QObject):
         self.thread.finished.connect(self.cleanup)
         self.thread.start()
 
+    @Slot(object)
+    def discovered(self, scan):
+        self.inventory = {i: b for i, b in enumerate(scan['batches'])}
+        self.folders = [b['folder'] for b in scan['batches']]
+        self.selector.reset(self.folders, self.root, self.inventory)
+        self.window.status.setText(f"已扫描{scan['directories']}个目录，发现{len(self.folders)}个图片批次，开始滚动处理")
+
     @Slot(int)
     def select(self, index):
-        if index < 0:
+        if index < 0 or index >= len(self.folders):
             return
         view = self.window.generation_preview
         view.payload = None
         view.preview.clear_for_generation()
         view.preview.source_folder = self.folders[index]
         self.panel.analysis.clear()
-        self.panel.summary.start(str(self.folders[index]))
+        info = self.inventory.get(index, {})
+        self.panel.summary.start(str(self.folders[index]), info.get('image_count', 0))
+        view.preview.sources_ready.emit(info.get('images', []))
         self.panel.timings.reset()
         if index in self.payloads:
             self.panel.summary.start(str(self.folders[index]), len(self.payloads[index]['planned']))
@@ -105,6 +111,11 @@ class BulkWorkbench(QObject):
 
     @Slot(int, str, str, object, object, str)
     def progress(self, index, folder, stage, current, total, filename):
+        if index < 0:
+            self.window.status.setText(f'{stage} · 已检查{current}个目录')
+            self.window.current_file.setText('当前目录：'+filename)
+            self.window.progress.setRange(0, 0)
+            return
         self.stages[index] = stage, current, total, filename
         self.selector.update_batch(index, stage, current, total, filename)
         if index == self.selector.currentIndex():

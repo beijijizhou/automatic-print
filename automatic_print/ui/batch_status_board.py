@@ -28,10 +28,10 @@ class BatchStatusBoard(QWidget):
             heading.addStretch()
             body.addLayout(heading)
             tree = QTreeWidget()
-            tree.setHeaderLabels(['批次文件夹', '当前状态'])
+            tree.setHeaderLabels(['批次相对路径', '当前状态', '图片数'])
             tree.setRootIsDecorated(False)
             tree.setWordWrap(True)
-            tree.setColumnWidth(0, 105)
+            tree.setColumnWidth(0, 180)
             tree.itemSelectionChanged.connect(lambda t=tree: self.choose(t))
             body.addWidget(tree)
             row.addLayout(body, 1)
@@ -39,7 +39,7 @@ class BatchStatusBoard(QWidget):
         self.setMinimumHeight(155)
         self.setMaximumHeight(230)
 
-    def reset(self, folders):
+    def reset(self, folders, root=None, information=None):
         self.blockSignals(True)
         for tree in self.groups.values():
             tree.blockSignals(True)
@@ -47,10 +47,13 @@ class BatchStatusBoard(QWidget):
         self.items.clear()
         self.index = -1
         for index, folder in enumerate(folders):
-            item = QTreeWidgetItem([folder.name, '等待开始'])
+            info = (information or {}).get(index, {})
+            name = folder.relative_to(root).as_posix() if root else folder.name
+            item = QTreeWidgetItem([name if name != '.' else folder.name, '等待开始',
+                                   str(info['image_count']) if 'image_count' in info else ''])
             item.setData(0, Qt.UserRole, index)
             item.setIcon(0, action_icon('waiting', '#b45309'))
-            item.setToolTip(0, str(folder))
+            item.setToolTip(0, str(folder)+'\n'+'\n'.join(p.name for p in info.get('images', [])))
             self.groups['未完成'].addTopLevelItem(item)
             self.items[index] = item
         for tree in self.groups.values():
