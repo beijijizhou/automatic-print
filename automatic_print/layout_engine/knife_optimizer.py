@@ -26,7 +26,8 @@ def select_batch_knife(groups, settings, spacing, progress=None):
         if progress:
             progress("计算批次刀位", index+1, len(candidates), "比较整批排版长度，保持订单顺序")
     if best is None:
-        raise ValueError("整批图片不存在安全的统一双列刀位，请使用单列或更宽的膜。")
+        from .error_parameters import groups_failure
+        raise ValueError("整批图片不存在安全的统一双列刀位，请使用单列或更宽的膜。\n"+groups_failure(groups,settings))
     return best[1]
 
 

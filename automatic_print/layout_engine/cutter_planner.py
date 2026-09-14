@@ -38,7 +38,8 @@ def plan_cutter_layout(paths, settings, progress, prepared=None, preserve_sequen
                  settings.dpi, f"整批固定刀位 {settings.cutter_knife_mm:.2f} 毫米")
     solution = solve_groups(groups, lanes, spacing)
     if solution is None:
-        raise ValueError("图片无法安全放入固定分区；单排必须靠左，请启用自动刀位、增大左分区或改用单列。")
+        from .error_parameters import groups_failure
+        raise ValueError("图片无法安全放入固定分区；单排必须靠左，请启用自动刀位、增大左分区或改用单列。\n"+groups_failure(groups,settings))
     _, plans = solution
     planned, index, y = [], 0, margin
     while index < len(groups):

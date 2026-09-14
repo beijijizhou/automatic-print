@@ -87,7 +87,7 @@ class PreviewTask(QRunnable):
             error = '预览任务已停止。'
         except Exception as exc:
             from ..layout_engine.error_context import error_context
-            error = error_context(exc, locals().get('paths', []), self.folder)
+            error = error_context(exc, locals().get('paths', []), self.folder, settings=self.settings)
         try:
             self.signals.finished.emit(self.token, payload, error)
         except RuntimeError:

@@ -136,7 +136,7 @@ class GenerateWorker(QObject):
         except Exception as error:
             self.timings_ready.emit(self.timing.finish('失败'))
             from ..layout_engine.error_context import error_context
-            message = error_context(error, self.images, self.source, self.failure_stage)
+            message = error_context(error, self.images, self.source, self.failure_stage, self.settings)
             try:
                 if self.output.is_dir():
                     (self.output/'失败诊断.txt').write_text(message, encoding='utf-8')

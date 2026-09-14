@@ -33,7 +33,9 @@ def plan_single_rows(paths, settings, progress):
             if all(item.footprint_width <= width for item in row):
                 candidates.append((sum(item.footprint_height+spacing for item in row),orientation,row))
         if not candidates:
-            raise ValueError(f'{group[0].name}：旋转与不旋转均超出单排可打印膜宽。')
+            from .error_parameters import groups_failure
+            details=groups_failure([items[path] for path in group],settings)
+            raise ValueError(f'{group[0].name}：旋转与不旋转均超出单排可打印膜宽。\n'+details)
         _,_,chosen = min(candidates,key=lambda c:(c[0],c[1]))
         for path,item in zip(group,chosen):
             choice = UnitChoice(item.footprint_width,item.footprint_height,(UnitMember(item,0,0),),0)

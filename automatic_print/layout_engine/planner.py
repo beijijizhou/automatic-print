@@ -89,7 +89,8 @@ def _plan_layout(paths, settings, progress, analysis, analysis_ready):
     for choices in units:
         if all(choice.width > usable_width for choice in choices):
             name = choices[0].members[0].item.path.name
-            raise ValueError(f"图片组 {name} 超过了材料可打印宽度。")
+            from .error_parameters import choices_failure
+            raise ValueError(f"图片组 {name} 超过了材料可打印宽度。\n"+choices_failure(choices,settings,usable_width))
     rows = optimal_ordered_layout(
         optimizer_options(units), usable_width, spacing
     )
