@@ -27,14 +27,9 @@ def setup(tmp_path):
 def test_multiple_selection_uses_shared_start_and_keeps_production_source(tmp_path, monkeypatch):
     window, dialog, parent, first, second = setup(tmp_path)
     starts = []
-    original = QFileDialog.setDirectory
-    def set_directory(chooser, value):
-        starts.append(value)
-        return original(chooser, value)
-    monkeypatch.setattr(QFileDialog, 'setDirectory', set_directory)
-    monkeypatch.setattr(QFileDialog, 'exec', lambda *_a: 1)
-    monkeypatch.setattr(QFileDialog, 'selectedFiles', lambda *_a: [str(first), str(second)])
-    dialog.choose()
+    monkeypatch.setattr(QFileDialog, 'getExistingDirectory',
+                        lambda *_a: starts.append(_a[2]) or str(parent))
+    dialog.choose_parent()
     assert starts == [str(first)]
     assert dialog.folders.count() == 2
     assert window.folder.text() == str(first)
@@ -54,6 +49,7 @@ def test_upper_directory_remembers_location_and_ignores_output_container(tmp_pat
     monkeypatch.setattr(QFileDialog, 'getExistingDirectory', lambda *_a: calls.append(_a[2]) or str(parent))
     dialog.choose_parent()
     assert calls == [str(first)] and dialog.folders.count() == 2
+    assert not hasattr(dialog, 'add') and not hasattr(dialog, 'choose')
     assert image_dialog_start(window) == str(parent)
     assert window.folder.text() == str(first)
     window.close()
@@ -69,8 +65,8 @@ def test_single_choice_updates_shared_start_and_cancel_does_not(tmp_path, monkey
     monkeypatch.setattr(QFileDialog, 'getExistingDirectory', lambda *_a: str(second))
     assert window.choose_folder()
     assert image_dialog_start(window) == str(second)
-    monkeypatch.setattr(QFileDialog, 'exec', lambda *_a: 0)
-    dialog.choose()
+    monkeypatch.setattr(QFileDialog, 'getExistingDirectory', lambda *_a: '')
+    dialog.choose_parent()
     assert image_dialog_start(window) == str(second)
     window.preferences.setValue(KEY, str(tmp_path/'missing'))
     assert image_dialog_start(window) == str(second)

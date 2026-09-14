@@ -1,6 +1,5 @@
 """One remembered browser location; never replace the production source."""
 from pathlib import Path
-from os.path import commonpath
 
 KEY = 'dialogs/last_image_directory'
 
@@ -21,13 +20,3 @@ def remember_image_directory(window, directory):
     if path.is_dir():
         window.preferences.setValue(KEY, str(path.resolve()))
         window.preferences.sync()
-
-
-def remember_multiple_selection(window, folders):
-    paths = [Path(folder).resolve() for folder in folders if Path(folder).is_dir()]
-    if paths:
-        try:
-            directory = commonpath([str(path.parent) for path in paths])
-        except ValueError:  # Different Windows drives have no common parent.
-            directory = paths[0].parent
-        remember_image_directory(window, directory)

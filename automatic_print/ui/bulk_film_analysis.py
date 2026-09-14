@@ -2,11 +2,11 @@
 from pathlib import Path
 from PySide6.QtCore import QObject, Signal, Slot, QThread, Qt
 from PySide6.QtWidgets import (QDialog, QVBoxLayout, QHBoxLayout, QPushButton,
-    QFileDialog, QListWidget, QListView, QTreeView, QAbstractItemView, QLabel, QPlainTextEdit)
+    QFileDialog, QListWidget, QAbstractItemView, QLabel, QPlainTextEdit)
 from ..cancellation import Cancellation
 from ..history.bulk_analysis import analyze_folders, summary_text
 from .action_icons import action_icon
-from .folder_dialog_paths import image_dialog_start, remember_image_directory, remember_multiple_selection
+from .folder_dialog_paths import image_dialog_start, remember_image_directory
 
 
 class BulkAnalysisWorker(QObject):
@@ -38,14 +38,13 @@ class BulkFilmAnalysisDialog(QDialog):
         layout = QVBoxLayout(self)
         layout.addWidget(QLabel('每个文件夹独立分析，不合并订单，不生成PNG；完成一批即保存历史。'))
         actions = QHBoxLayout()
-        self.add = QPushButton('添加多个文件夹')
         self.parent_add = QPushButton('添加上级目录中的批次')
         self.remove = QPushButton('移除选中')
         self.start = QPushButton('开始数据分析')
         self.stop = QPushButton('停止')
         self.start.setProperty('importance', 'primary')
         self.stop.setProperty('importance', 'danger')
-        for button, icon in ((self.add, 'folder'), (self.parent_add, 'folder'),
+        for button, icon in ((self.parent_add, 'folder'),
                              (self.remove, 'more'), (self.start, 'play'), (self.stop, 'stop')):
             button.setIcon(action_icon(icon))
             actions.addWidget(button)
@@ -54,14 +53,13 @@ class BulkFilmAnalysisDialog(QDialog):
         self.folders = QListWidget()
         self.folders.setSelectionMode(QAbstractItemView.ExtendedSelection)
         layout.addWidget(self.folders)
-        self.status = QLabel('选择多个批次后开始；40–80厘米，每隔5厘米，常规/旋转共18套。')
+        self.status = QLabel('选择上级目录，确认下面的批次后开始；40–80厘米，每隔5厘米，共18套。')
         self.status.setWordWrap(True)
         self.status.setTextInteractionFlags(Qt.TextSelectableByMouse)
         layout.addWidget(self.status)
         self.results = QPlainTextEdit()
         self.results.setReadOnly(True)
         layout.addWidget(self.results)
-        self.add.clicked.connect(self.choose)
         self.parent_add.clicked.connect(self.choose_parent)
         self.remove.clicked.connect(self.remove_selected)
         self.start.clicked.connect(self.begin)
@@ -74,19 +72,6 @@ class BulkFilmAnalysisDialog(QDialog):
             if path.is_dir() and str(path) not in existing:
                 self.folders.addItem(str(path))
                 existing.add(str(path))
-
-    def choose(self):
-        dialog = QFileDialog(self, '选择多个批次文件夹（可按Ctrl或Shift多选）')
-        dialog.setOption(QFileDialog.DontUseNativeDialog)
-        dialog.setFileMode(QFileDialog.Directory)
-        dialog.setOption(QFileDialog.ShowDirsOnly)
-        dialog.setDirectory(image_dialog_start(self.parent()))
-        for view in dialog.findChildren(QListView)+dialog.findChildren(QTreeView):
-            view.setSelectionMode(QAbstractItemView.ExtendedSelection)
-        if dialog.exec():
-            selected = dialog.selectedFiles()
-            self.add_folders(selected)
-            remember_multiple_selection(self.parent(), selected)
 
     def choose_parent(self):
         folder = QFileDialog.getExistingDirectory(self, '选择包含多个批次的上级目录',
@@ -150,7 +135,7 @@ class BulkFilmAnalysisDialog(QDialog):
         self.set_busy(False)
 
     def set_busy(self, busy):
-        for widget in (self.add, self.parent_add, self.remove, self.start, self.folders):
+        for widget in (self.parent_add, self.remove, self.start, self.folders):
             widget.setEnabled(not busy)
         self.stop.setEnabled(busy)
 
