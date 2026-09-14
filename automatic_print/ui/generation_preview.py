@@ -116,6 +116,7 @@ class GenerationPreviewController(QObject):
 
     @Slot(str)
     def failed(self, message):
+        self.panel.summary.show_failure(message)
         self.panel.analysis.failed(message)
         self.panel.summary.progress.setText(f'生成失败，禁止打印：{message}')
         self.preview.warning = f"生成失败，禁止打印：{message}"

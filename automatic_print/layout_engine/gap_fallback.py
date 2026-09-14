@@ -31,7 +31,11 @@ def plan_with_gap_fallback(paths, settings, records, progress=None, analysis_rea
             r.pop('prepared',None)
     if progress:
         progress('回退新增膜标签间距',0,1,'仅撤销程序新增空白，保留原图与用户设置，重新检查整批刀位')
-    result = plan_layout(paths,settings,progress,analysis_ready)
+    try:
+        result = plan_layout(paths,settings,progress,analysis_ready)
+    except ValueError as error:
+        count = sum(bool(r.get('rollback_added_mm')) for r in records)
+        raise ValueError(f'{error}\n已尝试自动恢复：回退{count}张的程序新增膜标签间距，原间距仍无安全方案；用户参数未修改。') from error
     if progress:
         progress('回退新增膜标签间距',1,1,'原间距重新排版完成，后续继续订单和实际像素安全检查')
     return paths,settings,result

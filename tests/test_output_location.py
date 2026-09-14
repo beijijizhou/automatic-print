@@ -74,7 +74,8 @@ def test_generated_png_is_beside_source_in_independent_job(tmp_path, monkeypatch
     monkeypatch.setattr(window, '_layout_settings', lambda: LayoutSettings(
         dpi=25.4, number_images=False, cutter_mode='dual'))
     failures = []
-    monkeypatch.setattr(QMessageBox, 'critical', lambda *args: failures.append(args[-1]))
+    from automatic_print.ui import failure_dialog
+    monkeypatch.setattr(failure_dialog, 'show_failure_dialog', lambda *args: failures.append(args[-1]))
     monkeypatch.setattr(QMessageBox, 'information', lambda *args: None)
     monkeypatch.setattr(generation_actions.QDesktopServices, 'openUrl', lambda *args: True)
     window.generate()

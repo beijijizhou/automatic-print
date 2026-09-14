@@ -38,7 +38,7 @@ def test_quick_default_overrides_old_rotation_and_persists(tmp_path):
     reopened.close()
 
 
-def test_one_background_scan_no_automatic_preview_or_rotation_compare(tmp_path, monkeypatch):
+def test_one_background_scan_no_automatic_preview(tmp_path, monkeypatch):
     source = tmp_path/'orders'/'batch'
     source.mkdir(parents=True)
     paths = []
@@ -60,9 +60,9 @@ def test_one_background_scan_no_automatic_preview_or_rotation_compare(tmp_path, 
         threads.append(get_ident())
         return original(folder)
     monkeypatch.setattr(workers, 'discover_images', scan)
-    monkeypatch.setattr(rotation_zones, 'plan_rotation_zones',
-                        lambda *args: (_ for _ in ()).throw(AssertionError('Rotation search forbidden')))
-    monkeypatch.setattr(QMessageBox, 'critical', lambda *args: errors.append(args[-1]))
+    # Whole-batch rotation comparisons are now allowed; folder loading stays explicit.
+    from automatic_print.ui import failure_dialog
+    monkeypatch.setattr(failure_dialog, 'show_failure_dialog', lambda *args: errors.append(args[-1]))
     monkeypatch.setattr(QMessageBox, 'information', lambda *args: None)
     monkeypatch.setattr(generation_actions.QDesktopServices, 'openUrl', lambda *args: True)
     window.folder.setText(str(source))
@@ -71,6 +71,8 @@ def test_one_background_scan_no_automatic_preview_or_rotation_compare(tmp_path, 
     assert preview.loader.active is None
     window.spacing.setValue(9)
     assert not preview.refresh_timer.isActive()
+    from PySide6.QtWidgets import QFileDialog
+    monkeypatch.setattr(QFileDialog, 'getExistingDirectory', lambda *args: str(source))
     window.automation_home.start_layout_button.click()
     deadline = monotonic()+5
     while window.thread is not None:

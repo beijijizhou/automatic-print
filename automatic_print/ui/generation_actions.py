@@ -220,11 +220,12 @@ class GenerationActionsMixin:
         self.clock.stop()
         self.progress.setRange(0, 100)
         self.progress.setFormat("生成失败")
-        self.status.setText("生成失败。")
+        self.status.setText(message.splitlines()[0])
         self.run_log.appendPlainText(f"失败：{message}")
         self.generate_button.setEnabled(True)
         self.stop_generation_button.setEnabled(False)
-        QMessageBox.critical(self, "生成失败", message)
+        from .failure_dialog import show_failure_dialog
+        show_failure_dialog(self, message)
 
     @Slot()
     def generation_cancelled(self) -> None:

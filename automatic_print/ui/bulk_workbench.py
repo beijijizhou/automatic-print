@@ -156,9 +156,8 @@ class BulkWorkbench(QObject):
         for error in result['errors']:
             self.window.run_log.appendPlainText(f"{error['folder']}：{error['error']}")
         if result['errors']:
-            self.panel.summary.anomalies.setText('\n'.join(
+            self.panel.summary.show_failure('\n'.join(
                 f"{e['folder']}：{e['error']}" for e in result['errors']))
-            self.panel.summary.anomalies.show()
 
     def cancel(self):
         self.worker.cancellation.request()

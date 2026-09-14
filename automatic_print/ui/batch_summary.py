@@ -2,7 +2,7 @@
 from pathlib import Path
 
 from PySide6.QtCore import Qt
-from PySide6.QtWidgets import QGroupBox, QLabel, QPlainTextEdit, QVBoxLayout
+from PySide6.QtWidgets import QGroupBox, QLabel, QPlainTextEdit, QVBoxLayout, QPushButton
 from ..layout_engine.output_sizes import cutting_report
 from ..layout_engine.image_anomalies import anomaly_text
 
@@ -29,6 +29,10 @@ class BatchSummaryPanel(QGroupBox):
         self.anomalies.setTextInteractionFlags(Qt.TextSelectableByMouse)
         self.anomalies.setStyleSheet('color: #a35400; background: #fff3d6; padding: 6px;')
         self.anomalies.hide()
+        self.failure_message = ''
+        self.failure_details = QPushButton('查看并复制报错详情')
+        self.failure_details.clicked.connect(self.open_failure)
+        self.failure_details.hide()
         from .film_comparison_table import FilmComparisonTable
         self.film_table = FilmComparisonTable(self)
         self.cutting = QPlainTextEdit()
@@ -45,6 +49,7 @@ class BatchSummaryPanel(QGroupBox):
         layout.addWidget(self.measurement)
         layout.addWidget(self.gap_loss)
         layout.addWidget(self.anomalies)
+        layout.addWidget(self.failure_details)
         layout.addWidget(self.film_table)
 
     def start(self, folder, count=None):
@@ -55,6 +60,8 @@ class BatchSummaryPanel(QGroupBox):
         self.cutting.clear()
         self.anomalies.clear()
         self.anomalies.hide()
+        self.failure_message = ''
+        self.failure_details.hide()
         self.cutting.hide()
         path = Path(folder)
         quantity = f'{count} 张图片' if count is not None else '正在读取图片名称'
@@ -141,3 +148,13 @@ class BatchSummaryPanel(QGroupBox):
     def _show_quality(self, quality):
         if quality:
             self.metrics.setText(self.metrics.text()+'\n'+quality['text'])
+
+    def show_failure(self, message):
+        self.failure_message = message
+        self.anomalies.setText('\n'.join(message.splitlines()[:8])+'\n完整订单和文件清单可在报错详情查看、复制。')
+        self.anomalies.show()
+        self.failure_details.show()
+
+    def open_failure(self):
+        from .failure_dialog import show_failure_dialog
+        show_failure_dialog(self, self.failure_message)

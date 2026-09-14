@@ -42,8 +42,10 @@ class GenerateWorker(QObject):
         self.preview_only = preview_only
         self.cancellation = Cancellation()
         self.timing = None
+        self.failure_stage = '开始读取批次'
 
     def _phase(self, name):
+        self.failure_stage = name
         self.cancellation.check()
         if self.timing.phase(name):
             self.timings_ready.emit(self.timing.snapshot())
@@ -133,7 +135,14 @@ class GenerateWorker(QObject):
             return
         except Exception as error:
             self.timings_ready.emit(self.timing.finish('失败'))
-            self.failed.emit(str(error))
+            from ..layout_engine.error_context import error_context
+            message = error_context(error, self.images, self.source, self.failure_stage)
+            try:
+                if self.output.is_dir():
+                    (self.output/'失败诊断.txt').write_text(message, encoding='utf-8')
+            except OSError:
+                pass  # Diagnostic writes must not hide the actual production error.
+            self.failed.emit(message)
             return
         self.finished.emit(str(self.output), result)
 
