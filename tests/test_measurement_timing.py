@@ -35,8 +35,8 @@ def test_cold_measurements_report_substeps_and_warm_cache_reports_zero(tmp_path)
     planner.plan_layout(paths, config(), None, reports.append)
     data = reports[-1]['measurement_timings']
     rows = {r['name']: r for r in data['steps']}
-    # Cold film preparation also locates cards before per-item decoded-source scope.
-    assert rows['源图片像素读取与解压']['calls'] == 2*len(paths)
+    # Both directions are now measured while the same decoded source is open.
+    assert rows['源图片像素读取与解压']['calls'] == len(paths)
     for name in ('膜标签卡片定位', '平台文字测量', '普通标签文字测量',
                  '平台透明空位搜索', '尺寸与DPI文件信息读取'):
         assert rows[name]['calls'] > 0

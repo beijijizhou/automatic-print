@@ -24,7 +24,11 @@ def header_space(path, qr, width, height, badge_width, badge_height, gap, degree
             rectangles = ((x, top, badge_width, badge_height) for x in options)
             clear = clear_rectangles(path, width, height, degrees, rectangles, source=source)
             return next((x for x, valid in zip(options, clear) if valid), None)
-        found = find(candidates)
+        # The known blank header usually fits the nearest position immediately.
+        # Check one rectangle before building/scanning every shifted candidate.
+        found = find(candidates[:1])
+        if found is None:
+            found = find(candidates[1:])
         if found is not None:
             return found
         return find(_free_band_candidates(source, qr, width, height,

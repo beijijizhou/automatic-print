@@ -149,13 +149,13 @@ def _group_rows(group, lanes, spacing):
     return rows
 
 
-def read_cutter_items(paths, settings, progress):
+def read_cutter_items(paths, settings, progress, prepare_rotations=False):
     if settings.cutter_mode not in {"single", "dual"}:
         raise ValueError("未知的切膜排版模式。")
     if not settings.color_block_enabled:
         raise ValueError("切膜模式必须启用左侧识别色块。")
     safe_settings = replace(
-        settings, allow_rotation=False, color_block_position="left_top",
+        settings, allow_rotation=bool(prepare_rotations or settings.compare_film_sizes), color_block_position="left_top",
         color_block_offset_y_mm=0,
     )
     if progress:
@@ -167,4 +167,6 @@ def read_cutter_items(paths, settings, progress):
             "以下图片没有可靠的内嵌 DPI，无法确认打印尺寸；请先补充图片 DPI：\n"
             + "\n".join(missing[:20])
         )
-    return read_items(paths, safe_settings, progress)
+    items, labels = read_items(paths, safe_settings, progress)
+    # Cache both directions while each source is open; production baseline stays upright.
+    return [[choices[0]] for choices in items], labels
