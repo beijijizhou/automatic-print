@@ -38,7 +38,7 @@ def wait_for(predicate):
 def test_four_cases_use_production_geometry_and_never_modify_sources(tmp_path):
     paths = sources(tmp_path)
     original = [p.read_bytes() for p in paths]
-    rows = build_examples(paths, settings())
+    rows = build_examples(paths, replace(settings(),cutter_left_marker_external=True))
     assert len(rows) == 4
     assert all(r['production'] for r in rows)
     for row in rows:
@@ -107,3 +107,27 @@ def test_annotation_is_preview_only_and_keeps_raw_pixels(tmp_path):
     assert output.height()==raw.height()+155
     assert data['pixels']==original
     assert any(output.pixelColor(x,70).name()=='#c2410c' for x in range(output.width()))
+
+
+@pytest.mark.parametrize('mode',['free','single','dual'])
+@pytest.mark.parametrize('side',['left','right'])
+@pytest.mark.parametrize('degrees',[0,90])
+def test_example_text_offsets_match_actual_output_plan(tmp_path,mode,side,degrees):
+    from automatic_print.layout import generate_layout
+    paths=sources(tmp_path)
+    path=paths[0 if side=='left' else 1]
+    config=replace(settings(),cutter_mode=mode,cutter_left_marker_external=True,
+        preserve_header_gap=True,label_fit_height=True,
+        manual_rotations=((str(path.resolve()),degrees),))
+    row=next(r for r in build_examples(paths,config) if r['side']==side and r['degrees']==degrees)
+    payload=[]
+    generate_layout([path],tmp_path/'out',config,preview_only=True,plan_ready=payload.append)
+    placement=payload[0]['planned'][0][1]
+    item=row['item']
+    assert (placement.number_x_px-placement.color_block_x_px,
+            placement.number_y_px-placement.color_block_y_px) == (
+                item.label_rx-item.block_rx,item.label_ry-item.block_ry)
+    assert (placement.platform_x_px-placement.color_block_x_px,
+            placement.platform_y_px-placement.color_block_y_px) == (
+                item.platform_rx-item.block_rx,item.platform_ry-item.block_ry)
+    assert row['mode']==mode
