@@ -53,10 +53,10 @@ def _piece_sort(path):
     parts = stem.split('-')
     # The size directly precedes NO; item/export ordinals must not sort before size.
     if len(parts) >= 5 and re.fullmatch(r'no\d+', parts[-2]):
-        product_color = tuple(parts[2:-3])
+        from .source_metadata import source_color, color_key
         item = int(parts[1]) if parts[1].isdigit() else 0
-        return product_color, _size_rank(parts[-3]), parts[-3], item, parts[-2], parts[-1]
-    return (stem,), 1000, '', 0, '', ''
+        return color_key(source_color(path)), _size_rank(parts[-3]), parts[-3], tuple(parts[2:-3]), item, parts[-2], parts[-1]
+    return (3,'未识别颜色'), 1000, '', (stem,), 0, '', ''
 
 
 def ordered_paths(paths):

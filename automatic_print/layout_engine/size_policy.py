@@ -1,7 +1,7 @@
 """Single-piece size blocks are production constraints, not packing hints."""
 from collections import defaultdict
 from .order_groups import order_key, pair_identity
-from .source_metadata import source_size, size_key
+from .source_metadata import source_size, size_key, source_color, source_block, block_key
 
 
 def single_order_size(order):
@@ -21,15 +21,18 @@ def ordered_single_blocks(orders, coalesce=False):
         if size is None:
             locked.append(order)
         else:
-            sizes[size].append(order)
+            sizes[source_block(order[0])].append(order)
     result = list(locked)
-    for size in sorted(sizes, key=size_key):
+    for size in sorted(sizes, key=block_key):
         members = sizes[size]
         result.extend([[path for order in members for path in order]] if coalesce else members)
-    return result
+    from .color_policy import order_color_key
+    return sorted(result,key=order_color_key)
 
 
 def same_single_size(first, second):
+    if source_color(first) != source_color(second):
+        return False
     one, two = single_order_size([first]), single_order_size([second])
     if one is not None:
         return one == two
@@ -45,7 +48,7 @@ def coalesced_size(order):
 
 def validate_single_size_blocks(paths, planned):
     from .order_groups import complete_orders
-    eligible = {path: size for order in complete_orders(paths)
+    eligible = {path: source_block(path) for order in complete_orders(paths)
                 if (size := single_order_size(order)) is not None for path in order}
     closed, previous, zones = set(), None, defaultdict(set)
     for path, placement in sorted(planned, key=lambda entry: (entry[1].row_y_px, entry[1].x_px)):
@@ -61,6 +64,7 @@ def validate_single_size_blocks(paths, planned):
     if any(len(values) > 1 for values in zones.values()):
         raise ValueError('同尺码单件被拆到不同旋转区域，禁止输出。')
     sequence = list(zones)
-    if sequence != sorted(sequence, key=size_key):
-        raise ValueError('单件尺码未按从小到大排列，禁止输出。')
-    return {'single_size_blocks': sequence, 'single_size_verified': True}
+    if sequence != sorted(sequence, key=block_key):
+        raise ValueError('单件未按颜色优先、同色尺码从小到大排列，禁止输出。')
+    return {'single_size_blocks': [size for _,size in sequence], 'single_size_verified': True,
+            'single_color_size_blocks': [{'color':color,'size':size} for color,size in sequence]}

@@ -2,7 +2,7 @@
 from collections import defaultdict
 
 from .order_groups import order_key
-from .source_metadata import size_key, source_size
+from .source_metadata import size_key, source_size, source_block, block_key
 from .size_policy import single_order_size
 
 
@@ -11,12 +11,13 @@ def prepare_order_sequence(orders, items):
     order_sizes = {}
     for index, order in enumerate(orders):
         size = single_order_size(order)
+        size = source_block(order[0]) if size is not None else None
         order_sizes[index] = size
         if size is not None:
             sizes[size].append(index)
         else:
             locked.append(index)
-    pending = [index for size in sorted(sizes, key=size_key)
+    pending = [index for size in sorted(sizes, key=block_key)
                for index in sorted(sizes[size], key=lambda i: -items[orders[i][0]].footprint_height)]
     return locked, pending, order_sizes
 

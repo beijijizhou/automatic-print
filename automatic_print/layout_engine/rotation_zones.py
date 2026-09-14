@@ -132,6 +132,13 @@ def plan_rotation_zones(paths, settings, progress, analysis=None, analysis_ready
                        platform_y_px=p.platform_y_px+boundary,
                        cut_zone='旋转区', cut_knife_x_px=rotated[3])) for path, p in rotated[0])
     baseline_height = baseline[3] if baseline else new_height
+    from .color_policy import validate_color_order
+    try:
+        validate_color_order(planned)
+    except ValueError:
+        if baseline is not None:
+            return _baseline_result(baseline,baseline_settings,progress)
+        raise
     if settings.transition_lines or settings.batch_footer_enabled:
         width = mm_to_px(settings.media_width_mm, settings.dpi)
         new_height = marked_height(planned, settings, width, new_height)

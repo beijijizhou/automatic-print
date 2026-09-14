@@ -4,7 +4,7 @@ from dataclasses import replace
 from .models import mm_to_px
 from .order_groups import complete_orders
 from .size_policy import single_order_size
-from .source_metadata import source_size
+from .source_metadata import source_block
 from .transition_marks import marked_height
 
 
@@ -15,7 +15,7 @@ def eligible_tail(paths, baseline):
     for path, p in baseline[0]:
         if p.rotation_degrees:
             return None  # Manual rotation is not this automatic single-piece policy.
-        size = source_size(path)
+        size = source_block(path)
         sizes.setdefault(size, []).append(path)
         rows.setdefault((p.row_y_px, p.y_px), []).append(size)
     for row in rows.values():
@@ -27,7 +27,7 @@ def eligible_tail(paths, baseline):
             break  # Keep complete size blocks and ascending normal -> rotated production.
         tail.append(size)
     allowed = set(tail)
-    return [path for path, _ in baseline[0] if source_size(path) in allowed]
+    return [path for path, _ in baseline[0] if source_block(path) in allowed]
 
 
 def plan_single_rotation(baseline, targets, rotated_items, rotated_labels, settings, progress):
@@ -42,10 +42,10 @@ def plan_single_rotation(baseline, targets, rotated_items, rotated_labels, setti
         return _baseline_result(baseline, settings, progress)
     blocks = {}
     for path in targets:
-        blocks.setdefault(source_size(path), []).append(path)
+        blocks.setdefault(source_block(path), []).append(path)
     bottoms = {}
     for path, p in baseline[0]:
-        bottoms[source_size(path)] = max(bottoms.get(source_size(path), 0),
+        bottoms[source_block(path)] = max(bottoms.get(source_block(path), 0),
                                         p.row_y_px+p.footprint_height_px)
     size_order = list(bottoms)
     prefix = {}

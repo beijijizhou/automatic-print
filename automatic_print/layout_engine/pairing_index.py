@@ -38,4 +38,5 @@ def indexed_sequence(orders, items, lanes, prepared):
             partner = best[-1]
             active.remove(partner)
             ordered.append(partner)
-    return ordered
+    from .color_policy import order_color_key
+    return sorted(ordered,key=lambda index:order_color_key(orders[index]))

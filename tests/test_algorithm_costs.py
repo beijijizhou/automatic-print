@@ -1,5 +1,6 @@
 from test_developer_mode import window, APP
 from automatic_print.layout_engine.operation_timing import OperationTiming
+from automatic_print.layout_engine.algorithm_costs import STEPS
 
 
 def test_costs_are_developer_only_and_copyable_without_image_read(tmp_path):
@@ -14,8 +15,9 @@ def test_costs_are_developer_only_and_copyable_without_image_read(tmp_path):
     panel.algorithm_costs_button.click()
     page = details.algorithm_page
     assert details.tabs.currentWidget() is page
-    assert page.table.rowCount() == 11
-    assert 'O(k × n²)' in page.table.item(5, 1).text()
+    assert page.table.rowCount() == len(STEPS)
+    row=next(i for i,step in enumerate(STEPS) if step[0]=='自动刀位整体比较')
+    assert 'O(k × n²)' in page.table.item(row, 1).text()
     assert '尚未读取' in page.actual.toPlainText()
     timer = OperationTiming()
     timer.phase('扫描文件名')
@@ -23,7 +25,7 @@ def test_costs_are_developer_only_and_copyable_without_image_read(tmp_path):
     page.refresh()
     assert '扫描文件名' in page.actual.toPlainText()
     page.copy_report()
-    assert '单件同尺码配对' in APP.clipboard().text()
+    assert '单件同色同尺码配对' in APP.clipboard().text()
     assert 'O(n²)' in APP.clipboard().text()
     assert page.grab().save(str(tmp_path/'algorithm-costs.png'))
     owner.developer_mode_checkbox.setChecked(False)

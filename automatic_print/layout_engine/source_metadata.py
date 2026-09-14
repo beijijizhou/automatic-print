@@ -30,6 +30,28 @@ def size_key(size):
     return rank, float(size) if size.replace('.', '', 1).isdigit() else 0, size
 
 
+@lru_cache(maxsize=4096)
+def source_color(path):
+    parts = production_stem(path).split('-')
+    if len(parts) < 6 or not re.fullmatch(r'no\d+',parts[-2]):
+        return '未识别颜色'
+    color = parts[-4].strip()
+    return {'black':'黑色','黑':'黑色','黑色':'黑色',
+            'white':'白色','白':'白色','白色':'白色'}.get(color,color or '未识别颜色')
+
+
+def color_key(color):
+    return {'黑色':0,'白色':1,'未识别颜色':3}.get(color,2),color
+
+
+def source_block(path):
+    return source_color(path),source_size(path)
+
+
+def block_key(block):
+    return color_key(block[0]),size_key(block[1])
+
+
 def shape_hints(width_mm, height_mm):
     hints = []
     if height_mm >= width_mm*2:

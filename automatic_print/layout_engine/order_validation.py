@@ -38,5 +38,7 @@ def validate_order_placements(paths, planned):
                 raise ValueError(f'双面 {key} 错位且存在高度重叠，禁止输出。')
             vertical += 1
     size_check = validate_single_size_blocks(paths, planned)
+    from .color_policy import validate_color_order
+    validate_color_order(planned)
     return {**size_check, 'orders': len(orders), 'double_pairs': horizontal+vertical,
             'horizontal_pairs': horizontal, 'vertical_pairs': vertical}
