@@ -217,9 +217,8 @@ class MainWindow(
         footer = QHBoxLayout()
         footer.addWidget(self.version_label)
         footer.addStretch()
-        settings_button = self.automation_home.settings_button
-        settings_button.setMinimumHeight(36)
-        footer.addWidget(settings_button)
+        from .fixed_pause import build_fixed_pause
+        build_fixed_pause(self, footer)
         footer.addWidget(self.check_update_button)
         from .developer_mode import build_developer_mode
         build_developer_mode(self, footer)
