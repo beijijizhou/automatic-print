@@ -10,7 +10,9 @@ def build_settings_navigation(window, source):
         forms[name] = QFormLayout(page)
         forms[name].setFieldGrowthPolicy(QFormLayout.AllNonFixedFieldsGrow)
         tabs.addTab(page, name)
-    film = {window.cutter_settings.film, window.cutter_settings.printable}
+    cutter = window.cutter_settings
+    film = {cutter.film, cutter.custom_film, cutter.printable,cutter.auto_knife,
+            cutter.knife,cutter.safety,cutter.marker_offset,cutter.compare_films}
     layout = {window.spacing, window.margin, window.allow_rotation, window.rotation_direction, window.membrane_gap, window.auto_fit_width}
     labels = {'标签与文字', '剪膜机色块'}
 
@@ -25,8 +27,8 @@ def build_settings_navigation(window, source):
             else:
                 target.addRow(field)
 
-    cutter = window.cutter_settings
-    transfer(cutter.layout(), lambda label, field: '膜的设置' if field in film else '排版规则')
+    transfer(cutter.layout(), lambda label, field: '膜的设置' if field in film else (
+        '标签与文字' if field is cutter.left_marker_lift else '排版规则'))
     cutter.hide()
     # The empty cutter container is no longer needed as a form row.
     for index in range(source.rowCount()):

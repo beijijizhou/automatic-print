@@ -20,7 +20,7 @@ class CurrentFilmLabel(QLabel):
         self.refresh()
 
     def refresh(self, *_args):
-        film = self.cutter.film.currentData()
+        film = self.cutter.width_control.value()
         usable = self.cutter.printable.usable_width()
         modes = {'single': '单列切膜', 'dual': '固定双列切膜', 'free': '自由排版'}
         mode = modes.get(self.cutter.mode.currentData(), '待选择排版模式')

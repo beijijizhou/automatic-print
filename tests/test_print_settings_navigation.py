@@ -10,7 +10,7 @@ def test_settings_categories_reuse_controls_and_persist_parallelism(tmp_path):
         '膜的设置', '排版规则', '标签与文字', '输出与并行']
     assert tabs.widget(0).isAncestorOf(owner.cutter_settings.film)
     assert tabs.widget(0).isAncestorOf(owner.cutter_settings.printable)
-    assert tabs.widget(1).isAncestorOf(owner.cutter_settings.knife)
+    assert tabs.widget(0).isAncestorOf(owner.cutter_settings.knife)
     assert tabs.widget(1).isAncestorOf(owner.spacing)
     assert tabs.widget(3).isAncestorOf(owner.bulk_parallelism)
     assert owner.worker_threads.value() == 4

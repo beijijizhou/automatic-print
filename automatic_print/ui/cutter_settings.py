@@ -16,6 +16,9 @@ class CutterSettingsPanel(QWidget):
         self.film = QComboBox()
         self.film.addItem("45 厘米膜", 450)
         self.film.addItem("60 厘米膜", 600)
+        self.film.addItem('自定义膜宽', 'custom')
+        from .custom_film import CustomFilmWidth
+        self.custom_film = CustomFilmWidth(preferences,self)
         self.mode = QComboBox()
         self.knife = self._box(300, 1, 599)
         self.printable = PrintableWidthPanel(preferences, width, self.knife, self)
@@ -46,6 +49,7 @@ class CutterSettingsPanel(QWidget):
         for text, control in (
             ('处理模式', self.quick_mode),
             ("膜规格", self.film), ("生产排版模式", self.mode),
+            ('', self.custom_film),
             ('RIIN 已设置的预留', self.printable),
             ("刀位选择", self.auto_knife),
             ("旋转区域", self.rotation_zone),
@@ -60,7 +64,10 @@ class CutterSettingsPanel(QWidget):
             form.addRow(text, control)
         previous_width = int(width.value())
         default_film = previous_width if previous_width in {450, 600} else 600
-        film = preferences.value("cutter/film_mm", default_film, int)
+        film = preferences.value("cutter/film_mm", default_film, float)
+        if preferences.value('cutter/custom_film_selected',film not in {450,600},bool):
+            self.custom_film.value.setValue(film/10)
+            film='custom'
         self.film.setCurrentIndex(max(0, self.film.findData(film)))
         self._initializing = True
         self._film_changed()
@@ -74,6 +81,7 @@ class CutterSettingsPanel(QWidget):
             control.setValue(preferences.value("cutter/" + key, default, float))
         self._initializing = False
         self.film.currentIndexChanged.connect(self._film_changed)
+        self.custom_film.value.valueChanged.connect(self._custom_width_changed)
         self.mode.currentIndexChanged.connect(self._mode_changed)
         self.auto_knife.toggled.connect(self._mode_changed)
         self.quick_mode.toggled.connect(self._mode_changed)
@@ -81,7 +89,9 @@ class CutterSettingsPanel(QWidget):
         self._mode_changed()
 
     def _film_changed(self, *_args):
-        film = self.film.currentData()
+        custom=self.film.currentData()=='custom'
+        self.custom_film.setVisible(custom)
+        film = self.custom_film.millimetres() if custom else self.film.currentData()
         self.width_control.setValue(film)
         self.mode.blockSignals(True)
         self.mode.clear()
@@ -96,6 +106,11 @@ class CutterSettingsPanel(QWidget):
         self.printable.refresh()
         self.knife.setValue(max(1, self.printable.usable_width() / 2))
         self._mode_changed()
+
+    def _custom_width_changed(self, *_args):
+        if self.film.currentData()=='custom':
+            self.width_control.setValue(self.custom_film.millimetres())
+            self.printable.refresh()
 
     def _mode_changed(self, *_args):
         if getattr(self, "_initializing", False):
@@ -125,7 +140,8 @@ class CutterSettingsPanel(QWidget):
         self.printable.save()
         for key, value in {
             'quick_mode': self.quick_mode.isChecked(),
-            "film_mm": self.film.currentData(), "mode": self.mode.currentData(),
+            "film_mm": self.width_control.value(), "mode": self.mode.currentData(),
+            'custom_film_selected': self.film.currentData()=='custom',
             "auto_knife": self.auto_knife.isChecked(),
             "rotation_zone": self.rotation_zone.isChecked(),
             'tail_rotation': self.tail_rotation.isChecked(),
