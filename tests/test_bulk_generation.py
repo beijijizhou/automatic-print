@@ -7,8 +7,11 @@ import numpy as np
 import pytest
 from PIL import Image
 from PySide6.QtCore import Qt
+from PySide6.QtWidgets import QApplication
 from automatic_print.ui.bulk_generation_worker import BulkGenerationWorker
 from test_parallel_film_geometry import qr_sources, settings
+
+APP = QApplication.instance() or QApplication([])
 
 
 @pytest.mark.parametrize('engine', ['pillow', 'libvips'])

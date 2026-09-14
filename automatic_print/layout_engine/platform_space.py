@@ -15,14 +15,16 @@ def header_space(path, qr, width, height, badge_width, badge_height, gap, degree
     with source_pixels(path) as source:
         if 'A' not in source.getbands():
             return None
-        candidates += _free_band_candidates(source, qr, width, height,
-                                            badge_width, badge_height, degrees)
         # Keep the exact candidate order and the source resampling padding.
-        rectangles = ((x, top, badge_width, badge_height) for x in candidates)
-        clear = clear_rectangles(path, width, height, degrees, rectangles, source=source)
-        for x, valid in zip(candidates, clear):
-            if valid:
-                return x
+        def find(options):
+            rectangles = ((x, top, badge_width, badge_height) for x in options)
+            clear = clear_rectangles(path, width, height, degrees, rectangles, source=source)
+            return next((x for x, valid in zip(options, clear) if valid), None)
+        found = find(candidates)
+        if found is not None:
+            return found
+        return find(_free_band_candidates(source, qr, width, height,
+                                         badge_width, badge_height, degrees))
     return None
 
 

@@ -6,7 +6,7 @@ from automatic_print.layout import LayoutSettings
 from automatic_print.layout_engine.item_factory import LayoutItem
 from automatic_print.layout_engine.cutter_planner import _horizontal, _lanes, solve_groups
 from automatic_print.layout_engine.single_order_sequence import arrange_groups, horizontal_savings
-from automatic_print.layout_engine.knife_optimizer import select_batch_knife, knife_candidates
+from automatic_print.layout_engine.knife_optimizer import select_batch_knife, knife_candidates, distinct_knife_candidates
 
 
 def item(i, width, height, offset=0):
@@ -38,3 +38,21 @@ def test_deduplicated_search_preserves_exhaustive_best_height_and_knife():
                 scores.append((result[0], abs(knife-290), knife))
         actual = select_batch_knife(groups, settings, 5)
         assert round(actual.cutter_knife_mm) == min(scores)[2]
+
+
+def test_range_event_states_match_full_lane_checks_with_marker_offsets():
+    from automatic_print.layout_engine.single_order_sequence import lane_fits
+    rng = Random(17)
+    for _ in range(20):
+        groups = [[replace(item(i, rng.randrange(50, 500), 200),
+                           block_rx=rng.randrange(-5, 30))] for i in range(20)]
+        config = LayoutSettings(dpi=25.4, media_width_mm=580, cutter_mode='dual',
+                                cutter_marker_offset_mm=rng.randrange(0, 25))
+        states = {}
+        for knife in knife_candidates(groups, config):
+            lanes = _lanes(replace(config, cutter_knife_mm=knife), 580)
+            signature = tuple(lane_fits(g[0], lane) for g in groups for lane in lanes)
+            old = states.get(signature)
+            if old is None or (abs(knife-290), knife) < (abs(old-290), old):
+                states[signature] = knife
+        assert distinct_knife_candidates(groups, config) == sorted(states.values())

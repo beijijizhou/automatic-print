@@ -3,7 +3,7 @@ from dataclasses import replace
 from math import ceil
 
 from .models import mm_to_px
-from .single_order_sequence import arrange_groups, prepare_groups, lane_fits
+from .single_order_sequence import arrange_groups, prepare_groups
 
 
 def select_batch_knife(groups, settings, spacing, progress=None):
@@ -31,13 +31,26 @@ def select_batch_knife(groups, settings, spacing, progress=None):
 
 def distinct_knife_candidates(groups, settings):
     """Equivalent lane-feasibility states have identical ordered height costs."""
-    from .cutter_planner import _lanes
     width = mm_to_px(settings.media_width_mm, settings.dpi)
-    items = [item for group in groups for item in group]
-    states = {}
+    safety = ceil(settings.cutter_safety_mm*settings.dpi/25.4)
+    offset = mm_to_px(settings.cutter_marker_offset_mm, settings.dpi)
+    events, signature, states = [], 0, {}
+    for index, item in enumerate(item for group in groups for item in group):
+        # Left lane fits from this lower boundary onward. Right lane fits up
+        # to its upper boundary, provided the fixed marker origin is valid.
+        events.append((item.footprint_width+safety, 1 << (2*index), True))
+        if item.block_rx <= offset:
+            bit = 1 << (2*index+1)
+            signature |= bit
+            upper = width-item.footprint_width-safety-offset+item.block_rx
+            events.append((upper+1, bit, False))
+    events.sort()
+    position = 0
     for knife in knife_candidates(groups, settings):
-        lanes = _lanes(replace(settings, cutter_knife_mm=knife*25.4/settings.dpi), width)
-        signature = tuple(lane_fits(item, lane) for item in items for lane in lanes)
+        while position < len(events) and events[position][0] <= knife:
+            _, bit, enabled = events[position]
+            signature = signature | bit if enabled else signature & ~bit
+            position += 1
         old = states.get(signature)
         if old is None or (abs(knife-width/2), knife) < (abs(old-width/2), old):
             states[signature] = knife
