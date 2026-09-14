@@ -51,6 +51,10 @@ class BulkGenerationDialog(BulkFilmAnalysisDialog):
         if self.thread:
             self.status.setText(f'正在开始：同时生成{self.active_parallelism}批，后台读取图片…')
 
+    @Slot(int, str, str, object, object, str)
+    def progress(self, index, folder, stage, current, total, filename):
+        super().progress(index, folder, stage, current, total, filename)
+
     @Slot(int, object)
     def receive_preview(self, index, payload):
         self.payloads[index] = payload

@@ -88,15 +88,19 @@ def _compare_films(paths, settings, progress):
                 row['error'] = str(exc)
             row['seconds'] = monotonic()-step
             return row
-    with ThreadPoolExecutor(max_workers=workers, thread_name_prefix='film-geometry') as pool:
-        futures = [pool.submit(copy_context().run, calculate, film, rotation)
-                   for film in widths for rotation in (False, True)]
-        for future in as_completed(futures):
-            row = future.result()
+    def collect(results):
+        for row in results:
             rows.append(row)
             completed[0] = len(rows)
             if progress:
                 progress('膜规格比较', len(rows), count, row['name']+' · '+('无安全方案' if row['error'] else '完成'))
+    if workers == 1:
+        collect(calculate(film, rotation) for film in widths for rotation in (False, True))
+    else:
+        with ThreadPoolExecutor(max_workers=workers, thread_name_prefix='film-geometry') as pool:
+            futures = [pool.submit(copy_context().run, calculate, film, rotation)
+                       for film in widths for rotation in (False, True)]
+            collect(future.result() for future in as_completed(futures))
     rows.sort(key=lambda r: (widths.index(r['film_mm']), r['rotation_allowed']))
     valid = [r for r in rows if not r['error']]
     best = min(valid, key=lambda r: r['film_area_m2']) if valid else None

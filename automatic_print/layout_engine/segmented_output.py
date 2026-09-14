@@ -118,10 +118,14 @@ def generate_segments(paths, output_dir, settings, progress, plan_ready,
         result['segment_index'] = index+1
         return result
     try:
-        with ThreadPoolExecutor(max_workers=parallel) as pool:
-            futures = {pool.submit(render, index): index for index in range(len(parts))}
-            for future in as_completed(futures):
-                results[futures[future]] = future.result()
+        if parallel == 1:
+            for index in range(len(parts)):
+                results[index] = render(index)
+        else:
+            with ThreadPoolExecutor(max_workers=parallel, thread_name_prefix='segment-save') as pool:
+                futures = {pool.submit(render, index): index for index in range(len(parts))}
+                for future in as_completed(futures):
+                    results[futures[future]] = future.result()
     except BaseException:
         # Keep unfinished files recoverable, but never leave them print-labelled.
         for path in set(output_dir.glob('*.png'))-existing:

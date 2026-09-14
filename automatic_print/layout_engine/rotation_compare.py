@@ -39,14 +39,19 @@ def compare_rotation(paths, settings, progress, analysis, analysis_ready):
         except ValueError as exc:
             return None, None, monotonic()-started, str(exc)
 
+    workers = min(2, max(1, settings.film_geometry_workers))
     if progress:
-        progress('比较旋转区域', 0, 2, '正在并行计算常规方案与完整订单旋转方案')
-    with ThreadPoolExecutor(max_workers=2, thread_name_prefix='layout-compare') as pool:
-        normal = pool.submit(copy_context().run, checked, plan_cutter_layout, normal_settings, normal_progress)
-        def rotation_plan(paths, config, report):
-            return plan_rotation_zones(paths, config, report, analysis, analysis_ready)
-        rotated = pool.submit(copy_context().run, checked, rotation_plan, settings, progress)
-        normal, rotated = normal.result(), rotated.result()
+        progress('比较旋转区域', 0, 2, f'最多{workers}路计算常规方案与完整订单旋转方案')
+    def rotation_plan(paths, config, report):
+        return plan_rotation_zones(paths, config, report, analysis, analysis_ready)
+    if workers == 1:
+        normal = checked(plan_cutter_layout, normal_settings, normal_progress)
+        rotated = checked(rotation_plan, settings, progress)
+    else:
+        with ThreadPoolExecutor(max_workers=workers, thread_name_prefix='layout-compare') as pool:
+            normal = pool.submit(copy_context().run, checked, plan_cutter_layout, normal_settings, normal_progress)
+            rotated = pool.submit(copy_context().run, checked, rotation_plan, settings, progress)
+            normal, rotated = normal.result(), rotated.result()
     if rotated[0] is None:
         raise ValueError('旋转方案无法安全生成：'+rotated[3])
     result, height, seconds, _ = rotated
@@ -57,7 +62,7 @@ def compare_rotation(paths, settings, progress, analysis, analysis_ready):
         'rotation_m': height*scale,
         'saved_m': (normal_height-height)*scale if normal_height is not None else None,
         'normal_seconds': normal[2], 'rotation_seconds': seconds,
-        'normal_error': normal[3], 'parallelism': 2,
+        'normal_error': normal[3], 'parallelism': workers,
         'rotated_images': sum(bool(p.rotation_degrees) for _, p in result[0]),
     }
     if progress:

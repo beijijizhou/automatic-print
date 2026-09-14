@@ -21,12 +21,14 @@ def _prepare(item: tuple[Path, Placement]):
         else (placement.width_px, placement.height_px)
     )
     image = normalized_image(path, size)
-    if placement.rotation_degrees == 90:
-        image = image.transpose(Image.Transpose.ROTATE_90)
-    elif placement.rotation_degrees == -90:
-        image = image.transpose(Image.Transpose.ROTATE_270)
-    elif placement.rotation_degrees == 180:
-        image = image.transpose(Image.Transpose.ROTATE_180)
+    rotation = {90: Image.Transpose.ROTATE_90, -90: Image.Transpose.ROTATE_270,
+                180: Image.Transpose.ROTATE_180}.get(placement.rotation_degrees)
+    if rotation is not None:
+        original = image
+        try:
+            image = original.transpose(rotation)
+        finally:
+            original.close()
     return image, placement
 
 
@@ -39,12 +41,19 @@ def build_pillow_canvas(
 ) -> Image.Image:
     canvas = Image.new("RGBA", canvas_size, (0, 0, 0, 0))
     workers = max(1, min(settings.worker_threads, len(planned)))
+    try:
+        return _compose(canvas, planned, labels, settings, progress, workers)
+    except BaseException:
+        canvas.close()
+        raise
+
+
+def _compose(canvas, planned, labels, settings, progress, workers):
     with closing(prepared_images(_prepare, planned, workers)) as images:
         for index, (image, placement) in enumerate(
             images, start=1
         ):
             canvas.paste(image, (placement.x_px, placement.y_px))
-            image.close()
             if placement.platform_width_px:
                 badge = platform_badge(settings.platform_name, placement.platform_height_px)
                 canvas.alpha_composite(badge, (placement.platform_x_px, placement.platform_y_px))

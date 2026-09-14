@@ -21,10 +21,10 @@ def monitor_save(path: Path, progress):
                 return
 
     progress("保存图片", 0, 0, path.name)
-    reporter = Thread(target=report_size, daemon=True)
+    reporter = Thread(target=report_size, name='save-progress', daemon=True)
     reporter.start()
     try:
         yield
     finally:
         stopped.set()
-        reporter.join(timeout=1)
+        reporter.join()  # Never return with a reporter still using worker callbacks.

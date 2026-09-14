@@ -19,7 +19,7 @@ class GenerateWorker(QObject):
     timings_ready = Signal(object)
     preview_ready = Signal(object)
     analysis_ready = Signal(object)
-    progress = Signal(str, int, object, str)
+    progress = Signal(str, object, object, str)
     finished = Signal(str, object)
     failed = Signal(str)
     cancelled = Signal()

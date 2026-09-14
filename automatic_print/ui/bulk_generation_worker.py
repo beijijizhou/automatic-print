@@ -11,7 +11,7 @@ from .workers import GenerateWorker
 
 
 class BulkGenerationWorker(QObject):
-    progress = Signal(int, str, str, int, int, str)
+    progress = Signal(int, str, str, object, object, str)
     preview = Signal(int, object)
     finished = Signal(object)
 
@@ -32,7 +32,7 @@ class BulkGenerationWorker(QObject):
         results, errors, stopped = [], [], []
         direct = Qt.DirectConnection
         def progress(stage, current, total, filename):
-            self.progress.emit(index, str(folder), stage, current, min(int(total), 2147483647), filename)
+            self.progress.emit(index, str(folder), stage, current, total, filename)
         worker.progress.connect(progress, direct)
         worker.preview_ready.connect(lambda payload: self.preview.emit(index, payload), direct)
         worker.finished.connect(lambda path, result: results.append(dict(output=path, result=result)), direct)

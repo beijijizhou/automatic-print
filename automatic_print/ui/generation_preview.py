@@ -80,7 +80,7 @@ class GenerationPreviewController(QObject):
             self.preview.warning = f"保留上次预览：{error}"
         self.preview.update()
 
-    @Slot(str, int, object, str)
+    @Slot(str, object, object, str)
     def progress(self, stage, current, total, filename):
         if not self.preview.production_active:
             return

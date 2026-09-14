@@ -4,8 +4,17 @@ from concurrent.futures import ThreadPoolExecutor
 
 
 def prepared_images(prepare, items, workers):
+    workers = max(1, int(workers))
+    if workers == 1:
+        for item in items:
+            value = prepare(item)
+            try:
+                yield value
+            finally:
+                value[0].close()
+        return
     pending, source = deque(), iter(items)
-    pool = ThreadPoolExecutor(max_workers=workers)
+    pool = ThreadPoolExecutor(max_workers=workers, thread_name_prefix='image-prepare')
     def submit_next():
         item = next(source, None)
         if item is not None:

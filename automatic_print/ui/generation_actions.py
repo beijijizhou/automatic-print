@@ -97,7 +97,7 @@ class GenerationActionsMixin:
         self.thread.finished.connect(self.clear_worker)
         self.thread.start()
 
-    @Slot(str, int, object, str)
+    @Slot(str, object, object, str)
     def update_progress(
         self, stage: str, current: int, total: int, filename: str
     ) -> None:
