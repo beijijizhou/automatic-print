@@ -6,6 +6,10 @@ from .measurement_session import source_pixels
 from .transparent_search import clear_rectangles
 
 
+from .measurement_timing import measured
+
+
+@measured('平台透明空位搜索')
 def header_space(path, qr, width, height, badge_width, badge_height, gap, degrees):
     top = round(qr.top*height)
     right = ceil(qr.right*width)+gap

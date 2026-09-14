@@ -3,6 +3,7 @@ from dataclasses import dataclass
 import math
 
 from PIL import Image
+from .measurement_timing import measured
 
 
 @dataclass(frozen=True)
@@ -14,6 +15,7 @@ class PrintDimensions:
     embedded_dpi: bool
 
 
+@measured('尺寸与DPI文件信息读取')
 def print_dimensions(path: Path, fallback_dpi: int) -> PrintDimensions:
     from .measurement_session import SESSION, identity
     session = SESSION.get()

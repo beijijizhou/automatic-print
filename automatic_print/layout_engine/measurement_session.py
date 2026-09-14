@@ -17,6 +17,8 @@ class Measurements:
         self.items, self.dimensions, self.rectangles = {}, {}, {}
         self.bands = {}
         self.identities, self.identity_lock = {}, RLock()
+        from .measurement_timing import MeasurementTiming
+        self.timing = MeasurementTiming()
 
 
 @contextmanager
@@ -87,12 +89,13 @@ def active_source(path):
 
 @contextmanager
 def source_pixels(path):
+    from .measurement_timing import decode_source
     source = active_source(path)
     if source is not None:
-        yield source
+        yield decode_source(source) if 'A' in source.getbands() else source
         return
     with Image.open(path) as source:
-        yield source
+        yield decode_source(source) if 'A' in source.getbands() else source
 
 
 @contextmanager

@@ -6,6 +6,7 @@ from .cut_guide_geometry import detect_guide_band
 from .models import mm_to_px
 from .platform_space import header_space
 from .membrane_region import MembraneRegion
+from .measurement_timing import measured
 
 
 def _font(size):
@@ -19,6 +20,7 @@ def _font(size):
     raise ValueError('未找到中文字体，无法清晰打印平台名称。请安装微软雅黑或思源黑体。')
 
 
+@measured('平台文字测量')
 def platform_badge(text, target_height):
     width, pixels = _badge_data(text, target_height)
     return Image.frombytes('RGBA', (width, target_height), pixels)

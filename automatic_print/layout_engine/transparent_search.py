@@ -6,8 +6,10 @@ import numpy as np
 
 from .measurement_session import source_pixels
 from .membrane_region import MembraneRegion
+from .measurement_timing import measured
 
 
+@measured('透明候选条带扫描')
 def clear_rectangles(path, width, height, degrees, rectangles, *, vertical=False, source=None):
     rectangles = tuple(rectangles)
     results = [False] * len(rectangles)

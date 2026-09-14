@@ -43,6 +43,7 @@ def plan_with_cache(make, paths, settings, progress, analysis_ready, session):
         report(stage, current, total, detail)
 
     def analyzed(data):
+        data['measurement_timings'] = session.timing.snapshot()
         final_analysis[:] = [data]
         if analysis_ready:
             analysis_ready(data)

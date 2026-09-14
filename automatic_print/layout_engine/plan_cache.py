@@ -84,6 +84,11 @@ def save(key, result, analysis, knife_mm):
 
 
 def cached_analysis(analysis):
+    timing = analysis.get('measurement_timings')
+    if timing:
+        timing['cached_original_steps'] = timing['steps']
+        timing['steps'] = [dict(row, seconds=0.0, calls=0) for row in timing['steps']]
+        timing['cache_hit'] = True
     analysis['cache'] = {'hit': True, 'scope': '复用已完成排版与测量；生成时仍独立检查源图和输出像素'}
     comparison = analysis.get('film_comparison')
     if comparison:

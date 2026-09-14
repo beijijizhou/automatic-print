@@ -6,6 +6,7 @@ from PIL import Image
 
 from .measurement_session import source_pixels
 from .membrane_region import MembraneRegion
+from .measurement_timing import measured, decode_source
 
 
 def search_header(path):
@@ -17,8 +18,10 @@ def search_header(path):
 
 
 @lru_cache(maxsize=4096)
+@measured('膜标签卡片定位')
 def _cached(path, _mtime, _size):
     with source_pixels(Path(path)) as source:
+        decode_source(source)
         # Width-based height keeps short source images' header cards intact.
         height = min(source.height, max(96, round(source.width*.5)))
         with source.crop((0, 0, source.width, height)) as crop:

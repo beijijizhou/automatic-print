@@ -2,8 +2,10 @@ from .labels import label_badge, settings_label_badge
 from .membrane_region import detect_membrane_region
 from .images import print_dimensions
 from .models import mm_to_px
+from .measurement_timing import measured
 
 
+@measured('普通标签文字测量')
 def source_label_badge(text, settings, path, degrees=0):
     if settings.cutter_mode != "free":
         return label_badge(text, settings.dpi, settings.number_font_size_mm,

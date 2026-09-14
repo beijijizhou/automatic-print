@@ -2,8 +2,10 @@
 from math import floor, ceil
 from .membrane_region import MembraneRegion
 from .measurement_session import SESSION, identity, source_pixels
+from .measurement_timing import measured
 
 
+@measured('刀码与标签透明矩形检查')
 def transparent_rect(path, width, height, degrees, rect):
     x, y, w, h = rect
     if w <= 0 or h <= 0:
