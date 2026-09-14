@@ -1,0 +1,151 @@
+"""Rolling batch jobs presented by the same main workbench as single jobs."""
+from pathlib import Path
+from PySide6.QtCore import QObject, QThread, Qt, Slot
+from PySide6.QtWidgets import QFileDialog, QComboBox
+from .folder_dialog_paths import image_dialog_start, remember_image_directory
+from .bulk_generation_worker import BulkGenerationWorker
+
+
+def open_bulk(window):
+    if window.has_active_tasks():
+        return
+    directory = QFileDialog.getExistingDirectory(window, '选择包含多个批次的上级目录',
+                                                 image_dialog_start(window))
+    if not directory:
+        return
+    remember_image_directory(window, directory)
+    if not hasattr(window, 'bulk_controller'):
+        window.bulk_controller = BulkWorkbench(window)
+    window.bulk_controller.begin(Path(directory))
+
+
+class BulkWorkbench(QObject):
+    def __init__(self, window):
+        super().__init__(window)
+        self.window = window
+        self.panel = window.automation_home.label_quick_panel
+        self.thread = self.worker = None
+        self.selector = QComboBox()
+        self.selector.setToolTip('切换当前批次，查看同一主界面的进度、耗时、预览与总结。')
+        self.panel.summary.layout().insertWidget(0, self.selector)
+        self.selector.currentIndexChanged.connect(self.select)
+
+    def begin(self, parent):
+        self.folders = sorted(p for p in parent.iterdir() if p.is_dir() and p.name != '切膜机文件')
+        if not self.folders:
+            self.window.status.setText('上级目录没有可处理的批次文件夹。')
+            return
+        try:
+            settings = self.window._layout_settings()
+            custom = None if self.window.output_beside_source.isChecked() else Path(self.window.output_location.text())
+            if custom is not None and not custom.is_dir() and not self.window.automation_home.preview_only.isChecked():
+                raise ValueError('自定义保存位置不存在')
+        except ValueError as error:
+            self.window.status.setText(str(error))
+            return
+        self.payloads, self.records, self.stages, self.timing_data = {}, {}, {}, {}
+        self.selector.blockSignals(True)
+        self.selector.clear()
+        self.selector.addItems([p.name+' · 等待开始' for p in self.folders])
+        self.selector.blockSignals(False)
+        self.window.generation_preview.start()
+        self.selector.show()
+        self.select(0)
+        self.window.stop_generation_button.setEnabled(True)
+        self.window.status.setText(f'正在开始多批次排版：共{len(self.folders)}批，后台滚动处理…')
+        self.worker = BulkGenerationWorker(self.folders, settings, self.window.bulk_parallelism.value(),
+                                           custom, self.window.automation_home.preview_only.isChecked())
+        self.thread = QThread(self)
+        self.worker.moveToThread(self.thread)
+        self.thread.started.connect(self.worker.run)
+        for signal, slot in ((self.worker.progress, self.progress), (self.worker.preview, self.preview),
+                             (self.worker.completed, self.completed), (self.worker.timings, self.timings),
+                             (self.worker.finished, self.complete)):
+            signal.connect(slot, Qt.QueuedConnection)
+        self.worker.finished.connect(self.thread.quit)
+        self.worker.finished.connect(self.worker.deleteLater)
+        self.thread.finished.connect(self.cleanup)
+        self.thread.start()
+
+    @Slot(int)
+    def select(self, index):
+        if index < 0:
+            return
+        view = self.window.generation_preview
+        view.payload = None
+        view.preview.clear_for_generation()
+        view.preview.source_folder = self.folders[index]
+        self.panel.analysis.clear()
+        self.panel.summary.start(str(self.folders[index]))
+        self.panel.timings.reset()
+        if index in self.payloads:
+            self.panel.summary.start(str(self.folders[index]), len(self.payloads[index]['planned']))
+            view.ready(self.payloads[index])
+        if index in self.timing_data:
+            self.panel.timings.receive(self.timing_data[index])
+        if index in self.records:
+            record = self.records[index]
+            self.panel.summary.finished(record['output'], record['result'])
+        if index in self.stages:
+            self.show_stage(index)
+
+    def show_stage(self, index):
+        stage, current, total, filename = self.stages[index]
+        self.window.progress.setRange(0, 100 if total else 0)
+        if total:
+            self.window.progress.setValue(round(current / total * 100))
+        self.window.progress.setFormat(stage+' · %p%' if total else stage+' · 进行中')
+        self.window.status.setText(f'{self.folders[index].name} · {stage} · {current}/{total}')
+        self.window.current_file.setText('当前文件：'+filename)
+        self.window.generation_preview.progress(stage, current, total, filename)
+
+    @Slot(int, str, str, object, object, str)
+    def progress(self, index, folder, stage, current, total, filename):
+        self.stages[index] = stage, current, total, filename
+        self.selector.setItemText(index, self.folders[index].name+' · '+stage)
+        if index == self.selector.currentIndex():
+            self.show_stage(index)
+
+    @Slot(int, object)
+    def preview(self, index, payload):
+        self.payloads[index] = payload
+        if index == self.selector.currentIndex():
+            self.panel.summary.start(str(self.folders[index]), len(payload['planned']))
+            self.window.generation_preview.ready(payload)
+
+    @Slot(int, object)
+    def timings(self, index, data):
+        self.timing_data[index] = data
+        if index == self.selector.currentIndex():
+            self.panel.timings.receive(data)
+
+    @Slot(int, object)
+    def completed(self, index, record):
+        self.records[index] = record
+        if index == self.selector.currentIndex():
+            self.panel.summary.finished(record['output'], record['result'])
+
+    @Slot(object)
+    def complete(self, result):
+        self.window.generation_preview.end()
+        self.window.stop_generation_button.setEnabled(False)
+        text = (f"{'已停止' if result['stopped'] else '已完成'} · 成功{len(result['records'])}批"
+                f" · 失败{len(result['errors'])}批 · 总耗时{result['seconds']:.2f}秒")
+        self.window.status.setText(text)
+        self.window.run_log.appendPlainText(text)
+        for error in result['errors']:
+            self.window.run_log.appendPlainText(f"{error['folder']}：{error['error']}")
+        if result['errors']:
+            self.panel.summary.anomalies.setText('\n'.join(
+                f"{e['folder']}：{e['error']}" for e in result['errors']))
+            self.panel.summary.anomalies.show()
+
+    def cancel(self):
+        self.worker.cancellation.request()
+        self.window.stop_generation_button.setEnabled(False)
+        self.window.status.setText('正在安全停止多批次排版，保留已完成文件…')
+
+    @Slot()
+    def cleanup(self):
+        self.thread.deleteLater()
+        self.thread = self.worker = None

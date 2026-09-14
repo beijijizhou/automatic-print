@@ -27,6 +27,7 @@ class PreferenceAutosave(QObject):
         signals += [window.output_beside_source.toggled]
         signals += [cutter.quick_mode.toggled]
         home = window.automation_home
+        signals += [home.preview_only.toggled]
         signals += [home.output.textChanged, home.local_test_mode.toggled, home.local_merge_batches.toggled]
         for signal in signals:
             signal.connect(self.schedule)

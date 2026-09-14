@@ -14,10 +14,13 @@ class BulkGenerationWorker(QObject):
     progress = Signal(int, str, str, object, object, str)
     preview = Signal(int, object)
     finished = Signal(object)
+    completed = Signal(int, object)
+    timings = Signal(int, object)
 
-    def __init__(self, folders, settings, parallelism, custom_base=None):
+    def __init__(self, folders, settings, parallelism, custom_base=None, preview_only=False):
         super().__init__()
         self.folders, self.custom_base = folders, custom_base
+        self.preview_only = preview_only
         self.parallelism = max(1, min(parallelism, len(folders)))
         self.settings = replace(settings, worker_threads=max(1, settings.worker_threads//self.parallelism),
                                 save_parallelism=1, film_geometry_workers=max(1, 4//self.parallelism))
@@ -27,7 +30,7 @@ class BulkGenerationWorker(QObject):
         self.cancellation.check()
         job = datetime.now().strftime('JOB_%Y%m%d_%H%M%S')+'_'+uuid4().hex[:8]
         output = batch_output_directory(self.custom_base or folder.parent, folder.name, job)
-        worker = GenerateWorker(None, folder, output, job, self.settings)
+        worker = GenerateWorker(None, folder, output, job, self.settings, preview_only=self.preview_only)
         worker.cancellation = self.cancellation
         results, errors, stopped = [], [], []
         direct = Qt.DirectConnection
@@ -35,6 +38,7 @@ class BulkGenerationWorker(QObject):
             self.progress.emit(index, str(folder), stage, current, total, filename)
         worker.progress.connect(progress, direct)
         worker.preview_ready.connect(lambda payload: self.preview.emit(index, payload), direct)
+        worker.timings_ready.connect(lambda data: self.timings.emit(index, data), direct)
         worker.finished.connect(lambda path, result: results.append(dict(output=path, result=result)), direct)
         worker.failed.connect(errors.append, direct)
         worker.cancelled.connect(lambda: stopped.append(True), direct)
@@ -45,8 +49,11 @@ class BulkGenerationWorker(QObject):
             raise TaskCancelled()
         if not results:
             raise RuntimeError('批次未返回生成结果')
-        self.progress.emit(index, str(folder), '批次生成完成', 1, 1, str(output))
-        return dict(results[0], folder=str(folder))
+        record = dict(results[0], folder=str(folder))
+        self.completed.emit(index, record)
+        self.progress.emit(index, str(folder), '批次预览完成' if self.preview_only else '批次生成完成', 1, 1,
+                           '未生成文件' if self.preview_only else str(output))
+        return record
 
     @Slot()
     def run(self):

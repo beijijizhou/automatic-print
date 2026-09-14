@@ -1,13 +1,10 @@
 from __future__ import annotations
-
 import time
 from datetime import datetime
 from pathlib import Path
-
 from PySide6.QtCore import QThread, Qt, QUrl, Slot
 from PySide6.QtGui import QDesktopServices
 from PySide6.QtWidgets import QMessageBox
-
 from ..layout import LayoutSettings
 from ..layout_engine.metrics import saving_text
 from ..layout_engine.output_name import batch_output_directory
@@ -19,13 +16,12 @@ from .thread_lifecycle import (
     defer_finished_thread_cleanup,
     discard_stopped_thread,
 )
-
-
 class GenerationActionsMixin:
     def _layout_settings(self) -> LayoutSettings:
         return settings_from_window(self)
 
     def generate(self, checked=False, *, preview_only=False) -> None:
+        preview_only = preview_only or self.automation_home.preview_only.isChecked()
         if self.thread is not None and not discard_stopped_thread(
             self, "thread", "worker"
         ):
@@ -170,6 +166,10 @@ class GenerationActionsMixin:
 
     @Slot()
     def stop_generation(self) -> None:
+        bulk = getattr(self, 'bulk_controller', None)
+        if bulk and bulk.thread:
+            bulk.cancel()
+            return
         if self.worker is None:
             return
         self.worker.request_cancel()

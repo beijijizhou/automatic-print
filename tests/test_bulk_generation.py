@@ -51,35 +51,42 @@ def test_normal_bulk_generates_independent_complete_batches(tmp_path, monkeypatc
                 assert np.array_equal(rendered[mask], original[mask])
 
 
-def test_normal_entry_and_active_task_protection(tmp_path):
+def test_normal_entry_and_active_task_protection(tmp_path, monkeypatch):
     from test_developer_mode import window, APP, OWNERS
     owner = window(tmp_path/'prefs.ini')
     panel = owner.automation_home.label_quick_panel
     assert not owner.developer_mode_enabled
     assert panel.bulk_generation_button.isVisible()
-    panel.bulk_generation_button.click()
-    APP.processEvents()
-    dialog = panel.details_dialog.production_bulk_dialog
-    OWNERS.append(dialog)
-    assert dialog.isVisible() and '独立生成' in dialog.windowTitle()
-    assert dialog.parallelism.value() == 4
     folder = tmp_path/'preview-batch'
     folder.mkdir()
     paths = qr_sources(folder)
+    from PySide6.QtWidgets import QFileDialog
+    from automatic_print.ui.bulk_workbench import BulkWorkbench
+    starts = []
+    monkeypatch.setattr(QFileDialog, 'getExistingDirectory', lambda *_: str(tmp_path))
+    monkeypatch.setattr(BulkWorkbench, 'begin', lambda self, parent: starts.append(parent))
+    panel.bulk_generation_button.click()
+    assert starts == [tmp_path]
+    assert not hasattr(panel.details_dialog, 'production_bulk_dialog')
+    controller = owner.bulk_controller
+    controller.folders = [folder]
+    controller.payloads, controller.records, controller.stages, controller.timing_data = {}, {}, {}, {}
+    controller.selector.blockSignals(True)
+    controller.selector.addItem(folder.name)
+    controller.selector.blockSignals(False)
     from automatic_print.layout import generate_layout
     payloads = []
     generate_layout(paths, tmp_path/'unused', replace(settings(), compare_reference_films=False),
                     preview_only=True, plan_ready=payloads.append)
-    dialog.add_folders([folder])
-    dialog.receive_preview(0, payloads[0])
-    assert len(dialog.preview.planned) == 12
-    assert 'preview-batch' in dialog.preview.detail
+    controller.preview(0, payloads[0])
+    controller.select(0)
+    assert len(panel.preview.planned) == 12
+    assert 'preview-batch' in panel.summary.info.text()
     APP.processEvents()
-    dialog.thread = object()
+    controller.thread = object()
     assert owner.has_active_tasks()
     owner.close()
     assert owner.isVisible()
-    dialog.thread = None
-    assert dialog.grab().save(str(tmp_path/'bulk-generation.png'))
-    dialog.close()
+    controller.thread = None
+    assert owner.grab().save(str(tmp_path/'bulk-generation.png'))
     owner.close()

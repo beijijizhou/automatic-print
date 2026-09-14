@@ -43,13 +43,8 @@ class BatchDetailsDialog(QDialog):
         self.bulk_dialog.raise_()
 
     def open_bulk_generation(self):
-        if self.parent().has_active_tasks():
-            return
-        if not hasattr(self, 'production_bulk_dialog'):
-            from .bulk_generation import BulkGenerationDialog
-            self.production_bulk_dialog = BulkGenerationDialog(self.parent())
-        self.production_bulk_dialog.show()
-        self.production_bulk_dialog.raise_()
+        from .bulk_workbench import open_bulk
+        open_bulk(self.parent())
 
     def open_algorithm_costs(self):
         if not getattr(self.parent(), 'developer_mode_enabled', False):

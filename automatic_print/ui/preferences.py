@@ -5,18 +5,11 @@ from PySide6.QtWidgets import QFileDialog, QMessageBox
 
 
 class PreferencesMixin:
-    def choose_and_preview(self):
-        if self.has_active_tasks():
-            return
-        folder = self.folder.text().strip()
-        if (folder and Path(folder).is_dir()) or self.choose_folder():
-            self.generate(preview_only=True)
-
     def choose_and_generate(self):
         if self.has_active_tasks():
             return
         if self.choose_folder():
-            self.generate()
+            self.generate(preview_only=self.automation_home.preview_only.isChecked())
 
     def build_reset_button(self):
         from .settings_reset import reset_button
@@ -195,6 +188,7 @@ class PreferencesMixin:
             "layout/margin_mm": self.margin.value(),
             "layout/dpi": self.dpi.value(),
             "layout/worker_threads": self.worker_threads.value(),
+            "layout/preview_only": self.automation_home.preview_only.isChecked(),
             "developer/bulk_parallelism": self.bulk_parallelism.value(),
             "layout/number_images": self.number_images.isChecked(),
             "layout/allow_rotation": self.allow_rotation.isChecked(),

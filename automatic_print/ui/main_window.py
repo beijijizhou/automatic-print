@@ -225,7 +225,8 @@ class MainWindow(
     def has_active_tasks(self) -> bool:
         from .developer_mode import developer_task_active
         return any((self.thread is not None, self.update_thread is not None,
-                    self.automation_home.thread is not None, developer_task_active(self)))
+                    self.automation_home.thread is not None, developer_task_active(self),
+                    getattr(getattr(self, 'bulk_controller', None), 'thread', None) is not None))
 
     def closeEvent(self, event) -> None:
         self.startup_update_timer.stop()
