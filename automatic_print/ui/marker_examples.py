@@ -55,7 +55,8 @@ class MarkerExamples(QGroupBox):
         self.timer.setInterval(180)
         self.timer.timeout.connect(self.refresh)
         for signal in (window.label_settings.settings_changed,
-                       window.color_block_settings.settings_changed, window.dpi.valueChanged):
+                       window.color_block_settings.settings_changed, window.dpi.valueChanged,
+                       window.cutter_settings.left_marker_lift.valueChanged):
             signal.connect(self.schedule)
 
     def showEvent(self, event):
@@ -97,8 +98,11 @@ class MarkerExamples(QGroupBox):
         if self.pending:
             return  # Never install an obsolete batch or parameter result.
         self.results, self.images = results, []
+        from .marker_example_annotations import annotated_example
+        settings = self.window._layout_settings()
         for data, (picture, caption) in zip(results, self.cards):
             image = QImage(data['pixels'], *data['size'], QImage.Format_RGBA8888).copy()
+            image = annotated_example(image, data, settings)
             self.images.append(image)
             kind = '当前批次生产图' if data['production'] else '示意图：当前抽样未找到该侧膜标签'
             caption.setText(kind+'\n'+data['detail'])

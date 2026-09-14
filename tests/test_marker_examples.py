@@ -78,6 +78,8 @@ def test_main_page_examples_start_after_show_and_refresh_on_parameters(tmp_path,
     old = examples.results[0]['item'].block_width
     window.color_block_settings.width.setValue(12)
     wait_for(lambda: examples.results[0]['item'].block_width != old and examples.worker is None)
+    window.cutter_settings.left_marker_lift.setValue(2.5)
+    wait_for(lambda: examples.results[0]['item'].left_marker_lift_px == 30 and examples.worker is None)
     assert all('当前批次生产图' in caption.text() for _, caption in examples.cards)
     snapshot = examples.results
     examples.enlarge(2)
@@ -89,3 +91,17 @@ def test_main_page_examples_start_after_show_and_refresh_on_parameters(tmp_path,
     window.preference_autosave.timer.stop()
     window.automation_home.label_quick_panel.preview.stop_loading()
     window.hide()
+
+
+def test_annotation_is_preview_only_and_keeps_raw_pixels(tmp_path):
+    from PySide6.QtGui import QImage
+    from automatic_print.ui.marker_example_annotations import annotated_example
+    config = replace(settings(),cutter_left_marker_external=True,cutter_left_marker_lift_mm=1.5)
+    data = build_examples(sources(tmp_path),config)[0]
+    original = data['pixels']
+    raw = QImage(original,*data['size'],QImage.Format_RGBA8888).copy()
+    output = annotated_example(raw,data,config)
+    assert output.width()==raw.width()+135
+    assert output.height()==raw.height()+155
+    assert data['pixels']==original
+    assert any(output.pixelColor(x,70).name()=='#c2410c' for x in range(output.width()))
