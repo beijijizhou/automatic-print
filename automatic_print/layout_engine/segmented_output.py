@@ -79,6 +79,9 @@ def generate_segments(paths, output_dir, settings, progress, plan_ready,
     if payload['warning']:
         raise ValueError(payload['warning'])
     base = payload['settings']
+    if settings.batch_footer_enabled:
+        from .batch_footer import footer_text
+        base = replace(base, batch_footer_context=footer_text(payload['planned'], base, '整批信息'))
     width, _, baseline = payload['canvas']
     parts = partition_plan(payload['planned'], settings.output_parts)
     margin = mm_to_px(settings.margin_mm, settings.dpi)

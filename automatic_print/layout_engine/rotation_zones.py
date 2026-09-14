@@ -130,7 +130,7 @@ def plan_rotation_zones(paths, settings, progress, analysis=None, analysis_ready
                        platform_y_px=p.platform_y_px+boundary,
                        cut_zone='旋转区', cut_knife_x_px=rotated[3])) for path, p in rotated[0])
     baseline_height = baseline[3] if baseline else new_height
-    if settings.transition_lines:
+    if settings.transition_lines or settings.batch_footer_enabled:
         width = mm_to_px(settings.media_width_mm, settings.dpi)
         new_height = marked_height(planned, settings, width, new_height)
         baseline_height = marked_height(baseline[0], settings, width, baseline[3]) if baseline else new_height

@@ -9,9 +9,18 @@ class TransitionSettings(QGroupBox):
         self.enabled.toggled.connect(lambda value: preferences.setValue('cutter/transition_lines', value))
         form = QFormLayout(self)
         form.addRow(self.enabled)
+        self.footer = QCheckBox('在批次末尾打印批次、平台、机器、数量及各区刀位信息')
+        self.footer.setChecked(preferences.value('cutter/batch_footer_enabled', True, bool))
+        self.footer.toggled.connect(lambda value: preferences.setValue('cutter/batch_footer_enabled', value))
+        form.addRow(self.footer)
+        if not preferences.contains('cutter/footer_spacing_v1'):
+            if preferences.value('cutter/transition_gap_mm', 3, float) == 3:
+                preferences.setValue('cutter/transition_gap_mm', 10)
+            preferences.setValue('cutter/footer_spacing_v1', True)
         for name, title, key, default, minimum, maximum in (
-            ('gap', '距批次最后一张图下方（毫米）', 'transition_gap_mm', 3, 0.1, 30),
+            ('gap', '内容、批次信息与结束线之间的剪切间距（毫米）', 'transition_gap_mm', 10, 0.1, 100),
             ('thickness', '红线粗细（毫米）', 'transition_line_mm', .3, .1, 2),
+            ('footer_font', '批次信息文字大小（毫米）', 'batch_footer_font_mm', 4, 1, 20),
         ):
             widget = QDoubleSpinBox()
             widget.setRange(minimum, maximum)

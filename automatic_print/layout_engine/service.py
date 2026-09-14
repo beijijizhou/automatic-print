@@ -72,7 +72,8 @@ def generate_layout(
         effective[0] = prepared_plan['settings']
         analysis[:] = [prepared_plan['analysis']]
     settings = effective[0]
-    height = marked_height(planned, settings, width, height)
+    height = marked_height(planned, settings, width, height,
+                           (prepared_plan or {}).get('end_notice', '批次结束'))
     phase('坐标与订单安全检查')
     warning, order_check = "", {}
     try:

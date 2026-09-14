@@ -65,14 +65,14 @@ def test_independent_validation_rejects_wrong_shift_and_colliding_line(tmp_path)
         cutter_auto_knife=True, cutter_rotation_zone=True, number_images=False,
         rotation_marker_shift_mm=2, transition_lines=True)
     planned, _, width, _, _ = plan_layout(paths, settings, None)
-    corrupt = [(path, replace(p, color_block_x_px=2) if p.cut_zone == '旋转区' else p) for path, p in planned]
+    corrupt = [(path, replace(p, color_block_x_px=p.color_block_x_px+2)) for path, p in planned]
     with pytest.raises(ValueError, match='色块未对齐'):
         validate_cut_corridor(corrupt, settings, width)
     line = transition_rects(planned, settings, width)[-1]
     path, p = planned[-1]
     colliding = planned[:-1]+[(path, replace(p, number_y_px=line['y'], number_width_px=1, number_height_px=1))]
-    with pytest.raises(ValueError, match='重叠'):
-        transition_rects(colliding, settings, width)
+    moved = transition_rects(colliding, settings, width)[-1]
+    assert moved['y'] >= line['y']+1+3
 
 
 @pytest.mark.parametrize('sizes, expected', [

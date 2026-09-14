@@ -32,6 +32,8 @@ def settings_from_window(window) -> LayoutSettings:
         transition_lines=window.cutter_settings.transitions.enabled.isChecked(),
         transition_gap_mm=window.cutter_settings.transitions.gap.value(),
         transition_line_mm=window.cutter_settings.transitions.thickness.value(),
+        batch_footer_enabled=window.cutter_settings.transitions.footer.isChecked(),
+        batch_footer_font_mm=window.cutter_settings.transitions.footer_font.value(),
         rotation_marker_shift_mm=0,
         allow_rotation=window.allow_rotation.isChecked() and not window.cutter_settings.quick_mode.isChecked(),
         rotation_direction=window.rotation_direction.currentData(),

@@ -52,3 +52,29 @@ def test_exact_horizontal_mask_does_not_allow_extra_pixels():
         validate_marked_pillow(image, check, rectangles=rects)
     extra = marked.draw_rect([255, 0, 0, 255], 50, 31, 1, 1, fill=True)
     assert not vips_corridor_is_clear(extra, check, rectangles=rects)
+
+
+def test_preview_prints_footer_and_keeps_end_line_after_it():
+    from PySide6.QtWidgets import QApplication
+    from automatic_print.layout_engine.transition_marks import transition_rects, marked_height
+    app = QApplication.instance() or QApplication([])
+    p = Placement('B1-1-T-Black-M-NO1-1.png', 1, 0, 0, 100, 80,
+                  0, 0, 0, 0, 0, 100, 80)
+    planned = [(Path('batch')/p.source, p)]
+    settings = LayoutSettings(dpi=25.4, transition_lines=True, transition_gap_mm=10,
+                              batch_footer_enabled=True, batch_footer_font_mm=8)
+    footer, line = transition_rects(planned, settings, 300)
+    preview = SimpleNamespace(render_settings=settings, batch_payload={'planned':planned},
+                              canvas_width=300, planned=planned)
+    height = marked_height(planned, settings, 300, 80)
+    image = QImage(300, height, QImage.Format_RGBA8888)
+    image.fill(0)
+    painter = QPainter(image)
+    try:
+        _transition_lines(preview, painter)
+    finally:
+        painter.end()
+    assert any(image.pixelColor(x,y).alpha() for y in range(footer['y'], footer['y']+footer['height'])
+               for x in range(footer['width']))
+    assert image.pixelColor(0,line['y']).getRgb() == (255,0,0,255)
+    assert image.pixelColor(0,line['y']-1).alpha() == 0

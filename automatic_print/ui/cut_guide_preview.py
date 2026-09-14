@@ -36,7 +36,7 @@ def draw_cut_guides(preview, painter, scale):
 def _transition_lines(preview, painter):
     settings = preview.render_settings
     planned = (preview.batch_payload or {}).get('planned') or preview.planned
-    if not planned or not preview.planned or not settings.transition_lines:
+    if not planned or not preview.planned or not (settings.transition_lines or settings.batch_footer_enabled):
         return
     originals = dict(planned)
     path, local = preview.planned[0]
@@ -49,6 +49,14 @@ def _transition_lines(preview, painter):
             preview.guide_status = str(error)
             return
         for r in rects:
+            if 'text' in r:
+                from PIL.ImageQt import ImageQt
+                from PySide6.QtGui import QImage
+                from ..layout_engine.batch_footer import footer_sprite
+                with footer_sprite(r) as sprite:
+                    image = QImage(ImageQt(sprite)).copy()
+                painter.drawImage(QRectF(r['x'], r['y']-offset, r['width'], r['height']), image)
+                continue
             painter.fillRect(QRectF(r['x'], r['y']-offset, r['width'], r['height']), QColor('#ff0000'))
     finally:
         painter.restore()

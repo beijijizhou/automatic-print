@@ -75,7 +75,15 @@ def vips_corridor_is_clear(image, check, boxes=(), rectangles=()):
         x0, y0 = max(left, r['x']), max(top, r['y'])
         x1, y1 = min(right, r['x']+r['width']), min(bottom, r['y']+r['height'])
         if x1 > x0 and y1 > y0:
-            mask = mask.insert(pyvips.Image.black(x1-x0, y1-y0).new_from_image(255), x0-left, y0-top)
+            if 'text' in r:
+                from .batch_footer import footer_sprite
+                with footer_sprite(r) as sprite:
+                    with sprite.getchannel('A') as glyph:
+                        ink = pyvips.Image.new_from_memory(glyph.tobytes(), r['width'], r['height'], 1, 'uchar')
+                        allowed = (ink.crop(x0-r['x'], y0-r['y'], x1-x0, y1-y0) > 0).ifthenelse(255, 0)
+            else:
+                allowed = pyvips.Image.black(x1-x0, y1-y0).new_from_image(255)
+            mask = mask.insert(allowed, x0-left, y0-top)
     return (alpha > mask).max() == 0
 
 

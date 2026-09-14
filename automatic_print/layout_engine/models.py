@@ -24,6 +24,9 @@ class LayoutSettings:
     transition_lines: bool = False
     transition_gap_mm: float = 3
     transition_line_mm: float = .3
+    batch_footer_enabled: bool = False
+    batch_footer_font_mm: float = 4
+    batch_footer_context: str = ''
     rotation_marker_shift_mm: float = 0
     number_images: bool = True
     number_gap_mm: float = 5

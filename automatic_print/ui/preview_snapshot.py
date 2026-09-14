@@ -41,11 +41,13 @@ def install_snapshot(preview, planned, labels, settings, warning="", overflow=()
     preview.canvas_height = max(p.row_y_px+p.footprint_height_px for _, p in local)
     if getattr(preview, 'overview', False) or not preview.batch_payload:
         preview.canvas_height = marked_height(local, settings, preview.canvas_width, preview.canvas_height)
-    elif settings.transition_lines:
+    elif settings.transition_lines or settings.batch_footer_enabled:
         full = preview.batch_payload['planned']
         limit = top+preview.canvas_height+mm_to_px(settings.transition_gap_mm, settings.dpi)+1
-        notices = [r['y']-top+r['height'] for r in transition_rects(full, settings, preview.canvas_width)
-                   if top <= r['y'] <= limit]
+        tail = transition_rects(full, settings, preview.canvas_width)
+        show_tail = any(top <= r['y'] <= limit for r in tail)
+        notices = [r['y']-top+r['height'] for r in tail
+                   if show_tail and r['y'] >= top]
         preview.canvas_height = max([preview.canvas_height]+notices)
     preview.render_settings, preview.warning = settings, warning
     preview.batch_labels = labels

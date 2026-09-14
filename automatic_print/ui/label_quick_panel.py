@@ -116,6 +116,11 @@ class LabelQuickPanel(QWidget):
             if self.preview.batch_payload and not self.preview.production_active:
                 self.preview.refresh_timer.start()
         label.platform_font_height.valueChanged.connect(refresh_platform_font)
+        transitions = window.cutter_settings.transitions
+        for signal in (transitions.enabled.toggled, transitions.footer.toggled,
+                       transitions.gap.valueChanged, transitions.thickness.valueChanged,
+                       transitions.footer_font.valueChanged):
+            signal.connect(refresh_platform_font)
         block.settings_changed.connect(self.preview.schedule_refresh)
         def folder_changed(folder):
             if window.cutter_settings.quick_mode.isChecked():
