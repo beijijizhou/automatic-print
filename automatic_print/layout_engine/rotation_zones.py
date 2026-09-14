@@ -61,7 +61,8 @@ def _rotated(paths, settings, prepared=None):
     safety = ceil(settings.cutter_safety_mm*settings.dpi/25.4)
     knife = max(items[p].footprint_width for p in paths)+safety
     spacing = mm_to_px(settings.spacing_mm, settings.dpi)
-    margin = mm_to_px(settings.margin_mm, settings.dpi)
+    from .left_marker import head_margin
+    margin = head_margin(settings)
     planned, y = [], margin
     for path in paths:
         item = items[path]

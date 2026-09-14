@@ -27,6 +27,8 @@ class CutterSettingsPanel(QWidget):
         self.tail_rotation.setChecked(preferences.value('cutter/tail_rotation', True, bool))
         self.safety = self._box(3, 0.1, 30)
         self.marker_offset = self._box(0, 0, 100)
+        self.left_marker_lift = self._box(preferences.value('cutter/left_marker_lift_mm',1.5,float),0,30)
+        self.left_marker_lift.valueChanged.connect(lambda v: preferences.setValue('cutter/left_marker_lift_mm',v))
         self.transitions = TransitionSettings(preferences, self)
         self.compare_films = QCheckBox('比较40–80厘米，每隔5厘米：常规与旋转（不自动切换，结果存入历史）')
         if not preferences.value('cutter/film_comparison_default_v2', False, bool):
@@ -53,6 +55,7 @@ class CutterSettingsPanel(QWidget):
             ("刀位距排版左边（毫米）", self.knife),
             ("刀位两侧安全距离（毫米）", self.safety),
             ("右侧色块基准偏移（毫米）", self.marker_offset), ("", note),
+            ('左图刀码高于图片（毫米，占用现有垂直间距）', self.left_marker_lift),
         ):
             form.addRow(text, control)
         previous_width = int(width.value())
@@ -128,6 +131,7 @@ class CutterSettingsPanel(QWidget):
             'tail_rotation': self.tail_rotation.isChecked(),
             "knife_mm": self.knife.value(), "safety_mm": self.safety.value(),
             "marker_offset_mm": self.marker_offset.value(),
+            'left_marker_lift_mm': self.left_marker_lift.value(),
         }.items():
             self.preferences.setValue("cutter/" + key, value)
 

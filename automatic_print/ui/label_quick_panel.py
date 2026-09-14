@@ -116,6 +116,7 @@ class LabelQuickPanel(QWidget):
             if self.preview.batch_payload and not self.preview.production_active:
                 self.preview.refresh_timer.start()
         label.platform_font_height.valueChanged.connect(refresh_platform_font)
+        window.cutter_settings.left_marker_lift.valueChanged.connect(refresh_platform_font)
         transitions = window.cutter_settings.transitions
         for signal in (transitions.enabled.toggled, transitions.footer.toggled,
                        transitions.gap.valueChanged, transitions.thickness.valueChanged,
@@ -140,7 +141,8 @@ class LabelQuickPanel(QWidget):
                        cutter.auto_knife.toggled,
                        cutter.rotation_zone.toggled,
                        cutter.knife.valueChanged, cutter.safety.valueChanged,
-                       cutter.marker_offset.valueChanged, window.spacing.valueChanged):
+                       cutter.marker_offset.valueChanged, cutter.left_marker_lift.valueChanged,
+                       window.spacing.valueChanged):
             signal.connect(self.preview.schedule_refresh)
         for control in (cutter.printable.left, cutter.printable.right):
             control.valueChanged.connect(self.preview.schedule_refresh)

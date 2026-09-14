@@ -49,6 +49,7 @@ class LayoutSettings:
     color_block_offset_y_mm: float = 0
     cutter_mode: str = "free"
     cutter_left_marker_external: bool = False
+    cutter_left_marker_lift_mm: float = 0
     cutter_knife_mm: float = 300
     cutter_safety_mm: float = 3
     cutter_marker_offset_mm: float = 0

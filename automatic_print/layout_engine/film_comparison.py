@@ -81,7 +81,7 @@ def _compare_films(paths, settings, progress):
                 planned, _, width, height = result[:4]
                 validate_order_placements(paths, planned)
                 validate_cut_corridor(planned, effective[0], width)
-                validate_embedded_marks(planned)
+                validate_embedded_marks(planned, config)
                 height = marked_height(planned, config, width, height)
                 metres_per_px = 25.4/config.dpi/1000
                 length = height*metres_per_px

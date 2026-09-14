@@ -34,7 +34,7 @@ def compare_rotation(paths, settings, progress, analysis, analysis_ready):
             planned, _, width, height = result[:4]
             validate_order_placements(paths, planned)
             validate_cut_corridor(planned, effective[0], width)
-            validate_embedded_marks(planned)
+            validate_embedded_marks(planned, config)
             return result, marked_height(planned, config, width, height), monotonic()-started, ''
         except ValueError as exc:
             return None, None, monotonic()-started, str(exc)

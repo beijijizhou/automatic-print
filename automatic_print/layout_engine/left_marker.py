@@ -17,4 +17,16 @@ def external_left_item(item):
                 label_x+item.label_width if item.label_width else 0,
                 platform_x+item.platform_width if item.platform_width else 0)
     return replace(item, image_rx=image_x, block_rx=0, label_rx=label_x,
+                   block_ry=item.image_ry-item.left_marker_lift_px,
+                   label_ry=item.label_ry-item.left_marker_lift_px
+                   if not item.rotation_degrees and item.block_ry != item.image_ry-item.left_marker_lift_px
+                   else item.label_ry,
                    platform_rx=platform_x, footprint_width=width)
+
+
+def head_margin(settings):
+    from .models import mm_to_px
+    lift = settings.cutter_left_marker_lift_mm if settings.cutter_left_marker_external else 0
+    if lift < 0 or lift > settings.spacing_mm:
+        raise ValueError('左图刀码抬高量必须在0与图片垂直间距之间，请调整打印设置。')
+    return mm_to_px(max(settings.margin_mm, lift), settings.dpi)

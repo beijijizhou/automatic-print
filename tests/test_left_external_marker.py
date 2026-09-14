@@ -9,6 +9,7 @@ from automatic_print.layout import LayoutSettings, generate_layout
 from automatic_print.layout_engine.cut_validation import validate_cut_corridor
 from automatic_print.layout_engine.item_factory import read_items
 from automatic_print.layout_engine.left_marker import external_left_item
+from automatic_print.layout_engine.models import mm_to_px
 
 
 def sources(root):
@@ -33,6 +34,7 @@ def test_full_batch_left_external_right_unchanged_and_pixels_safe(tmp_path, engi
     settings = LayoutSettings(dpi=25.4, media_width_mm=580, cutter_mode='dual',
         cutter_auto_knife=True, cutter_rotation_zone=rotation,
         cutter_left_marker_external=True, color_block_gap_mm=5,
+        cutter_left_marker_lift_mm=1.5,
         platform_name='隆丰', platform_font_height_mm=6,
         output_parts=3, png_engine=engine, save_memory_unlimited=True)
     result = generate_layout(paths,tmp_path/'out',settings)
@@ -43,6 +45,8 @@ def test_full_batch_left_external_right_unchanged_and_pixels_safe(tmp_path, engi
             for p in part['placements']:
                 if p['color_block_x_px'] == 0:
                     assert p['x_px'] >= p['color_block_width_px']+5
+                    assert p['color_block_y_px'] == p['y_px']-mm_to_px(1.5,settings.dpi)
+                    assert p['color_block_y_px'] >= 0
                 else:
                     right_count += 1
                     options,_ = read_items([tmp_path/p['source']],replace(settings,
@@ -75,3 +79,28 @@ def test_external_item_is_idempotent_and_validation_rejects_embedded_left(tmp_pa
     path,p = planned[0]
     with pytest.raises(ValueError,match='原图外'):
         validate_cut_corridor([(path,replace(p,x_px=0))],settings,600)
+
+
+def test_lift_reuses_row_spacing_and_is_persistent(tmp_path):
+    from PySide6.QtCore import QSettings
+    from PySide6.QtWidgets import QApplication, QDoubleSpinBox, QCheckBox, QComboBox
+    from automatic_print.ui.cutter_settings import CutterSettingsPanel
+    from automatic_print.layout_engine.cutter_planner import plan_cutter_layout
+    from automatic_print.layout_engine.left_marker import head_margin
+    app = QApplication.instance() or QApplication([])
+    paths = sources(tmp_path)[:6]
+    base = LayoutSettings(dpi=25.4,media_width_mm=580,cutter_mode='dual',
+                          cutter_auto_knife=True,cutter_left_marker_external=True)
+    original = plan_cutter_layout(paths,base,None)
+    raised = plan_cutter_layout(paths,replace(base,cutter_left_marker_lift_mm=1.5),None)
+    assert original[2:] == raised[2:]
+    assert [(p.y_px,p.row_y_px) for _,p in original[0]] == [(p.y_px,p.row_y_px) for _,p in raised[0]]
+    with pytest.raises(ValueError,match='垂直间距'):
+        head_margin(replace(base,cutter_left_marker_lift_mm=6))
+    prefs = QSettings(str(tmp_path/'lift.ini'),QSettings.IniFormat)
+    controls = (QDoubleSpinBox(),QCheckBox(),QComboBox())
+    panel = CutterSettingsPanel(prefs,*controls)
+    assert panel.left_marker_lift.value()==1.5
+    panel.left_marker_lift.setValue(2.5)
+    again = CutterSettingsPanel(prefs,QDoubleSpinBox(),QCheckBox(),QComboBox())
+    assert again.left_marker_lift.value()==2.5

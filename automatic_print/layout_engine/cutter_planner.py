@@ -20,7 +20,8 @@ def plan_cutter_layout(paths, settings, progress, prepared=None, preserve_sequen
     paths = ordered_paths(paths)
     width = mm_to_px(settings.media_width_mm, settings.dpi)
     spacing = mm_to_px(settings.spacing_mm, settings.dpi)
-    margin = mm_to_px(settings.margin_mm, settings.dpi)
+    from .left_marker import head_margin
+    margin = head_margin(settings)
     items, labels = prepared if prepared is not None else read_cutter_items(paths, settings, progress)
     if progress:
         progress('计算排版', 0, len(paths), '整理完整订单与固定分区占位')

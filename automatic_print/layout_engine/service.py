@@ -80,7 +80,7 @@ def generate_layout(
         order_check = validate_order_placements(paths, planned)
         cut_check = validate_cut_corridor(planned, settings, width)
         if settings.cutter_mode != 'free':
-            validate_embedded_marks(planned)
+            validate_embedded_marks(planned, settings)
     except ValueError as error:
         if not preview_only:
             raise

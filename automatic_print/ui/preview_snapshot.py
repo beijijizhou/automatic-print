@@ -11,7 +11,7 @@ from ..layout_engine.transition_marks import marked_height, transition_rects
 
 def install_snapshot(preview, planned, labels, settings, warning="", overflow=()):
     images, badges = {}, {}
-    top = min(p.row_y_px for _, p in planned)
+    top = min(min(p.row_y_px,p.color_block_y_px) for _, p in planned)
     local = [(path, replace(p, y_px=p.y_px-top, number_y_px=p.number_y_px-top,
                             color_block_y_px=p.color_block_y_px-top, row_y_px=p.row_y_px-top,
                             platform_y_px=p.platform_y_px-top))

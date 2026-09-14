@@ -5,6 +5,11 @@ from ..layout_engine.platform_label import platform_badge
 
 
 def render_example(path, item, labels, settings):
+    from dataclasses import replace
+    top = min(0,item.block_ry)
+    item = replace(item, image_ry=item.image_ry-top, block_ry=item.block_ry-top,
+                   label_ry=item.label_ry-top, platform_ry=item.platform_ry-top,
+                   footprint_height=item.footprint_height-top)
     scale = min(900/item.footprint_width, 650/item.footprint_height)
     width, height = max(1, round(item.footprint_width*scale)), max(1, round(item.footprint_height*scale))
     canvas = Image.new('RGBA', (width, height), 'white')

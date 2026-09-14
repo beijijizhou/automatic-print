@@ -47,7 +47,7 @@ def can_embed_marker(path, width, height, degrees, block, label, platform):
     return bool(bw and bh)
 
 
-def validate_embedded_marks(planned):
+def validate_embedded_marks(planned, settings=None):
     """Recheck every source rectangle independently of the packing decision."""
     for path, p in planned:
         if p.rotation_degrees % 360:
@@ -56,7 +56,9 @@ def validate_embedded_marks(planned):
             if qr:
                 qr = qr.rotated(p.rotation_degrees)
                 from .rotated_marks import marker_top
-                if p.color_block_width_px and p.color_block_y_px != p.y_px+marker_top(qr, p.height_px):
+                external = settings and settings.cutter_left_marker_external and p.color_block_x_px == 0
+                expected = p.y_px-round(settings.cutter_left_marker_lift_mm*settings.dpi/25.4) if external else p.y_px+marker_top(qr,p.height_px)
+                if p.color_block_width_px and p.color_block_y_px != expected:
                     raise ValueError(f'{path.name}：旋转刀码未处于安全基准高度，禁止输出。')
                 if p.number_width_px and (
                     p.number_x_px != p.x_px+round(qr.left*p.width_px)

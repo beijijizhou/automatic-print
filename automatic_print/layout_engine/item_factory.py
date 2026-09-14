@@ -43,6 +43,7 @@ class LayoutItem:
     platform_width: int = 0
     platform_height: int = 0
     left_marker_gap_px: int = 0
+    left_marker_lift_px: int = 0
 
 
 def read_items(paths, settings, progress):
@@ -191,6 +192,8 @@ def _make_item(
         block_width, block_height,
         px+image_rx, py+image_ry, pw, ph,
         max(1, mm_to_px(settings.color_block_gap_mm, settings.dpi))
+        if settings.cutter_left_marker_external and settings.cutter_mode != 'free' else 0,
+        mm_to_px(settings.cutter_left_marker_lift_mm, settings.dpi)
         if settings.cutter_left_marker_external and settings.cutter_mode != 'free' else 0,
     )
 

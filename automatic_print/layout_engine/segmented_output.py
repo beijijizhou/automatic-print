@@ -84,7 +84,8 @@ def generate_segments(paths, output_dir, settings, progress, plan_ready,
         base = replace(base, batch_footer_context=footer_text(payload['planned'], base, '整批信息'))
     width, _, baseline = payload['canvas']
     parts = partition_plan(payload['planned'], settings.output_parts)
-    margin = mm_to_px(settings.margin_mm, settings.dpi)
+    from .left_marker import head_margin
+    margin = head_margin(settings)
     plans = [shift_part(members, margin) for members in parts]
     parallel, estimate = save_concurrency(settings, width, plans, payload['planned'])
     if progress:
