@@ -39,6 +39,8 @@ def test_normal_bulk_generates_independent_complete_batches(tmp_path, monkeypatc
         assert output.parent == tmp_path/'切膜机文件'
         assert folder.name in output.name and folder.name in data['filename']
         assert (output/'排版报告.txt').is_file()
+        assert not (output/'批次未完成，禁止打印.txt').exists()
+        assert not list(output.glob('*.未完成'))
         assert json.loads((output/'manifest.json').read_text())['source_count'] == 12
         assert data['order_check'] and data['cut_corridor']['pixel_verified']
         with Image.open(output/data['filename']) as image:
@@ -86,7 +88,7 @@ def test_normal_entry_and_active_task_protection(tmp_path, monkeypatch):
     controller.thread = object()
     assert owner.has_active_tasks()
     owner.close()
-    assert owner.isVisible()
+    assert not owner.isVisible()
     controller.thread = None
     assert owner.grab().save(str(tmp_path/'bulk-generation.png'))
     owner.close()

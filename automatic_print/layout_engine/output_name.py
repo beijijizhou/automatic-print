@@ -37,7 +37,7 @@ def batch_output_directory(base, batch_name, job_id):
 def unused_output_path(directory, filename):
     path = directory / filename
     index = 2
-    while path.exists():
+    while path.exists() or path.with_name(path.name+'.未完成').exists():
         path = directory / f"{filename[:-4]} ({index}).png"
         index += 1
     return path

@@ -74,7 +74,7 @@ def test_active_developer_task_blocks_exit_and_mode_disable(tmp_path):
     owner.developer_mode_checkbox.setChecked(False)
     assert owner.developer_mode_checkbox.isChecked()
     owner.close()
-    assert owner.isVisible()
+    assert not owner.isVisible()
     dialog.thread = None
     dialog.close()
     owner.developer_mode_checkbox.setChecked(False)

@@ -166,18 +166,8 @@ class GenerationActionsMixin:
 
     @Slot()
     def stop_generation(self) -> None:
-        bulk = getattr(self, 'bulk_controller', None)
-        if bulk and bulk.thread:
-            bulk.cancel()
-            return
-        if self.worker is None:
-            return
-        self.worker.request_cancel()
-        self.stop_generation_button.setEnabled(False)
-        self.status.setText(
-            "正在安全停止；如果正在保存大图，将在当前文件写完后结束…"
-        )
-        self.run_log.appendPlainText("已请求停止当前排版。")
+        from .immediate_exit import exit_now
+        exit_now(self)
 
     @Slot(str, object)
     def generation_finished(self, output: str, result: dict) -> None:

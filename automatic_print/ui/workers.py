@@ -69,6 +69,11 @@ class GenerateWorker(QObject):
     def run(self) -> None:
         self.timing = OperationTiming()
         try:
+            if not self.preview_only:
+                self.output.mkdir(parents=True, exist_ok=True)
+                marker = self.output / '批次未完成，禁止打印.txt'
+                marker.write_text('本批次尚未全部完成或被中途退出。禁止打印本目录中的文件。\n'
+                                  '已完成的其他批次不受影响；请重新生成此批次。', encoding='utf-8')
             self._phase('扫描文件名')
             self.cancellation.check()
             if self.images is None:
@@ -116,6 +121,7 @@ class GenerateWorker(QObject):
             combined = cutting_report(result) + '\n\n耗时与并行处理\n' + report_text
             (self.output / '排版报告.txt').write_text(combined, encoding='utf-8')
             self._save_history(result)
+            marker.unlink()
         except TaskCancelled:
             self.timings_ready.emit(self.timing.finish('已停止'))
             self.cancelled.emit()

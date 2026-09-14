@@ -229,16 +229,8 @@ class MainWindow(
                     getattr(getattr(self, 'bulk_controller', None), 'thread', None) is not None))
 
     def closeEvent(self, event) -> None:
-        self.startup_update_timer.stop()
-        if self.has_active_tasks():
-            event.ignore()
-            self.automation_home.loading_label.setText(
-                "任务仍在运行，完成后程序会安全关闭。"
-            )
-            self.automation_home.loading_panel.show()
-            return
-        self.preference_autosave.flush()
-        self.automation_home.label_quick_panel.preview.loader.shutdown()
+        from .immediate_exit import exit_now
+        exit_now(self)
         event.accept()
 
     @staticmethod

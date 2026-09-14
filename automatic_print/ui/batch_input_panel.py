@@ -24,7 +24,7 @@ def build_batch_input(owner, panel):
     owner.start_layout_button.setToolTip('选择图片文件夹后立即开始排版；取消不会启动任务。')
     panel.bulk_generation_button.setToolTip('选择上级目录中的批次；并发参数在打印设置中修改。')
     owner.window().stop_generation_button.setToolTip(
-        '安全停止当前排版，保留已完成文件；暂不支持断点续跑。')
+        '立即退出软件，不等待任务完成；未完成批次禁止打印，已完成批次保留。')
     owner.start_layout_button.setProperty('importance', 'primary')
     group.setStyleSheet('''
         QGroupBox#batchInput { border: none; padding-top: 24px; font-weight: bold; }

@@ -18,7 +18,7 @@ from .order_validation import validate_order_placements
 from .pillow_renderer import build_pillow_canvas
 from .printed_guides import collect_guides, dot_boxes, paint_guides, validate_vips_canvas
 from .planner import plan_layout
-from .save_progress import monitor_save
+from .atomic_png import save_png
 from .vips_renderer import available, build_vips_canvas
 from .transition_marks import marked_height, transition_rects, paint_transition_lines
 from .output_sizes import size_range_label
@@ -129,20 +129,7 @@ def generate_layout(
     filename = output_path.name
     saving_started = perf_counter()
     phase('保存输出图片')
-    with monitor_save(output_path, progress):
-        if use_vips:
-            canvas.pngsave(
-                str(output_path),
-                compression=settings.png_compression_level,
-                interlace=False,
-            )
-        else:
-            canvas.save(
-                output_path,
-                dpi=(settings.dpi, settings.dpi),
-                compress_level=settings.png_compression_level,
-            )
-            canvas.close()
+    save_png(canvas, output_path, settings, use_vips, progress)
     saving_seconds = perf_counter() - saving_started
     if use_vips:
         phase('输出文件安全复核')
