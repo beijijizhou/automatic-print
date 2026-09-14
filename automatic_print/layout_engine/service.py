@@ -42,15 +42,17 @@ def generate_layout(
     prepared_plan=None,
     filename_suffix="",
 ) -> dict:
+    paths = list(image_paths)
+    from .output_dpi import resolve_output_dpi
+    settings = resolve_output_dpi(paths, settings, progress)
     if settings.output_parts > 1 and not preview_only and prepared_plan is None:
         from .segmented_output import generate_segments
-        return generate_segments(list(image_paths), output_dir, settings, progress,
+        return generate_segments(paths, output_dir, settings, progress,
                                  plan_ready, analysis_ready, batch_name, phase_ready)
     total_started = perf_counter()
     if not preview_only:
         output_dir.mkdir(parents=True, exist_ok=True)
     reading_started = perf_counter()
-    paths = list(image_paths)
     phase = phase_ready or (lambda name: None)
     phase('订单与尺码分析')
     effective = [settings]
@@ -104,7 +106,8 @@ def generate_layout(
                     "saved_meters": max(0,baseline_height-height)*25.4/settings.dpi/1000,
                     "canvas": (width, height, baseline_height)})
     if preview_only:
-        return {"preview_only": True, "width_px": width, "height_px": height, "analysis": analysis[-1]}
+        return {"preview_only": True, "width_px": width, "height_px": height,
+                "output_dpi": settings.dpi, "analysis": analysis[-1]}
     reading_seconds = perf_counter() - reading_started
 
     combining_started = perf_counter()
@@ -163,6 +166,7 @@ def generate_layout(
         "filename": filename,
         "dual_quality": quality,
         "size_range": sizes, "output_dpi": settings.dpi,
+        "output_dpi_origin": settings.output_dpi_origin,
         "transition_marks": transitions,
         "rotation_marker_shift_mm": 0,
         "machine_number": normalize_machine_number(settings.machine_number),

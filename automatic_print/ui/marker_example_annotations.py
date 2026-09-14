@@ -36,8 +36,9 @@ def annotated_example(image, data, settings):
         painter.drawLine(QPointF(35, by), QPointF(35, iy))
         for y in (by, iy):
             painter.drawLine(QPointF(29, y), QPointF(41, y))
-        gap = (item.image_rx-item.block_rx-item.block_width)*25.4/settings.dpi
-        lift = (item.image_ry-item.block_ry)*25.4/settings.dpi
+        dpi = data.get('dpi', settings.dpi)
+        gap = (item.image_rx-item.block_rx-item.block_width)*25.4/dpi
+        lift = (item.image_ry-item.block_ry)*25.4/dpi
         painter.drawText(QRectF(15, 10, result.width()-30, 50), Qt.AlignCenter,
                          f'水平间隙 {gap:.1f}毫米   ·   刀码抬高 {lift:.1f}毫米')
         painter.setPen(QColor('#475569'))

@@ -1,0 +1,37 @@
+"""Resolve one reliable output grid per batch from lightweight source headers."""
+from dataclasses import replace
+from collections import defaultdict
+from .images import print_dimensions
+
+
+def resolve_output_dpi(paths, settings, progress=None):
+    if not settings.follow_source_dpi:
+        return settings
+    groups = defaultdict(list)
+    failures = []
+    actual_dpi = {}
+    for index, path in enumerate(paths, 1):
+        if progress:
+            progress('读取原图DPI', index-1, len(paths), path.name)
+        dimensions = print_dimensions(path, settings.dpi)
+        if not dimensions.embedded_dpi:
+            failures.append(path.name+'：缺少可靠DPI')
+        elif round(dimensions.x_dpi) != round(dimensions.y_dpi):
+            failures.append(path.name+f'：水平/垂直DPI不同（{dimensions.x_dpi:.2f}/{dimensions.y_dpi:.2f}）')
+        else:
+            nominal = round(dimensions.x_dpi)
+            groups[nominal].append(path.name)
+            actual_dpi.setdefault(nominal, dimensions.x_dpi)
+    if failures or len(groups) != 1:
+        messages = failures[:5]
+        messages += [f'{dpi} DPI：{len(names)} 张，例如 {names[0]}'
+                     for dpi, names in sorted(groups.items())]
+        raise ValueError('无法统一跟随原图DPI。\n'+'\n'.join(messages)+
+                         '\n请在打印参数 → 输出与并行中取消“跟随原图DPI”，手动指定统一输出DPI。')
+    dpi = actual_dpi[next(iter(groups))]
+    if dpi <= 0:
+        raise ValueError('原图DPI无效，请核对源文件。')
+    if progress:
+        progress('读取原图DPI', len(paths), len(paths),
+                 f'输出跟随原图：{dpi:.2f} DPI，保持实际毫米尺寸，不强制升到300 DPI')
+    return replace(settings, dpi=dpi, follow_source_dpi=False, output_dpi_origin='source')

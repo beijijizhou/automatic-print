@@ -22,6 +22,7 @@ def settings_from_window(window) -> LayoutSettings:
         spacing_mm=window.spacing.value(),
         margin_mm=window.margin.value(),
         dpi=window.dpi.value(),
+        follow_source_dpi=window.follow_source_dpi.isChecked(),
         png_compression_level=window.png_compression.currentData(),
         png_engine=window.png_engine.currentData(),
         png_fast_encoding=False,

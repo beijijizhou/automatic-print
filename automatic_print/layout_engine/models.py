@@ -13,7 +13,9 @@ class LayoutSettings:
     media_width_mm: float = 600
     spacing_mm: float = 5  # Vertical only in cutter modes; both axes in free mode.
     margin_mm: float = 3
-    dpi: int = 300
+    dpi: float = 300
+    follow_source_dpi: bool = False  # GUI defaults on; direct API stays compatible.
+    output_dpi_origin: str = 'manual'
     png_compression_level: int = 1
     png_engine: str = "pillow"
     png_fast_encoding: bool = False  # GUI opt-in default; preserve direct-call compatibility.

@@ -104,6 +104,8 @@ class MainWindow(
         )
         self.dpi = QSpinBox()
         self.dpi.setRange(72, 1200)
+        from .output_dpi import build_output_dpi
+        self.output_dpi_control = build_output_dpi(self)
         self.worker_threads = QSpinBox()
         self.worker_threads.setRange(1, 32)
         self.segmented_output = SegmentedOutputSettings(self.preferences, self)
@@ -138,7 +140,7 @@ class MainWindow(
             ("膜与切膜规则", self.cutter_settings),
             ("上下垂直间距（毫米）", self.spacing),
             ("批次开头与结尾留白（毫米）", self.margin),
-            ("输出分辨率", self.dpi),
+            ("输出分辨率", self.output_dpi_control),
             ("并行处理线程数", self.worker_threads),
             ("图片旋转", self.allow_rotation),
             ("旋转方向", self.rotation_direction),

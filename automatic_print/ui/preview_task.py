@@ -41,6 +41,10 @@ class PreviewTask(QRunnable):
             self.emit(self.signals.sources, paths)
             if not paths:
                 raise ValueError('所选文件夹没有可读取的图片，请重新选择。')
+            from ..layout_engine.output_dpi import resolve_output_dpi
+            self.settings = resolve_output_dpi(paths, self.settings,
+                lambda stage, current, total, name: self.emit(self.signals.progress,
+                    f'{stage} · {current}/{total} · {name}'))
             effective, reports = [self.settings], []
 
             def progress(stage, current, total, filename):

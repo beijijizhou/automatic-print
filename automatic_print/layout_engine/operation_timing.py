@@ -3,6 +3,7 @@ from threading import RLock
 from time import perf_counter
 
 PROGRESS_PHASES = {
+    '读取原图DPI': '输出DPI确认',
     '读取排版缓存': '排版缓存读取', '保存排版缓存': '排版缓存保存',
     '扫描文件夹': '扫描文件名', '分析批次': '订单与尺码分析',
     '读取图片尺寸': '读取尺寸与标签', '识别膜标签': '读取尺寸与标签',

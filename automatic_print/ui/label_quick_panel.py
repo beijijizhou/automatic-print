@@ -137,6 +137,7 @@ class LabelQuickPanel(QWidget):
         window.cutter_settings.quick_mode.toggled.connect(mode_changed)
         self.preview.auto_refresh_enabled = not window.cutter_settings.quick_mode.isChecked()
         window.dpi.valueChanged.connect(self.preview.schedule_refresh)
+        window.follow_source_dpi.toggled.connect(self.preview.schedule_refresh)
         cutter = window.cutter_settings
         for signal in (cutter.film.currentIndexChanged, cutter.mode.currentIndexChanged,
                        cutter.auto_knife.toggled,

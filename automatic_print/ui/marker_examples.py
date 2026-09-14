@@ -56,6 +56,7 @@ class MarkerExamples(QGroupBox):
         self.timer.timeout.connect(self.refresh)
         for signal in (window.label_settings.settings_changed,
                        window.color_block_settings.settings_changed, window.dpi.valueChanged,
+                       window.follow_source_dpi.toggled,
                        window.cutter_settings.left_marker_lift.valueChanged):
             signal.connect(self.schedule)
 

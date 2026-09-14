@@ -79,7 +79,9 @@ def test_main_page_examples_start_after_show_and_refresh_on_parameters(tmp_path,
     window.color_block_settings.width.setValue(12)
     wait_for(lambda: examples.results[0]['item'].block_width != old and examples.worker is None)
     window.cutter_settings.left_marker_lift.setValue(2.5)
-    wait_for(lambda: examples.results[0]['item'].left_marker_lift_px == 30 and examples.worker is None)
+    from automatic_print.layout_engine.models import mm_to_px
+    wait_for(lambda: examples.results[0]['item'].left_marker_lift_px ==
+             mm_to_px(2.5, examples.results[0]['dpi']) and examples.worker is None)
     assert all('当前批次生产图' in caption.text() for _, caption in examples.cards)
     snapshot = examples.results
     examples.enlarge(2)

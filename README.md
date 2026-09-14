@@ -7,7 +7,7 @@ Windows desktop application for combining a folder of images into print-ready la
 在测试电脑上打开 PowerShell，复制并运行：
 
 ```powershell
-powershell -ExecutionPolicy Bypass -Command "irm 'https://raw.githubusercontent.com/beijijizhou/automatic-print/main/windows/bootstrap-test-computer.ps1?v=0.1.153' | iex"
+powershell -ExecutionPolicy Bypass -Command "irm 'https://raw.githubusercontent.com/beijijizhou/automatic-print/main/windows/bootstrap-test-computer.ps1?v=0.1.154' | iex"
 ```
 
 同一条命令既可首次安装，也可在以后下载最新代码并更新运行环境。
@@ -147,7 +147,7 @@ source version instead of reinstalling every build.
 Open PowerShell on the test computer and run:
 
 ```powershell
-powershell -ExecutionPolicy Bypass -Command "irm 'https://raw.githubusercontent.com/beijijizhou/automatic-print/main/windows/bootstrap-test-computer.ps1?v=0.1.153' | iex"
+powershell -ExecutionPolicy Bypass -Command "irm 'https://raw.githubusercontent.com/beijijizhou/automatic-print/main/windows/bootstrap-test-computer.ps1?v=0.1.154' | iex"
 ```
 
 The script installs or checks Git, Python 3.12, and Google Chrome; clones or
@@ -174,6 +174,8 @@ computers should continue using tested GitHub Releases.
 当前报告统一为 `排版报告.txt`：包含切割说明、总计/分步骤耗时、实际并行数与分段耗时，不再分别输出切割和耗时两个文本文件。旧报告保留。
 
 打印参数 → 输出与并行默认启用“大图分块流式合成与保存”：超过64MiB原始RGBA的大图使用原生libvips流水线，不再转为整图NumPy数组或分配整图滤波缓冲。完整长图、透明度、DPI与分段选择不变。最终画布检查全部区域实际刀位通道及精确标记，保存后只核对PNG头、尺寸、格式与结束标记，不重复解压大图。无libvips时使用普通兼容画布；旧全数组编码不再由界面启用。原生延迟合成可能计入保存，报告明确标注，不冒充纯写盘耗时。
+
+输出分辨率默认勾选“跟随原图DPI”，不强制插值放大到300 DPI。后台读取各图片内嵌DPI，一致时沿用原图实际DPI并保持毫米尺寸；同批混合DPI、缺可靠DPI或水平/垂直明显不一致时提示手动指定统一输出DPI。取消勾选即可使用记住的150/300等手动值；多批次分别跟随各自批次，多段输出使用整批同一DPI。报告和“复制耗时”显示实际输出DPI及跟随/手动模式。
 
 平台字优先复用二维码旁经过源图透明像素检查的空位，不追加到图案右侧。没有安全空位时保守放在图片左侧外部，仍可能影响可并排宽度；不为省材料覆盖原图。旋转后重新检查，实际预览与输出共享坐标。
 
