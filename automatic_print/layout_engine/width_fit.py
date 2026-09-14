@@ -3,7 +3,6 @@ from dataclasses import replace
 from hashlib import sha256
 from pathlib import Path
 from time import time
-from math import ceil
 from uuid import uuid4
 from PIL import Image
 from .images import print_dimensions
@@ -42,6 +41,8 @@ def scaled_copy(path, factor):
 
 
 def fit_oversized(paths,settings,progress=None):
+    if settings.cutter_mode!='single':
+        raise ValueError('自动超宽旋转与等比缩小仅允许单排模式，双排图片保持原尺寸')
     settings=replace(settings,sequence_numbers=settings.sequence_numbers or
                      tuple((str(p.resolve()),i) for i,p in enumerate(paths,1)))
     output=list(paths)
@@ -49,10 +50,6 @@ def fit_oversized(paths,settings,progress=None):
     numbers=dict(settings.sequence_numbers)
     notices=list(settings.width_adjustments)
     width=mm_to_px(settings.media_width_mm,settings.dpi)
-    if settings.cutter_mode=='dual':
-        safety=ceil(settings.cutter_safety_mm*settings.dpi/25.4)
-        width=(width-2*safety-max(1,mm_to_px(settings.cutter_marker_offset_mm,settings.dpi)+1)
-               if settings.cutter_auto_knife else mm_to_px(settings.cutter_knife_mm,settings.dpi)-safety)
     if width<=0:
         raise ValueError('当前刀位安全分区无可用宽度，无法通过缩小图片恢复')
     def measure(path,degree):

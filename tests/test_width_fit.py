@@ -25,12 +25,11 @@ def test_rotation_is_forced_before_any_scaling(tmp_path,monkeypatch):
 
 
 @pytest.mark.parametrize('engine',['pillow','libvips'])
-@pytest.mark.parametrize('mode',['single','dual'])
-def test_full_double_batch_short_side_scaling_and_saved_pixels(tmp_path,monkeypatch,engine,mode):
+def test_full_double_batch_short_side_scaling_and_saved_pixels(tmp_path,monkeypatch,engine):
     monkeypatch.setattr(width_fit,'cache_root',lambda:tmp_path/'cache')
     paths=[source(tmp_path/f'B{o}-1-T-Black-M-NO1-{f}.png',(500,300)) for o in range(4) for f in (1,2)]
     originals=[p.read_bytes() for p in paths]
-    settings=LayoutSettings(dpi=25.4,media_width_mm=150,cutter_mode=mode,cutter_auto_knife=True,
+    settings=LayoutSettings(dpi=25.4,media_width_mm=150,cutter_mode='single',cutter_auto_knife=True,
         cutter_left_marker_external=True,auto_fit_width=True,allow_rotation=False,number_images=False,png_engine=engine)
     plans=[]
     result=generate_layout(paths,tmp_path/'out',settings,plan_ready=plans.append)
@@ -58,3 +57,20 @@ def test_feature_can_be_disabled_without_silent_resize(tmp_path):
     with pytest.raises(ValueError):
         generate_layout([path],tmp_path/'out',LayoutSettings(dpi=25.4,media_width_mm=150,
             allow_rotation=False,auto_fit_width=False,number_images=False,color_block_enabled=False))
+
+
+@pytest.mark.parametrize('mode',['dual','free'])
+def test_other_modes_never_enter_width_recovery(tmp_path,monkeypatch,mode):
+    paths=[source(tmp_path/f'B1-1-T-Black-M-NO1-{face}.png',(500,300)) for face in (1,2)]
+    original=[p.read_bytes() for p in paths]
+    monkeypatch.setattr(width_fit,'fit_oversized',lambda *args:pytest.fail('非单排不得自动缩小'))
+    with pytest.raises(ValueError):
+        generate_layout(paths,tmp_path/'out',LayoutSettings(dpi=25.4,media_width_mm=150,
+            cutter_mode=mode,cutter_auto_knife=True,auto_fit_width=True,allow_rotation=False,
+            number_images=False,color_block_enabled=False))
+    assert [p.read_bytes() for p in paths]==original
+
+
+def test_direct_recovery_rejects_dual_mode(tmp_path):
+    with pytest.raises(ValueError,match='仅允许单排模式'):
+        width_fit.fit_oversized([],LayoutSettings(cutter_mode='dual',auto_fit_width=True))

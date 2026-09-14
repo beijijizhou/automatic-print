@@ -11,7 +11,7 @@ def width_failure(error):
 
 
 def recover_width(paths,settings,error,progress,analysis_ready):
-    if not settings.auto_fit_width or not width_failure(error):
+    if settings.cutter_mode!='single' or not settings.auto_fit_width or not width_failure(error):
         raise error
     from .width_fit import fit_oversized
     fitted,adjusted=fit_oversized(paths,settings,progress)
@@ -56,7 +56,7 @@ def plan_with_gap_fallback(paths, settings, records, progress=None, analysis_rea
         result = plan_layout(paths,settings,progress,analysis_ready)
     except ValueError as error:
         count = sum(bool(r.get('rollback_added_mm')) for r in records)
-        if settings.auto_fit_width and width_failure(error):
+        if settings.cutter_mode=='single' and settings.auto_fit_width and width_failure(error):
             return recover_width(paths,settings,error,progress,analysis_ready)
         raise ValueError(f'{error}\n已尝试自动恢复：回退{count}张的程序新增膜标签间距，原间距仍无安全方案；用户参数未修改。') from error
     if progress:
