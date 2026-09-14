@@ -28,6 +28,7 @@ def _compare_films(paths, settings, progress):
     started = monotonic()
     widths = comparison_widths(settings.compare_reference_films)
     count = len(widths)*2
+    workers = max(1, min(4, settings.film_geometry_workers))
     shared = replace(settings, media_width_mm=max(widths)-settings.riin_left_mm-settings.riin_right_mm,
                      cutter_mode='dual', cutter_auto_knife=True, cutter_rotation_zone=False,
                      cutter_tail_rotation=False, allow_rotation=False,
@@ -37,7 +38,7 @@ def _compare_films(paths, settings, progress):
     analysis = analyze_batch(paths, shared)
     measured_seconds = monotonic()-started
     if progress:
-        progress('膜规格比较', 0, count, f'测量已完成，{count}套方案最多四路并行，不合成图片、不切换生产参数')
+        progress('膜规格比较', 0, count, f'测量已完成，{count}套方案最多{workers}路计算，不合成图片、不切换生产参数')
     completed = [0]
     def calculate(film, rotation):
             usable = film-settings.riin_left_mm-settings.riin_right_mm
@@ -87,7 +88,7 @@ def _compare_films(paths, settings, progress):
                 row['error'] = str(exc)
             row['seconds'] = monotonic()-step
             return row
-    with ThreadPoolExecutor(max_workers=4, thread_name_prefix='film-geometry') as pool:
+    with ThreadPoolExecutor(max_workers=workers, thread_name_prefix='film-geometry') as pool:
         futures = [pool.submit(copy_context().run, calculate, film, rotation)
                    for film in widths for rotation in (False, True)]
         for future in as_completed(futures):
@@ -102,7 +103,7 @@ def _compare_films(paths, settings, progress):
     for row in valid:
         row['extra_area_vs_best_m2'] = row['film_area_m2']-best['film_area_m2']
     return {'rows': rows, 'seconds': monotonic()-started,
-            'best_name': best['name'] if best else '', 'parallelism': 4,
+            'best_name': best['name'] if best else '', 'parallelism': workers,
             'measurement_seconds': measured_seconds,
             'scope': '分段前；自动刀位；无手动旋转；包含标签、刀码、红线和留白；仅几何检查',
             'occupancy_basis': '生产图片矩形面积，含原图透明部分，不含新增标签/刀码；不是油墨覆盖率'}

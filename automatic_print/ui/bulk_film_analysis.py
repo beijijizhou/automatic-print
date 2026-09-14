@@ -2,7 +2,7 @@
 from pathlib import Path
 from PySide6.QtCore import QObject, Signal, Slot, QThread, Qt
 from PySide6.QtWidgets import (QDialog, QVBoxLayout, QHBoxLayout, QPushButton,
-    QFileDialog, QListWidget, QAbstractItemView, QLabel, QPlainTextEdit)
+    QFileDialog, QListWidget, QAbstractItemView, QLabel, QPlainTextEdit, QSpinBox)
 from ..cancellation import Cancellation
 from ..history.bulk_analysis import analyze_folders, summary_text
 from .action_icons import action_icon
@@ -13,15 +13,17 @@ class BulkAnalysisWorker(QObject):
     progress = Signal(int, str, str, int, int, str)
     finished = Signal(object)
 
-    def __init__(self, folders, settings):
+    def __init__(self, folders, settings, parallelism=4):
         super().__init__()
         self.folders, self.settings = folders, settings
         self.cancellation = Cancellation()
+        self.parallelism = parallelism
 
     @Slot()
     def run(self):
         try:
-            result = analyze_folders(self.folders, self.settings, self.progress.emit, self.cancellation)
+            result = analyze_folders(self.folders, self.settings, self.progress.emit,
+                                     self.cancellation, parallelism=self.parallelism)
         except Exception as error:
             result = {'records': [], 'errors': [{'folder': '', 'error': str(error)}],
                       'stopped': False, 'seconds': 0}
@@ -50,6 +52,15 @@ class BulkFilmAnalysisDialog(QDialog):
             actions.addWidget(button)
         self.stop.setEnabled(False)
         layout.addLayout(actions)
+        concurrency = QHBoxLayout()
+        concurrency.addWidget(QLabel('同时分析批次数'))
+        self.parallelism = QSpinBox()
+        self.parallelism.setRange(1, 8)
+        preferences = getattr(parent, 'preferences', None)
+        self.parallelism.setValue(preferences.value('developer/bulk_parallelism', 4, int) if preferences else 4)
+        concurrency.addWidget(self.parallelism)
+        concurrency.addStretch()
+        layout.addLayout(concurrency)
         self.folders = QListWidget()
         self.folders.setSelectionMode(QAbstractItemView.ExtendedSelection)
         layout.addWidget(self.folders)
@@ -66,11 +77,12 @@ class BulkFilmAnalysisDialog(QDialog):
         self.stop.clicked.connect(self.cancel)
 
     def add_folders(self, folders):
-        existing = {self.folders.item(i).text() for i in range(self.folders.count())}
+        existing = {self.folders.item(i).data(Qt.UserRole) for i in range(self.folders.count())}
         for folder in folders:
             path = Path(folder).resolve()
             if path.is_dir() and str(path) not in existing:
                 self.folders.addItem(str(path))
+                self.folders.item(self.folders.count()-1).setData(Qt.UserRole, str(path))
                 existing.add(str(path))
 
     def choose_parent(self):
@@ -98,12 +110,16 @@ class BulkFilmAnalysisDialog(QDialog):
         except ValueError as error:
             self.status.setText(str(error))
             return
-        folders = [Path(self.folders.item(i).text()) for i in range(self.folders.count())]
+        folders = [Path(self.folders.item(i).data(Qt.UserRole)) for i in range(self.folders.count())]
+        self.active_parallelism = min(self.parallelism.value(), len(folders))
+        if hasattr(parent, 'preferences'):
+            parent.preferences.setValue('developer/bulk_parallelism', self.parallelism.value())
+            parent.preferences.sync()
         self.results.clear()
-        self.status.setText('正在开始批量分析，后台扫描文件名…')
+        self.status.setText(f'正在开始：同时分析{self.active_parallelism}批，后台扫描文件名…')
         self.set_busy(True)
         self.thread = QThread(self)
-        self.worker = BulkAnalysisWorker(folders, settings)
+        self.worker = BulkAnalysisWorker(folders, settings, self.parallelism.value())
         self.worker.moveToThread(self.thread)
         self.thread.started.connect(self.worker.run)
         self.worker.progress.connect(self.progress, Qt.QueuedConnection)
@@ -115,7 +131,8 @@ class BulkFilmAnalysisDialog(QDialog):
 
     @Slot(int, str, str, int, int, str)
     def progress(self, index, folder, stage, current, total, filename):
-        self.status.setText(f'批次 {index+1}/{self.folders.count()} · {Path(folder).name} · '
+        self.folders.item(index).setText(f'{Path(folder).name} · {stage} {current}/{total}\n{folder}')
+        self.status.setText(f'并行{self.active_parallelism}批 · 批次 {index+1}/{self.folders.count()} · {Path(folder).name} · '
                             f'{stage} {current}/{total}\n{filename}')
         if stage in ('批次分析完成', '批次失败，继续下一批'):
             self.results.appendPlainText(self.status.text())
@@ -126,6 +143,7 @@ class BulkFilmAnalysisDialog(QDialog):
             '\n'.join(f"{e['folder']}：{e['error']}" for e in result['errors']))
         self.status.setText(f"{'已停止' if result['stopped'] else '已完成'} · "
             f"成功保存 {len(result['records'])} 批 · 失败 {len(result['errors'])} 批 · "
+            f"并行 {result.get('actual_parallelism', self.active_parallelism)} 批 · "
             f"耗时 {result['seconds']:.2f}秒；可在用膜历史记录查看。")
 
     @Slot()
@@ -135,7 +153,7 @@ class BulkFilmAnalysisDialog(QDialog):
         self.set_busy(False)
 
     def set_busy(self, busy):
-        for widget in (self.parent_add, self.remove, self.start, self.folders):
+        for widget in (self.parent_add, self.remove, self.start, self.folders, self.parallelism):
             widget.setEnabled(not busy)
         self.stop.setEnabled(busy)
 

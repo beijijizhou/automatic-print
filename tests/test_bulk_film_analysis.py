@@ -2,7 +2,7 @@ import os
 os.environ.setdefault('QT_QPA_PLATFORM', 'offscreen')
 from pathlib import Path
 from time import monotonic
-from threading import get_ident, Event
+from threading import get_ident, Event, Barrier, Lock
 from PIL import Image
 from PySide6.QtWidgets import QApplication, QWidget
 from PySide6.QtTest import QTest
@@ -60,7 +60,7 @@ def test_stop_keeps_completed_batch_and_does_not_read_next(tmp_path):
     def progress(index, folder, stage, *_):
         if stage == '批次分析完成':
             cancel.request()
-    result = analyze_folders(inputs, settings(), progress, cancel, tmp_path/'history.sqlite3')
+    result = analyze_folders(inputs, settings(), progress, cancel, tmp_path/'history.sqlite3', parallelism=1)
     assert result['stopped'] and len(result['records']) == 1
     assert len(load_runs(tmp_path/'history.sqlite3')) == 1
 
@@ -76,6 +76,54 @@ def test_summary_does_not_rank_partial_coverage_as_best():
     assert '部分批次无解，不参与排名' in text
 
 
+def test_default_starts_four_independent_batches_with_shared_worker_budget(tmp_path, monkeypatch):
+    import automatic_print.history.bulk_analysis as module
+    inputs = folders(tmp_path)
+    extra = tmp_path/'extra'
+    extra.mkdir()
+    inputs += folders(extra)
+    original = module.compare_films
+    barrier, lock = Barrier(4), Lock()
+    threads, budgets = set(), []
+    def compare(images, options, report):
+        with lock:
+            threads.add(get_ident())
+            budgets.append(options.film_geometry_workers)
+        barrier.wait(5)  # Serial execution cannot pass this barrier.
+        return original(images, options, report)
+    monkeypatch.setattr(module, 'compare_films', compare)
+    path = tmp_path/'history.sqlite3'
+    result = analyze_folders(inputs, settings(), path=path)
+    assert result['actual_parallelism'] == 4
+    assert len(threads) == 4 and budgets == [1]*4
+    assert not result['errors'] and len(result['records']) == 4
+    assert len(load_runs(path)) == 4
+    assert all(record['bulk_parallelism'] == 4 for record in result['records'])
+    assert len(list(tmp_path.rglob('*.png'))) == 8
+
+
+def test_parallel_stop_does_not_schedule_remaining_folders(tmp_path, monkeypatch):
+    import automatic_print.history.bulk_analysis as module
+    inputs = []
+    for index in range(8):
+        folder = tmp_path/str(index)
+        folder.mkdir()
+        inputs.append(folder)
+    cancel, barrier, lock = Cancellation(), Barrier(4), Lock()
+    visited = []
+    def discover(folder):
+        with lock:
+            visited.append(folder)
+        barrier.wait(5)
+        cancel.request()
+        cancel.check()
+    monkeypatch.setattr(module, 'discover_images', discover)
+    result = analyze_folders(inputs, settings(), cancellation=cancel,
+                             path=tmp_path/'history.sqlite3')
+    assert result['stopped'] and len(visited) == 4
+    assert not result['records'] and not result['errors']
+
+
 def test_dialog_runs_off_gui_and_releases_thread(tmp_path, monkeypatch):
     import automatic_print.ui.bulk_film_analysis as module
     app = QApplication.instance() or QApplication([])
@@ -89,7 +137,7 @@ def test_dialog_runs_off_gui_and_releases_thread(tmp_path, monkeypatch):
     dialog.add_folders(inputs+inputs)
     assert dialog.folders.count() == 2
     caller, observed = get_ident(), []
-    def analyze(*args):
+    def analyze(*args, **kwargs):
         observed.append(get_ident())
         return {'records': [], 'errors': [], 'stopped': False, 'seconds': .1}
     monkeypatch.setattr(module, 'analyze_folders', analyze)
@@ -118,7 +166,7 @@ def test_close_requests_stop_without_deleting_running_thread(tmp_path, monkeypat
     OWNERS.extend((parent, dialog))
     dialog.add_folders(folders(tmp_path))
     entered, release = Event(), Event()
-    def analyze(*args):
+    def analyze(*args, **kwargs):
         entered.set()
         release.wait(5)
         return {'records': [], 'errors': [], 'stopped': True, 'seconds': .1}

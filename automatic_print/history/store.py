@@ -41,6 +41,7 @@ def save_run(job_id, source, output, settings, result, path=None):
               'output_folder': str(output) if not result.get('preview_only') else '',
               'status': '仅分析' if result.get('comparison_only') else '仅预览' if result.get('preview_only') else '已生成',
               'group_id': result.get('group_id', ''),
+              'bulk_parallelism': result.get('bulk_parallelism', 1),
               'settings': asdict(settings),
               'image_count': analysis.get('image_count'),
               'order_count': analysis.get('order_count'),
