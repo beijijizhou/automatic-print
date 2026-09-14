@@ -91,3 +91,29 @@ def test_visible_copyable_report_and_new_task_reset():
     assert panel.table.rowCount() == 0
     assert panel.data is None
     panel.close()
+
+
+def test_running_phase_is_highlighted_first_without_changing_measurements():
+    bridge = MainWindowWorkerBridge()
+    panel = OperationTimingPanel(bridge)
+    OWNERS.extend((bridge, panel))
+    timer = OperationTiming()
+    timer.phase('扫描文件名')
+    timer.phase('读取尺寸与标签')
+    timer.phase('保存输出图片')
+    snapshot = timer.snapshot()
+    original = [s['name'] for s in snapshot['steps']]
+    panel.receive(snapshot)
+    assert panel.table.item(0,0).text() == '保存输出图片'
+    assert panel.table.item(0,0).font().bold()
+    assert '进行中' in panel.table.item(0,2).text()
+    assert '当前：保存输出图片' in panel.summary.text()
+    assert [s['name'] for s in snapshot['steps']] == original
+    assert [panel.table.item(i,0).text() for i in (1,2)] == original[:2]
+    panel.receive(timer.finish())
+    assert [panel.table.item(i,0).text() for i in range(3)] == original
+    assert not panel.table.item(0,0).font().bold()
+    assert '当前：' not in panel.summary.text()
+    panel.reset()
+    assert panel.display_phase is None
+    panel.close()

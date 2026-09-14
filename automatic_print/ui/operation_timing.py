@@ -1,6 +1,7 @@
 """GUI-thread presentation of worker-clock measurements."""
 from time import perf_counter
 from PySide6.QtCore import QTimer, Qt, Slot
+from PySide6.QtGui import QColor
 from PySide6.QtWidgets import (
     QAbstractItemView, QApplication, QGroupBox, QHBoxLayout, QLabel,
     QPushButton, QTableWidget, QTableWidgetItem, QVBoxLayout,
@@ -11,6 +12,7 @@ class OperationTimingPanel(QGroupBox):
     def __init__(self, bridge, parent=None):
         super().__init__('本次排版 · 分步耗时', parent)
         self.data = None
+        self.display_phase = None
         self.save_report_provider = lambda: ''
         self.summary = QLabel('开始排版后显示各大步骤耗时')
         self.summary.setTextInteractionFlags(Qt.TextSelectableByMouse)
@@ -40,6 +42,7 @@ class OperationTimingPanel(QGroupBox):
     def reset(self):
         self.timer.stop()
         self.data = None
+        self.display_phase = None
         self.table.setRowCount(0)
         self.summary.setText('正在开始，等待后台计时…')
         self.note.setText('按实际执行阶段计时；大图延迟计算可能计入安全检查或保存。未执行的旋转比较不计时。')
@@ -55,7 +58,10 @@ class OperationTimingPanel(QGroupBox):
             return
         delta = max(0, perf_counter()-self.data['captured_at']) if self.data['status'] == '运行中' else 0
         total = self.data['total_seconds'] + delta
-        rows = self.data['steps']
+        original = self.data['steps']
+        active = self.data.get('active_phase') if self.data['status'] == '运行中' else None
+        rows = ([row for row in original if row['name'] == active] +
+                [row for row in original if row['name'] != active]) if active else original
         values = [row['seconds'] + (delta if row['running'] else 0) for row in rows]
         self.table.setRowCount(len(rows))
         for index, (row, seconds) in enumerate(zip(rows, values)):
@@ -63,9 +69,20 @@ class OperationTimingPanel(QGroupBox):
             if self.data['status'] in ('失败', '已停止') and row['name'] == self.data.get('active_phase'):
                 state = self.data['status']
             for column, text in enumerate((row['name'], f'{seconds:.2f} 秒', f'{seconds/max(total, .001):.1%} · {state}')):
-                self.table.setItem(index, column, QTableWidgetItem(text))
+                item = QTableWidgetItem(text)
+                if row['name'] == active:
+                    item.setBackground(QColor('#dbeafe'))
+                    item.setForeground(QColor('#174ea6'))
+                    font = item.font()
+                    font.setBold(True)
+                    item.setFont(font)
+                self.table.setItem(index, column, item)
+        if active != self.display_phase:
+            self.table.scrollToTop()
+            self.display_phase = active
         slowest = rows[values.index(max(values))]['name'] if values else '等待开始'
-        self.summary.setText(f"{self.data['status']} · 总计 {total:.2f} 秒 · 最耗时：{slowest}")
+        current = f' · 当前：{active}' if active else ''
+        self.summary.setText(f"{self.data['status']} · 总计 {total:.2f} 秒{current} · 最耗时：{slowest}")
         if any(row['name'] == '分段合成、安全检查与保存' for row in rows):
             self.note.setText('分段并行阶段显示实际总耗时，不把重叠时间相加；每段详细耗时和真实文件名记录在批次记录中。')
 
