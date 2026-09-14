@@ -81,8 +81,8 @@ class GenerationPreviewController(QObject):
         settings = self.payload["settings"]
         try:
             install_snapshot(self.preview, planned if self.preview.overview else detail_members(planned, index=start), self.payload["labels"], settings, warning=self.payload.get("warning", ""))
-            zones = dict((p.cut_zone,p.cut_knife_x_px) for _,p in planned if p.cut_zone)
-            knives = " · ".join(f"{name}刀位 {knife*25.4/settings.dpi:.1f} 毫米" for name,knife in zones.items())
+            from .knife_caption import knife_caption
+            knives = knife_caption(planned, settings.dpi)
             self.preview.detail = f"{knives or f'固定刀位 {settings.cutter_knife_mm:.1f} 毫米'} · 共 {len(planned)} 张 · 节省 {self.payload.get('saved_meters',0):.3f} 米"
         except (ValueError, OSError) as error:
             self.preview.warning = f"保留上次预览：{error}"

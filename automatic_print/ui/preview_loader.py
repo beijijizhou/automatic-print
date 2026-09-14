@@ -77,8 +77,8 @@ class PreviewLoader(QObject):
                                      payload['warning'], payload['overflow'])
                     p.batch_payload = payload
                     settings = payload['settings']
-                    zones = dict((item.cut_zone, item.cut_knife_x_px) for _, item in payload['planned'] if item.cut_zone)
-                    knives = ' / '.join(f'{name}刀位 {x*25.4/settings.dpi:.1f} 毫米' for name, x in zones.items())
+                    from .knife_caption import knife_caption
+                    knives = knife_caption(payload['planned'], settings.dpi, ' / ')
                     p.detail = f"{'整批总览' if p.overview else '双图细节'} · 整批 {len(payload['planned'])} 张 · 节省 {payload['saved_meters']:.3f} 米 · {knives}"
                     p.plan_loaded.emit(payload)
                     self.status(payload['warning'] or '整批预览完成 · 尚未生成输出文件')
