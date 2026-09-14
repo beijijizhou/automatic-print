@@ -30,7 +30,7 @@ def test_default_hides_tools_and_gates_direct_open(tmp_path, monkeypatch):
     panel.details_dialog.open_bulk_analysis()
     assert not hasattr(panel.details_dialog, 'history_page')
     assert not hasattr(panel.details_dialog, 'bulk_dialog')
-    assert panel.summary.isVisible() and panel.preview_scroll.isVisible()
+    assert panel.summary.isVisible() and panel.preview_tabs.isVisible()
     assert owner.developer_mode_checkbox.isVisible()
     assert owner.grab().save(str(tmp_path/'developer-off.png'))
     owner.close()

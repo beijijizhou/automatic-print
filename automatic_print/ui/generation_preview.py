@@ -26,6 +26,7 @@ class GenerationPreviewController(QObject):
         bridge.layout_cancelled.connect(self.cancelled)
 
     def start(self):
+        self.panel.marker_examples.clear_batch()
         bulk = getattr(self.window, 'bulk_controller', None)
         if bulk:
             bulk.selector.hide()
@@ -57,6 +58,8 @@ class GenerationPreviewController(QObject):
 
     @Slot(object)
     def ready(self, payload):
+        self.panel.marker_examples.use_batch(payload)
+        self.panel.preview_tabs.setCurrentIndex(0)
         self.payload = payload
         self.preview.production_stage = '本批次排版已确定，正在处理输出…'
         self.panel.analysis.show_report(payload['analysis'])

@@ -2,7 +2,7 @@ from pathlib import Path
 
 from PySide6.QtWidgets import (
     QCheckBox, QComboBox, QDoubleSpinBox, QGroupBox,
-    QLineEdit, QPushButton, QScrollArea, QVBoxLayout, QWidget,
+    QLineEdit, QPushButton, QScrollArea, QTabWidget, QVBoxLayout, QWidget,
 )
 
 from .pair_preview import PairProductionPreview
@@ -148,7 +148,15 @@ class LabelQuickPanel(QWidget):
         from .preview_viewport import PreviewViewport
         self.preview_viewport = PreviewViewport(self.preview, self.preview_scroll)
         preview_layout = QVBoxLayout(group)
-        preview_layout.addWidget(self.preview_viewport)
+        from .marker_examples import MarkerExamples
+        self.marker_examples = MarkerExamples(window, self)
+        self.preview_tabs = QTabWidget()
+        self.actual_preview_page = QWidget()
+        QVBoxLayout(self.actual_preview_page).addWidget(self.preview_viewport)
+        self.preview_tabs.addTab(self.actual_preview_page, '整批排版预览')
+        self.preview_tabs.addTab(self.marker_examples, '刀码四种情况')
+        self.preview_tabs.setCurrentIndex(1)
+        preview_layout.addWidget(self.preview_tabs)
         self.preview.detail = '尚未读取批次。选择文件夹或点击“读取当前文件夹”后开始。'
         self.summary.progress.setText('软件已就绪，未读取上次批次。')
         layout = QVBoxLayout(self)

@@ -24,9 +24,12 @@ def test_secondary_tools_live_in_one_nonmodal_dialog(tmp_path):
                  panel.summary.cutting, window.run_log, window.automation_home.log):
         assert details.isAncestorOf(tool)
         assert not tool.isVisible()
-    for tool in (panel.summary, panel.timings, panel.preview_scroll):
+    for tool in (panel.summary, panel.timings, panel.preview_tabs):
         assert tool.isVisible()
         assert not details.isAncestorOf(tool)
+    assert panel.marker_examples.isVisible()
+    panel.preview_tabs.setCurrentIndex(0)
+    assert panel.preview_scroll.isVisible()
     assert [details.tabs.tabText(i) for i in range(details.tabs.count())] == [
         '订单与尺码', '图片检查与旋转', '切割明细', '预览与处理日志',
     ]
