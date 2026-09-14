@@ -26,8 +26,14 @@ def analyze_folders(folders, settings, progress=None, cancellation=None, path=No
         images = discover_images(folder)
         if not images:
             raise ValueError('文件夹没有支持的图片')
-        analysis = analyze_batch(images, settings)
-        analysis['film_comparison'] = compare_films(images, settings, report)
+        from ..layout_engine.header_gap import prepare_paths, annotate_analysis, verify_records
+        from ..layout_engine.output_dpi import resolve_output_dpi
+        local = replace(settings, worker_threads=max(1, min(settings.worker_threads, 4//workers)))
+        images, local, gap_records = prepare_paths(images, local, report)
+        local = resolve_output_dpi(images, local, report)
+        analysis = annotate_analysis(analyze_batch(images, local), gap_records)
+        analysis['film_comparison'] = compare_films(images, local, report)
+        verify_records(gap_records)
         if cancellation:
             cancellation.check()
         result = {'analysis': analysis, 'preview_only': True,

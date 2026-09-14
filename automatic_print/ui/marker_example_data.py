@@ -49,7 +49,10 @@ def build_examples(paths, settings):
         results = []
         for side, degrees in CASES:
             path = samples.get(side, fallback[side])
-            config = replace(settings, allow_rotation=False,
+            from ..layout_engine.header_gap import prepare_paths
+            prepared, example_settings, _ = prepare_paths([path], settings)
+            path = prepared[0]
+            config = replace(example_settings, allow_rotation=False,
                 manual_rotations=((str(path.resolve()), degrees),),
                 sequence_numbers=((str(path.resolve()), 1),))
             from ..layout_engine.output_dpi import resolve_output_dpi

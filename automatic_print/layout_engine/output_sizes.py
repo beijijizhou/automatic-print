@@ -46,6 +46,8 @@ def cutting_report(result):
     review += '\n'+comparison_text(result.get('analysis', {}).get('film_comparison'))
     from .image_anomalies import anomaly_text
     review += '\n'+anomaly_text(result.get('analysis', {}))
+    from .header_gap import gap_report
+    review += '\n'+gap_report(result.get('analysis', {}).get('header_gap', []))
     from .measurement_timing import measurement_text
     from .output_file_info import result_file_report
     review += '\n'+result_file_report(result)

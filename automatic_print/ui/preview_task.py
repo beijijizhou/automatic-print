@@ -41,6 +41,10 @@ class PreviewTask(QRunnable):
             self.emit(self.signals.sources, paths)
             if not paths:
                 raise ValueError('所选文件夹没有可读取的图片，请重新选择。')
+            from ..layout_engine.header_gap import prepare_paths
+            paths, self.settings, gap_records = prepare_paths(paths, self.settings,
+                lambda stage, current, total, name: self.emit(self.signals.progress,
+                    f'{stage} · {current}/{total} · {name}'))
             from ..layout_engine.output_dpi import resolve_output_dpi
             self.settings = resolve_output_dpi(paths, self.settings,
                 lambda stage, current, total, name: self.emit(self.signals.progress,
@@ -53,6 +57,8 @@ class PreviewTask(QRunnable):
                 self.emit(self.signals.progress, f'{stage} · {current}/{total} · {filename}')
 
             def analysis(report):
+                from ..layout_engine.header_gap import annotate_analysis
+                annotate_analysis(report, gap_records)
                 reports[:] = [report]
                 self.emit(self.signals.analysis, report)
 
@@ -70,7 +76,7 @@ class PreviewTask(QRunnable):
                 baseline = height
             payload = {'planned': planned, 'labels': labels, 'settings': effective[0],
                        'warning': warning, 'overflow': overflow, 'order_check': order_check,
-                       'analysis': reports[-1] if reports else {},
+                       'analysis': reports[-1] if reports else {}, 'header_gap': gap_records,
                        'saved_meters': max(0, baseline-height)*25.4/self.settings.dpi/1000}
             self.cancel.check()
         except TaskCancelled:

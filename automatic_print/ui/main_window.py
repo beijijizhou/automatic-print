@@ -106,6 +106,8 @@ class MainWindow(
         self.dpi.setRange(72, 1200)
         from .output_dpi import build_output_dpi
         self.output_dpi_control = build_output_dpi(self)
+        from .header_gap import build_header_gap
+        build_header_gap(self)
         self.worker_threads = QSpinBox()
         self.worker_threads.setRange(1, 32)
         self.segmented_output = SegmentedOutputSettings(self.preferences, self)
@@ -139,6 +141,7 @@ class MainWindow(
             ("图片文件夹", folder_row),
             ("膜与切膜规则", self.cutter_settings),
             ("上下垂直间距（毫米）", self.spacing),
+            ("膜标签与图案最小间距", self.membrane_gap),
             ("批次开头与结尾留白（毫米）", self.margin),
             ("输出分辨率", self.output_dpi_control),
             ("并行处理线程数", self.worker_threads),

@@ -43,6 +43,7 @@ def settings_from_window(window) -> LayoutSettings:
         cutter_knife_dots=False,
         cutter_single_row_rotation=True,
         preserve_header_gap=True,
+        membrane_gap_mm=window.membrane_gap.value(),
         cutter_left_marker_lift_mm=window.cutter_settings.left_marker_lift.value(),
         allow_rotation=window.allow_rotation.isChecked() and not window.cutter_settings.quick_mode.isChecked(),
         rotation_direction=window.rotation_direction.currentData(),

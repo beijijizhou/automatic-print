@@ -42,14 +42,18 @@ def generate_layout(
     prepared_plan=None,
     filename_suffix="",
 ) -> dict:
+    total_started = perf_counter()
     paths = list(image_paths)
+    from .header_gap import prepare_paths
+    if phase_ready and settings.membrane_gap_mm > 0:
+        phase_ready('补足膜标签间距')
+    paths, settings, gap_records = prepare_paths(paths, settings, progress)
     from .output_dpi import resolve_output_dpi
     settings = resolve_output_dpi(paths, settings, progress)
     if settings.output_parts > 1 and not preview_only and prepared_plan is None:
         from .segmented_output import generate_segments
         return generate_segments(paths, output_dir, settings, progress,
                                  plan_ready, analysis_ready, batch_name, phase_ready)
-    total_started = perf_counter()
     if not preview_only:
         output_dir.mkdir(parents=True, exist_ok=True)
     reading_started = perf_counter()
@@ -63,6 +67,8 @@ def generate_layout(
             progress(stage, current, total, filename)
     analysis = []
     def analyzed(data):
+        from .header_gap import annotate_analysis
+        annotate_analysis(data, gap_records)
         analysis[:] = [data]
         if analysis_ready:
             analysis_ready(data)
@@ -107,7 +113,7 @@ def generate_layout(
                     "canvas": (width, height, baseline_height)})
     if preview_only:
         return {"preview_only": True, "width_px": width, "height_px": height,
-                "output_dpi": settings.dpi, "analysis": analysis[-1]}
+                "output_dpi": settings.dpi, "analysis": analysis[-1], "header_gap": gap_records}
     reading_seconds = perf_counter() - reading_started
 
     combining_started = perf_counter()
@@ -170,6 +176,7 @@ def generate_layout(
         "transition_marks": transitions,
         "rotation_marker_shift_mm": 0,
         "machine_number": normalize_machine_number(settings.machine_number),
+        "header_gap": gap_records,
         "cutter_mode": settings.cutter_mode,
         'platform_name': settings.platform_name,
         'platform_font_height_mm': settings.platform_font_height_mm,
@@ -222,4 +229,6 @@ def generate_layout(
         },
     }
     result.update(saving_metrics(baseline_height, height, settings.dpi))
+    from .header_gap import verify_records
+    verify_records(gap_records)
     return result

@@ -58,6 +58,7 @@ class LayoutSettings:
     cutter_knife_dots: bool = True
     cutter_single_row_rotation: bool = False
     preserve_header_gap: bool = False
+    membrane_gap_mm: float = 0  # GUI defaults to 40; direct API remains opt-in.
     cutter_knife_mm: float = 300
     cutter_safety_mm: float = 3
     cutter_marker_offset_mm: float = 0
