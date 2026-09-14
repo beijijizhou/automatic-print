@@ -10,16 +10,23 @@ def test_failed_normal_batch_rotates_without_resizing(tmp_path,engine,mode):
     for order in range(3):
         for face in (1,2):
             path=tmp_path/f'B{order}-1-T-Black-L-NO1-{face}.png'
-            with Image.new('RGBA',(563,234),(20,50,90,255)) as image:
+            with Image.new('RGBA',(563,234)) as image:
+                image.paste('white',(0,0,200,30))
+                image.paste((20,50,90,255),(0,70,563,234))
                 image.save(path,dpi=(25.4,25.4))
             paths.append(path)
     original=[p.read_bytes() for p in paths]
     plans=[]
     settings=LayoutSettings(dpi=25.4,media_width_mm=430,cutter_mode=mode,
-        cutter_auto_knife=True,cutter_compare_whole_rotation=False,
-        cutter_left_marker_external=True,number_images=False,allow_rotation=False,
+        cutter_auto_knife=True,cutter_compare_whole_rotation=False,cutter_knife_dots=False,
+        cutter_left_marker_external=True,cutter_left_marker_lift_mm=1.5,
+        preserve_header_gap=True,platform_below_marker=True,
+        platform_name='隆丰',platform_font_height_mm=6,
+        number_images=True,allow_rotation=False,
         auto_fit_width=True,png_engine=engine)
     result=generate_layout(paths,tmp_path/'out',settings,plan_ready=plans.append)
+    from automatic_print.layout_engine.cut_guide_geometry import detect_guide_band
+    assert all(detect_guide_band(path) is not None for path in paths)
     assert result['order_check']['double_pairs']==3
     assert not result['analysis'].get('width_adjustments')
     assert '未缩小图片' in result['analysis']['rotation_recovery']['action']
@@ -28,6 +35,7 @@ def test_failed_normal_batch_rotates_without_resizing(tmp_path,engine,mode):
         for path,p in plans[0]['planned']:
             assert p.rotation_degrees==90 and (p.width_px,p.height_px)==(234,563)
             assert p.color_block_x_px==0
+            assert p.color_block_y_px==p.y_px-round(1.5*25.4/25.4)
             assert p.cut_zone==('旋转区' if mode=='dual' else '单排区')
             with Image.open(path) as source:
                 rotated=source.rotate(90,expand=True)
