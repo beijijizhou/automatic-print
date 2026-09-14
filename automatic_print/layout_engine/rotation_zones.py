@@ -79,9 +79,6 @@ def plan_rotation_zones(paths, settings, progress, analysis=None, analysis_ready
     paths = ordered_paths(paths)
     options, labels = prepared[:2] if prepared else read_cutter_items(paths, base_settings, progress)
     normal_items = {row[0].path: row[0] for row in options}
-    rotated_items, rotated_labels = prepared[2:] if prepared else rotation_items(paths, base_settings, progress)
-    if analysis is not None:
-        attach_rotation_options(analysis, rotated_items, settings, analysis_ready)
     baseline, normal_settings = None, base_settings
     if normal_baseline is not None:
         baseline, normal_settings = normal_baseline
@@ -91,6 +88,19 @@ def plan_rotation_zones(paths, settings, progress, analysis=None, analysis_ready
         except ValueError:
             # A valid rotated zone can fit orders that have no common normal knife.
             pass
+    from .single_rotation import eligible_tail, plan_single_rotation
+    tail = eligible_tail(paths, baseline)
+    rotated_items, rotated_labels = (prepared[2:] if prepared else rotation_items(
+        tail if tail is not None else paths, base_settings, progress))
+    if analysis is not None:
+        attach_rotation_options(analysis, rotated_items, settings, analysis_ready)
+        if tail is not None:
+            allowed = {str(p) for p in tail}
+            for order in analysis['orders']:
+                if any(im['path'] not in allowed for it in order['items'] for im in it['images']):
+                    order['rotation_policy_skip'] = True
+    if tail is not None:
+        return plan_single_rotation(baseline, tail, rotated_items, rotated_labels, normal_settings, progress)
     orders = ordered_single_blocks(complete_orders(paths), coalesce=True)
     baseline_settings = normal_settings
     mask, knife, _, sequence = select_zones(orders, normal_items, rotated_items, base_settings, progress)

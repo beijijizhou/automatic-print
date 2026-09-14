@@ -11,7 +11,7 @@ from automatic_print.layout_engine.cut_validation import validate_cut_corridor
 
 def _sources(tmp_path):
     paths = []
-    for order,width,height in (("BORDER1",100,300),("BORDER2",200,150)):
+    for order,width,height in (("BORDER1",340,500),("BORDER2",200,150)):
         for side in (1,2):
             size = 'L' if order == 'BORDER1' else 'S'
             path = tmp_path/f"{order}-1-T-Black-{size}-NO1-{side}.png"

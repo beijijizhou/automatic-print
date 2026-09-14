@@ -118,7 +118,7 @@ def _compare_films(paths, settings, progress):
     return {'rows': rows, 'seconds': monotonic()-started,
             'best_name': best['name'] if best else '', 'parallelism': workers,
             'measurement_seconds': measured_seconds,
-            'scope': '分段前；自动刀位；无手动旋转；包含标签、刀码、红线和留白；仅几何检查',
+            'scope': '分段前；自动刀位；单件双排优先，仅完整单排尺码后缀旋转；无手动旋转；包含标签、刀码、红线和留白；仅几何检查',
             'occupancy_basis': '生产图片矩形面积，含原图透明部分，不含新增标签/刀码；不是油墨覆盖率'}
 
 
