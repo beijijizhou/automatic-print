@@ -27,9 +27,12 @@ def test_segments_preserve_full_orders_pairing_and_real_pixels(tmp_path, engine,
     assert result['actual_save_parallelism'] == parallel
     assert len(result['files']) == len(set(result['files'])) == 3
     assert all(name.startswith('批次123_') for name in result['files'])
+    assert all('批次8单' in name for name in result['files'])
     membership = defaultdict(set)
     total_images = 0
     for part in result['parts']:
+        orders = {order_key(Path(p['source'])) for p in part['placements']}
+        assert f'本段{len(orders)}单' in part['filename']
         total_images += len(part['placements'])
         for p in part['placements']:
             membership[order_key(Path(p['source']))].add(part['filename'])
@@ -55,6 +58,7 @@ def test_one_large_order_cannot_be_split(tmp_path):
         cutter_mode='dual', output_parts=4, number_images=False))
     assert result['segment_count'] == 1
     assert len(result['parts'][0]['placements']) == 4
+    assert '批次1单 本段1单' in result['filename']
 
 
 def test_partial_segment_failure_quarantines_only_new_files(tmp_path, monkeypatch):

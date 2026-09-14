@@ -9,7 +9,7 @@ from typing import Iterable
 from .models import LayoutSettings, ProgressCallback
 from .images import print_dimensions
 from .labels import normalize_machine_number, format_label
-from .output_name import label_output_name, unused_output_path
+from .output_name import label_output_name, unused_output_path, order_quantity
 from .dual_quality import dual_quality
 from .marker_space import validate_embedded_marks
 from .cut_validation import validate_cut_corridor, validate_canvas_pixels, validate_vips_output
@@ -93,7 +93,10 @@ def generate_layout(
     size_suffix = f' {sizes}' if sizes else ''
     zones = {p.cut_zone for _, p in planned}
     zone_suffix = ' 旋转区' if zones == {'旋转区'} else ' 常规+旋转区' if '旋转区' in zones else ''
-    output_path = unused_output_path(output_dir, label_output_name(label_text+size_suffix+zone_suffix+filename_suffix, batch_name))
+    quantity = order_quantity(paths)
+    if prepared_plan is not None:
+        quantity = prepared_plan.get('batch_quantity', quantity)+' '+order_quantity(paths, '本段')
+    output_path = unused_output_path(output_dir, label_output_name(quantity+' '+label_text+size_suffix+zone_suffix+filename_suffix, batch_name))
     quality = dual_quality(planned, settings)
     if plan_ready:
         plan_ready({"planned": planned, "labels": labels, "settings": settings, "warning": warning, "order_check": order_check, "analysis": analysis[-1], "dual_quality": quality,

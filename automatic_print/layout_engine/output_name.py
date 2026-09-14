@@ -2,6 +2,17 @@
 import re
 
 
+def order_quantity(paths, scope="批次"):
+    """Count order identities, not pictures, pieces or front/back faces."""
+    from .order_groups import order_key
+    keys = {order_key(path) for path in paths}
+    unknown = '未识别订单组' in keys
+    keys.discard('未识别订单组')
+    if unknown:
+        return f'{scope}已识别{len(keys)}单 订单待核对' if keys else f'{scope}订单待核对'
+    return f'{scope}{len(keys)}单'
+
+
 def label_output_name(text, batch_name=""):
     if batch_name:
         text = f"{batch_name}_{text}"
