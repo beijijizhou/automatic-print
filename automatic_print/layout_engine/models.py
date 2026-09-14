@@ -50,6 +50,8 @@ class LayoutSettings:
     cutter_mode: str = "free"
     cutter_left_marker_external: bool = False
     cutter_left_marker_lift_mm: float = 0
+    cutter_compare_whole_rotation: bool = False
+    preserve_header_gap: bool = False
     cutter_knife_mm: float = 300
     cutter_safety_mm: float = 3
     cutter_marker_offset_mm: float = 0

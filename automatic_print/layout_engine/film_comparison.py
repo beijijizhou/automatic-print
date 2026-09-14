@@ -74,6 +74,8 @@ def _compare_films(paths, settings, progress):
                     result = plan_rotation_zones(paths, config, report, deepcopy(analysis), None,
                                                 prepared=(options, labels, fitting, rotated_labels),
                                                 normal_baseline=(baseline, normal_config))
+                    from .whole_rotation import compare_whole
+                    result = compare_whole(paths,config,report,result,(fitting,rotated_labels))
                 else:
                     if normal_error:
                         raise ValueError(normal_error)

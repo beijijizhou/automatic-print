@@ -50,6 +50,15 @@ def can_embed_marker(path, width, height, degrees, block, label, platform):
 def validate_embedded_marks(planned, settings=None):
     """Recheck every source rectangle independently of the packing decision."""
     for path, p in planned:
+        if settings and settings.preserve_header_gap:
+            from .cut_guide_geometry import detect_guide_band
+            header = detect_guide_band(path)
+            for x,y,w,h in ((p.number_x_px,p.number_y_px,p.number_width_px,p.number_height_px),
+                          (p.platform_x_px,p.platform_y_px,p.platform_width_px,p.platform_height_px)):
+                overlaps = w and h and x < p.x_px+p.width_px and x+w > p.x_px and y < p.y_px+p.height_px and y+h > p.y_px
+                in_header = header and not p.rotation_degrees and y >= p.y_px+round(header.top*p.height_px) and y+h <= p.y_px+round(header.bottom*p.height_px)
+                if overlaps and not in_header:
+                    raise ValueError(f'{path.name}：文字进入膜标签与图案之间的禁用区域，禁止输出。')
         if p.rotation_degrees % 360:
             from .cut_guide_geometry import detect_guide_band
             qr = detect_guide_band(path)
@@ -60,7 +69,8 @@ def validate_embedded_marks(planned, settings=None):
                 expected = p.y_px-round(settings.cutter_left_marker_lift_mm*settings.dpi/25.4) if external else p.y_px+marker_top(qr,p.height_px)
                 if p.color_block_width_px and p.color_block_y_px != expected:
                     raise ValueError(f'{path.name}：旋转刀码未处于安全基准高度，禁止输出。')
-                if p.number_width_px and (
+                outside_label = settings and settings.preserve_header_gap and p.number_x_px+p.number_width_px <= p.x_px
+                if p.number_width_px and not outside_label and (
                     p.number_x_px != p.x_px+round(qr.left*p.width_px)
                     or p.number_y_px < p.y_px+ceil(qr.bottom*p.height_px)
                 ):

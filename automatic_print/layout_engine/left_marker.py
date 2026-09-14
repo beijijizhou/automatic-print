@@ -12,7 +12,7 @@ def external_left_item(item):
     image_x = item.image_rx+dx
     platform_x = item.platform_rx+dx
     # Rotated text follows the membrane card; upright text stays under the mark.
-    label_x = item.label_rx+dx if item.rotation_degrees else 0
+    label_x = item.label_rx+dx if item.rotation_degrees and not item.preserve_header_gap else 0
     width = max(image_x+item.width, item.block_width,
                 label_x+item.label_width if item.label_width else 0,
                 platform_x+item.platform_width if item.platform_width else 0)

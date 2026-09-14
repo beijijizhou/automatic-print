@@ -44,6 +44,7 @@ class LayoutItem:
     platform_height: int = 0
     left_marker_gap_px: int = 0
     left_marker_lift_px: int = 0
+    preserve_header_gap: bool = False
 
 
 def read_items(paths, settings, progress):
@@ -170,7 +171,7 @@ def _make_item(
         (label_x, label_y, label_width, label_height), (px, py, pw, ph))
     if rotated:
         block_x, block_y, label_x, label_y = rotated
-    elif settings.cutter_mode != 'free' and can_embed_marker(
+    elif settings.cutter_mode != 'free' and not settings.preserve_header_gap and can_embed_marker(
         path, width, height, rotation_degrees,
         (0, block_y, block_width, block_height),
         (0, label_y, label_width, label_height), (px, py, pw, ph),
@@ -195,6 +196,7 @@ def _make_item(
         if settings.cutter_left_marker_external and settings.cutter_mode != 'free' else 0,
         mm_to_px(settings.cutter_left_marker_lift_mm, settings.dpi)
         if settings.cutter_left_marker_external and settings.cutter_mode != 'free' else 0,
+        settings.preserve_header_gap,
     )
 
 

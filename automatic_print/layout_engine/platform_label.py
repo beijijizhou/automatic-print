@@ -71,7 +71,7 @@ def platform_geometry(path, settings, width, height, degrees):
     badge_width = badge.width
     badge.close()
     gap = mm_to_px(settings.platform_gap_mm, settings.dpi)
-    x = header_space(path, region, width, height, badge_width, target, gap, degrees)
+    x = None if settings.preserve_header_gap and degrees % 180 else header_space(path, region, width, height, badge_width, target, gap, degrees)
     if x is None:
         # Never append a wide platform name to the artwork's right edge.
         x = -gap-badge_width

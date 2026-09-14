@@ -18,6 +18,9 @@ def rotated_marks(path, width, height, degrees, settings, block, label, platform
     _, _, lw, lh = label
     px, py, pw, ph = platform
     by = marker_top(qr, height)
+    if settings.preserve_header_gap:
+        gap = max(1, round(settings.number_gap_mm*settings.dpi/25.4))
+        return bx, by, bx, by+bh+gap
     lx = max(0, round(qr.left*width))
     ly = ceil(qr.bottom*height) + max(1, round(settings.number_gap_mm*settings.dpi/25.4))
 
