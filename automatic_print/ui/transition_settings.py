@@ -9,8 +9,11 @@ class TransitionSettings(QGroupBox):
         self.enabled.toggled.connect(lambda value: preferences.setValue('cutter/transition_lines', value))
         form = QFormLayout(self)
         form.addRow(self.enabled)
+        if not preferences.contains('cutter/footer_disabled_pending_test_v1'):
+            preferences.setValue('cutter/batch_footer_enabled', False)
+            preferences.setValue('cutter/footer_disabled_pending_test_v1', True)
         self.footer = QCheckBox('在批次末尾打印批次、平台、机器、数量及各区刀位信息')
-        self.footer.setChecked(preferences.value('cutter/batch_footer_enabled', True, bool))
+        self.footer.setChecked(preferences.value('cutter/batch_footer_enabled', False, bool))
         self.footer.toggled.connect(lambda value: preferences.setValue('cutter/batch_footer_enabled', value))
         form.addRow(self.footer)
         if not preferences.contains('cutter/footer_spacing_v1'):

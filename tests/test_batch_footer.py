@@ -89,12 +89,15 @@ def test_footer_preferences_migrate_once_and_remember_custom_gap(tmp_path):
     app = QApplication.instance() or QApplication([])
     prefs = QSettings(str(tmp_path/'settings.ini'), QSettings.IniFormat)
     prefs.setValue('cutter/transition_gap_mm', 3)
+    prefs.setValue('cutter/batch_footer_enabled', True)
     first = TransitionSettings(prefs)
-    assert first.footer.isChecked() and first.gap.value() == 10
+    assert not first.footer.isChecked() and first.gap.value() == 10
+    first.footer.setChecked(True)
     first.gap.setValue(7)
     first.footer_font.setValue(5)
     second = TransitionSettings(prefs)
     assert second.gap.value() == 7 and second.footer_font.value() == 5
+    assert second.footer.isChecked()
     first.close()
     second.close()
 
