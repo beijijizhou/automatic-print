@@ -5,6 +5,13 @@ from PySide6.QtWidgets import QFileDialog, QMessageBox
 
 
 class PreferencesMixin:
+    def choose_and_preview(self):
+        if self.has_active_tasks():
+            return
+        folder = self.folder.text().strip()
+        if (folder and Path(folder).is_dir()) or self.choose_folder():
+            self.generate(preview_only=True)
+
     def choose_and_generate(self):
         if self.has_active_tasks():
             return

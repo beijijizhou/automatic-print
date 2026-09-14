@@ -45,9 +45,10 @@ QCheckBox { spacing: 7px; }
 
 def button_kind(text):
     for words, kind in (
+        (('单批次排版',), 'batch_single'), (('多批次排版',), 'batch_multiple'),
         (('放大',), 'zoom_in'), (('缩小',), 'zoom_out'),
         (('适合宽度', '最大化查看', '返回主界面'), 'expand'),
-        (('停止',), 'stop'), (('预览',), 'preview'),
+        (('停止', '暂停批次'), 'stop'), (('预览',), 'preview'),
         (('开始排版', '生成最终', '确认并生成'), 'play'),
         (('色块',), 'color'), (('标签', '文字'), 'text'),
         (('参数', '设置'), 'settings'), (('保存',), 'save'),
@@ -66,7 +67,7 @@ def apply_workbench_style(window):
     window.setStyleSheet(WORKBENCH_STYLE + BUTTON_STYLE + spinbox_style())
     for button in window.findChildren(QPushButton):
         kind = button_kind(button.text())
-        importance = 'primary' if kind == 'play' else 'danger' if kind == 'stop' else 'secondary'
+        importance = 'primary' if kind in {'play', 'batch_single'} else 'danger' if kind == 'stop' else 'secondary'
         button.setProperty('importance', importance)
         button.setIcon(action_icon(kind, '#ffffff' if importance == 'primary' else
                                    '#be123c' if importance == 'danger' else '#475569'))

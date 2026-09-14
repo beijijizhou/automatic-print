@@ -38,6 +38,8 @@ class GenerationPreviewController(QObject):
         self.preview.production_active = True
         self.preview.composed_count = 0
         self.window.automation_home.start_layout_button.setEnabled(False)
+        self.window.automation_home.preview_layout_button.setEnabled(False)
+        self.panel.bulk_generation_button.setEnabled(False)
         self.preview.production_stage = "正在读取整批图片并计算固定刀位…"
         self.panel.manual_rotation.setEnabled(False)
         self.preview.update()
@@ -98,6 +100,8 @@ class GenerationPreviewController(QObject):
         self.preview.production_active = False
         self.preview.composed_count = None
         self.window.automation_home.start_layout_button.setEnabled(True)
+        self.window.automation_home.preview_layout_button.setEnabled(True)
+        self.panel.bulk_generation_button.setEnabled(True)
         self.preview.production_stage = "本次任务预览（保留实际刀位与排版位置）"
         self.panel.manual_rotation.setEnabled(True)
         self.preview.update()

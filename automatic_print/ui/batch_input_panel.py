@@ -1,5 +1,5 @@
 """A compact production action row; configuration belongs in print settings."""
-from PySide6.QtWidgets import QGroupBox, QHBoxLayout
+from PySide6.QtWidgets import QGroupBox, QHBoxLayout, QPushButton
 from .action_icons import action_icon
 
 
@@ -8,9 +8,13 @@ def build_batch_input(owner, panel):
     group.setObjectName('batchInput')
     row = QHBoxLayout(group)
     row.setSpacing(14)
+    owner.preview_layout_button = QPushButton('仅预览排版')
+    owner.preview_layout_button.clicked.connect(owner.window().choose_and_preview)
+    owner.preview_layout_button.setToolTip('使用当前文件夹计算整批排版和用膜情况，不生成打印文件。')
     for button, text, icon in (
-        (owner.start_layout_button, '单批次', 'play'),
-        (panel.bulk_generation_button, '多批次', 'folder'),
+        (owner.start_layout_button, '单批次排版', 'batch_single'),
+        (panel.bulk_generation_button, '多批次排版', 'batch_multiple'),
+        (owner.preview_layout_button, '仅预览排版', 'preview'),
         (owner.window().stop_generation_button, '暂停批次', 'stop'),
     ):
         button.setText(text)
