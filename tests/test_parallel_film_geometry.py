@@ -43,8 +43,9 @@ def test_four_workers_simultaneous_and_no_image_io_after_measurement(tmp_path, m
     barrier, threads = Barrier(4), set()
     def concurrent(fn):
         def run(*args, **kwargs):
-            threads.add(get_ident())
-            barrier.wait(timeout=5)
+            if get_ident() not in threads:
+                threads.add(get_ident())
+                barrier.wait(timeout=5)
             return fn(*args, **kwargs)
         return run
     for name in ('plan_cutter_layout', 'plan_rotation_zones'):
@@ -82,7 +83,7 @@ def test_comparison_keeps_actual_selected_batch_pixel_corridors(tmp_path, engine
     paths = qr_sources(tmp_path)
     result = generate_layout(paths, tmp_path/'out', replace(settings(),
         compare_film_sizes=True, png_engine=engine, output_parts=3, save_memory_unlimited=True))
-    assert len(result['analysis']['film_comparison']['rows']) == 8
+    assert len(result['analysis']['film_comparison']['rows']) == 18
     for part in result.get('parts', [result]):
         assert part['order_check']
         planned = [(tmp_path/p['source'], Placement(**p)) for p in part['placements']]

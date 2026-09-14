@@ -21,3 +21,12 @@ class BatchDetailsDialog(QDialog):
         self.show()
         self.raise_()
         self.activateWindow()
+
+    def open_history(self):
+        if not hasattr(self, 'history_page'):
+            from .film_history import FilmHistoryPage
+            self.history_page = FilmHistoryPage(self)
+            self.tabs.addTab(self.history_page, '用膜历史记录')
+        self.tabs.setCurrentWidget(self.history_page)
+        self.open_details()
+        self.history_page.refresh()

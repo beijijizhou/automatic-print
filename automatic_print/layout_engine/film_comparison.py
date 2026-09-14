@@ -35,7 +35,7 @@ def _compare_films(paths, settings, progress):
     analysis = analyze_batch(paths, shared)
     measured_seconds = monotonic()-started
     if progress:
-        progress('膜规格比较', 0, COMPARISON_COUNT, '测量已完成，八套参考方案最多四路并行，不合成图片、不切换生产参数')
+        progress('膜规格比较', 0, COMPARISON_COUNT, '测量已完成，18套参考方案最多四路并行，不合成图片、不切换生产参数')
     completed = [0]
     def calculate(film, rotation):
             usable = film-settings.riin_left_mm-settings.riin_right_mm
@@ -109,7 +109,7 @@ def _compare_films(paths, settings, progress):
 def comparison_text(comparison):
     if not comparison:
         return ''
-    lines = ['膜规格八方案比较（分段前，按耗膜面积比较；不自动选择生产方案）']
+    lines = ['膜规格比较：40–80厘米、间隔5厘米（分段前，按耗膜面积比较；不自动选择生产方案）']
     if 'measurement_seconds' in comparison:
         measurement = comparison['measurement_seconds']
         lines.append(f"共享测量 {measurement:.2f} 秒 · 方案并行计算 "

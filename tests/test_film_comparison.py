@@ -26,7 +26,7 @@ def test_four_real_plans_report_area_not_cross_width_length(tmp_path):
                               number_images=False, transition_lines=True)
     progress = []
     result = compare_films(paths, settings, lambda *args: progress.append(args))
-    assert len(result['rows']) == 8
+    assert len(result['rows']) == 18
     assert result['parallelism'] == 4
     for row in result['rows']:
         assert not row['error']
@@ -41,8 +41,8 @@ def test_four_real_plans_report_area_not_cross_width_length(tmp_path):
     assert result['rows'][3]['length_m'] < result['rows'][2]['length_m']
     best = min(result['rows'], key=lambda row: row['film_area_m2'])
     assert result['best_name'] == best['name']
-    assert progress[-1][:3] == ('膜规格比较', 8, 8)
-    assert {r['film_mm'] for r in result['rows']} == {400, 450, 600, 800}
+    assert progress[-1][:3] == ('膜规格比较', 18, 18)
+    assert {r['film_mm'] for r in result['rows']} == set(range(400, 801, 50))
     assert all(r['available'] == (r['film_mm'] in (450, 600)) for r in result['rows'])
     assert '不自动选择生产方案' in comparison_text(result)
     assert '不是油墨覆盖率' in comparison_text(result)
@@ -66,7 +66,7 @@ def test_planner_comparison_is_optional_and_preserves_selected_plan(tmp_path):
     reports = []
     actual = plan_layout(paths, replace(settings, compare_film_sizes=True), None, reports.append)
     assert actual == expected
-    assert len(reports[-1]['film_comparison']['rows']) == 8
+    assert len(reports[-1]['film_comparison']['rows']) == 18
 
 
 def test_future_width_can_fit_without_becoming_production_selection(tmp_path):
@@ -76,7 +76,7 @@ def test_future_width_can_fit_without_becoming_production_selection(tmp_path):
     result = compare_films([path], settings)
     future = [row for row in result['rows'] if row['film_mm'] == 800]
     assert all(not row['error'] and not row['available'] for row in future)
-    assert all(row['error'] for row in result['rows'] if row['film_mm'] < 800)
-    assert result['best_name'].startswith('80 厘米')
+    assert all(row['error'] for row in result['rows'] if row['film_mm'] < 700)
+    assert result['best_name'].startswith('70 厘米')
     assert settings.media_width_mm == 580
     assert '不代表当前设备可生产' in comparison_text(result)

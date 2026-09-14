@@ -25,7 +25,7 @@ class FilmComparisonTable(QTableWidget):
         for row, name in enumerate(names):
             for col, value in enumerate((name, text, '—', '—', '—')):
                 self.setItem(row, col, QTableWidgetItem(value))
-        self.setToolTip('40/80厘米暂无规格，仅供参考；不会切换生产参数。面积使用物理膜宽，图片占位不是油墨覆盖率。')
+        self.setToolTip('40–80厘米每隔5厘米比较；仅45/60为现有规格；参考结果不会切换生产参数。图片占位不是油墨覆盖率。')
 
     def show_comparison(self, comparison):
         if not comparison:

@@ -175,6 +175,10 @@ class LabelQuickPanel(QWidget):
         self.details_dialog.add_page('切割明细', [self.summary.cutting])
         self.details_button = QPushButton('批次详情与检查…')
         self.details_button.clicked.connect(self.details_dialog.open_details)
+        self.history_button = QPushButton('用膜历史记录…')
+        from .action_icons import action_icon
+        self.history_button.setIcon(action_icon('more'))
+        self.history_button.clicked.connect(self.details_dialog.open_history)
 
     def _select_analysis_source(self, path):
         combo = self.manual_rotation.images

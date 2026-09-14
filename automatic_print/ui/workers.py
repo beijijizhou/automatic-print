@@ -51,6 +51,14 @@ class GenerateWorker(QObject):
     def request_cancel(self) -> None:
         self.cancellation.request()
 
+    def _save_history(self, result):
+        try:
+            from ..history.store import save_run
+            save_run(self.job_id, self.source, self.output, self.settings, result)
+        except Exception as error:
+            result['history_warning'] = f'本地用膜历史保存失败：{error}'
+            self.progress.emit('历史保存失败', 0, 0, result['history_warning'])
+
     def _progress(self, stage, current, total, filename) -> None:
         self.cancellation.check()
         if stage in PROGRESS_PHASES:
@@ -82,6 +90,7 @@ class GenerateWorker(QObject):
             result['operation_timings'] = self.timing.finish()
             self.timings_ready.emit(result['operation_timings'])
             if self.preview_only:
+                self._save_history(result)
                 self.finished.emit("", result)
                 return
             manifest = {
@@ -106,6 +115,7 @@ class GenerateWorker(QObject):
                     '本段计时从复用整批排版开始，到本段信息整理完成')
             combined = cutting_report(result) + '\n\n耗时与并行处理\n' + report_text
             (self.output / '排版报告.txt').write_text(combined, encoding='utf-8')
+            self._save_history(result)
         except TaskCancelled:
             self.timings_ready.emit(self.timing.finish('已停止'))
             self.cancelled.emit()

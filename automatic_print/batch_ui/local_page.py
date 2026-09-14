@@ -87,6 +87,7 @@ def build_local_page(owner) -> QWidget:
         layout.addWidget(owner.label_quick_panel)
         direct_actions.addWidget(window.stop_generation_button)
         direct_actions.addWidget(owner.label_quick_panel.details_button)
+        direct_actions.addWidget(owner.label_quick_panel.history_button)
         owner.label_quick_panel.details_dialog.add_page('预览与处理日志', [
             preview_button, window.run_log, owner.log,
         ])

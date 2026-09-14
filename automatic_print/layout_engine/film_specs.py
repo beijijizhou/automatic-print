@@ -1,5 +1,5 @@
 """Comparison inventory; reference widths never change production settings."""
-FILM_WIDTHS = (600, 450, 800, 400)
+FILM_WIDTHS = (600, 450, 400, 500, 550, 650, 700, 750, 800)
 AVAILABLE_WIDTHS = frozenset((600, 450))
 COMPARISON_COUNT = len(FILM_WIDTHS) * 2
 

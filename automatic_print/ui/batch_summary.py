@@ -87,7 +87,8 @@ class BatchSummaryPanel(QGroupBox):
                 '\n可在打印参数取消旋转区，选择常规方案；仅预览不会生成文件。')
 
     def finished(self, output, result):
-        self.anomalies.setText(anomaly_text(result.get('analysis', {})))
+        self.anomalies.setText('\n'.join(filter(None, (
+            anomaly_text(result.get('analysis', {})), result.get('history_warning', '')))))
         self.anomalies.setVisible(bool(self.anomalies.text()))
         if result.get('preview_only'):
             self.progress.setText('整批预览完成，未生成文件；本批次预览和总结已保留。')

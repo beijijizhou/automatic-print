@@ -25,12 +25,12 @@ def test_four_options_are_visible_and_copyable(tmp_path, capfd):
     panel.resize(1300, 470)
     panel.show()
     app.processEvents()
-    assert panel.film_table.rowCount() == 8
-    text = '\n'.join(panel.film_table.item(row, 0).text() for row in range(8))
-    for film in ('60', '45', '40', '80'):
+    assert panel.film_table.rowCount() == 18
+    text = '\n'.join(panel.film_table.item(row, 0).text() for row in range(18))
+    for film in ('60', '45', '40', '50', '55', '65', '70', '75', '80'):
         for option in ('不旋转', '允许旋转'):
             assert f'{film} 厘米 · {option}' in text
-    assert text.count('（参考）') == 4
+    assert text.count('（参考）') == 14
     assert panel.film_table.horizontalHeaderItem(2).text() == '面积 / ㎡'
     assert panel.film_table.horizontalHeaderItem(3).text() == '图片占位'
     assert panel.metrics.textInteractionFlags() & Qt.TextSelectableByMouse
