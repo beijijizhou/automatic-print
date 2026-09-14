@@ -62,6 +62,8 @@ class BatchSummaryPanel(QGroupBox):
         self.info.setText(f"{folder}\n{report['batch_type']} · {report['order_count']} 个订单组"
                           f" · {report['piece_count']} 件 / {report['image_count']} 张图"
                           f" · {report['double_pairs']} 组双面")
+        if report.get('cache', {}).get('hit'):
+            self.info.setText(self.info.text()+'\n本地缓存命中：已复用测量、刀位、排版与用膜方案')
         if 'height_m' in report:
             saved = report['saved_m']
             self.metrics.setText(f"排版长度 {report['height_m']:.3f} 米"

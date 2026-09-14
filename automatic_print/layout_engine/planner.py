@@ -20,11 +20,10 @@ def plan_layout(
     progress: ProgressCallback | None,
     analysis_ready=None,
 ) -> tuple[list[tuple[Path, Placement]], dict[int, str], int, int, int]:
-    from .measurement_session import measurement_session, verify_sources
-    with measurement_session():
-        result = _measured_plan(paths, settings, progress, analysis_ready)
-        verify_sources()
-        return result
+    from .measurement_session import measurement_session
+    from .cached_planner import plan_with_cache
+    with measurement_session() as session:
+        return plan_with_cache(_measured_plan, paths, settings, progress, analysis_ready, session)
 
 
 def _measured_plan(paths, settings, progress, analysis_ready):
