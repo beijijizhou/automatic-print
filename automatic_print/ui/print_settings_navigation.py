@@ -42,4 +42,5 @@ def build_settings_navigation(window, source):
     window.bulk_parallelism.setToolTip('独立批次滚动处理；完成一批立即补下一批。启动后使用参数快照。')
     forms['输出与并行'].insertRow(0, '同时处理批次数', window.bulk_parallelism)
     window.print_settings_tabs = tabs
+    window.layout_rules_form = forms['排版规则']
     return tabs

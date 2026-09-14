@@ -24,6 +24,7 @@ def build_developer_mode(window, footer):
             return
         window.developer_mode_enabled = enabled
         window.quick_header_gap_group.setVisible(enabled)
+        window.layout_rules_form.setRowVisible(window.membrane_gap, enabled)
         panel = window.automation_home.label_quick_panel
         panel.summary.gap_loss.setVisible(enabled)
         panel.history_button.setVisible(enabled)
