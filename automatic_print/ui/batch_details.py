@@ -50,3 +50,14 @@ class BatchDetailsDialog(QDialog):
             self.production_bulk_dialog = BulkGenerationDialog(self.parent())
         self.production_bulk_dialog.show()
         self.production_bulk_dialog.raise_()
+
+    def open_algorithm_costs(self):
+        if not getattr(self.parent(), 'developer_mode_enabled', False):
+            return
+        if not hasattr(self, 'algorithm_page'):
+            from .algorithm_costs import AlgorithmCostsPage
+            self.algorithm_page = AlgorithmCostsPage(self.parent(), self)
+            self.tabs.addTab(self.algorithm_page, '算法开销')
+        self.algorithm_page.refresh()
+        self.tabs.setCurrentWidget(self.algorithm_page)
+        self.open_details()

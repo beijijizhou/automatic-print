@@ -185,6 +185,9 @@ class LabelQuickPanel(QWidget):
         self.bulk_generation_button = QPushButton('多批次排版…')
         self.bulk_generation_button.setIcon(action_icon('folder'))
         self.bulk_generation_button.clicked.connect(self.details_dialog.open_bulk_generation)
+        self.algorithm_costs_button = QPushButton('算法开销…')
+        self.algorithm_costs_button.setIcon(action_icon('more'))
+        self.algorithm_costs_button.clicked.connect(self.details_dialog.open_algorithm_costs)
 
     def _select_analysis_source(self, path):
         combo = self.manual_rotation.images
