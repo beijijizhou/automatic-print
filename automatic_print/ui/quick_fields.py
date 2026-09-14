@@ -45,5 +45,10 @@ def quick_fields(panel, date_button, window):
                          window.preferences.value('layout/input_mode', 'single', str))
     layout = QVBoxLayout()
     layout.addLayout(row)
-    layout.addWidget(panel.selected_source)
+    from .current_film import CurrentFilmLabel
+    panel.current_film = CurrentFilmLabel(window, panel)
+    identities = QHBoxLayout()
+    identities.addWidget(panel.selected_source, 3)
+    identities.addWidget(panel.current_film, 2)
+    layout.addLayout(identities)
     return layout

@@ -11,6 +11,10 @@ class BatchSummaryPanel(QGroupBox):
     def __init__(self, parent=None):
         super().__init__('本次批次 · 排版总结', parent)
         self.info = QLabel('请选择本地图片文件夹。')
+        self.info.setTextFormat(Qt.PlainText)
+        self.info.setStyleSheet('QLabel { background: #dbeafe; color: #1e3a8a; '
+            'border: 2px solid #60a5fa; border-radius: 7px; padding: 9px; '
+            'font-size: 17px; font-weight: bold; }')
         self.metrics = QLabel('排版后显示总长度、节省用膜和旋转数量。')
         self.progress = QLabel('尚未开始')
         self.measurement = QLabel()
