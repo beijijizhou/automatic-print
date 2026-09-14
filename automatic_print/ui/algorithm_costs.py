@@ -2,7 +2,7 @@
 from time import perf_counter
 from PySide6.QtCore import Qt, QTimer
 from PySide6.QtWidgets import (QWidget, QVBoxLayout, QLabel, QTableWidget,
-    QTableWidgetItem, QAbstractItemView, QPushButton, QPlainTextEdit, QApplication)
+    QTableWidgetItem, QAbstractItemView, QPushButton, QPlainTextEdit, QApplication, QTabWidget)
 from ..layout_engine.algorithm_costs import VARIABLES, STEPS
 from ..layout_engine.operation_timing import timing_report
 
@@ -40,8 +40,15 @@ class AlgorithmCostsPage(QWidget):
         self.table.setCurrentCell(5, 0)
         self.actual = QPlainTextEdit()
         self.actual.setReadOnly(True)
-        layout.addWidget(self.actual, 1)
-        copy = QPushButton('复制算法开销与本次耗时')
+        records = QTabWidget()
+        self.records = records
+        records.addTab(self.actual, '当前批次耗时')
+        from ..layout_engine.benchmark_reference import reference_text
+        self.reference = QPlainTextEdit(reference_text())
+        self.reference.setReadOnly(True)
+        records.addTab(self.reference, '58张实图基准')
+        layout.addWidget(records, 1)
+        copy = QPushButton('复制算法开销、当前耗时与实图基准')
         copy.clicked.connect(self.copy_report)
         layout.addWidget(copy)
         window.worker_bridge.layout_timings.connect(lambda *_: self.refresh())
@@ -70,4 +77,4 @@ class AlgorithmCostsPage(QWidget):
 
     def copy_report(self):
         text = VARIABLES+'\n\n'+'\n'.join(' · '.join(row) for row in STEPS)
-        QApplication.clipboard().setText(text+'\n\n'+self.actual.toPlainText())
+        QApplication.clipboard().setText(text+'\n\n'+self.actual.toPlainText()+'\n\n'+self.reference.toPlainText())
