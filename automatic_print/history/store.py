@@ -39,7 +39,8 @@ def save_run(job_id, source, output, settings, result, path=None):
               'version': __version__, 'version_display': __version_display__,
               'source_folder': str(Path(source).resolve()), 'batch_name': Path(source).name,
               'output_folder': str(output) if not result.get('preview_only') else '',
-              'status': '仅预览' if result.get('preview_only') else '已生成',
+              'status': '仅分析' if result.get('comparison_only') else '仅预览' if result.get('preview_only') else '已生成',
+              'group_id': result.get('group_id', ''),
               'settings': asdict(settings),
               'image_count': analysis.get('image_count'),
               'order_count': analysis.get('order_count'),
@@ -58,7 +59,7 @@ def load_runs(path=None):
 
 
 def export_csv(destination, records):
-    columns = ['记录编号', '时间', '批次', '来源', '状态', '版本', '图片数', '订单数',
+    columns = ['记录编号', '分析组编号', '时间', '批次', '来源', '状态', '版本', '图片数', '订单数',
                '实际膜宽毫米', '左预留毫米', '右预留毫米', '方案膜宽毫米', '可用宽毫米',
                '允许旋转', '现有规格', '长度米', '耗膜平方米', '可用面积平方米',
                '图片面积平方米', '图片占位百分比', '可用区占位百分比', '旋转图片数', '计算秒', '异常']
@@ -68,7 +69,7 @@ def export_csv(destination, records):
         for record in records:
             settings = record['settings']
             for row in record['comparison']['rows']:
-                writer.writerow([record['id'], record['created_at'], record['batch_name'],
+                writer.writerow([record['id'], record.get('group_id', ''), record['created_at'], record['batch_name'],
                     record['source_folder'], record['status'], record['version'],
                     record['image_count'], record['order_count'], settings['media_width_mm']+
                     settings['riin_left_mm']+settings['riin_right_mm'],

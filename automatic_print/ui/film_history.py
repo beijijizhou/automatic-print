@@ -17,12 +17,16 @@ class FilmHistoryPage(QWidget):
         actions = QHBoxLayout()
         refresh = QPushButton('刷新历史')
         export = QPushButton('导出全部统计数据')
+        summarize = QPushButton('汇总同组批次')
+        summarize.setIcon(action_icon('more'))
+        summarize.clicked.connect(self.summarize)
         refresh.setIcon(action_icon('refresh'))
         export.setIcon(action_icon('save'))
         refresh.clicked.connect(self.refresh)
         export.clicked.connect(self.export)
         actions.addWidget(refresh)
         actions.addWidget(export)
+        actions.addWidget(summarize)
         layout.addLayout(actions)
         self.status = QLabel('打开历史时读取本地日志，不读取原始图片。')
         self.status.setTextInteractionFlags(Qt.TextSelectableByMouse)
@@ -81,3 +85,14 @@ class FilmHistoryPage(QWidget):
                 self.status.setText(f'已导出：{filename}；每次记录、每套方案各一行。')
             except Exception as error:
                 self.status.setText(f'导出失败：{error}')
+
+    def summarize(self):
+        row = self.runs.currentRow()
+        if not 0 <= row < len(self.records):
+            return
+        group = self.records[row].get('group_id')
+        if not group:
+            self.status.setText('这条记录不属于批量分析组，请选择批量分析的记录。')
+            return
+        from ..history.bulk_analysis import summary_text
+        self.details.setPlainText(summary_text([r for r in self.records if r.get('group_id') == group]))

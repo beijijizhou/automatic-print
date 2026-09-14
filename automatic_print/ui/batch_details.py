@@ -30,3 +30,10 @@ class BatchDetailsDialog(QDialog):
         self.tabs.setCurrentWidget(self.history_page)
         self.open_details()
         self.history_page.refresh()
+
+    def open_bulk_analysis(self):
+        if not hasattr(self, 'bulk_dialog'):
+            from .bulk_film_analysis import BulkFilmAnalysisDialog
+            self.bulk_dialog = BulkFilmAnalysisDialog(self.parent())
+        self.bulk_dialog.show()
+        self.bulk_dialog.raise_()
