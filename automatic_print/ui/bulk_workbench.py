@@ -1,7 +1,8 @@
 """Rolling batch jobs presented by the same main workbench as single jobs."""
 from pathlib import Path
 from PySide6.QtCore import QObject, QThread, Qt, Slot
-from PySide6.QtWidgets import QFileDialog, QComboBox
+from PySide6.QtWidgets import QFileDialog
+from .batch_status_board import BatchStatusBoard
 from .folder_dialog_paths import image_dialog_start, remember_image_directory
 from .bulk_generation_worker import BulkGenerationWorker
 
@@ -27,14 +28,20 @@ class BulkWorkbench(QObject):
         self.window = window
         self.panel = window.automation_home.label_quick_panel
         self.thread = self.worker = None
-        self.selector = QComboBox()
+        self.selector = BatchStatusBoard()
         self.selector.setToolTip('切换当前批次，查看同一主界面的进度、耗时、预览与总结。')
         self.panel.summary.layout().insertWidget(0, self.selector)
         self.selector.currentIndexChanged.connect(self.select)
 
     def begin(self, parent):
         self.folders = sorted(p for p in parent.iterdir() if p.is_dir() and p.name != '切膜机文件')
+        self.payloads, self.records, self.stages, self.timing_data = {}, {}, {}, {}
+        self.selector.reset(self.folders)
+        self.selector.show()
         if not self.folders:
+            self.window.generation_preview.payload = None
+            self.panel.preview.clear_for_generation()
+            self.panel.summary.start(str(parent), 0)
             self.window.status.setText('上级目录没有可处理的批次文件夹。')
             return
         try:
@@ -45,11 +52,6 @@ class BulkWorkbench(QObject):
         except ValueError as error:
             self.window.status.setText(str(error))
             return
-        self.payloads, self.records, self.stages, self.timing_data = {}, {}, {}, {}
-        self.selector.blockSignals(True)
-        self.selector.clear()
-        self.selector.addItems([p.name+' · 等待开始' for p in self.folders])
-        self.selector.blockSignals(False)
         self.window.generation_preview.start()
         self.selector.show()
         self.select(0)
@@ -104,7 +106,7 @@ class BulkWorkbench(QObject):
     @Slot(int, str, str, object, object, str)
     def progress(self, index, folder, stage, current, total, filename):
         self.stages[index] = stage, current, total, filename
-        self.selector.setItemText(index, self.folders[index].name+' · '+stage)
+        self.selector.update_batch(index, stage, current, total, filename)
         if index == self.selector.currentIndex():
             self.show_stage(index)
 
@@ -124,11 +126,16 @@ class BulkWorkbench(QObject):
     @Slot(int, object)
     def completed(self, index, record):
         self.records[index] = record
+        self.selector.update_batch(index, '批次预览完成' if record['result'].get('preview_only') else '批次生成完成')
         if index == self.selector.currentIndex():
             self.panel.summary.finished(record['output'], record['result'])
 
     @Slot(object)
     def complete(self, result):
+        for index in self.selector.items:
+            if index not in self.records:
+                stage = self.stages.get(index, ('未执行', 0, 0, ''))
+                self.selector.update_batch(index, *stage, group='未完成')
         self.window.generation_preview.end()
         self.window.stop_generation_button.setEnabled(False)
         text = (f"{'已停止' if result['stopped'] else '已完成'} · 成功{len(result['records'])}批"

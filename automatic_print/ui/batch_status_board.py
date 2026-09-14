@@ -1,0 +1,111 @@
+"""Direct, grouped batch visibility without a modal window or dropdown."""
+from PySide6.QtCore import Qt, Signal
+from PySide6.QtWidgets import QWidget, QHBoxLayout, QVBoxLayout, QLabel, QTreeWidget, QTreeWidgetItem
+from .action_icons import action_icon
+from .progress_format import file_size_text
+
+
+class BatchStatusBoard(QWidget):
+    currentIndexChanged = Signal(int)
+
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.index = -1
+        self.items, self.groups, self.titles = {}, {}, {}
+        row = QHBoxLayout(self)
+        row.setContentsMargins(0, 0, 0, 0)
+        for name, icon, color in (('已完成', 'done', '#15803d'),
+                                  ('进行中', 'refresh', '#2563eb'),
+                                  ('未完成', 'waiting', '#b45309')):
+            body = QVBoxLayout()
+            heading = QHBoxLayout()
+            mark = QLabel()
+            mark.setPixmap(action_icon(icon, color).pixmap(20, 20))
+            title = QLabel(name+'（0）')
+            title.setStyleSheet(f'color: {color}; font-weight: bold;')
+            heading.addWidget(mark)
+            heading.addWidget(title)
+            heading.addStretch()
+            body.addLayout(heading)
+            tree = QTreeWidget()
+            tree.setHeaderLabels(['批次文件夹', '当前状态'])
+            tree.setRootIsDecorated(False)
+            tree.setWordWrap(True)
+            tree.setColumnWidth(0, 105)
+            tree.itemSelectionChanged.connect(lambda t=tree: self.choose(t))
+            body.addWidget(tree)
+            row.addLayout(body, 1)
+            self.groups[name], self.titles[name] = tree, title
+        self.setMinimumHeight(155)
+        self.setMaximumHeight(230)
+
+    def reset(self, folders):
+        self.blockSignals(True)
+        for tree in self.groups.values():
+            tree.blockSignals(True)
+            tree.clear()
+        self.items.clear()
+        self.index = -1
+        for index, folder in enumerate(folders):
+            item = QTreeWidgetItem([folder.name, '等待开始'])
+            item.setData(0, Qt.UserRole, index)
+            item.setIcon(0, action_icon('waiting', '#b45309'))
+            item.setToolTip(0, str(folder))
+            self.groups['未完成'].addTopLevelItem(item)
+            self.items[index] = item
+        for tree in self.groups.values():
+            tree.blockSignals(False)
+        self.counts()
+        self.blockSignals(False)
+        if folders:
+            self.setCurrentIndex(0)
+
+    def counts(self):
+        for name, tree in self.groups.items():
+            self.titles[name].setText(f'{name}（{tree.topLevelItemCount()}）')
+
+    def update_batch(self, index, stage, current=0, total=0, filename='', group=None):
+        item = self.items[index]
+        done = stage in ('批次生成完成', '批次预览完成')
+        failed = '失败' in stage or '停止' in stage
+        group = group or ('已完成' if done else '未完成' if failed else '进行中')
+        source, target = item.treeWidget(), self.groups[group]
+        for tree in self.groups.values():
+            tree.blockSignals(True)
+        if source is not target:
+            source.takeTopLevelItem(source.indexOfTopLevelItem(item))
+            target.addTopLevelItem(item)
+        count = f' · {current}/{total}' if total else (
+            ' · 已写入 '+file_size_text(current) if stage == '保存图片' else '')
+        item.setText(1, stage+count)
+        item.setToolTip(1, stage+count+'\n'+filename)
+        icon, color = ('done', '#15803d') if done else (
+            ('warning', '#be123c') if failed else ('waiting', '#b45309') if group == '未完成'
+            else ('refresh', '#2563eb'))
+        item.setIcon(0, action_icon(icon, color))
+        item.setSelected(index == self.index)
+        for tree in self.groups.values():
+            tree.blockSignals(False)
+        self.counts()
+
+    def currentIndex(self):
+        return self.index
+
+    def setCurrentIndex(self, index):
+        if index not in self.items:
+            return
+        self.index = index
+        for tree in self.groups.values():
+            tree.blockSignals(True)
+            tree.clearSelection()
+        item = self.items[index]
+        item.setSelected(True)
+        item.treeWidget().scrollToItem(item)
+        for tree in self.groups.values():
+            tree.blockSignals(False)
+        self.currentIndexChanged.emit(index)
+
+    def choose(self, tree):
+        selected = tree.selectedItems()
+        if selected:
+            self.setCurrentIndex(selected[0].data(0, Qt.UserRole))

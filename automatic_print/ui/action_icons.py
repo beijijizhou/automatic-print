@@ -5,6 +5,9 @@ from PySide6.QtSvg import QSvgRenderer
 
 
 PATHS = {
+    'done': '<circle cx="12" cy="12" r="9"/><path d="m7 12 3 3 7-7"/>',
+    'waiting': '<circle cx="12" cy="12" r="9"/><path d="M12 6v6l4 2"/>',
+    'warning': '<path d="m12 3 10 18H2Z M12 9v5M12 17h.01"/>',
     'batch_single': '<rect x="4" y="3" width="16" height="18" rx="2"/><path d="M8 7h8M8 11h8m-5 4 4 2-4 2Z"/>',
     'batch_multiple': '<path d="M7 3h14v14M4 6h14v14"/><rect x="1" y="9" width="14" height="14" rx="2"/><path d="M5 13h6M5 17h6"/>',
     'zoom_in': '<circle cx="10" cy="10" r="7"/><path d="m15 15 6 6M6 10h8M10 6v8"/>',
