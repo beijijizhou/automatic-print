@@ -66,8 +66,10 @@ class PreviewTask(QRunnable):
 
             warning, overflow, order_check = '', [], {}
             try:
-                planned, labels, _, height, baseline = plan_layout(paths, self.settings, progress,
-                                                                  analysis_ready=analysis)
+                from ..layout_engine.gap_fallback import plan_with_gap_fallback
+                paths, self.settings, result = plan_with_gap_fallback(paths, self.settings, gap_records, progress, analysis)
+                planned, labels, _, height, baseline = result
+                effective[0] = replace(self.settings, cutter_knife_mm=effective[0].cutter_knife_mm)
                 order_check = validate_order_placements(paths, planned)
                 validate_cut_corridor(planned, effective[0],
                                      mm_to_px(self.settings.media_width_mm, self.settings.dpi))

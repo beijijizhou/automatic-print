@@ -188,5 +188,7 @@ def gap_report(records):
     if not records:
         return ''
     changed = [record for record in records if record['added_px']]
+    rolled = [r for r in records if r.get('rollback_added_mm')]
     return (f"膜标签与图案最小间距：{records[0]['minimum_mm']:g}毫米 · 补足{len(changed)}张（不缩放原图）\n" +
-            '\n'.join(f"{r['filename']}：新增透明空白{r['added_mm']:.2f}毫米" for r in changed))
+            '\n'.join(f"{r['filename']}：新增透明空白{r['added_mm']:.2f}毫米" for r in changed)+
+            '\n'+'\n'.join(f"{r['filename']}：已回退新增{r['rollback_added_mm']:.2f}毫米；用户设置未修改" for r in rolled))

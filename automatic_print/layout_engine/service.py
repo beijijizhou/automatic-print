@@ -73,8 +73,10 @@ def generate_layout(
         if analysis_ready:
             analysis_ready(data)
     if prepared_plan is None:
-        planned, labels, width, height, baseline_height = plan_layout(
-            paths, settings, report, analysis_ready=analyzed)
+        from .gap_fallback import plan_with_gap_fallback
+        paths, settings, result = plan_with_gap_fallback(paths, settings, gap_records, report, analyzed)
+        planned, labels, width, height, baseline_height = result
+        effective[0] = replace(settings, cutter_knife_mm=effective[0].cutter_knife_mm)
     else:
         planned, labels, width, height, baseline_height = prepared_plan['plan']
         effective[0] = prepared_plan['settings']
