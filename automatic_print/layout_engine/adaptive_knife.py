@@ -25,7 +25,7 @@ def plan_adaptive_knife_zones(paths, settings, progress):
     double_orders, leftovers = _partition(complete_orders(paths), items, lanes)
     normal_paths = [path for order in double_orders for path in order]
     rotated_paths = [path for order in leftovers for path in order]
-    if not rotated_paths or len(normal_paths) <= len(rotated_paths):
+    if len(normal_paths) <= len(rotated_paths):
         raise ValueError('可安全双排的图片未超过半数，改用常规旋转方案比较。')
 
     effective = [base]
@@ -39,6 +39,15 @@ def plan_adaptive_knife_zones(paths, settings, progress):
         prepared=([[items[path]] for path in normal_paths], labels),
         preserve_sequence=True,
     )
+
+    if not rotated_paths:
+        knife = mm_to_px(effective[0].cutter_knife_mm, base.dpi)
+        planned = [(path, replace(p, cut_zone='双排区', cut_knife_x_px=knife))
+                   for path, p in normal[0]]
+        if progress:
+            progress('双排与旋转分区', len(paths), len(paths),
+                     f'全部{len(paths)}张进入双排区；没有剩余旋转区；共1个区域')
+        return planned, normal[1], normal[2], normal[3], normal[4]
 
     from .rotation_zones import _rotated, rotation_items
     rotated_items, rotated_labels = rotation_items(rotated_paths, base, progress)
