@@ -176,7 +176,7 @@ class BulkWorkbench(QObject):
     def cancel(self):
         self.worker.cancellation.request()
         self.window.stop_generation_button.setEnabled(False)
-        self.window.status.setText('正在安全停止多批次排版，保留已完成文件…')
+        self.window.status.setText('正在停止多批次排版，保留已完成文件；软件不会退出…')
 
     @Slot()
     def cleanup(self):

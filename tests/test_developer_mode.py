@@ -43,11 +43,14 @@ def test_default_hides_tools_and_gates_direct_open(tmp_path, monkeypatch):
     assert pauses == [owner.stop_generation_button]
     assert owner.stop_generation_button.parentWidget().objectName() == 'batchInput'
     owner.stop_generation_button.setEnabled(True)
-    from automatic_print.ui import immediate_exit
-    exits = []
-    monkeypatch.setattr(immediate_exit, 'exit_now', exits.append)
+    from types import SimpleNamespace
+    cancelled=[]
+    owner.thread=object()
+    owner.worker=SimpleNamespace(request_cancel=lambda:cancelled.append(True))
     owner.stop_generation_button.click()
-    assert exits == [owner]
+    assert cancelled==[True]
+    assert owner.isVisible()
+    owner.thread=owner.worker=None
     owner.stop_generation_button.setEnabled(False)
     assert not owner.stop_generation_button.isEnabled()
     before = settings_button.mapTo(owner, settings_button.rect().topLeft())

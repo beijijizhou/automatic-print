@@ -6,18 +6,30 @@ from time import monotonic
 from test_developer_mode import window
 
 
-def test_pause_and_close_exit_without_waiting_for_worker(tmp_path, intercept_process_exit):
+def test_pause_cancels_task_but_only_close_exits(tmp_path, intercept_process_exit):
     owner = window(tmp_path/'prefs.ini')
+    cancelled=[]
     owner.thread = object()
-    owner.worker = object()  # No cooperative cancellation or join method.
+    owner.worker = SimpleNamespace(request_cancel=lambda:cancelled.append(True))
     owner.stop_generation()
+    assert cancelled==[True] and intercept_process_exit==[]
+    assert owner.isVisible()
+    assert '软件不会退出' in owner.status.text()
+    owner.thread = owner.worker = None
+    owner.close()
     assert intercept_process_exit == [0]
     assert not owner.isVisible()
-    owner.show()
+
+
+def test_pause_routes_to_active_multi_batch_without_exiting(tmp_path,intercept_process_exit):
+    owner=window(tmp_path/'prefs.ini')
+    cancelled=[]
+    owner.bulk_controller=SimpleNamespace(thread=object(),cancel=lambda:cancelled.append(True))
+    owner.stop_generation_button.setEnabled(True)
+    owner.stop_generation()
+    assert cancelled==[True] and intercept_process_exit==[]
+    owner.bulk_controller.thread=None
     owner.close()
-    assert intercept_process_exit == [0, 0]
-    assert not owner.isVisible()
-    owner.thread = owner.worker = None
 
 
 def test_real_exit_interrupts_blocked_save_and_leaves_unfinished_markers(tmp_path):

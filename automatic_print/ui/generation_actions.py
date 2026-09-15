@@ -166,8 +166,8 @@ class GenerationActionsMixin:
 
     @Slot()
     def stop_generation(self) -> None:
-        from .immediate_exit import exit_now
-        exit_now(self)
+        from .stop_actions import stop_active_layout
+        stop_active_layout(self)
 
     @Slot(str, object)
     def generation_finished(self, output: str, result: dict) -> None:

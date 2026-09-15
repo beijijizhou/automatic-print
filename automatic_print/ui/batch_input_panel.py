@@ -33,7 +33,7 @@ def build_batch_input(owner, panel):
     owner.start_layout_button.setToolTip('选择图片文件夹后立即开始排版；取消不会启动任务。')
     panel.bulk_generation_button.setToolTip('选择上级目录中的批次；并发参数在打印设置中修改。')
     owner.window().stop_generation_button.setToolTip(
-        '立即退出软件，不等待任务完成；未完成批次禁止打印，已完成批次保留。')
+        '停止当前单批次或多批次排版，保留已完成文件；不会关闭软件。')
     owner.start_layout_button.setProperty('importance', 'primary')
     from .layout_activity import LayoutActivity
     owner.window().layout_activity = LayoutActivity(owner.start_layout_button, panel.bulk_generation_button, group)
