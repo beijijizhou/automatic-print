@@ -13,7 +13,8 @@ def build_settings_navigation(window, source):
     cutter = window.cutter_settings
     film = {cutter.film, cutter.custom_film, cutter.printable,cutter.auto_knife,
             cutter.knife,cutter.safety,cutter.marker_offset,cutter.compare_films}
-    layout = {window.spacing, window.margin, window.allow_rotation, window.rotation_direction, window.membrane_gap, window.auto_fit_width}
+    layout = {window.spacing, window.margin, window.allow_rotation, window.rotation_direction,
+              window.membrane_gap_enabled, window.membrane_gap, window.auto_fit_width}
     labels = {'标签与文字', '剪膜机色块'}
 
     def transfer(form, classify):

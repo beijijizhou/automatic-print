@@ -139,12 +139,14 @@ class LabelQuickPanel(QWidget):
         self.preview.auto_refresh_enabled = not window.cutter_settings.quick_mode.isChecked()
         window.dpi.valueChanged.connect(self.preview.schedule_refresh)
         window.follow_source_dpi.toggled.connect(self.preview.schedule_refresh)
+        window.membrane_gap_enabled.toggled.connect(self.preview.schedule_refresh)
         window.membrane_gap.valueChanged.connect(self.preview.schedule_refresh)
         window.auto_fit_width.toggled.connect(self.preview.schedule_refresh)
         cutter = window.cutter_settings
         for signal in (cutter.film.currentIndexChanged, cutter.mode.currentIndexChanged,
                        cutter.auto_knife.toggled,
                        cutter.rotation_zone.toggled,
+                       cutter.two_zone.toggled,
                        cutter.knife.valueChanged, cutter.safety.valueChanged,
                        cutter.marker_offset.valueChanged, cutter.left_marker_lift.valueChanged,
                        window.spacing.valueChanged):

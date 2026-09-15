@@ -14,11 +14,12 @@ def _sources(root):
 
 
 @pytest.mark.parametrize('engine', ['pillow', 'libvips'])
-def test_width_outlier_does_not_force_pairable_runs_to_single_rows(tmp_path, engine):
+def test_pairable_majority_precedes_one_rotated_leftover_zone(tmp_path, engine):
     paths = _sources(tmp_path)
     result = generate_layout(paths, tmp_path/'out', LayoutSettings(
         dpi=25.4, media_width_mm=580, margin_mm=0, spacing_mm=8,
         cutter_mode='dual', cutter_auto_knife=True, cutter_rotation_zone=True,
+        cutter_majority_two_zone=True,
         cutter_left_marker_external=True, number_images=False, png_engine=engine,
     ))
     placements = result['placements']
@@ -26,9 +27,12 @@ def test_width_outlier_does_not_force_pairable_runs_to_single_rows(tmp_path, eng
     for placement in placements:
         rows.setdefault((placement['cut_zone'], placement['row_y_px']), []).append(placement)
     assert sum(len(row) == 2 for row in rows.values()) == 2
-    assert [placement['source'] for placement in placements] == [path.name for path in paths]
-    assert len({placement['cut_zone'] for placement in placements}) == 3
-    assert result['analysis']['rotation_comparison']['selected_strategy'] == '连续刀位分区双排'
+    assert [placement['source'] for placement in placements] == [
+        paths[i].name for i in (0, 1, 3, 4, 2)
+    ]
+    assert {placement['cut_zone'] for placement in placements} == {'双排区', '旋转区'}
+    assert sum(placement['rotation_degrees'] != 0 for placement in placements) == 1
+    assert result['analysis']['rotation_comparison']['selected_strategy'] == '多数双排区 + 剩余旋转区'
     assert result['width_px'] == max(
         placement['x_px']+placement['width_px'] for placement in placements
     )
@@ -40,9 +44,29 @@ def test_batch_end_block_is_the_only_reason_to_restore_full_film_width(tmp_path)
     paths = _sources(tmp_path)
     base = LayoutSettings(dpi=25.4, media_width_mm=580, margin_mm=0,
         cutter_mode='dual', cutter_auto_knife=True, cutter_rotation_zone=True,
+        cutter_majority_two_zone=True,
         cutter_left_marker_external=True, number_images=False)
     cropped = generate_layout(paths, tmp_path/'cropped', base)
     full = generate_layout(paths, tmp_path/'full',
                            LayoutSettings(**(base.__dict__ | {'batch_end_block': True})))
     assert cropped['width_px'] < 580
     assert full['width_px'] == 580
+
+
+def test_only_oversized_rotated_leftover_is_scaled(tmp_path, monkeypatch):
+    from automatic_print.layout_engine import width_fit
+    monkeypatch.setattr(width_fit, 'cache_root', lambda: tmp_path/'cache')
+    paths = _sources(tmp_path)[:4]
+    oversized = tmp_path/'B9-1-T-Black-M-NO1-1.png'
+    Image.new('RGBA', (900, 700), 'red').save(oversized, dpi=(25.4, 25.4))
+    paths.append(oversized)
+    result = generate_layout(paths, tmp_path/'scaled', LayoutSettings(
+        dpi=25.4, media_width_mm=580, margin_mm=0, spacing_mm=8,
+        cutter_mode='dual', cutter_auto_knife=True, cutter_rotation_zone=True,
+        cutter_majority_two_zone=True,
+        cutter_left_marker_external=True, number_images=False, auto_fit_width=True,
+    ))
+    assert len(result['analysis']['width_adjustments']) == 1
+    assert {p['cut_zone'] for p in result['placements']} == {'双排区', '旋转区'}
+    scaled = next(p for p in result['placements'] if p['source'] == oversized.name)
+    assert scaled['rotation_degrees'] == 90 and scaled['width_px'] < 580

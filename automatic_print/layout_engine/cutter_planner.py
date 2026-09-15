@@ -36,7 +36,7 @@ def plan_cutter_layout(paths, settings, progress, prepared=None, preserve_sequen
     if progress:
         progress("批次刀位已确定", mm_to_px(settings.cutter_knife_mm, settings.dpi),
                  settings.dpi, f"整批固定刀位 {settings.cutter_knife_mm:.2f} 毫米")
-    solution = solve_groups(groups, lanes, spacing)
+    solution = solve_groups(groups, lanes, spacing, settings.cutter_majority_two_zone)
     if solution is None:
         from .error_parameters import groups_failure
         raise ValueError("图片无法安全放入固定分区；单排必须靠左，请启用自动刀位、增大左分区或改用单列。\n"+groups_failure(groups,settings))
@@ -73,7 +73,7 @@ def cutter_output_width(planned, settings, maximum):
     return min(maximum, max(used, max(knives)+safety+1))
 
 
-def solve_groups(groups, lanes, spacing):
+def solve_groups(groups, lanes, spacing, pair_adjacent=False):
     from collections import Counter
     counts = Counter(order_key(item.path) for group in groups for item in group)
     costs, plans = [float("inf")] * (len(groups) + 1), [None] * len(groups)
@@ -84,8 +84,10 @@ def solve_groups(groups, lanes, spacing):
             if len(groups[index]) == len(groups[index + 1]) == 1:
                 pair = groups[index] + groups[index + 1]
                 keys = [order_key(item.path) for item in pair]
-                share = keys[0] == keys[1] or (all(counts[key] == 1 for key in keys)
-                                             and same_single_size(pair[0].path, pair[1].path))
+                from .source_metadata import source_color
+                compatible = (source_color(pair[0].path) == source_color(pair[1].path)
+                              if pair_adjacent else same_single_size(pair[0].path, pair[1].path))
+                share = keys[0] == keys[1] or (all(counts[key] == 1 for key in keys) and compatible)
                 row = _horizontal(pair, lanes) if share else None
                 if row:
                     candidates.insert(0, (2, row))

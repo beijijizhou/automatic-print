@@ -130,7 +130,7 @@ class GenerateWorker(QObject):
             combined = cutting_report(result) + '\n\n耗时与并行处理\n' + report_text
             (self.output / '排版报告.txt').write_text(combined, encoding='utf-8')
             self._save_history(result)
-            marker.unlink()
+            marker.unlink(missing_ok=True)
         except TaskCancelled:
             self.timings_ready.emit(self.timing.finish('已停止'))
             self.cancelled.emit()

@@ -18,7 +18,9 @@ def select_batch_knife(groups, settings, spacing, progress=None):
     for index, knife in enumerate(candidates):
         trial = replace(settings, cutter_knife_mm=knife*25.4/settings.dpi)
         lanes = _lanes(trial, width)
-        result = solve_groups(arrange_groups(groups, lanes, trial, prepared), lanes, spacing)
+        ordered = groups if settings.cutter_majority_two_zone else arrange_groups(
+            groups, lanes, trial, prepared)
+        result = solve_groups(ordered, lanes, spacing, settings.cutter_majority_two_zone)
         if result is not None:
             score = (result[0], abs(knife-width/2), knife)
             if best is None or score < best[0]:

@@ -140,6 +140,7 @@ class MainWindow(
             ("图片文件夹", folder_row),
             ("膜与切膜规则", self.cutter_settings),
             ("上下垂直间距（毫米）", self.spacing),
+            ("补足膜间距", self.membrane_gap_enabled),
             ("膜标签与图案最小间距", self.membrane_gap),
             ("超宽恢复", self.auto_fit_width),
             ("批次开头与结尾留白（毫米）", self.margin),

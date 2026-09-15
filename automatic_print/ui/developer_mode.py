@@ -24,15 +24,16 @@ def build_developer_mode(window, footer):
             return
         window.developer_mode_enabled = enabled
         window.quick_header_gap_group.setVisible(enabled)
+        window.layout_rules_form.setRowVisible(window.membrane_gap_enabled, enabled)
         window.layout_rules_form.setRowVisible(window.membrane_gap, enabled)
+        window.layout_rules_form.setRowVisible(window.cutter_settings.two_zone, enabled)
         panel = window.automation_home.label_quick_panel
         panel.summary.gap_loss.setVisible(enabled)
         panel.history_button.setVisible(enabled)
-        panel.bulk_analysis_button.setVisible(enabled)
+        panel.bulk_analysis_button.setVisible(False)
         panel.algorithm_costs_button.setVisible(enabled)
-        panel.summary.film_table.set_reference_mode(enabled)
+        panel.summary.film_table.set_reference_mode(False)
         window.cutter_settings.compare_films.setText(
-            '比较40–80厘米，每隔5厘米：常规与旋转（不自动切换）' if enabled else
             '比较45/60厘米：常规与旋转（不自动切换）')
         details = panel.details_dialog
         algorithm = getattr(details, 'algorithm_page', None)

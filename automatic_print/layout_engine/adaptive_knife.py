@@ -1,4 +1,4 @@
-"""Linear contiguous knife zones: isolate width outliers without reordering."""
+"""Two production zones: majority double rows, then rotated leftovers."""
 from dataclasses import replace
 
 from .cutter_planner import (
@@ -11,63 +11,69 @@ from .single_order_sequence import lane_fits
 
 
 def plan_adaptive_knife_zones(paths, settings, progress):
-    """Use balanced zones for pairable runs and separate knives for outliers."""
+    """Keep the pairable majority together and rotate complete leftovers."""
     if settings.cutter_mode != 'dual' or not settings.cutter_auto_knife:
-        return plan_cutter_layout(paths, settings, progress)
+        raise ValueError('多数双排分区只适用于自动双刀模式。')
     base = replace(settings, cutter_rotation_zone=False, cutter_tail_rotation=False,
-                   allow_rotation=False, manual_rotations=())
+                   allow_rotation=False)
     paths = ordered_paths(paths)
     options, labels = read_cutter_items(paths, base, progress)
     items = {row[0].path: row[0] for row in options}
     lanes = _lanes(replace(base, cutter_auto_knife=False,
                            cutter_knife_mm=base.media_width_mm/2),
                    mm_to_px(base.media_width_mm, base.dpi))
-    runs = _contiguous_runs(complete_orders(paths), items, lanes)
-    if len(runs) == 1:
-        return plan_cutter_layout(paths, base, progress, prepared=(options, labels),
-                                  preserve_sequence=True)
-    planned, height, zone_index = [], 0, 0
-    for balanced, orders in runs:
-        selected = [path for order in orders for path in order]
-        effective = [base]
+    double_orders, leftovers = _partition(complete_orders(paths), items, lanes)
+    normal_paths = [path for order in double_orders for path in order]
+    rotated_paths = [path for order in leftovers for path in order]
+    if not rotated_paths or len(normal_paths) <= len(rotated_paths):
+        raise ValueError('可安全双排的图片未超过半数，改用常规旋转方案比较。')
 
-        def report(stage, current, total, filename):
-            if stage == '批次刀位已确定':
-                effective[0] = replace(base, cutter_knife_mm=current*25.4/total)
-            if progress:
-                progress('连续刀位分区：'+stage, current, total, filename)
+    effective = [base]
+    def report(stage, current, total, filename):
+        if stage == '批次刀位已确定':
+            effective[0] = replace(base, cutter_knife_mm=current*25.4/total)
+        if progress:
+            progress('双排区：'+stage, current, total, filename)
+    normal = plan_cutter_layout(
+        normal_paths, base, report,
+        prepared=([[items[path]] for path in normal_paths], labels),
+        preserve_sequence=True,
+    )
 
-        prepared = ([[items[path]] for path in selected], labels)
-        result = plan_cutter_layout(selected, base, report, prepared=prepared,
-                                    preserve_sequence=True)
-        knife = mm_to_px(effective[0].cutter_knife_mm, base.dpi)
-        zone_index += 1
-        zone = ('双排区' if balanced else '宽图区')+str(zone_index)
-        shifted = [_shift(path, placement, height, zone, knife)
-                   for path, placement in result[0]]
-        planned.extend(shifted)
-        height += result[3]+mm_to_px(base.spacing_mm, base.dpi)
-    height -= mm_to_px(base.spacing_mm, base.dpi)
-    maximum = mm_to_px(base.media_width_mm, base.dpi)
-    width = cutter_output_width(planned, base, maximum)
+    from .rotation_zones import _rotated, rotation_items
+    rotated_items, rotated_labels = rotation_items(rotated_paths, base, progress)
+    missing = [path.name for path in rotated_paths if path not in rotated_items]
+    if missing:
+        raise ValueError('剩余图片旋转后仍超宽，需要进入等比缩小恢复：'+'、'.join(missing))
+    rotated = _rotated(rotated_paths, base, (rotated_items, rotated_labels))
+    spacing = mm_to_px(base.spacing_mm, base.dpi)
+    boundary = normal[3]+spacing
+    normal_knife = mm_to_px(effective[0].cutter_knife_mm, base.dpi)
+    planned = [(path, replace(p, cut_zone='双排区', cut_knife_x_px=normal_knife))
+               for path, p in normal[0]]
+    planned.extend(_shift(path, placement, boundary, rotated[3])
+                   for path, placement in rotated[0])
+    height = boundary+rotated[2]
+    width = cutter_output_width(
+        planned, base, mm_to_px(base.media_width_mm, base.dpi)
+    )
     if progress:
-        progress('连续刀位分区', len(runs), len(runs),
-                 f'{len(runs)}个连续区域；保持订单顺序，宽图不再拖累可双排区域')
-    return planned, labels, width, height, height
+        progress('双排与旋转分区', len(paths), len(paths),
+                 f'双排区{len(normal_paths)}张；旋转区{len(rotated_paths)}张；共2个区域')
+    return planned, labels | rotated_labels, width, height, height
 
 
-def _contiguous_runs(orders, items, lanes):
-    runs = []
+def _partition(orders, items, lanes):
+    double, leftovers = [], []
     for order in orders:
-        balanced = _balanced(order, items, lanes)
-        if not runs or runs[-1][0] != balanced:
-            runs.append((balanced, []))
-        runs[-1][1].append(order)
-    return runs
+        (double if _pairable(order, items, lanes) else leftovers).append(order)
+    return double, leftovers
 
 
-def _balanced(order, items, lanes):
+def _pairable(order, items, lanes):
     members = [items[path] for path in order]
+    if any(item.rotation_degrees for item in members):
+        return False
     if len(members) == 1:
         return all(lane_fits(members[0], lane) for lane in lanes)
     if len(members) == 2:
@@ -75,12 +81,12 @@ def _balanced(order, items, lanes):
     return False
 
 
-def _shift(path, placement, offset, zone, knife):
+def _shift(path, placement, offset, knife):
     return path, replace(
         placement, y_px=placement.y_px+offset,
         row_y_px=placement.row_y_px+offset,
         number_y_px=placement.number_y_px+offset,
         color_block_y_px=placement.color_block_y_px+offset,
         platform_y_px=placement.platform_y_px+offset,
-        cut_zone=zone, cut_knife_x_px=knife,
+        cut_zone='旋转区', cut_knife_x_px=knife,
     )

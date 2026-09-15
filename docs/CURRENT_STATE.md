@@ -8,6 +8,8 @@
 - 主窗口：`automatic_print/ui/main_window.py`，负责构造应用级状态和连接各控制器。
 - 主工作台：`automatic_print/automation_dialog.py` 为兼容门面；实际页面在
   `automatic_print/batch_ui/` 和 `automatic_print/ui/label_quick_panel.py`。
+- 开发者模式当前仅开放45/60厘米方案；40–80厘米批量研究入口处于隐藏停用状态。补足膜间距由
+  `ui/header_gap.py` 的独立开关控制，保存的毫米数值本身不会自动启用。
 - 单批次生成编排：`automatic_print/ui/generation_actions.py`、`workers.py`、
   `generation_preview.py`。
 - 多批次生成编排：`automatic_print/ui/bulk_workbench.py`、
@@ -22,7 +24,8 @@
 - 订单、双面、颜色与尺码：`order_groups.py`、`batch_analysis.py`、
   `single_order_sequence.py`、`color_policy.py`、`size_policy.py`。
 - 行、刀位和区域规划：`planner.py`、`row_optimizer.py`、`cutter_planner.py`、
-  `knife_optimizer.py`、`adaptive_knife.py`、`zone_optimizer.py`、`rotation_zones.py`。
+  `knife_optimizer.py`、`adaptive_knife.py`、`zone_optimizer.py`、`rotation_zones.py`。多数双排路径由
+  `adaptive_knife.py` 唯一组装“双排区 + 剩余旋转区”，旋转仍超宽时复用 `width_fit.py` 缩小缓存。
 - 旋转与超宽恢复：`rotation_compare.py`、`whole_rotation.py`、`tail_rotation.py`、
   `single_rotation.py`、`width_fit.py`、`gap_fallback.py`。
 - 标签与刀码：`labels.py`、`dynamic_label.py`、`marker_stack.py`、`left_marker.py`、

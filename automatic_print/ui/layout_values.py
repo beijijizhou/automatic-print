@@ -17,7 +17,7 @@ def settings_from_window(window) -> LayoutSettings:
     return LayoutSettings(
         media_width_mm=window.cutter_settings.printable.effective_width(),
         compare_film_sizes=window.cutter_settings.compare_films.isChecked(),
-        compare_reference_films=getattr(window, 'developer_mode_enabled', False),
+        compare_reference_films=False,
         riin_left_mm=window.cutter_settings.printable.left.value(),
         riin_right_mm=window.cutter_settings.printable.right.value(),
         spacing_mm=window.spacing.value(),
@@ -48,7 +48,9 @@ def settings_from_window(window) -> LayoutSettings:
         auto_fit_width=window.auto_fit_width.isChecked(),
         developer_gap_loss=getattr(window, 'developer_mode_enabled', False),
         platform_below_marker=True,
-        membrane_gap_mm=window.membrane_gap.value() if cutting and getattr(window, 'developer_mode_enabled', False) else 0,
+        membrane_gap_mm=(window.membrane_gap.value() if cutting
+                         and getattr(window, 'developer_mode_enabled', False)
+                         and window.membrane_gap_enabled.isChecked() else 0),
         cutter_left_marker_lift_mm=window.cutter_settings.left_marker_lift.value(),
         allow_rotation=window.allow_rotation.isChecked() and not window.cutter_settings.quick_mode.isChecked(),
         rotation_direction=window.rotation_direction.currentData(),
@@ -81,6 +83,8 @@ def settings_from_window(window) -> LayoutSettings:
         cutter_knife_mm=window.cutter_settings.knife.value(),
         cutter_auto_knife=window.cutter_settings.auto_knife.isChecked(),
         cutter_rotation_zone=window.cutter_settings.rotation_zone.isChecked() and not window.cutter_settings.quick_mode.isChecked(),
+        cutter_majority_two_zone=(getattr(window, 'developer_mode_enabled', False)
+                                  and window.cutter_settings.two_zone.isChecked()),
         cutter_tail_rotation=window.cutter_settings.tail_rotation.isChecked() and window.cutter_settings.mode.currentData() == 'dual',
         cutter_safety_mm=window.cutter_settings.safety.value(),
         cutter_marker_offset_mm=window.cutter_settings.marker_offset.value(),

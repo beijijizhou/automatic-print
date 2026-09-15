@@ -41,8 +41,8 @@ def scaled_copy(path, factor):
 
 
 def fit_oversized(paths,settings,progress=None):
-    if settings.cutter_mode!='single':
-        raise ValueError('自动超宽旋转与等比缩小仅允许单排模式，双排图片保持原尺寸')
+    if settings.cutter_mode not in {'single', 'dual'}:
+        raise ValueError('自动超宽旋转与等比缩小只用于单排或双排后的剩余旋转区')
     settings=replace(settings,sequence_numbers=settings.sequence_numbers or
                      tuple((str(p.resolve()),i) for i,p in enumerate(paths,1)))
     output=list(paths)
@@ -50,6 +50,8 @@ def fit_oversized(paths,settings,progress=None):
     numbers=dict(settings.sequence_numbers)
     notices=list(settings.width_adjustments)
     width=mm_to_px(settings.media_width_mm,settings.dpi)
+    if settings.cutter_mode == 'dual':
+        width -= 2*mm_to_px(settings.cutter_safety_mm, settings.dpi)+1
     if width<=0:
         raise ValueError('当前刀位安全分区无可用宽度，无法通过缩小图片恢复')
     def measure(path,degree):
@@ -60,14 +62,16 @@ def fit_oversized(paths,settings,progress=None):
     for index,path in enumerate(paths):
         if progress:
             progress('超宽自动恢复',index,len(paths),path.name)
-        current=measure(path,rotations.get(str(path.resolve()),0))
-        if current.footprint_width<=width:
-            continue
         dimensions=print_dimensions(path,settings.dpi)
+        current=measure(path,rotations.get(str(path.resolve()),0))
+        if settings.cutter_mode == 'single' and current.footprint_width<=width:
+            continue
         if not dimensions.embedded_dpi:
             raise ValueError(f'{path.name}：缺可靠DPI，不能自动缩小打印尺寸')
         degree=(90 if settings.rotation_direction=='left' else 270) if dimensions.height_mm<dimensions.width_mm else 0
         candidate=measure(path,degree)
+        if candidate.footprint_width<=width:
+            continue
         factor=1.0
         prepared=path
         for attempt in range(4):

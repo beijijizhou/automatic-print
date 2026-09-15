@@ -50,21 +50,17 @@ def validate_single_size_blocks(paths, planned):
     from .order_groups import complete_orders
     eligible = {path: source_block(path) for order in complete_orders(paths)
                 if (size := single_order_size(order)) is not None for path in order}
-    closed, previous, orientations = set(), None, defaultdict(set)
-    for path, placement in sorted(planned, key=lambda entry: (entry[1].row_y_px, entry[1].x_px)):
-        size = eligible.get(path)
-        if size != previous:
-            if previous is not None:
-                closed.add(previous)
-            if size in closed:
-                raise ValueError(f'单件尺码 {size} 被其他尺码或订单打散，禁止输出。')
-            previous = size
-        if size is not None:
-            orientations[size].add(bool(placement.rotation_degrees))
-    if any(len(values) > 1 for values in orientations.values()):
-        raise ValueError('同尺码单件被拆成旋转与不旋转两种方向，禁止输出。')
-    sequence = list(orientations)
-    if sequence != sorted(sequence, key=block_key):
-        raise ValueError('单件未按颜色优先、同色尺码从小到大排列，禁止输出。')
+    ordered = sorted(planned, key=lambda entry: (entry[1].row_y_px, entry[1].x_px))
+    zones = {placement.cut_zone for _path, placement in ordered}
+    groups = ({zone: [(path, p) for path, p in ordered if p.cut_zone == zone]
+               for zone in ('双排区', '旋转区')} if zones == {'双排区', '旋转区'}
+              else {'整批': ordered})
+    sequences = []
+    for zone, entries in groups.items():
+        sequence = list(dict.fromkeys(eligible[path] for path, _p in entries if path in eligible))
+        if sequence != sorted(sequence, key=block_key):
+            raise ValueError(f'{zone}内单件未按颜色优先、同色尺码从小到大排列，禁止输出。')
+        sequences.extend(sequence)
+    sequence = list(dict.fromkeys(sequences))
     return {'single_size_blocks': [size for _,size in sequence], 'single_size_verified': True,
             'single_color_size_blocks': [{'color':color,'size':size} for color,size in sequence]}

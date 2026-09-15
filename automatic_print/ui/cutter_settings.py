@@ -26,6 +26,9 @@ class CutterSettingsPanel(QWidget):
         self.auto_knife.setChecked(preferences.value("cutter/auto_knife", True, bool))
         self.rotation_zone = QCheckBox("省膜时启用独立旋转区（每行一张，换刀一次）")
         self.rotation_zone.setChecked(not self.quick_mode.isChecked() and preferences.value("cutter/rotation_zone", False, bool))
+        self.two_zone = QCheckBox('多数可双排时：双排集中在一起，剩余图片进入旋转区（最多两个区域）')
+        self.two_zone.setChecked(preferences.value('developer/majority_two_zone', False, bool))
+        self.two_zone.setToolTip('开发者测试功能；普通生产模式不会启用。')
         self.tail_rotation = QCheckBox('单件批次末尾 3XL 及以上：省膜时整尺码块旋转')
         self.tail_rotation.setChecked(preferences.value('cutter/tail_rotation', True, bool))
         self.safety = self._box(3, 0.1, 30)
@@ -53,6 +56,7 @@ class CutterSettingsPanel(QWidget):
             ('RIIN 已设置的预留', self.printable),
             ("刀位选择", self.auto_knife),
             ("旋转区域", self.rotation_zone),
+            ('双排集中', self.two_zone),
             ('快速末尾旋转', self.tail_rotation),
             ('区域与批次提示', self.transitions),
             ('膜规格比较', self.compare_films),
@@ -86,6 +90,7 @@ class CutterSettingsPanel(QWidget):
         self.auto_knife.toggled.connect(self._mode_changed)
         self.quick_mode.toggled.connect(self._mode_changed)
         self.rotation_zone.toggled.connect(self._rotation_requested)
+        self.two_zone.toggled.connect(self._two_zone_requested)
         self._mode_changed()
 
     def _film_changed(self, *_args):
@@ -120,6 +125,7 @@ class CutterSettingsPanel(QWidget):
             control.setEnabled(mode == "dual")
         self.auto_knife.setEnabled(mode == "dual")
         self.rotation_zone.setEnabled(mode == "dual")
+        self.two_zone.setEnabled(mode == 'dual')
         self.tail_rotation.setEnabled(mode == 'dual')
         if self.quick_mode.isChecked():
             self.rotation_zone.setChecked(False)
@@ -153,10 +159,18 @@ class CutterSettingsPanel(QWidget):
             'left_marker_lift_mm': self.left_marker_lift.value(),
         }.items():
             self.preferences.setValue("cutter/" + key, value)
+        self.preferences.setValue('developer/majority_two_zone', self.two_zone.isChecked())
 
     def _rotation_requested(self, enabled):
         if enabled and self.mode.currentData() == 'dual':
             self.quick_mode.setChecked(False)
+            self.tail_rotation.setChecked(False)
+
+    def _two_zone_requested(self, enabled):
+        self.preferences.setValue('developer/majority_two_zone', enabled)
+        if enabled and self.mode.currentData() == 'dual':
+            self.quick_mode.setChecked(False)
+            self.rotation_zone.setChecked(True)
             self.tail_rotation.setChecked(False)
 
     @staticmethod

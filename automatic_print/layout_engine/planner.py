@@ -13,7 +13,6 @@ from .row_optimizer import optimal_ordered_layout
 from .units import build_units, optimizer_options
 from .measurement_session import resolved_name
 
-
 def plan_layout(
     paths: list[Path],
     settings: LayoutSettings,
@@ -40,9 +39,11 @@ def _measured_plan(paths, settings, progress, analysis_ready):
     if settings.cutter_mode in {'single', 'dual'}:
         from .whole_rotation import compare_whole
         previously_selected = result
-        result = compare_whole(paths, settings, progress, result)
+        comparison = analysis.get('rotation_comparison')
+        if not (comparison and comparison.get('selected_strategy') == '多数双排区 + 剩余旋转区'):
+            result = compare_whole(paths, settings, progress, result)
         from .rotation_compare import update_selected_comparison
-        update_selected_comparison(analysis.get('rotation_comparison'), result, settings,
+        update_selected_comparison(comparison, result, settings,
                                    result is not previously_selected)
     planned, labels, width, height, baseline = result
     if settings.batch_end_block:

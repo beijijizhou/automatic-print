@@ -63,7 +63,7 @@ class LayoutSettings:
     cutter_knife_dots: bool = True
     cutter_single_row_rotation: bool = False
     preserve_header_gap: bool = False
-    membrane_gap_mm: float = 0  # GUI defaults to 40; direct API remains opt-in.
+    membrane_gap_mm: float = 0  # GUI remembers a value, but a developer-only checkbox gates it.
     platform_below_marker: bool = False  # GUI uses one vertical marker stack.
     cutter_knife_mm: float = 300
     cutter_safety_mm: float = 3
@@ -75,6 +75,7 @@ class LayoutSettings:
     manual_rotations: tuple[tuple[str, int], ...] = ()
     cutter_auto_knife: bool = False
     cutter_rotation_zone: bool = False
+    cutter_majority_two_zone: bool = False
     cutter_tail_rotation: bool = False
     sequence_numbers: tuple[tuple[str, int], ...] = ()
     label_sequence_enabled: bool = False

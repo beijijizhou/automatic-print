@@ -57,6 +57,7 @@ class MarkerExamples(QGroupBox):
         for signal in (window.label_settings.settings_changed,
                        window.color_block_settings.settings_changed, window.dpi.valueChanged,
                        window.follow_source_dpi.toggled,
+                       window.membrane_gap_enabled.toggled,
                        window.membrane_gap.valueChanged,
                        window.cutter_settings.mode.currentIndexChanged,
                        window.cutter_settings.left_marker_lift.valueChanged):

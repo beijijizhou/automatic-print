@@ -11,7 +11,7 @@
 | 订单、双面和尺码归组 | `layout_engine/order_groups.py`, `batch_analysis.py`, `size_policy.py` | 排版、比较、报告和安全检查使用同一身份。 |
 | 颜色与生产顺序 | `layout_engine/color_policy.py`, `single_order_sequence.py` | 颜色优先、尺码业务顺序集中维护。 |
 | 普通行和双排行规划 | `layout_engine/planner.py`, `row_optimizer.py`, `single_rows.py` | 入口不得自己拼 Placement。 |
-| 整批刀位 | `layout_engine/cutter_planner.py`, `knife_optimizer.py`, `adaptive_knife.py` | 连续宽度异常拆成固定刀位区域；保持顺序且不让宽图拖累可双排区。 |
+| 整批刀位 | `layout_engine/cutter_planner.py`, `knife_optimizer.py`, `adaptive_knife.py` | 线性贪心配对；多数可双排时形成一个双排区，其余完整订单形成一个旋转区；禁止超过两个区域。 |
 | 旋转区域和整批旋转 | `layout_engine/rotation_zones.py`, `rotation_compare.py`, `whole_rotation.py` | 以完整订单或尺码块评估，不复制候选算法。 |
 | 单排超宽恢复 | `layout_engine/width_fit.py`, `gap_fallback.py` | 先旋转、符合规则时再等比缩小；保留恢复报告。 |
 | 标签、平台文字和刀码 | `layout_engine/labels.py`, `marker_stack.py`, `platform_label.py` | 测量、预览、输出使用同一几何结果。 |
