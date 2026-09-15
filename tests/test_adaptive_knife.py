@@ -70,3 +70,37 @@ def test_only_oversized_rotated_leftover_is_scaled(tmp_path, monkeypatch):
     assert {p['cut_zone'] for p in result['placements']} == {'双排区', '旋转区'}
     scaled = next(p for p in result['placements'] if p['source'] == oversized.name)
     assert scaled['rotation_degrees'] == 90 and scaled['width_px'] < 580
+
+
+def test_developer_width_cap_forces_s_to_l_pairs_without_enlarging(tmp_path):
+    paths = []
+    for index, (width, size) in enumerate(((280, 'S'), (250, 'S'),
+                                           (285, 'M'), (290, 'L')), 1):
+        path = tmp_path/f'B{index}-1-T-Black-{size}-NO1-1.png'
+        Image.new('RGBA', (width, 120), 'blue').save(path, dpi=(25.4, 25.4))
+        paths.append(path)
+    result = generate_layout(paths, tmp_path/'unused', LayoutSettings(
+        dpi=25.4, media_width_mm=580, margin_mm=0, spacing_mm=8,
+        cutter_mode='dual', cutter_auto_knife=True, cutter_rotation_zone=True,
+        cutter_majority_two_zone=True, force_small_pair_width=True,
+        cutter_left_marker_external=True, number_images=False,
+    ))
+    placements = result['placements']
+    rows = {}
+    for placement in placements:
+        rows.setdefault((placement['cut_zone'], placement['row_y_px']), []).append(placement)
+    assert [sorted(p['width_px'] for p in row) for row in rows.values()] == [
+        [250, 270], [270, 270]
+    ]
+    assert all(len(row) == 2 for row in rows.values())
+    assert len(result['analysis']['width_adjustments']) == 3
+    knives = {p['cut_knife_x_px'] for p in placements}
+    assert len(knives) == 1
+    assert knives == {result['cut_corridor']['zones'][0]['knife_x_px']}
+    right_markers = {p['color_block_x_px'] for p in placements
+                     if p['x_px'] > next(iter(knives))}
+    assert len(right_markers) == 1
+    output = tmp_path/'unused'/result['filename']
+    with Image.open(output) as rendered:
+        assert rendered.size == (result['width_px'], result['height_px'])
+    output.unlink()

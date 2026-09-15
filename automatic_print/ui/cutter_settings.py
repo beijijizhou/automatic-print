@@ -30,6 +30,9 @@ class CutterSettingsPanel(QWidget):
         legacy = preferences.value('developer/majority_two_zone', True, bool)
         self.two_zone.setChecked(preferences.value('layout/majority_two_zone', legacy, bool))
         self.two_zone.setToolTip('能安全双排的完整订单优先集中双排，其余进入旋转区；最多两个区域。')
+        self.force_small_pair = QCheckBox('强行 S–L 双排（宽度超过 270 毫米时等比缩小到 270）')
+        self.force_small_pair.setChecked(preferences.value('developer/force_small_pair_width', False, bool))
+        self.force_small_pair.setToolTip('仅开发者模式生效；不放大小图，XL 及以上不处理，刀码仍按区域统一刀位。')
         self.tail_rotation = QCheckBox('单件批次末尾 3XL 及以上：省膜时整尺码块旋转')
         self.tail_rotation.setChecked(preferences.value('cutter/tail_rotation', True, bool))
         self.safety = self._box(3, 0.1, 30)
@@ -58,6 +61,7 @@ class CutterSettingsPanel(QWidget):
             ("刀位选择", self.auto_knife),
             ("旋转区域", self.rotation_zone),
             ('双排集中', self.two_zone),
+            ('强制双排实验', self.force_small_pair),
             ('快速末尾旋转', self.tail_rotation),
             ('区域与批次提示', self.transitions),
             ('膜规格比较', self.compare_films),
@@ -67,6 +71,9 @@ class CutterSettingsPanel(QWidget):
             ('左图刀码高于图片（毫米，占用现有垂直间距）', self.left_marker_lift),
         ):
             form.addRow(text, control)
+        self.form = form
+        self.force_small_pair_label = form.labelForField(self.force_small_pair)
+        self.set_developer_mode(False)
         previous_width = int(width.value())
         default_film = previous_width if previous_width in {450, 600} else 600
         film = preferences.value("cutter/film_mm", default_film, float)
@@ -92,6 +99,7 @@ class CutterSettingsPanel(QWidget):
         self.quick_mode.toggled.connect(self._mode_changed)
         self.rotation_zone.toggled.connect(self._rotation_requested)
         self.two_zone.toggled.connect(self._two_zone_requested)
+        self.force_small_pair.toggled.connect(self._force_small_pair_requested)
         self._mode_changed()
 
     def _film_changed(self, *_args):
@@ -127,6 +135,7 @@ class CutterSettingsPanel(QWidget):
         self.auto_knife.setEnabled(mode == "dual")
         self.rotation_zone.setEnabled(mode == "dual")
         self.two_zone.setEnabled(mode == 'dual')
+        self.force_small_pair.setEnabled(mode == 'dual')
         self.tail_rotation.setEnabled(mode == 'dual')
         if self.quick_mode.isChecked():
             self.rotation_zone.setChecked(False)
@@ -161,6 +170,7 @@ class CutterSettingsPanel(QWidget):
         }.items():
             self.preferences.setValue("cutter/" + key, value)
         self.preferences.setValue('layout/majority_two_zone', self.two_zone.isChecked())
+        self.preferences.setValue('developer/force_small_pair_width', self.force_small_pair.isChecked())
 
     def _rotation_requested(self, enabled):
         if enabled and self.mode.currentData() == 'dual':
@@ -173,6 +183,15 @@ class CutterSettingsPanel(QWidget):
             self.quick_mode.setChecked(False)
             self.rotation_zone.setChecked(True)
             self.tail_rotation.setChecked(False)
+
+    def _force_small_pair_requested(self, enabled):
+        self.preferences.setValue('developer/force_small_pair_width', enabled)
+        if enabled and self.mode.currentData() == 'dual':
+            self.two_zone.setChecked(True)
+
+    def set_developer_mode(self, enabled):
+        self.force_small_pair.setVisible(enabled)
+        self.force_small_pair_label.setVisible(enabled)
 
     @staticmethod
     def _box(value, minimum, maximum):

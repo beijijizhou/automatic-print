@@ -14,6 +14,7 @@
 | 整批刀位 | `layout_engine/cutter_planner.py`, `knife_optimizer.py`, `adaptive_knife.py` | 线性贪心配对；多数可双排时形成一个双排区，其余完整订单形成一个旋转区；禁止超过两个区域。 |
 | 旋转区域和整批旋转 | `layout_engine/rotation_zones.py`, `rotation_compare.py`, `whole_rotation.py` | 以完整订单或尺码块评估，不复制候选算法。 |
 | 单排超宽恢复 | `layout_engine/width_fit.py`, `gap_fallback.py` | 先旋转、符合规则时再等比缩小；保留恢复报告。 |
+| 开发者强制 S–L 双排 | `layout_engine/pair_width.py` | 仅固定双列贪心方案按270毫米上限生成尺寸覆盖；预览、比较、输出和统一刀位复用该事实，不修改源图。 |
 | 标签、平台文字和刀码 | `layout_engine/labels.py`, `marker_stack.py`, `platform_label.py` | 测量、预览、输出使用同一几何结果。 |
 | 二维码侧别与空白带 | `layout_engine/qr_corners.py`, `qr_placement.py`, `header_region.py` | 只测顶部有限条带的位置和可用空间，不做二维码解码或整图像素读取。 |
 | 透明区域搜索 | `layout_engine/transparent_search.py`, `platform_space.py`, `marker_space.py` | 像素读取结果进入测量缓存，不在每个方案重复扫描。 |
@@ -29,7 +30,7 @@
 | 多批次滚动编排 | `ui/bulk_workbench.py`, `bulk_generation_worker.py` | 外层线程池有空位立即补批次；合并批次复用内部图片线程。 |
 | 主界面进度展示 | `ui/busy_spinner.py`, `operation_timing.py`, `generation_panel.py` | 未知总量用旋转指示，已知总量用真实进度条。 |
 | 错误上下文与复制 | `layout_engine/error_context.py`, `error_parameters.py`, `ui/failure_panel.py` | 所有失败复用完整订单/参数诊断，不散落拼字符串。 |
-| 参数持久化与模式可见性 | `ui/preferences.py`, `preference_autosave.py`, `layout_values.py`, `developer_mode.py` | 生产排版控件在普通模式可见并生效；开发者模式只控制诊断工具。控件只绑定一个当前配置键，父项变化同步清理非法子项。 |
+| 参数持久化与模式可见性 | `ui/preferences.py`, `preference_autosave.py`, `layout_values.py`, `developer_mode.py` | 稳定生产控件对普通用户开放；新实验功能默认只在开发者模式显示并生效。控件只绑定一个当前配置键，父项变化同步清理非法子项。 |
 | 批次及膜历史 | `history/store.py`, `history/batch_queue.py`, `history/bulk_analysis.py` | 历史格式由存储模块维护，UI不直接写日志文件。 |
 | 源码更新 | `updates/`, `updater.py` | 检查、应用、重启为一个状态机，不要求点击两次。 |
 | 协作取消 | `cancellation.py`, `ui/stop_actions.py`, `thread_lifecycle.py` | 长循环定期检查；停止不关闭应用，关闭可立即退出。 |

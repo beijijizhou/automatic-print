@@ -72,8 +72,11 @@ def _read_items(paths, settings, progress):
     for index, path in enumerate(paths, start=1):
         number = dict(settings.sequence_numbers).get(resolved_name(path), index)
         size = print_dimensions(path, settings.dpi)
-        width = max(1, mm_to_px(size.width_mm, settings.dpi))
-        height = max(1, mm_to_px(size.height_mm, settings.dpi))
+        dimensions = dict(settings.dimension_overrides).get(
+            resolved_name(path), (size.width_mm, size.height_mm)
+        )
+        width = max(1, mm_to_px(dimensions[0], settings.dpi))
+        height = max(1, mm_to_px(dimensions[1], settings.dpi))
         manual = dict(settings.manual_rotations).get(resolved_name(path), 0)
         if manual % 180:
             width, height = height, width
@@ -83,7 +86,7 @@ def _read_items(paths, settings, progress):
             qr_detected += qr_location is not None
         if progress:
             progress('读取图片尺寸', index, len(paths),
-                     f'{path.name} · {size.width_mm:.1f} × {size.height_mm:.1f} 毫米')
+                     f'{path.name} · {dimensions[0]:.1f} × {dimensions[1]:.1f} 毫米')
             progress('测量标签与刀码', index-1, len(paths), path.name)
         # Normal and rotated measurements share one decoded source, then close it.
         with choice_source(path, number, width, height, settings, manual):
@@ -106,7 +109,7 @@ def _read_items(paths, settings, progress):
             source = "图片内嵌 DPI" if size.embedded_dpi else "缺少 DPI，按输出 DPI 估算"
             progress(
                 "测量标签与刀码", index, len(paths),
-                f"{path}\t{path.name} · {size.width_mm:.1f} × {size.height_mm:.1f} 毫米 · {source}",
+                f"{path}\t{path.name} · {dimensions[0]:.1f} × {dimensions[1]:.1f} 毫米 · {source}",
             )
     if progress and qr_attempted:
         progress(

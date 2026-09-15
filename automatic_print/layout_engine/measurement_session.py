@@ -89,6 +89,8 @@ def item_settings(settings):
                    cutter_auto_knife=False,
                    cutter_rotation_zone=False, cutter_tail_rotation=False,
                    cutter_majority_two_zone=False,
+                   force_small_pair_width=False, force_small_pair_width_mm=270,
+                   dimension_overrides=(), width_adjustments=(),
                    cutter_knife_mm=300, cutter_safety_mm=3, cutter_marker_offset_mm=0,
                    allow_rotation=False, manual_rotations=(), sequence_numbers=(),
                    riin_left_mm=10, riin_right_mm=10)

@@ -46,6 +46,8 @@ def settings_from_window(window) -> LayoutSettings:
         cutter_single_row_rotation=True,
         preserve_header_gap=True,
         auto_fit_width=window.auto_fit_width.isChecked(),
+        force_small_pair_width=(getattr(window, 'developer_mode_enabled', False)
+                                and window.cutter_settings.force_small_pair.isChecked()),
         developer_gap_loss=True,
         platform_below_marker=True,
         membrane_gap_mm=(window.membrane_gap.value() if cutting

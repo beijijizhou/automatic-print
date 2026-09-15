@@ -30,7 +30,10 @@ def _measured_plan(paths, settings, progress, analysis_ready):
                        tuple((resolved_name(path), i) for i, path in enumerate(paths, 1)),
                        label_sequence_total=settings.label_sequence_total or len(paths))
     paths = ordered_paths(paths)
+    from .pair_width import apply_pair_width_cap
+    settings = apply_pair_width_cap(paths, settings, progress)
     analysis = analyze_batch(paths, settings, progress, analysis_ready)
+    analysis['width_adjustments'] = settings.width_adjustments
     try:
         result = _plan_layout(paths, settings, progress, analysis, analysis_ready)
     except ValueError as error:
@@ -56,6 +59,12 @@ def _measured_plan(paths, settings, progress, analysis_ready):
         analysis['film_comparison'] = compare_films(paths, settings, progress, result)
     from .image_anomalies import collect_image_anomalies
     analysis['image_anomalies'] = collect_image_anomalies(paths, settings)
+    analysis['image_anomalies'].extend(
+        {'source': name, 'path': path, 'kind': text,
+         'action': '已按开发者设置等比缩小；请核对预览和实际烫印尺寸'}
+        for name, text, path in settings.width_adjustments
+        if text.startswith('强制 S–L 双排：')
+    )
     if analysis.get('rotation_recovery'):
         analysis['image_anomalies'].append({'source':'整批旋转恢复','kind':analysis['rotation_recovery']['action'],
                                           'action':'请核查旋转区预览与统一刀位；常规基准无解，不显示虚假省膜量'})

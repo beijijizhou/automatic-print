@@ -37,6 +37,9 @@ def test_default_shows_production_layout_but_hides_diagnostic_tools(tmp_path, mo
     assert owner._layout_settings().membrane_gap_mm == 0
     assert panel.summary.film_table.rowCount() == 4
     assert not owner._layout_settings().compare_reference_films
+    owner.cutter_settings.force_small_pair.setChecked(True)
+    assert owner.cutter_settings.force_small_pair.isHidden()
+    assert not owner._layout_settings().force_small_pair_width
     assert not panel.history_button.isVisible() and not panel.bulk_analysis_button.isVisible()
     assert not panel.source_order.isVisible() and not panel.reference_films_label.isVisible()
     navigation_before = owner.automation_home.batch_tools.mapTo(owner, owner.rect().topLeft())
@@ -80,6 +83,9 @@ def test_two_zone_layout_stays_visible_and_active_outside_developer_mode(tmp_pat
     owner = window(tmp_path/'two-zone.ini')
     control = owner.cutter_settings.two_zone
     owner.developer_mode_checkbox.setChecked(True)
+    assert not owner.cutter_settings.force_small_pair.isHidden()
+    owner.cutter_settings.force_small_pair.setChecked(True)
+    assert owner._layout_settings().force_small_pair_width
     assert owner.label_settings.form.isRowVisible(owner.label_settings.source_order)
     owner.label_settings.source_order.setChecked(True)
     assert owner._layout_settings().label_source_order_enabled

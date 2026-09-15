@@ -11,7 +11,7 @@ def developer_task_active(window):
 
 def build_developer_mode(window, footer):
     checkbox = QCheckBox('开发者模式')
-    checkbox.setToolTip('显示算法开销和排版历史等诊断工具；生产排版内容对所有用户可见。')
+    checkbox.setToolTip('显示算法开销、排版历史和尚未开放给普通用户的实验排版功能。')
     window.developer_mode_checkbox = checkbox
     checkbox.setChecked(window.preferences.value('developer/enabled', False, bool))
     footer.addWidget(checkbox)
@@ -27,6 +27,7 @@ def build_developer_mode(window, footer):
         window.layout_rules_form.setRowVisible(window.membrane_gap_enabled, True)
         window.layout_rules_form.setRowVisible(window.membrane_gap, True)
         window.layout_rules_form.setRowVisible(window.cutter_settings.two_zone, True)
+        window.cutter_settings.set_developer_mode(enabled)
         panel = window.automation_home.label_quick_panel
         window.batch_record_group.setVisible(True)
         panel.summary.gap_loss.setVisible(True)

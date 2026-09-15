@@ -19,6 +19,9 @@ class LayoutSettings:
     output_dpi_notice: str = ''
     developer_gap_loss: bool = False
     auto_fit_width: bool = False
+    force_small_pair_width: bool = False
+    force_small_pair_width_mm: float = 270
+    dimension_overrides: tuple = ()
     width_adjustments: tuple = ()
     png_compression_level: int = 1
     png_engine: str = "pillow"
