@@ -7,8 +7,12 @@ def record(name='批次.png', size=600_000_000):
         output_dpi=300, output_format='PNG', pixel_format='RGBA', bits_per_channel=8,
         alpha_channel=True, png_compression_level=1, png_engine='libvips',
         timings_seconds={'saving_png': 48.627}, png_save_details={
-            'encoder': '原生分块流式PNG', 'steps': [
-                {'name': '流式合成、编码与写入', 'seconds': 48.627}]})
+            'encoder': '原生分块流式PNG',
+            'timing_note': '流水线交错执行', 'observed_bytes': size,
+            'steps': [
+                {'name': '启动至首批PNG数据', 'seconds': 2.0},
+                {'name': 'PNG持续生成、压缩与写入', 'seconds': 45.0},
+                {'name': '编码收尾与文件刷新', 'seconds': 1.627}]})
 
 
 def test_file_information_uses_metadata_without_any_file_access(monkeypatch):
@@ -21,6 +25,8 @@ def test_file_information_uses_metadata_without_any_file_access(monkeypatch):
                      '水平 300 DPI', '垂直 300 DPI', 'PNG · RGBA · 每通道 8 位',
                      '透明通道：保留', '压缩等级：1', '无损', '原生分块流式PNG', '48.627 秒']:
         assert expected in text
+    assert '计时口径：流水线交错执行' in text
+    assert '保存阶段平均文件产出' in text
 
 
 def test_segment_report_lists_each_file_size_and_saving_details():

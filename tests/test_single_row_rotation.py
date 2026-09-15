@@ -23,7 +23,7 @@ def test_single_rows_choose_direction_per_complete_order_without_knife(tmp_path,
         cutter_single_row_rotation=True,cutter_compare_whole_rotation=True,
         cutter_left_marker_external=True,cutter_left_marker_lift_mm=1.5,
         preserve_header_gap=True,cutter_knife_dots=False,png_engine=engine,png_fast_encoding=fast,
-        output_parts=3,save_memory_unlimited=True,platform_name='隆丰',platform_font_height_mm=6)
+        output_parts=3,save_memory_unlimited=True,platform_name='',platform_font_height_mm=6)
     result=generate_layout(paths,tmp_path/'out',settings)
     for part in result.get('parts') or [result]:
         if fast:

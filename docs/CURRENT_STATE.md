@@ -61,6 +61,8 @@
   膜规格比较表不再承载该信息。
 - 进度、停止和线程生命周期：`ui/busy_spinner.py`、`layout_activity.py`、
   `operation_timing.py`、`stop_actions.py`、`thread_lifecycle.py`、`worker_bridge.py`。
+- 保存耗时：`layout_engine/save_progress.py`记录首批PNG数据、持续文件增长、编码收尾和原子发布；
+  `atomic_png.py`与输出报告复用该事实，不把libvips重叠流水线伪装成互斥CPU步骤。
 - 预览：`ui/production_preview.py`、`preview_*`、`pair_preview.py`、
   `marker_examples.py` 及 `marker_example_*`。`layout_engine/preview_result.py` 形成不落地打印图片的
   完整报告数据，`ui/batch_summary.py` 显示可复制的刀位、单排原因和耗时报告。

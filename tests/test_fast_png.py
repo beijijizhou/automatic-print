@@ -23,7 +23,8 @@ def test_native_png_preserves_every_channel_dpi_and_long_dimensions(tmp_path, vi
     reports = []
     details = save_png(canvas, target, settings, vips, lambda *a: reports.append(a))
     assert '原生快速PNG' in details['encoder']
-    assert len(details['steps']) == 3
+    assert len(details['steps']) == 4
+    assert details['steps'][-1]['name'] == '未完成文件原子发布'
     assert not target.with_name(target.name+'.未完成').exists()
     with Image.open(target) as decoded:
         assert decoded.mode == 'RGBA'

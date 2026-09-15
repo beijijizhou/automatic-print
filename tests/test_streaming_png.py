@@ -64,7 +64,14 @@ def test_streaming_uses_fixed_fast_png_filter(tmp_path):
     settings = LayoutSettings(png_streaming=True, png_compression_level=1)
     details = save_png(canvas, target, settings, True, None)
     assert canvas.options['filter'] == 'up'
-    assert '固定UP滤波' in details['steps'][0]['name']
+    assert details['encoder'] == '原生分块流式PNG'
+    assert [step['name'] for step in details['steps']] == [
+        '启动至首批PNG数据（含首段延迟合成）',
+        'PNG持续生成、压缩与写入',
+        '编码收尾与文件刷新',
+        '未完成文件原子发布',
+    ]
+    assert '不虚构互斥CPU耗时' in details['timing_note']
 
 
 def test_balanced_vertical_join_preserves_every_row_and_gap():

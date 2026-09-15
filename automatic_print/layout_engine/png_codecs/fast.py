@@ -92,7 +92,18 @@ def timing_text(data):
     if not data:
         return ''
     text = ['保存编码器：'+data['encoder']]
+    if data.get('timing_note'):
+        text.append('计时口径：'+data['timing_note'])
     text.extend(f"{row['name']}：{row['seconds']:.3f} 秒" for row in data.get('steps', []))
+    observed = data.get('observed_bytes')
+    observed_seconds = sum(
+        row.get('seconds', 0) for row in data.get('steps', ())
+        if row.get('name') != '未完成文件原子发布'
+    )
+    if observed and observed_seconds > 0:
+        text.append(
+            f"保存阶段平均文件产出：{observed/1_000_000/observed_seconds:.2f} MB/秒"
+        )
     if data.get('fallback_reason'):
         text.append('兼容回退：'+data['fallback_reason'])
     return '\n'.join(text)
