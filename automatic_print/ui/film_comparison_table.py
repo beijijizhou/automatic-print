@@ -6,10 +6,11 @@ from ..layout_engine.film_specs import AVAILABLE_WIDTHS, COMPARISON_COUNT, compa
 
 class FilmComparisonTable(QTableWidget):
     def __init__(self, parent=None):
-        super().__init__(COMPARISON_COUNT, 5, parent)
+        super().__init__(COMPARISON_COUNT, 6, parent)
         self.include_references = True
         self.last_comparison = None
-        self.setHorizontalHeaderLabels(['用膜方案', '长度 / 米', '面积 / ㎡', '图片占位', '可用区占位'])
+        self.setHorizontalHeaderLabels(
+            ['用膜方案', '双排数量', '长度 / 米', '面积 / ㎡', '图片占位', '可用区占位'])
         self.setEditTriggers(QAbstractItemView.NoEditTriggers)
         self.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
         self.horizontalHeader().setSectionResizeMode(0, QHeaderView.ResizeToContents)
@@ -27,7 +28,7 @@ class FilmComparisonTable(QTableWidget):
                  ('（参考）' if film not in AVAILABLE_WIDTHS else '')
                  for film in widths for rotation in (False, True))
         for row, name in enumerate(names):
-            for col, value in enumerate((name, text, '—', '—', '—')):
+            for col, value in enumerate((name, '—', text, '—', '—', '—')):
                 self.setItem(row, col, QTableWidgetItem(value))
         self.setToolTip(('开发者：40–80厘米每隔5厘米比较。' if self.include_references else
                          '普通模式：只比较45/60厘米。')+'不自动切换生产参数；图片占位不是油墨覆盖率。')
@@ -43,9 +44,11 @@ class FilmComparisonTable(QTableWidget):
         for row, result in enumerate(rows):
             extra = result.get('film_area_m2', 0)-best_area
             if result['error']:
-                values = (result['name'], '无安全方案', '—', '—', '—')
+                values = (result['name'], '—', '无安全方案', '—', '—', '—')
             else:
-                values = (result['name'], f"{result['length_m']:.3f}",
+                values = (result['name'],
+                          f"{result.get('paired_rows', 0)}行 / {result.get('paired_images', 0)}张",
+                          f"{result['length_m']:.3f}",
                           f"{result['film_area_m2']:.3f}",
                           f"{result['image_occupancy_percent']:.1f}%",
                           f"{result['usable_occupancy_percent']:.1f}%")

@@ -17,6 +17,7 @@ from .marker_space import validate_embedded_marks
 from .batch_analysis import analyze_batch
 from .film_specs import AVAILABLE_WIDTHS, availability_text, comparison_widths
 from .normal_plan_cache import NormalPlans
+from .dual_quality import dual_quality
 
 
 def compare_films(paths, settings, progress=None):
@@ -90,11 +91,14 @@ def _compare_films(paths, settings, progress):
                 image_area = sum(p.width_px*p.height_px for _, p in planned)*metres_per_px**2
                 area = film/1000*length
                 usable_area = usable/1000*length
+                quality = dual_quality(planned, config, analysis)
                 row.update(length_m=length, film_area_m2=area, usable_area_m2=usable_area,
                            image_area_m2=image_area,
                            image_occupancy_percent=100*image_area/area if area else 0,
                            usable_occupancy_percent=100*image_area/usable_area if usable_area else 0,
-                           rotated_images=sum(bool(p.rotation_degrees) for _, p in planned))
+                           rotated_images=sum(bool(p.rotation_degrees) for _, p in planned),
+                           paired_rows=quality.get('paired_rows', 0),
+                           paired_images=quality.get('paired_rows', 0)*2)
             except ValueError as exc:
                 row['error'] = str(exc)
             row['seconds'] = monotonic()-step
@@ -140,6 +144,7 @@ def comparison_text(comparison):
             lines.append(r['name']+'：无安全方案 · '+r['error'])
         else:
             lines.append(f"{r['name']}：{r['length_m']:.3f} 米 · {r['film_area_m2']:.3f} 平方米"
+                         f" · 双排 {r.get('paired_rows', 0)} 行/{r.get('paired_images', 0)} 张"
                          f" · 图片占位 {r['image_occupancy_percent']:.1f}%"
                          f" · 可用区占位 {r['usable_occupancy_percent']:.1f}%"
                          f" · 实际旋转 {r['rotated_images']} 张"
