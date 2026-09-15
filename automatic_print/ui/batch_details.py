@@ -22,6 +22,10 @@ class BatchDetailsDialog(QDialog):
         self.raise_()
         self.activateWindow()
 
+    def open_overview(self):
+        self.tabs.setCurrentIndex(0)
+        self.open_details()
+
     def open_history(self):
         if not getattr(self.parent(), 'developer_mode_enabled', False):
             return

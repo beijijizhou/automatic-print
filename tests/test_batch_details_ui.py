@@ -39,6 +39,9 @@ def test_secondary_tools_live_in_one_nonmodal_dialog(tmp_path):
     assert details.isVisible()
     assert panel.analysis.isVisible()
     details.tabs.setCurrentIndex(3)
+    panel.details_button.click()
+    assert details.tabs.currentIndex() == 0
+    details.tabs.setCurrentIndex(3)
     window.run_log.appendPlainText('正在保存本批次')
     assert window.run_log.isVisible()
     assert '正在保存本批次' in window.run_log.toPlainText()
