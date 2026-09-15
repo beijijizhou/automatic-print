@@ -11,15 +11,15 @@
 | 订单、双面和尺码归组 | `layout_engine/order_groups.py`, `batch_analysis.py`, `size_policy.py` | 排版、比较、报告和安全检查使用同一身份。 |
 | 颜色与生产顺序 | `layout_engine/color_policy.py`, `single_order_sequence.py` | 颜色优先、尺码业务顺序集中维护。 |
 | 普通行和双排行规划 | `layout_engine/planner.py`, `row_optimizer.py`, `single_rows.py` | 入口不得自己拼 Placement。 |
-| 整批刀位 | `layout_engine/cutter_planner.py`, `knife_optimizer.py` | 一个区域一个固定范围/刀位；UI只展示结果。 |
+| 整批刀位 | `layout_engine/cutter_planner.py`, `knife_optimizer.py`, `adaptive_knife.py` | 连续宽度异常拆成固定刀位区域；保持顺序且不让宽图拖累可双排区。 |
 | 旋转区域和整批旋转 | `layout_engine/rotation_zones.py`, `rotation_compare.py`, `whole_rotation.py` | 以完整订单或尺码块评估，不复制候选算法。 |
 | 单排超宽恢复 | `layout_engine/width_fit.py`, `gap_fallback.py` | 先旋转、符合规则时再等比缩小；保留恢复报告。 |
 | 标签、平台文字和刀码 | `layout_engine/labels.py`, `marker_stack.py`, `platform_label.py` | 测量、预览、输出使用同一几何结果。 |
-| 二维码侧别与空白带 | `layout_engine/qr_corners.py`, `qr_placement.py`, `header_region.py` | 只测位置和可用空间，不做无业务用途的二维码解码。 |
+| 二维码侧别与空白带 | `layout_engine/qr_corners.py`, `qr_placement.py`, `header_region.py` | 只测顶部有限条带的位置和可用空间，不做二维码解码或整图像素读取。 |
 | 透明区域搜索 | `layout_engine/transparent_search.py`, `platform_space.py`, `marker_space.py` | 像素读取结果进入测量缓存，不在每个方案重复扫描。 |
 | 膜规格方案比较 | `layout_engine/film_comparison.py`, `film_specs.py` | 比较方案不自动替用户选择生产膜。 |
 | Pillow 渲染 | `layout_engine/pillow_renderer.py` | 与 vips 共享规划和安全契约，不复制排版业务。 |
-| libvips 分块渲染 | `layout_engine/vips_renderer.py`, `png_codecs/` | 只负责高效合成编码，不拥有订单或刀位规则。 |
+| libvips 分块渲染 | `layout_engine/vips_renderer.py`, `png_codecs/` | 使用浅层画布图和固定快速滤波完成合成编码，不拥有订单或刀位规则。 |
 | 分段输出 | `layout_engine/segmented_output.py`, `atomic_png.py` | 按完整行/订单切分，失败文件不可冒充可打印结果。 |
 | 输出命名与信息 | `layout_engine/output_name.py`, `output_sizes.py`, `output_file_info.py` | 单批、多批、分段统一命名和报告字段。 |
 | 订单与刀位安全 | `layout_engine/order_validation.py`, `cut_validation.py`, `marked_pixel_validation.py` | 规划后和真实像素阶段分别核验，不能由 UI 绕过。 |

@@ -34,13 +34,14 @@ def save_png(canvas, target, settings, use_vips, progress):
             if details is None:
                 start = perf_counter()
                 if use_vips:
-                    canvas.pngsave(str(pending), compression=settings.png_compression_level, interlace=False)
+                    canvas.pngsave(str(pending), compression=settings.png_compression_level,
+                                   interlace=False, filter='up')
                 else:
                     canvas.save(pending, format='PNG', dpi=(settings.dpi, settings.dpi),
                                 compress_level=settings.png_compression_level)
                 encoder = ('原生分块流式PNG' if getattr(settings, 'png_streaming', False)
                            else '大图兼容PNG') if use_vips else '标准兼容PNG'
-                name = ('流式合成、编码与写入' if use_vips and getattr(settings, 'png_streaming', False)
+                name = ('延迟合成、固定UP滤波、PNG压缩与写入' if use_vips and getattr(settings, 'png_streaming', False)
                         else '兼容编码与写入（含可能的延迟合成）')
                 details = {'encoder': encoder,
                     'steps': [{'name': name, 'seconds': perf_counter()-start}]}

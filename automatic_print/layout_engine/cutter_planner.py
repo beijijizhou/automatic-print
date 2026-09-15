@@ -56,8 +56,21 @@ def plan_cutter_layout(paths, settings, progress, prepared=None, preserve_sequen
                 if all(h is not None for h in independent) else height)
     if progress:
         progress("切膜安全检查", len(paths), len(paths), "刀位及左右色块基准整批固定")
-    output_width = width if settings.cutter_mode == "dual" else min(width, _used_canvas_width(planned))
+    output_width = cutter_output_width(planned, settings, width)
     return planned, labels, output_width, height, baseline
+
+
+def cutter_output_width(planned, settings, maximum):
+    """Trim unused right canvas while retaining every active knife corridor."""
+    from .planner import _used_canvas_width
+    used = _used_canvas_width(planned)
+    if settings.cutter_mode != 'dual':
+        return min(maximum, used)
+    safety = ceil(settings.cutter_safety_mm*settings.dpi/25.4)
+    knives = [p.cut_knife_x_px for _path, p in planned if p.cut_knife_x_px is not None]
+    if not knives:
+        knives = [mm_to_px(settings.cutter_knife_mm, settings.dpi)]
+    return min(maximum, max(used, max(knives)+safety+1))
 
 
 def solve_groups(groups, lanes, spacing):

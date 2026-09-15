@@ -5,6 +5,7 @@ from PIL import Image
 import pyvips
 from automatic_print.layout import LayoutSettings, generate_layout
 from automatic_print.layout_engine.png_codecs.streaming import validate_final_canvas, validate_header
+from automatic_print.layout_engine.vips_renderer import _balanced_vertical_join
 
 
 def test_final_canvas_rejects_actual_pixel_in_corridor():
@@ -48,3 +49,34 @@ def test_streaming_never_reopens_png_for_pixel_decode(tmp_path, monkeypatch):
     assert '最终画布刀位检查' in phases
     assert '原生分块流式PNG' in result['png_save_details']['encoder']
     assert result['cut_corridor']['pixel_verified']
+
+
+def test_streaming_uses_fixed_fast_png_filter(tmp_path):
+    from automatic_print.layout_engine.atomic_png import save_png
+    class Canvas:
+        width, height = 10, 20
+        options = None
+        def pngsave(self, path, **options):
+            self.options = options
+            Path(path).write_bytes(b'complete')
+    canvas = Canvas()
+    target = tmp_path/'filter.png'
+    settings = LayoutSettings(png_streaming=True, png_compression_level=1)
+    details = save_png(canvas, target, settings, True, None)
+    assert canvas.options['filter'] == 'up'
+    assert '固定UP滤波' in details['steps'][0]['name']
+
+
+def test_balanced_vertical_join_preserves_every_row_and_gap():
+    rows = [
+        pyvips.Image.black(7, height, bands=4).new_from_image(color)
+        for height, color in ((2, [1, 2, 3, 255]), (3, [4, 5, 6, 255]),
+                              (1, [7, 8, 9, 255]), (4, [10, 11, 12, 255]))
+    ]
+    joined = _balanced_vertical_join(rows)
+    pixels = bytes(joined.write_to_memory())
+    expected = b''.join(bytes(color)*7*height for height, color in (
+        (2, [1, 2, 3, 255]), (3, [4, 5, 6, 255]),
+        (1, [7, 8, 9, 255]), (4, [10, 11, 12, 255])))
+    assert (joined.width, joined.height) == (7, 10)
+    assert pixels == expected

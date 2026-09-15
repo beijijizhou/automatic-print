@@ -53,7 +53,8 @@ def test_actual_choice_width_failure_is_quantified(tmp_path):
     from automatic_print.layout import LayoutSettings,generate_layout
     import pytest
     path=tmp_path/'B123-1-T-Black-M-NO1-1.png'
-    with Image.new('RGBA',(200,100)) as image:
+    # Both orientations exceed the film; a merely wide image now recovers by rotation.
+    with Image.new('RGBA',(200,180)) as image:
         image.save(path,dpi=(25.4,25.4))
     with pytest.raises(ValueError) as error:
         generate_layout([path],tmp_path/'out',LayoutSettings(dpi=25.4,media_width_mm=150,

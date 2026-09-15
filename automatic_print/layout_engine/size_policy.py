@@ -50,7 +50,7 @@ def validate_single_size_blocks(paths, planned):
     from .order_groups import complete_orders
     eligible = {path: source_block(path) for order in complete_orders(paths)
                 if (size := single_order_size(order)) is not None for path in order}
-    closed, previous, zones = set(), None, defaultdict(set)
+    closed, previous, orientations = set(), None, defaultdict(set)
     for path, placement in sorted(planned, key=lambda entry: (entry[1].row_y_px, entry[1].x_px)):
         size = eligible.get(path)
         if size != previous:
@@ -60,10 +60,10 @@ def validate_single_size_blocks(paths, planned):
                 raise ValueError(f'单件尺码 {size} 被其他尺码或订单打散，禁止输出。')
             previous = size
         if size is not None:
-            zones[size].add(placement.cut_zone)
-    if any(len(values) > 1 for values in zones.values()):
-        raise ValueError('同尺码单件被拆到不同旋转区域，禁止输出。')
-    sequence = list(zones)
+            orientations[size].add(bool(placement.rotation_degrees))
+    if any(len(values) > 1 for values in orientations.values()):
+        raise ValueError('同尺码单件被拆成旋转与不旋转两种方向，禁止输出。')
+    sequence = list(orientations)
     if sequence != sorted(sequence, key=block_key):
         raise ValueError('单件未按颜色优先、同色尺码从小到大排列，禁止输出。')
     return {'single_size_blocks': [size for _,size in sequence], 'single_size_verified': True,

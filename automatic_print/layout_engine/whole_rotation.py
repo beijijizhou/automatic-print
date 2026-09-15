@@ -30,7 +30,9 @@ def recover_normal_width(paths,settings,progress,error):
     planned=[(path,replace(p,cut_zone='旋转区' if dual else '单排区',
                           cut_knife_x_px=rotated[3] if dual else None))
              for path,p in rotated[0]]
-    width=mm_to_px(settings.media_width_mm,settings.dpi)
+    maximum=mm_to_px(settings.media_width_mm,settings.dpi)
+    from .cutter_planner import cutter_output_width
+    width=cutter_output_width(planned,settings,maximum)
     validate_order_placements(paths,planned)
     validate_cut_corridor(planned,settings,width)
     validate_embedded_marks(planned,settings)
@@ -57,7 +59,9 @@ def compare_whole(paths, settings, progress, selected, prepared=None):
     planned = [(path, replace(p, cut_zone='旋转区' if settings.cutter_mode == 'dual' else '单排区',
                              cut_knife_x_px=rotated[3] if settings.cutter_mode == 'dual' else None))
                for path, p in rotated[0]]
-    width = mm_to_px(settings.media_width_mm, settings.dpi)
+    maximum = mm_to_px(settings.media_width_mm, settings.dpi)
+    from .cutter_planner import cutter_output_width
+    width = cutter_output_width(planned, settings, maximum)
     try:
         validate_order_placements(paths, planned)
         validate_cut_corridor(planned, settings, width)

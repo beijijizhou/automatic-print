@@ -35,8 +35,9 @@ def test_cold_measurements_report_substeps_and_warm_cache_reports_zero(tmp_path)
     planner.plan_layout(paths, config(), None, reports.append)
     data = reports[-1]['measurement_timings']
     rows = {r['name']: r for r in data['steps']}
-    # Both directions are now measured while the same decoded source is open.
-    assert rows['源图片像素读取与解压']['calls'] == len(paths)
+    # Production libvips reads only the bounded top strip; Pillow remains a fallback.
+    decode = rows.get('顶部标签条带读取与解压') or rows.get('源图片像素读取与解压')
+    assert decode['calls'] == len(paths)
     for name in ('膜标签卡片定位', '平台文字测量', '普通标签文字测量',
                  '平台透明空位搜索', '尺寸与DPI文件信息读取'):
         assert rows[name]['calls'] > 0
@@ -63,7 +64,7 @@ def test_measurement_text_appears_in_main_data_and_output_report(tmp_path):
     assert '膜标签卡片定位' in panel.measurement.text()
     report = cutting_report({'analysis': reports[-1], 'parts': [],
         'filename': 'test.png', 'placements': [], 'output_dpi': 25.4})
-    assert '源图片像素读取与解压' in report
+    assert '读取与解压' in report
     panel.start(tmp_path/'next')
     assert not panel.measurement.text()
     panel.close()

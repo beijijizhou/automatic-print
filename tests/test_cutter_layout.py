@@ -35,11 +35,15 @@ def test_fixed_dual_rows_keep_knife_marker_and_orientation(tmp_path, engine):
     assert result["source_dimensions"][0]["width_mm"] == pytest.approx(280, abs=0.1)
 
 
-def test_image_that_fits_film_but_crosses_partition_is_rejected(tmp_path):
+def test_image_that_crosses_partition_uses_safe_original_size_rotation(tmp_path):
     path = _image(tmp_path / "too-wide.png", width=310)
-    with pytest.raises(ValueError, match="无法安全放入固定分区"):
-        generate_layout([path], tmp_path / "out", _settings())
-    assert not (tmp_path / "out" / "print.png").exists()
+    result = generate_layout([path], tmp_path / "out", _settings())
+    placement = result['placements'][0]
+    assert result['rotation_count'] == 1
+    assert placement['rotation_degrees'] == 90
+    assert (placement['width_px'], placement['height_px']) == (350, 310)
+    assert placement['cut_zone'] == '旋转区'
+    assert result['cut_corridor']['pixel_verified']
 
 
 def test_single_column_preserves_double_pair_without_rotation(tmp_path):

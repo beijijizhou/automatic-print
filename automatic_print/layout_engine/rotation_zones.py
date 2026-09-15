@@ -151,7 +151,10 @@ def plan_rotation_zones(paths, settings, progress, analysis=None, analysis_ready
                  '完整订单分区，双面保持相邻；各区刀位固定')
         progress('旋转区节省', baseline_height-new_height, settings.dpi,
                  f'旋转区 {len(rotated_paths)} 张 · 节省 {(baseline_height-new_height)*25.4/settings.dpi/1000:.3f} 米')
-    return planned, labels, mm_to_px(settings.media_width_mm, settings.dpi), new_height, baseline_height
+    from .cutter_planner import cutter_output_width
+    width = cutter_output_width(planned, settings,
+                                mm_to_px(settings.media_width_mm, settings.dpi))
+    return planned, labels, width, new_height, baseline_height
 
 
 def _baseline_result(plan, settings, progress):

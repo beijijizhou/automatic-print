@@ -52,9 +52,17 @@ def compare_rotation(paths, settings, progress, analysis, analysis_ready):
             normal = pool.submit(copy_context().run, checked, plan_cutter_layout, normal_settings, normal_progress)
             rotated = pool.submit(copy_context().run, checked, rotation_plan, settings, progress)
             normal, rotated = normal.result(), rotated.result()
-    if rotated[0] is None:
-        raise ValueError('旋转方案无法安全生成：'+rotated[3])
-    result, height, seconds, _ = rotated
+    from .adaptive_knife import plan_adaptive_knife_zones
+    adaptive = checked(plan_adaptive_knife_zones, settings, progress)
+    candidates = [(name, row) for name, row in (
+        ('旋转区域', rotated), ('连续刀位分区双排', adaptive)
+    ) if row[0] is not None]
+    if not candidates:
+        raise ValueError('旋转及连续刀位分区均无法安全生成：'+rotated[3]+'；'+adaptive[3])
+    strategy, selected = min(candidates, key=lambda item: (
+        item[1][1], sum(bool(p.rotation_degrees) for _, p in item[1][0][0])
+    ))
+    result, height, seconds, _ = selected
     normal_height = normal[1]
     scale = 25.4/settings.dpi/1000
     analysis['rotation_comparison'] = {
@@ -64,6 +72,8 @@ def compare_rotation(paths, settings, progress, analysis, analysis_ready):
         'normal_seconds': normal[2], 'rotation_seconds': seconds,
         'normal_error': normal[3], 'parallelism': workers,
         'rotated_images': sum(bool(p.rotation_degrees) for _, p in result[0]),
+        'selected_strategy': strategy,
+        'selected_zones': len({p.cut_zone for _, p in result[0]}),
     }
     if progress:
         progress('比较旋转区域', 2, 2, '两套整批方案已完成订单、双面、刀位与透明标记检查')
@@ -71,3 +81,16 @@ def compare_rotation(paths, settings, progress, analysis, analysis_ready):
     extra = height-result[3]
     baseline = (normal_height if normal_height is not None else height)-extra
     return result[0], result[1], result[2], result[3], baseline
+
+
+def update_selected_comparison(comparison, result, settings, whole_rotation=False):
+    if not comparison:
+        return
+    if whole_rotation:
+        comparison['selected_strategy'] = '整批旋转'
+    height = marked_height(result[0], settings, result[2], result[3])
+    comparison['rotation_m'] = height*25.4/settings.dpi/1000
+    normal = comparison['normal_m']
+    comparison['saved_m'] = normal-comparison['rotation_m'] if normal is not None else None
+    comparison['rotated_images'] = sum(bool(p.rotation_degrees) for _, p in result[0])
+    comparison['selected_zones'] = len({p.cut_zone for _, p in result[0]})

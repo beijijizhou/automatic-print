@@ -23,8 +23,11 @@ def make_window(tmp_path):
 
 def test_main_start_directly_generates_without_settings(tmp_path, monkeypatch):
     window = make_window(tmp_path)
+    source = tmp_path/'selected-batch'
+    source.mkdir()
+    monkeypatch.setattr(QFileDialog, 'getExistingDirectory', lambda *_: str(source))
     calls = []
-    monkeypatch.setattr(window, 'generate', lambda: calls.append('generate'))
+    monkeypatch.setattr(window, 'generate', lambda *_args, **_kwargs: calls.append('generate'))
     window.automation_home.start_layout_button.click()
     assert calls == ['generate']
     assert not window.settings_dialog.isVisible()

@@ -109,8 +109,9 @@ class BatchSummaryPanel(QGroupBox):
             normal_text = f'{normal:.3f} 米' if normal is not None else '无安全方案'
             saved = comparison['saved_m']
             saving = f'{saved:.3f} 米' if saved is not None else '无法比较'
+            strategy = comparison.get('selected_strategy', '旋转区域')
             self.metrics.setText(self.metrics.text()+
-                f"\n并行比较（分段前）：不旋转 {normal_text} · 启用旋转 {comparison['rotation_m']:.3f} 米"
+                f"\n实际排版策略比较（分段前）：固定刀位不旋转 {normal_text} · {strategy} {comparison['rotation_m']:.3f} 米"
                 f" · 省膜 {saving} · 实际旋转 {comparison['rotated_images']} 张"
                 '\n可在打印参数取消旋转区，选择常规方案；仅预览不会生成文件。')
 

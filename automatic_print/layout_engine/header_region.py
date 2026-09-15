@@ -4,9 +4,8 @@ from pathlib import Path
 import numpy as np
 from PIL import Image
 
-from .measurement_session import source_pixels
 from .membrane_region import MembraneRegion
-from .measurement_timing import measured, decode_source
+from .measurement_timing import measured, substep
 
 
 def search_header(path):
@@ -20,22 +19,57 @@ def search_header(path):
 @lru_cache(maxsize=4096)
 @measured('膜标签卡片定位')
 def _cached(path, _mtime, _size):
-    with source_pixels(Path(path)) as source:
-        decode_source(source)
-        # Width-based height keeps short source images' header cards intact.
-        height = min(source.height, max(96, round(source.width*.5)))
-        with source.crop((0, 0, source.width, height)) as crop:
+    pixels, source_width, source_height, header_height = _header_pixels(Path(path))
+    white = (pixels[:, :, 3] >= 240) & (pixels[:, :, :3].min(axis=2) >= 220)
+    candidates = _cards(white)
+    if not candidates:
+        return None
+    sample_height, sample_width = white.shape
+    left, top, right, bottom = min(candidates, key=lambda r:
+        (r[1], -(r[2]-r[0])*(r[3]-r[1]), min(r[0], sample_width-r[2])))
+    return MembraneRegion(left/sample_width, top/sample_height*header_height/source_height,
+                          right/sample_width, bottom/sample_height*header_height/source_height)
+
+
+def _header_pixels(path):
+    """Decode only the bounded top label strip when libvips is available."""
+    try:
+        import pyvips
+    except (ImportError, OSError):
+        return _pillow_header_pixels(path)
+    with substep('顶部标签条带读取与解压'):
+        source = pyvips.Image.new_from_file(str(path), access='sequential')
+        source_width, source_height = source.width, source.height
+        header_height = min(source_height, max(96, round(source_width*.5)))
+        strip = source.crop(0, 0, source_width, header_height)
+        scale = min(1.0, 1000/max(strip.width, strip.height))
+        if scale < 1:
+            strip = strip.resize(scale, kernel='nearest')
+        if strip.format != 'uchar':
+            strip = strip.cast('uchar')
+        if strip.bands == 1:
+            grey = strip[0]
+            strip = grey.bandjoin([grey, grey, 255])
+        elif strip.bands == 2:
+            grey = strip[0]
+            strip = grey.bandjoin([grey, grey, strip[1]])
+        elif strip.bands == 3:
+            strip = strip.bandjoin(255)
+        elif strip.bands > 4:
+            strip = strip.extract_band(0, n=4)
+        pixels = np.frombuffer(strip.write_to_memory(), dtype=np.uint8)
+        return pixels.reshape(strip.height, strip.width, 4), source_width, source_height, header_height
+
+
+def _pillow_header_pixels(path):
+    with substep('源图片像素读取与解压'), Image.open(path) as source:
+        source.load()
+        source_width, source_height = source.size
+        header_height = min(source_height, max(96, round(source_width*.5)))
+        with source.crop((0, 0, source_width, header_height)) as crop:
             crop.thumbnail((1000, 1000), Image.Resampling.NEAREST)
             with crop.convert('RGBA') as rgba:
-                pixels = np.asarray(rgba)
-                white = (pixels[:, :, 3] >= 240) & (pixels[:, :, :3].min(axis=2) >= 220)
-            candidates = _cards(white)
-            if not candidates:
-                return None
-            left, top, right, bottom = min(candidates, key=lambda r:
-                (r[1], -(r[2]-r[0])*(r[3]-r[1]), min(r[0], crop.width-r[2])))
-            return MembraneRegion(left/crop.width, top/crop.height*height/source.height,
-                                  right/crop.width, bottom/crop.height*height/source.height)
+                return np.asarray(rgba).copy(), source_width, source_height, header_height
 
 
 def _cards(white):

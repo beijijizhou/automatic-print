@@ -98,7 +98,7 @@ def test_already_normalized_order_code_is_not_stripped_again(tmp_path):
 
 def test_rotation_can_fit_batch_without_a_feasible_normal_baseline(tmp_path):
     paths = [source(tmp_path, 'BORDER-1-NO1-1', 700, 100)]
-    with pytest.raises(ValueError):
-        plan_layout(paths, settings(cutter_rotation_zone=False), None)
+    baseline, _, _, _, _ = plan_layout(paths, settings(cutter_rotation_zone=False), None)
+    assert baseline[0][1].cut_zone == '旋转区'
     planned, _, _, _, _ = plan_layout(paths, settings(), None)
     assert planned[0][1].cut_zone == '旋转区'

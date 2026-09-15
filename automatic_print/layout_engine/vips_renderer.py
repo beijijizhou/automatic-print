@@ -30,9 +30,10 @@ def _rgba(path: Path, width: int, height: int, rotation_degrees: int):
     target_width, target_height = (
         (height, width) if rotation_degrees % 180 else (width, height)
     )
-    image = image.thumbnail_image(
-        target_width, height=target_height, size="force", no_rotate=True
-    )
+    if image.width != target_width or image.height != target_height:
+        image = image.thumbnail_image(
+            target_width, height=target_height, size="force", no_rotate=True
+        )
     if rotation_degrees == 90:
         image = image.rot("d270")
     elif rotation_degrees == -90:
@@ -142,18 +143,19 @@ def build_vips_canvas(
                 ),
             )
         )
-    _, previous_height, canvas = rows[0]
-    previous_y = rows[0][0]
+    pieces = [rows[0][2]]
+    previous_y, previous_height = rows[0][:2]
     for row_y, row_height, row_canvas in rows[1:]:
-        canvas = canvas.join(
-            row_canvas,
-            "vertical",
-            expand=True,
-            shim=row_y - (previous_y + previous_height),
-            background=[0, 0, 0, 0],
-            align="low",
-        )
+        gap = row_y - (previous_y + previous_height)
+        if gap < 0:
+            raise ValueError("排版行发生垂直重叠，禁止生成输出。")
+        if gap:
+            pieces.append(pyvips.Image.black(width, gap, bands=4).copy(
+                interpretation="srgb"
+            ))
+        pieces.append(row_canvas)
         previous_y, previous_height = row_y, row_height
+    canvas = _balanced_vertical_join(pieces)
     pixels_per_mm = settings.dpi / 25.4
     return canvas.embed(
         0,
@@ -163,3 +165,20 @@ def build_vips_canvas(
         extend="background",
         background=[0, 0, 0, 0],
     ).copy(xres=pixels_per_mm, yres=pixels_per_mm)
+
+
+def _balanced_vertical_join(images):
+    """Build a shallow demand graph instead of an O(rows)-deep join chain."""
+    level = list(images)
+    while len(level) > 1:
+        joined = []
+        for index in range(0, len(level), 2):
+            if index + 1 == len(level):
+                joined.append(level[index])
+            else:
+                joined.append(level[index].join(
+                    level[index + 1], "vertical", expand=True,
+                    background=[0, 0, 0, 0], align="low",
+                ))
+        level = joined
+    return level[0]

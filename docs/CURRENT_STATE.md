@@ -22,13 +22,14 @@
 - 订单、双面、颜色与尺码：`order_groups.py`、`batch_analysis.py`、
   `single_order_sequence.py`、`color_policy.py`、`size_policy.py`。
 - 行、刀位和区域规划：`planner.py`、`row_optimizer.py`、`cutter_planner.py`、
-  `knife_optimizer.py`、`zone_optimizer.py`、`rotation_zones.py`。
+  `knife_optimizer.py`、`adaptive_knife.py`、`zone_optimizer.py`、`rotation_zones.py`。
 - 旋转与超宽恢复：`rotation_compare.py`、`whole_rotation.py`、`tail_rotation.py`、
   `single_rotation.py`、`width_fit.py`、`gap_fallback.py`。
 - 标签与刀码：`labels.py`、`dynamic_label.py`、`marker_stack.py`、`left_marker.py`、
   `platform_label.py`、`header_region.py`、`transparent_search.py`。
 - 渲染与编码：`pillow_renderer.py`、`vips_renderer.py`、`png_codecs/`、
-  `segmented_output.py`、`atomic_png.py`。
+  `segmented_output.py`、`atomic_png.py`。活动的大图路径使用顶部有限条带测量、平衡行画布图和固定
+  UP 滤波；保存计时包含 libvips 延迟合成、编码与写入，不能解释成纯磁盘耗时。
 - 输出安全：`order_validation.py`、`cut_validation.py`、
   `marked_pixel_validation.py`、`printed_guides.py`、`output_file_info.py`。
 - 膜方案与统计：`film_comparison.py`、`film_specs.py`、`metrics.py`、

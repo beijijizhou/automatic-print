@@ -94,4 +94,7 @@ def plan_single_rotation(baseline, targets, rotated_items, rotated_labels, setti
                  f'旋转区 {len(chosen)} 张；保留双排，不拆订单、双面或尺码块')
     selected_labels = {p.sequence_number: rotated_labels[p.sequence_number] for _, p in rotated[0]
                        if p.sequence_number in rotated_labels}
+    from .cutter_planner import cutter_output_width
+    width = cutter_output_width(planned, settings,
+                                mm_to_px(settings.media_width_mm, settings.dpi))
     return planned, baseline[1] | selected_labels, width, height, original_height

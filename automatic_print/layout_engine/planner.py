@@ -39,12 +39,11 @@ def _measured_plan(paths, settings, progress, analysis_ready):
         analysis['rotation_recovery']={'reason':str(error),'action':'常规方案无解，采用原尺寸整批旋转单排；未缩小图片'}
     if settings.cutter_mode in {'single', 'dual'}:
         from .whole_rotation import compare_whole
+        previously_selected = result
         result = compare_whole(paths, settings, progress, result)
-        comparison = analysis.get('rotation_comparison')
-        if comparison:
-            comparison['rotation_m'] = marked_height(result[0],settings,result[2],result[3])*25.4/settings.dpi/1000
-            comparison['saved_m'] = (comparison['normal_m']-comparison['rotation_m']) if comparison['normal_m'] is not None else None
-            comparison['rotated_images'] = sum(bool(p.rotation_degrees) for _,p in result[0])
+        from .rotation_compare import update_selected_comparison
+        update_selected_comparison(analysis.get('rotation_comparison'), result, settings,
+                                   result is not previously_selected)
     planned, labels, width, height, baseline = result
     if settings.batch_end_block:
         width = mm_to_px(settings.media_width_mm,settings.dpi)

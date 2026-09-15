@@ -37,7 +37,9 @@ def test_fast_tail_rotation_keeps_full_sizes_double_faces_and_real_cut_channels(
     assert len(rotated) == 4
     assert all(p['rotation_degrees'] == 90 and p['color_block_x_px'] == 0 for p in rotated)
     assert rotated[0]['source'].endswith('NO1-1.png') and rotated[1]['source'].endswith('NO1-2.png')
-    assert rotated[1]['row_y_px'] == rotated[0]['row_y_px']+rotated[0]['footprint_height_px']+5
+    assert rotated[1]['row_y_px'] == (rotated[0]['row_y_px']+
+                                      rotated[0]['footprint_height_px']+
+                                      settings.spacing_mm)
     with Image.open(tmp_path/'out'/result['filename']) as image:
         for zone in result['cut_corridor']['zones']:
             stripe = image.crop((zone['safe_left_px'], zone['start_y_px'], zone['safe_right_px'], zone['end_y_px']))

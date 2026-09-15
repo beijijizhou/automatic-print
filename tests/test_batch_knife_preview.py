@@ -8,7 +8,7 @@ from PySide6.QtCore import QSettings
 from PySide6.QtWidgets import QApplication
 
 from automatic_print.layout import LayoutSettings, generate_layout
-from automatic_print.layout_engine.planner import plan_layout
+from automatic_print.layout_engine.planner import _used_canvas_width, plan_layout
 from automatic_print.ui.main_window import MainWindow
 
 
@@ -45,8 +45,18 @@ def test_whole_batch_knife_is_asymmetric_fixed_and_recorded(tmp_path):
         else:
             assert p["x_px"] >= knife+3
             assert p["x_px"] + p["width_px"] <= 600
-    with pytest.raises(ValueError):
-        plan_layout(paths, replace(_settings(), cutter_auto_knife=False), None)
+    recovered, _labels, width, _height, _baseline = plan_layout(
+        paths, replace(_settings(), cutter_auto_knife=False), None
+    )
+    assert width < 600
+    assert width == max(
+        _used_canvas_width(recovered),
+        max(p.cut_knife_x_px for _path, p in recovered)+4,
+    )
+    assert all(p.rotation_degrees == 90 for _path, p in recovered)
+    assert {p.cut_zone for _path, p in recovered} == {'旋转区'}
+    assert len({p.cut_knife_x_px for _path, p in recovered}) == 1
+    assert all(p.color_block_x_px == 0 for _path, p in recovered)
 
 
 def test_generation_preview_uses_worker_positions_and_keeps_saving_frame(tmp_path):

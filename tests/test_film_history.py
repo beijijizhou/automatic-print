@@ -60,7 +60,8 @@ def test_history_failures_do_not_block_finished_production(tmp_path, monkeypatch
     import automatic_print.history.store as store
     import automatic_print.ui.workers as workers
     monkeypatch.setattr(store, 'save_run', lambda *_a, **_k: (_ for _ in ()).throw(OSError('disk unavailable')))
-    monkeypatch.setattr(workers, 'generate_layout', lambda *_a, **_k: {'analysis': {}})
+    monkeypatch.setattr(workers, 'generate_layout',
+                        lambda *_a, **_k: {'analysis': {}, 'filename': tmp_path.name+'.png'})
     monkeypatch.setattr(workers, 'cutting_report', lambda *_a: 'report')
     worker = GenerateWorker([], tmp_path, tmp_path, 'job', LayoutSettings())
     finished, failed = [], []
@@ -82,7 +83,8 @@ def test_successful_worker_appends_one_record_and_stopped_task_does_not(tmp_path
     import automatic_print.ui.workers as workers
     monkeypatch.setenv('LOCALAPPDATA', str(tmp_path/'appdata'))
     settings = LayoutSettings(dpi=25.4, media_width_mm=580, number_images=False)
-    result = {'analysis': {'film_comparison': compare_films(sources(tmp_path), settings)}}
+    result = {'filename': tmp_path.name+'.png',
+              'analysis': {'film_comparison': compare_films(sources(tmp_path), settings)}}
     monkeypatch.setattr(workers, 'generate_layout', lambda *_a, **_k: result)
     monkeypatch.setattr(workers, 'cutting_report', lambda *_a: 'report')
     worker = GenerateWorker([], tmp_path, tmp_path, 'completed', settings)

@@ -8,6 +8,20 @@ from automatic_print.layout import LayoutSettings, generate_layout
 from automatic_print.layout_engine.transition_marks import transition_rects
 
 
+def test_ui_migrates_existing_end_block_to_off_once(tmp_path):
+    from PySide6.QtCore import QSettings
+    from PySide6.QtWidgets import QApplication
+    from automatic_print.ui.transition_settings import TransitionSettings
+    app = QApplication.instance() or QApplication([])
+    preferences = QSettings(str(tmp_path/'settings.ini'), QSettings.Format.IniFormat)
+    preferences.setValue('cutter/batch_end_block', True)
+    widget = TransitionSettings(preferences)
+    assert not widget.end_block.isChecked()
+    assert '会扩展到当前膜宽' in widget.end_block.text()
+    widget.close()
+    app.processEvents()
+
+
 def test_preview_uses_same_end_block_rectangle():
     from types import SimpleNamespace
     from PySide6.QtGui import QImage,QPainter

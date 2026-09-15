@@ -40,7 +40,7 @@ def test_selected_batches_are_merged_in_selection_order(
         "ORDER-B-White-M-NO1-1.png",
         "ORDER-A-Black-S-NO1-1.png",
     ]
-    assert captured["destination"].name.startswith("607250203002_607250203001_MERGED_")
+    assert captured["destination"].name == "607250203002_607250203001"
     assert captured["batch_name"] == "607250203002_607250203001"
     assert result["merged_batches"] == ["607250203002", "607250203001"]
     assert any("正在合并 2 个批次" in message for message in messages)
