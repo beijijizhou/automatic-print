@@ -34,6 +34,7 @@ def build_developer_mode(window, footer):
         panel.bulk_analysis_button.setVisible(False)
         panel.algorithm_costs_button.setVisible(enabled)
         panel.summary.film_table.set_reference_mode(False)
+        panel.summary.film_table.set_developer_mode(enabled)
         window.cutter_settings.compare_films.setText(
             '比较45/60厘米：常规与旋转（不自动切换）')
         details = panel.details_dialog

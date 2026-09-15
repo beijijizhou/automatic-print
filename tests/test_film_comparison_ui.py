@@ -34,6 +34,11 @@ def test_four_options_are_visible_and_copyable(tmp_path, capfd):
     assert text.count('（参考）') == 14
     assert panel.film_table.horizontalHeaderItem(1).text() == '双排数量'
     assert panel.film_table.horizontalHeaderItem(2).text() == '实际旋转'
+    assert panel.film_table.isColumnHidden(2)
+    panel.film_table.set_developer_mode(True)
+    assert not panel.film_table.isColumnHidden(2)
+    panel.film_table.set_developer_mode(False)
+    assert panel.film_table.isColumnHidden(2)
     assert panel.film_table.horizontalHeaderItem(4).text() == '面积 / ㎡'
     assert panel.film_table.horizontalHeaderItem(5).text() == '图片占位'
     assert sum('（当前输出）' in panel.film_table.item(row, 0).text()
