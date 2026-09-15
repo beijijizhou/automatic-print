@@ -68,6 +68,9 @@ class GenerationPreviewController(QObject):
         self.panel.analysis.show_report(payload['analysis'])
         self.panel.summary.show_plan(payload)
         self.preview.batch_payload = payload
+        quality = payload.get('dual_quality', {}).get('text')
+        if quality:
+            self.window.run_log.appendPlainText('排版方案：'+quality)
         if payload["settings"].cutter_mode == "dual":
             self.window.cutter_settings.knife.setValue(payload["settings"].cutter_knife_mm)
         self.preview.refresh_timer.stop()

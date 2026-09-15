@@ -36,6 +36,7 @@ def build_developer_mode(window, footer):
         window.layout_rules_form.setRowVisible(window.membrane_gap, enabled)
         window.layout_rules_form.setRowVisible(window.cutter_settings.two_zone, enabled)
         panel = window.automation_home.label_quick_panel
+        window.batch_record_group.setVisible(enabled)
         panel.summary.gap_loss.setVisible(enabled)
         panel.history_button.setVisible(enabled)
         panel.bulk_analysis_button.setVisible(False)

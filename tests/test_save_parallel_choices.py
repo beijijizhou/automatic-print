@@ -17,7 +17,7 @@ APP = QApplication.instance() or QApplication([])
 def test_parallel_choices_default_and_persist(tmp_path):
     prefs = QSettings(str(tmp_path/'parallel.ini'), QSettings.IniFormat)
     panel = SegmentedOutputSettings(prefs)
-    assert panel.workers.value() == 2
+    assert panel.workers.value() == 4
     assert (panel.workers.minimum(), panel.workers.maximum()) == (1, 8)
     panel.parts.setValue(8)
     panel.workers.setValue(8)

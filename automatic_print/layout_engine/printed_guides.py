@@ -84,7 +84,9 @@ def vips_corridor_is_clear(image, check, boxes=(), rectangles=()):
             else:
                 allowed = pyvips.Image.black(x1-x0, y1-y0).new_from_image(255)
             mask = mask.insert(allowed, x0-left, y0-top)
-    return (alpha > mask).max() == 0
+    from .vips_renderer import demand_lock
+    with demand_lock:
+        return (alpha > mask).max() == 0
 
 
 def validate_vips_canvas(canvas, check):

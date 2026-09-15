@@ -27,6 +27,7 @@ def test_secondary_tools_live_in_one_nonmodal_dialog(tmp_path):
     for tool in (panel.summary, panel.timings, panel.preview_tabs):
         assert tool.isVisible()
         assert not details.isAncestorOf(tool)
+    assert window.batch_record.document() is window.run_log.document()
     assert panel.marker_examples.isVisible()
     panel.preview_tabs.setCurrentIndex(0)
     assert panel.preview_scroll.isVisible()

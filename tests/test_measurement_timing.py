@@ -54,7 +54,7 @@ def test_cold_measurements_report_substeps_and_warm_cache_reports_zero(tmp_path)
 
 def test_per_image_measurement_cache_survives_batch_geometry_change(tmp_path, monkeypatch):
     paths = qr_sources(tmp_path)[:2]
-    initial = config(compare_film_sizes=False)
+    initial = replace(config(), compare_film_sizes=False)
     planner.plan_layout(paths, initial, None)
     from automatic_print.layout_engine import item_factory
     monkeypatch.setattr(

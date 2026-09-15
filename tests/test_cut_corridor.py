@@ -1,3 +1,6 @@
+import os
+os.environ.setdefault('QT_QPA_PLATFORM', 'offscreen')
+
 from dataclasses import replace
 from pathlib import Path
 

@@ -1,7 +1,9 @@
 from __future__ import annotations
 
+import atexit
 from itertools import groupby
 from pathlib import Path
+from threading import RLock
 
 from PIL import ImageColor
 
@@ -13,6 +15,20 @@ try:
     import pyvips
 except (ImportError, OSError):
     pyvips = None
+else:
+    # libvips owns native worker threads.  Let it join those workers before
+    # Python starts destroying extension modules during a normal/restart exit.
+    def _shutdown_vips():
+        pyvips.cache_set_max(0)
+        pyvips.shutdown()
+
+    atexit.register(_shutdown_vips)
+
+
+# This Homebrew libvips build can crash when independent Python worker pools
+# start several demand evaluations at once. libvips still uses its own native
+# worker threads inside each evaluation; only the outer evaluations are gated.
+demand_lock = RLock()
 
 
 def available() -> bool:

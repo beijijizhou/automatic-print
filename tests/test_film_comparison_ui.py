@@ -31,8 +31,9 @@ def test_four_options_are_visible_and_copyable(tmp_path, capfd):
         for option in ('不旋转', '允许旋转'):
             assert f'{film} 厘米 · {option}' in text
     assert text.count('（参考）') == 14
-    assert panel.film_table.horizontalHeaderItem(2).text() == '面积 / ㎡'
-    assert panel.film_table.horizontalHeaderItem(3).text() == '图片占位'
+    assert panel.film_table.horizontalHeaderItem(1).text() == '双排数量'
+    assert panel.film_table.horizontalHeaderItem(3).text() == '面积 / ㎡'
+    assert panel.film_table.horizontalHeaderItem(4).text() == '图片占位'
     assert panel.metrics.textInteractionFlags() & Qt.TextSelectableByMouse
     assert panel.grab().save(str(tmp_path/'four-film-comparison.png'))
     panel.film_table.set_reference_mode(False)

@@ -37,28 +37,34 @@ def _header_pixels(path):
         import pyvips
     except (ImportError, OSError):
         return _pillow_header_pixels(path)
+    from .vips_renderer import demand_lock
     with substep('顶部标签条带读取与解压'):
-        source = pyvips.Image.new_from_file(str(path), access='sequential')
-        source_width, source_height = source.width, source.height
-        header_height = min(source_height, max(96, round(source_width*.5)))
-        strip = source.crop(0, 0, source_width, header_height)
-        scale = min(1.0, 1000/max(strip.width, strip.height))
-        if scale < 1:
-            strip = strip.resize(scale, kernel='nearest')
-        if strip.format != 'uchar':
-            strip = strip.cast('uchar')
-        if strip.bands == 1:
-            grey = strip[0]
-            strip = grey.bandjoin([grey, grey, 255])
-        elif strip.bands == 2:
-            grey = strip[0]
-            strip = grey.bandjoin([grey, grey, strip[1]])
-        elif strip.bands == 3:
-            strip = strip.bandjoin(255)
-        elif strip.bands > 4:
-            strip = strip.extract_band(0, n=4)
-        pixels = np.frombuffer(strip.write_to_memory(), dtype=np.uint8)
-        return pixels.reshape(strip.height, strip.width, 4), source_width, source_height, header_height
+        with demand_lock:
+            return _vips_header_pixels(path, pyvips)
+
+
+def _vips_header_pixels(path, pyvips):
+    source = pyvips.Image.new_from_file(str(path), access='sequential')
+    source_width, source_height = source.width, source.height
+    header_height = min(source_height, max(96, round(source_width*.5)))
+    strip = source.crop(0, 0, source_width, header_height)
+    scale = min(1.0, 1000/max(strip.width, strip.height))
+    if scale < 1:
+        strip = strip.resize(scale, kernel='nearest')
+    if strip.format != 'uchar':
+        strip = strip.cast('uchar')
+    if strip.bands == 1:
+        grey = strip[0]
+        strip = grey.bandjoin([grey, grey, 255])
+    elif strip.bands == 2:
+        grey = strip[0]
+        strip = grey.bandjoin([grey, grey, strip[1]])
+    elif strip.bands == 3:
+        strip = strip.bandjoin(255)
+    elif strip.bands > 4:
+        strip = strip.extract_band(0, n=4)
+    pixels = np.frombuffer(strip.write_to_memory(), dtype=np.uint8)
+    return pixels.reshape(strip.height, strip.width, 4), source_width, source_height, header_height
 
 
 def _pillow_header_pixels(path):

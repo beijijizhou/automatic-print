@@ -50,8 +50,11 @@ def save(canvas, target, settings, use_vips, progress=None):
     report('准备快速保存像素')
     if use_vips:
         width, height = canvas.width, canvas.height
-        pixels = measured('延迟合成与像素提取', lambda: np.frombuffer(
-            canvas.write_to_memory(), dtype=np.uint8).reshape(height, width, 4))
+        from ..vips_renderer import demand_lock
+        def extract():
+            with demand_lock:
+                return np.frombuffer(canvas.write_to_memory(), dtype=np.uint8).reshape(height, width, 4)
+        pixels = measured('延迟合成与像素提取', extract)
     else:
         width, height = canvas.size
         pixels = measured('保存像素提取', lambda: np.asarray(canvas))

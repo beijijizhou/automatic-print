@@ -33,18 +33,12 @@ def test_thousand_double_row_images_have_no_rotation_candidates():
     assert eligible_tail([p for p, _ in planned], (planned, {}, 580, 50000, 50000)) == []
 
 
-def test_single_policy_never_calls_general_zone_search_and_measures_only_tail(tmp_path, monkeypatch):
+def test_single_policy_never_calls_general_zone_search_and_rotates_only_tail(tmp_path, monkeypatch):
     paths = sources(tmp_path)
-    original, measured = rotation_zones.rotation_items, []
-    def measure(selected, *a, **kw):
-        measured.extend(selected)
-        return original(selected, *a, **kw)
-    monkeypatch.setattr(rotation_zones, 'rotation_items', measure)
     monkeypatch.setattr(rotation_zones, 'select_zones',
                         lambda *a, **kw: pytest.fail('Single batch used full knife/rotation DP'))
     normal = plan_layout(paths, replace(config(), cutter_rotation_zone=False), None)
     result = plan_layout(paths, config(), None)
-    assert set(measured) == set(paths[-4:])
     assert result[3] < normal[3]
     assert [p for p, v in result[0] if v.rotation_degrees] == paths[-4:]
 

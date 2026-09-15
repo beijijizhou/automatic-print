@@ -8,7 +8,6 @@ from PySide6.QtWidgets import QApplication
 from automatic_print.layout import LayoutSettings
 from automatic_print.ui.pair_preview import PairProductionPreview
 from dataclasses import replace
-import pytest
 from preview_wait import wait_preview
 from automatic_print.layout_engine.planner import plan_layout
 
@@ -38,7 +37,7 @@ def test_two_image_preview_uses_fixed_partition_marker_groups(tmp_path):
     preview.close()
 
 
-def test_invalid_parameters_keep_two_images_and_mark_overflow(tmp_path):
+def test_narrow_media_recovers_and_keeps_both_sources_in_batch_preview(tmp_path):
     app = QApplication.instance() or QApplication([])
     for i in range(2):
         Image.new("RGBA", (180, 250), "blue").save(tmp_path / f"{i}.png", dpi=(25.4, 25.4))
@@ -50,13 +49,12 @@ def test_invalid_parameters_keep_two_images_and_mark_overflow(tmp_path):
     state[0] = replace(state[0], media_width_mm=300, cutter_knife_mm=150)
     preview.refresh()
     wait_preview(preview)
-    assert len(preview.planned) == 2
-    assert len(preview.images) == 2
+    assert len(preview.batch_payload["planned"]) == 2
+    assert all(p.rotation_degrees == 90 for _, p in preview.batch_payload["planned"])
     assert preview.item is not None
-    assert preview.overflow
-    assert "禁止输出" in preview.warning
-    with pytest.raises(ValueError):
-        plan_layout(sorted(tmp_path.glob("*.png")), state[0], None)
+    assert not preview.overflow
+    assert not preview.warning
+    assert len(plan_layout(sorted(tmp_path.glob("*.png")), state[0], None)[0]) == 2
     state[0] = replace(state[0], media_width_mm=600, cutter_knife_mm=300)
     preview.refresh()
     wait_preview(preview)

@@ -55,7 +55,7 @@ def test_invalid_margin_sum_is_rejected(tmp_path):
 
 
 @pytest.mark.parametrize('engine', ['pillow', 'libvips'])
-def test_entire_batch_uses_580_canvas_and_pixel_safe_knife_without_padding(tmp_path, engine):
+def test_entire_batch_trims_canvas_and_keeps_pixel_safe_knife(tmp_path, engine):
     window, _prefs = make_window(tmp_path)
     paths = []
     for order in range(6):
@@ -68,13 +68,15 @@ def test_entire_batch_uses_580_canvas_and_pixel_safe_knife_without_padding(tmp_p
     payloads = []
     result = generate_layout(paths, tmp_path/'out', settings, plan_ready=payloads.append)
     assert result['maximum_width_mm'] == 580
-    assert result['width_px'] == 580
+    assert result['width_px'] <= 580
+    assert result['width_px'] == max(
+        placement['x_px'] + placement['width_px'] for placement in result['placements'])
     assert result['order_check']['double_pairs'] == 6
     for placement in result['placements']:
         assert placement['x_px']+placement['width_px'] <= 580
     output = tmp_path/'out'/result['filename']
     with Image.open(output) as image:
-        assert image.width == 580
+        assert image.width == result['width_px']
         stripe = image.getchannel('A').crop((287, 0, 293, image.height))
         # The new printed end notice is the only permitted full-width content.
         for mark in result['transition_marks']:

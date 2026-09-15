@@ -122,9 +122,10 @@ class BatchSummaryPanel(QGroupBox):
         self.anomalies.setVisible(bool(self.anomalies.text()))
         if result.get('preview_only'):
             self.progress.setText('整批预览完成，未生成文件；完整排版报告已显示，可直接复制。')
-            self.cutting.setPlainText(
-                result.get('report_text') or cutting_report(result)
-            )
+            report = result.get('report_text')
+            if not report and result.get('placements') and result.get('output_dpi'):
+                report = cutting_report(result)
+            self.cutting.setPlainText(report or '仅预览完成；本次未生成输出文件。')
             self.cutting.setMaximumHeight(260)
             self.cutting.show()
             return

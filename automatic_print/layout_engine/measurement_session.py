@@ -7,10 +7,8 @@ from PIL import Image
 from threading import RLock
 from concurrent.futures import Future
 import sqlite3
-
 SESSION = ContextVar('layout_measurements', default=None)
 SOURCE = ContextVar('layout_measurement_source', default=None)
-
 
 class Measurements:
     def __init__(self):
@@ -22,7 +20,6 @@ class Measurements:
         self.persistent_lock = RLock()
         from .measurement_timing import MeasurementTiming
         self.timing = MeasurementTiming()
-
 
 @contextmanager
 def measurement_session():
@@ -41,7 +38,6 @@ def measurement_session():
                 pass
         SESSION.reset(token)
 
-
 def persistent_cache():
     session = SESSION.get()
     if session is None:
@@ -51,7 +47,6 @@ def persistent_cache():
             from .measurement_cache import MeasurementCache
             session.persistent = MeasurementCache()
         return session.persistent
-
 
 def identity(path):
     session = SESSION.get()
@@ -68,11 +63,9 @@ def identity(path):
         return future.result()
     return fresh_identity(path)
 
-
 def fresh_identity(path):
     stat = path.stat()
     return str(path.resolve()), stat.st_mtime_ns, stat.st_size
-
 
 def resolved_name(path):
     session = SESSION.get()
@@ -80,14 +73,12 @@ def resolved_name(path):
         return session.identities[path].result()[0]
     return str(path.resolve())
 
-
 def verify_sources():
     session = SESSION.get()
     if session is not None:
         for path, expected in session.identities.items():
             if fresh_identity(path) != expected.result():
                 raise ValueError(f'{path.name}：源文件在排版计算期间发生变化，请重新生成。')
-
 
 def item_settings(settings):
     # These fields do not affect the pixels or geometry of an individual item.
@@ -102,11 +93,9 @@ def item_settings(settings):
                    allow_rotation=False, manual_rotations=(), sequence_numbers=(),
                    riin_left_mm=10, riin_right_mm=10)
 
-
 def active_source(path):
     current = SOURCE.get()
     return current[1] if current is not None and current[0] == path else None
-
 
 @contextmanager
 def source_pixels(path):
@@ -117,7 +106,6 @@ def source_pixels(path):
         return
     with Image.open(path) as source:
         yield decode_source(source) if 'A' in source.getbands() else source
-
 
 @contextmanager
 def measuring_source(path):
@@ -130,7 +118,6 @@ def measuring_source(path):
             yield
         finally:
             SOURCE.reset(token)
-
 
 def measured_item(make, path, index, width, height, settings, labels, created_at,
                    gap, offset_x, offset_y, rotation_degrees, qr_location):
@@ -173,7 +160,6 @@ def measured_item(make, path, index, width, height, settings, labels, created_at
             except (OSError, ValueError, TypeError, sqlite3.Error):
                 pass
     return item
-
 
 @contextmanager
 def choice_source(path, index, width, height, settings, manual):

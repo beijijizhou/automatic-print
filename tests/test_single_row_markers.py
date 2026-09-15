@@ -36,13 +36,16 @@ def test_all_single_rows_have_left_edge_marker_in_saved_png(tmp_path, engine, mo
             assert stripe.getchannel('A').getextrema() == (0, 0)
 
 
-def test_manual_knife_cannot_put_single_image_on_right_only(tmp_path):
+def test_manual_knife_recovers_single_image_without_right_only_marker(tmp_path):
     path = tmp_path/'B1-1-T-Black-L-NO1-1.png'
     Image.new('RGBA', (320, 180), 'blue').save(path, dpi=(25.4, 25.4))
     settings = LayoutSettings(media_width_mm=580, dpi=25.4, cutter_mode='dual',
         cutter_knife_mm=180, number_images=False)
-    with pytest.raises(ValueError, match='无法安全放入固定分区'):
-        generate_layout([path], tmp_path/'out', settings)
+    result = generate_layout([path], tmp_path/'out', settings)
+    assert len(result['placements']) == 1
+    placement = result['placements'][0]
+    assert placement['rotation_degrees'] == 90
+    assert placement['color_block_x_px'] == 0
 
 
 def test_independent_check_rejects_right_only_row(tmp_path):

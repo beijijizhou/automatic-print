@@ -1,10 +1,8 @@
 from pathlib import Path
-
 from PySide6.QtWidgets import (
     QCheckBox, QComboBox, QDoubleSpinBox, QGroupBox,
     QLineEdit, QPushButton, QScrollArea, QTabWidget, QVBoxLayout, QWidget,
 )
-
 from .pair_preview import PairProductionPreview
 from .batch_analysis_panel import BatchAnalysisPanel
 from .batch_summary import BatchSummaryPanel
@@ -13,10 +11,8 @@ from .manual_rotation import ManualRotationPanel
 from .batch_details import BatchDetailsDialog
 from ..layout_engine.labels import compact_label_text
 
-
 class LabelQuickPanel(QWidget):
     """Main-page editing mirrors the canonical print settings, never a copy."""
-
     def __init__(self, label, block, parent=None, window=None):
         super().__init__(parent)
         self.label = label
@@ -211,17 +207,14 @@ class LabelQuickPanel(QWidget):
         self.algorithm_costs_button = QPushButton('算法开销…')
         self.algorithm_costs_button.setIcon(action_icon('more'))
         self.algorithm_costs_button.clicked.connect(self.details_dialog.open_algorithm_costs)
-
     def _select_analysis_source(self, path):
         combo = self.manual_rotation.images
         index = combo.findData(str(Path(path).resolve()))
         if index >= 0:
             combo.setCurrentIndex(index)
-
     def _add_date(self):
         if "{日期}" not in self.text.text():
             self.text.setText(self.text.text().rstrip() + "－{日期}")
-
     @staticmethod
     def _checkbox(text, source):
         checkbox = QCheckBox(text)

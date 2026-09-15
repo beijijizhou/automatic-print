@@ -1,5 +1,4 @@
 from __future__ import annotations
-
 from PySide6.QtCore import QSettings, QStandardPaths, QThread, QTimer, Qt
 from PySide6.QtWidgets import (
     QCheckBox,
@@ -19,7 +18,6 @@ from PySide6.QtWidgets import (
     QVBoxLayout,
     QWidget,
 )
-
 from .. import __version__, __version_display__
 from ..branding import application_icon
 from .segmented_output import SegmentedOutputSettings
@@ -76,7 +74,6 @@ class MainWindow(
         self.startup_update_timer.setSingleShot(True)
         self.startup_update_timer.timeout.connect(lambda: self.check_for_updates(True) if self.isVisible() else None)
         self.startup_update_timer.start(2500)
-
     def _connect_worker_bridge(self) -> None:
         bridge = self.worker_bridge
         bridge.layout_progress.connect(self.update_progress)
@@ -207,7 +204,6 @@ class MainWindow(
         scroll.setWidgetResizable(True)
         scroll.setWidget(container)
         QVBoxLayout(self.settings_dialog).addWidget(scroll)
-
     def _build_home(self) -> None:
         self.automation_home = AutomationDialog(self)
         self.version_label = QLabel(f"版本 {__version_display__}")
@@ -236,12 +232,10 @@ class MainWindow(
         return any((self.thread is not None, self.update_thread is not None,
                     self.automation_home.thread is not None, developer_task_active(self),
                     getattr(getattr(self, 'bulk_controller', None), 'thread', None) is not None))
-
     def closeEvent(self, event) -> None:
         from .immediate_exit import exit_now
         exit_now(self)
         event.accept()
-
     @staticmethod
     def _box(value, minimum, maximum) -> QDoubleSpinBox:
         box = QDoubleSpinBox()

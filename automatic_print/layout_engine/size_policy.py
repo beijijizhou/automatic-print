@@ -57,7 +57,11 @@ def validate_single_size_blocks(paths, planned):
               else {'整批': ordered})
     sequences = []
     for zone, entries in groups.items():
-        sequence = list(dict.fromkeys(eligible[path] for path, _p in entries if path in eligible))
+        sequence = []
+        for path, _placement in entries:
+            block = eligible.get(path)
+            if block is not None and (not sequence or sequence[-1] != block):
+                sequence.append(block)
         if sequence != sorted(sequence, key=block_key):
             raise ValueError(f'{zone}内单件未按颜色优先、同色尺码从小到大排列，禁止输出。')
         sequences.extend(sequence)

@@ -20,7 +20,6 @@ from .thread_lifecycle import (
 class GenerationActionsMixin:
     def _layout_settings(self) -> LayoutSettings:
         return settings_from_window(self)
-
     def generate(self, checked=False, *, preview_only=False) -> None:
         preview_only = preview_only or self.automation_home.preview_only.isChecked()
         if self.thread is not None and not discard_stopped_thread(
@@ -94,7 +93,6 @@ class GenerationActionsMixin:
         self.worker.cancelled.connect(self.worker.deleteLater)
         self.thread.finished.connect(self.clear_worker)
         self.thread.start()
-
     @Slot(str, object, object, str)
     def update_progress(
         self, stage: str, current: int, total: int, filename: str
@@ -130,7 +128,6 @@ class GenerationActionsMixin:
             self.progress.setFormat(f"{percent}% — {stage}")
         self.current_file.setText(f"{'当前方案' if stage == '膜规格比较' else '当前文件'}：{filename}")
         self.refresh_timing()
-
     @Slot()
     def refresh_timing(self) -> None:
         now = time.monotonic()
@@ -158,19 +155,16 @@ class GenerationActionsMixin:
             f" · 总计 {duration_text(elapsed)} · {estimate}"
             f"{saving_detail}"
         )
-
     def _saving_detail(self) -> str:
         if self.current_stage != "保存图片":
             return ""
         path = Path(self.job_path.text()) / getattr(self, "active_output_filename", "")
         size = path.stat().st_size if path.is_file() else 0
         return f" · 已写入 {file_size_text(size)}"
-
     @Slot()
     def stop_generation(self) -> None:
         from .stop_actions import stop_active_layout
         stop_active_layout(self)
-
     @Slot(str, object)
     def generation_finished(self, output: str, result: dict) -> None:
         self.clock.stop()
@@ -180,6 +174,7 @@ class GenerationActionsMixin:
             self.progress.setValue(100)
             self.progress.setFormat("预览完成")
             self.status.setText("整批预览完成，未生成最终文件；尚未进行输出像素验收。")
+            self.run_log.appendPlainText('仅预览完成：未生成打印文件。')
             self.job_path.clear()
             self.generate_button.setEnabled(True)
             self.stop_generation_button.setEnabled(False)
@@ -218,7 +213,6 @@ class GenerationActionsMixin:
         QDesktopServices.openUrl(
             QUrl.fromLocalFile(str(Path(output).resolve()))
         )
-
     @Slot(str)
     def generation_failed(self, message: str) -> None:
         self.clock.stop()
@@ -231,7 +225,6 @@ class GenerationActionsMixin:
         self.stop_generation_button.setEnabled(False)
         from .failure_dialog import show_failure_dialog
         show_failure_dialog(self, message)
-
     @Slot()
     def generation_cancelled(self) -> None:
         self.clock.stop()
@@ -242,7 +235,6 @@ class GenerationActionsMixin:
         self.run_log.appendPlainText("当前排版已安全停止。")
         self.generate_button.setEnabled(True)
         self.stop_generation_button.setEnabled(False)
-
     @Slot()
     def clear_worker(self) -> None:
         defer_finished_thread_cleanup(self, "thread", "worker")

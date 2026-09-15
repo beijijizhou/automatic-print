@@ -1,11 +1,10 @@
 from __future__ import annotations
-
+from contextlib import nullcontext
 from dataclasses import asdict, replace
 from datetime import datetime
 from pathlib import Path
 from time import perf_counter
 from typing import Iterable
-
 from .models import LayoutSettings, ProgressCallback, mm_to_px
 from .images import print_dimensions
 from .labels import normalize_machine_number, format_label
@@ -23,12 +22,8 @@ from .vips_renderer import available, build_vips_canvas
 from .transition_marks import marked_height, transition_rects, paint_transition_lines
 from .output_sizes import size_range_label
 from .marked_pixel_validation import validate_marked_pillow
-
-
 def png_engine_name() -> str:
     return "大图节省内存模式" if available() else "标准兼容模式"
-
-
 def generate_layout(
     image_paths: Iterable[Path],
     output_dir: Path,
@@ -122,57 +117,60 @@ def generate_layout(
             gap_records, cut_check, order_check, width, height, baseline_height,
         )
     reading_seconds = perf_counter() - reading_started
-
     combining_started = perf_counter()
     phase('图片准备与合成')
     streaming = settings.png_streaming and not settings.png_fast_encoding
     use_vips = available() and (settings.png_engine == 'libvips' or
                                (streaming and width*height*4 >= 64*1024*1024))
-    builder = build_vips_canvas if use_vips else build_pillow_canvas
-    canvas = builder(
-        planned, labels, (width, height), settings, progress
-    )
-    combining_seconds = perf_counter() - combining_started
-    phase('合成像素安全检查')
-    if not use_vips:
-        validate_canvas_pixels(canvas, cut_check, progress)
-    elif not streaming:
-        validate_vips_canvas(canvas, cut_check)
-    phase('膜标签与辅助线处理')
-    guide_spans, missing_guides = collect_guides(planned, settings, progress)
-    guide_boxes = list(dot_boxes(guide_spans, settings.dpi))
-    canvas = paint_guides(canvas, guide_boxes, use_vips)
-    transitions = transition_rects(planned, settings, width,
-                                  (prepared_plan or {}).get('end_notice', '批次结束'))
-    canvas = paint_transition_lines(canvas, transitions, use_vips)
-    if not use_vips:
-        validate_marked_pillow(canvas, cut_check, guide_boxes, transitions, progress)
-    elif streaming:
-        from .png_codecs.streaming import validate_final_canvas
-        phase('最终画布刀位检查')
-        validate_final_canvas(canvas, cut_check, guide_boxes, transitions, progress)
-
-    filename = output_path.name
-    saving_started = perf_counter()
-    phase('保存输出图片')
-    save_details = save_png(canvas, output_path, settings, use_vips, progress)
-    saving_seconds = perf_counter() - saving_started
-    if streaming:
-        from .png_codecs.streaming import validate_header
-        phase('输出尺寸核对')
-        validate_header(output_path, width, height)
-    elif use_vips or (settings.png_fast_encoding and available()):
-        phase('输出文件安全复核')
-        validate_vips_output(output_path, cut_check, progress, guide_boxes, transitions)
-    elif settings.png_fast_encoding and cut_check:
-        from PIL import Image
-        phase('输出文件安全复核')
-        try:
-            with Image.open(output_path) as saved:
-                validate_marked_pillow(saved, cut_check, guide_boxes, transitions, progress)
-        except ValueError:
-            output_path.rename(output_path.with_suffix('.禁止打印'))
-            raise
+    from .vips_renderer import demand_lock
+    native_validation = use_vips or (settings.png_fast_encoding and available())
+    with demand_lock if native_validation else nullcontext():
+        builder = build_vips_canvas if use_vips else build_pillow_canvas
+        canvas = builder(planned, labels, (width, height), settings, progress)
+        combining_seconds = perf_counter() - combining_started
+        phase('合成像素安全检查')
+        if not use_vips:
+            validate_canvas_pixels(canvas, cut_check, progress)
+        elif not streaming:
+            validate_vips_canvas(canvas, cut_check)
+        phase('膜标签与辅助线处理')
+        guide_spans, missing_guides = collect_guides(planned, settings, progress)
+        guide_boxes = list(dot_boxes(guide_spans, settings.dpi))
+        canvas = paint_guides(canvas, guide_boxes, use_vips)
+        transitions = transition_rects(planned, settings, width,
+                                      (prepared_plan or {}).get('end_notice', '批次结束'))
+        canvas = paint_transition_lines(canvas, transitions, use_vips)
+        if not use_vips:
+            validate_marked_pillow(canvas, cut_check, guide_boxes, transitions, progress)
+        elif streaming:
+            from .png_codecs.streaming import validate_final_canvas
+            phase('最终画布刀位检查')
+            validate_final_canvas(canvas, cut_check, guide_boxes, transitions, progress)
+        filename = output_path.name
+        saving_started = perf_counter()
+        phase('保存输出图片')
+        save_details = save_png(canvas, output_path, settings, use_vips, progress)
+        saving_seconds = perf_counter() - saving_started
+        if streaming:
+            from .png_codecs.streaming import validate_header
+            phase('输出尺寸核对')
+            validate_header(output_path, width, height)
+        elif native_validation:
+            phase('输出文件安全复核')
+            validate_vips_output(output_path, cut_check, progress, guide_boxes, transitions)
+        elif settings.png_fast_encoding and cut_check:
+            from PIL import Image
+            phase('输出文件安全复核')
+            try:
+                with Image.open(output_path) as saved:
+                    validate_marked_pillow(saved, cut_check, guide_boxes, transitions, progress)
+            except ValueError:
+                output_path.rename(output_path.with_suffix('.禁止打印'))
+                raise
+        if native_validation:
+            canvas = None
+            import pyvips
+            pyvips.cache_set_max(0)
     phase('批次信息整理')
     size = output_path.stat().st_size
     result = {
@@ -225,9 +223,7 @@ def generate_layout(
         ),
         "order_check": order_check, "analysis": analysis[-1],
         "placements": [asdict(item) for _, item in planned],
-        "rotation_count": sum(
-            bool(item.rotation_degrees) for _, item in planned
-        ),
+        "rotation_count": sum(bool(item.rotation_degrees) for _, item in planned),
         "timings_seconds": {
             "reading": round(reading_seconds, 3),
             "combining": round(combining_seconds, 3),

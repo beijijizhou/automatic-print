@@ -51,7 +51,7 @@ def test_four_cases_use_production_geometry_and_never_modify_sources(tmp_path):
             assert item.block_ry == item.image_ry
             assert item.label_ry-item.image_ry >= row['region'].bottom*item.height
     assert [p.read_bytes() for p in paths] == original
-    assert set(tmp_path.iterdir()) == set(paths)
+    assert set(tmp_path.iterdir()) == set(paths) | {tmp_path/'measurement-cache'}
 
 
 def test_missing_side_is_explicit_diagram_not_mirrored_production(tmp_path):
