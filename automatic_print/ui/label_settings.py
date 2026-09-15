@@ -27,6 +27,7 @@ class LabelSettingsDialog(QDialog):
         self.enabled.setChecked(True)
         self.sequence = QCheckBox('自动添加序号（每批从 1 到最后一张，不重复添加）')
         self.sequence.setChecked(True)
+        self.source_order = QCheckBox('标注输入文件名、正序和倒序（测试中）')
         self.platform = QComboBox()
         self.platform.setEditable(True)
         self.platform.addItem('隆丰')
@@ -92,6 +93,7 @@ class LabelSettingsDialog(QDialog):
         for label, widget in (
             ("启用标签", self.enabled),
             ('图片序号', self.sequence),
+            ('文件顺序标注', self.source_order),
             ('生产平台', self.platform),
             ('平台标记', self.platform_enabled),
             ('平台文字高度', self.platform_font_height),
@@ -111,6 +113,7 @@ class LabelSettingsDialog(QDialog):
             ("日期格式", self.date_format),
         ):
             form.addRow(label, widget)
+        self.form = form; form.setRowVisible(self.source_order, False)
         buttons = QDialogButtonBox(
             QDialogButtonBox.Ok | QDialogButtonBox.Cancel
         )
@@ -136,6 +139,7 @@ class LabelSettingsDialog(QDialog):
             "date_format": self.date_format.text(),
             "machine_number": self.machine.currentData(),
             'sequence_enabled': self.sequence.isChecked(),
+            'source_order_enabled': self.source_order.isChecked(),
             'machine_enabled': True,
             'platform_name': self.platform.currentText() if self.platform_enabled.isChecked() else '',
             'platform_font_height_mm': self.platform_font_height.value(),
@@ -148,6 +152,7 @@ class LabelSettingsDialog(QDialog):
         self.position.currentIndexChanged.connect(self.preview.update)
         self.machine.currentIndexChanged.connect(self.preview.update)
         self.sequence.toggled.connect(self.preview.update)
+        self.source_order.toggled.connect(self.preview.update)
         self.platform.currentTextChanged.connect(self.preview.update)
         self.platform_enabled.toggled.connect(self.preview.update)
         self.platform_font_height.valueChanged.connect(self.preview.update)
@@ -156,7 +161,7 @@ class LabelSettingsDialog(QDialog):
         for box in (self.font_size, self.gap, self.offset_x, self.offset_y):
             box.valueChanged.connect(self.preview.update)
         signals = [
-            self.sequence.toggled, self.platform.currentTextChanged, self.platform_enabled.toggled,
+            self.sequence.toggled, self.source_order.toggled, self.platform.currentTextChanged, self.platform_enabled.toggled,
             self.platform_font_height.valueChanged,
             self.detect_region.toggled,
             self.fit_height.toggled, self.reference_height.valueChanged,

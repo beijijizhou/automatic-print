@@ -96,6 +96,7 @@ class PreferencesMixin:
         )
         label = self.label_settings
         label.sequence.setChecked(self.preferences.value('label/sequence_enabled', True, bool))
+        label.source_order.setChecked(self.preferences.value('label/source_order_enabled', False, bool))
         label.platform_enabled.setChecked(self.preferences.value('label/platform_enabled', True, bool))
         label.platform_font_height.setValue(self.preferences.value('label/platform_font_height_mm', 6, float))
         platform = self.preferences.value('label/platform_name', '隆丰', str).strip()
@@ -207,6 +208,7 @@ class PreferencesMixin:
             "layout/png_engine": self.png_engine.currentData(),
             "label/text_template": label.text_template.text(),
             'label/sequence_enabled': label.sequence.isChecked(),
+            'label/source_order_enabled': label.source_order.isChecked(),
             'label/platform_name': label.platform.currentText(),
             'label/platform_enabled': label.platform_enabled.isChecked(),
             'label/platform_font_height_mm': label.platform_font_height.value(),

@@ -45,6 +45,16 @@ def test_label_preview_updates_sample_text_and_renders():
     dialog.close()
 
 
+def test_developer_source_order_has_filename_and_both_sequences_in_preview():
+    _app()
+    dialog = LabelSettingsDialog()
+    dialog.source_order.setChecked(True)
+    text = dialog.preview.sample_text()
+    assert 'B9UV77Y-黑色-XL-NO1-1.png' in text
+    assert '正序 12/20' in text and '倒序 9/20' in text
+    dialog.close()
+
+
 def test_color_block_preview_uses_editable_values_and_renders():
     _app()
     dialog = ColorBlockSettingsDialog()

@@ -27,7 +27,8 @@ def plan_layout(
 
 def _measured_plan(paths, settings, progress, analysis_ready):
     settings = replace(settings, sequence_numbers=settings.sequence_numbers or
-                       tuple((resolved_name(path), i) for i, path in enumerate(paths, 1)))
+                       tuple((resolved_name(path), i) for i, path in enumerate(paths, 1)),
+                       label_sequence_total=settings.label_sequence_total or len(paths))
     paths = ordered_paths(paths)
     analysis = analyze_batch(paths, settings, progress, analysis_ready)
     try:

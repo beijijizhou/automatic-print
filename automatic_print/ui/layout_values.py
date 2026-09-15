@@ -62,6 +62,8 @@ def settings_from_window(window) -> LayoutSettings:
         label_reference_height_mm=label.reference_height.value(),
         label_text_template=label.text_template.text(),
         label_sequence_enabled=label.sequence.isChecked(),
+        label_source_order_enabled=(getattr(window, 'developer_mode_enabled', False)
+                                    and label.source_order.isChecked()),
         label_machine_enabled=True,
         platform_name=platform if label.enabled.isChecked() and label.platform_enabled.isChecked() else '',
         platform_font_height_mm=label.platform_font_height.value(),

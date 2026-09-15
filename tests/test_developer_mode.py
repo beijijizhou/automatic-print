@@ -23,6 +23,9 @@ def test_default_shows_production_layout_but_hides_diagnostic_tools(tmp_path, mo
     owner = window(tmp_path/'prefs.ini')
     panel = owner.automation_home.label_quick_panel
     assert not owner.developer_mode_checkbox.isChecked()
+    assert not owner.label_settings.form.isRowVisible(owner.label_settings.source_order)
+    owner.label_settings.source_order.setChecked(True)
+    assert not owner._layout_settings().label_source_order_enabled
     assert owner.quick_header_gap_group.isVisible()
     assert owner.layout_rules_form.isRowVisible(owner.membrane_gap_enabled)
     assert owner.layout_rules_form.isRowVisible(owner.membrane_gap)
@@ -76,6 +79,9 @@ def test_two_zone_layout_stays_visible_and_active_outside_developer_mode(tmp_pat
     owner = window(tmp_path/'two-zone.ini')
     control = owner.cutter_settings.two_zone
     owner.developer_mode_checkbox.setChecked(True)
+    assert owner.label_settings.form.isRowVisible(owner.label_settings.source_order)
+    owner.label_settings.source_order.setChecked(True)
+    assert owner._layout_settings().label_source_order_enabled
     assert owner.layout_rules_form.isRowVisible(control)
     control.setChecked(True)
     assert owner._layout_settings().cutter_majority_two_zone

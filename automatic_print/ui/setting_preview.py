@@ -17,6 +17,9 @@ class SettingPreview(QWidget):
 
     def sample_text(self) -> str:
         template = self.values().get("text", "{编号}")
+        if self.values().get('source_order_enabled'):
+            from ..layout_engine.platform_label import source_order_template
+            template = source_order_template(template)
         if self.values().get('machine_enabled') and not any(t in template for t in ('{机器号}', '{machine}')):
             template = (template.strip()+' {机器号}').strip()
         if self.values().get('sequence_enabled') and not any(t in template for t in ('{编号}', '{number}')):
@@ -35,6 +38,8 @@ class SettingPreview(QWidget):
             "{stem}": "B9UV77Y-黑色-XL-NO1-1",
             "{机器号}": self.values().get("machine_number", "M1").upper(),
             '{machine}': self.values().get('machine_number', 'M1').upper(),
+            '{总数}': '20',
+            '{倒序}': '9',
         }
         for field, value in replacements.items():
             template = template.replace(field, value)

@@ -93,6 +93,17 @@ def test_missing_qr_warns_without_blocking_and_sequence_is_not_duplicated(tmp_pa
     badge.close()
 
 
+def test_batch_labels_use_global_forward_and_reverse_numbers(tmp_path):
+    paths = [qr_image(tmp_path/f'输入图{i}.png') for i in range(1, 4)]
+    payloads = []
+    generate_layout(paths, tmp_path/'out', settings(
+        label_source_order_enabled=True), plan_ready=payloads.append)
+    labels = payloads[0]['labels']
+    assert '输入图1.png · 正序 1/3 · 倒序 3/3' in labels[1]
+    assert '输入图2.png · 正序 2/3 · 倒序 2/3' in labels[2]
+    assert '输入图3.png · 正序 3/3 · 倒序 1/3' in labels[3]
+
+
 @pytest.mark.parametrize('engine', ['pillow', 'libvips'])
 def test_parallel_segments_keep_global_numbers_and_platform_coordinates(tmp_path, engine):
     paths = [qr_image(tmp_path/f'B{i}-1-T-Black-M-NO1-1.png') for i in range(4)]
