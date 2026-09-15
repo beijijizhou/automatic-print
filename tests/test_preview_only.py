@@ -3,6 +3,7 @@ from PIL import Image
 from automatic_print.layout import LayoutSettings
 from automatic_print.layout_engine import service
 from automatic_print.layout_engine.planner import plan_layout
+from automatic_print.layout_engine.output_sizes import cutting_report
 
 
 def test_preview_does_not_build_canvas_or_create_output(tmp_path, monkeypatch):
@@ -17,6 +18,9 @@ def test_preview_does_not_build_canvas_or_create_output(tmp_path, monkeypatch):
         LayoutSettings(dpi=25.4, number_images=False),
         plan_ready=payloads.append, preview_only=True)
     assert result['preview_only']
+    assert result['filename'].endswith('.png')
+    assert len(result['placements']) == 1
+    assert '单列 / 自由排版' in cutting_report(result)
     assert len(payloads[0]['planned']) == 1
     assert not (tmp_path/'absent').exists()
 

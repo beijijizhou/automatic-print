@@ -99,6 +99,11 @@ class GenerateWorker(QObject):
             result['operation_timings'] = self.timing.finish()
             self.timings_ready.emit(result['operation_timings'])
             if self.preview_only:
+                report_text = cutting_report(result)
+                result['report_text'] = (
+                    report_text + '\n\n耗时与并行处理\n' +
+                    timing_report(result['operation_timings'])
+                )
                 self._save_history(result)
                 self.finished.emit("", result)
                 return

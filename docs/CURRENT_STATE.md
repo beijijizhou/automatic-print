@@ -37,8 +37,9 @@
   `marked_pixel_validation.py`、`printed_guides.py`、`output_file_info.py`。
 - 膜方案与统计：`film_comparison.py`、`film_specs.py`、`metrics.py`、
   `operation_timing.py`、`algorithm_costs.py`。
-- 缓存：`plan_cache.py`、`normal_plan_cache.py`、`cached_planner.py`、
-  `measurement_session.py`。
+- 缓存：`plan_cache.py`、`normal_plan_cache.py`、`cached_planner.py`；单图测量由
+  `measurement_cache.py` 持久化，并由 `measurement_session.py` 在任务内共享连接。单图缓存24小时，
+  重新组批、膜宽变化和普通版本更新不触发源图重新测量。
 
 ## UI 与本地数据
 
@@ -46,7 +47,8 @@
 - 进度、停止和线程生命周期：`ui/busy_spinner.py`、`layout_activity.py`、
   `operation_timing.py`、`stop_actions.py`、`thread_lifecycle.py`、`worker_bridge.py`。
 - 预览：`ui/production_preview.py`、`preview_*`、`pair_preview.py`、
-  `marker_examples.py` 及 `marker_example_*`。
+  `marker_examples.py` 及 `marker_example_*`。`layout_engine/preview_result.py` 形成不落地打印图片的
+  完整报告数据，`ui/batch_summary.py` 显示可复制的刀位、单排原因和耗时报告。
 - 错误诊断：`ui/failure_panel.py`、`failure_dialog.py`、
   `layout_engine/error_context.py`、`error_parameters.py`。
 - 历史记录：`automatic_print/history/`；Qt 参数使用 `QSettings`。

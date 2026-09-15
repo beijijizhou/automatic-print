@@ -57,6 +57,7 @@ class BatchSummaryPanel(QGroupBox):
         self.gap_loss.clear()
         self.film_table.reset_rows()
         self.cutting.clear()
+        self.cutting.setMaximumHeight(110)
         self.anomalies.clear()
         self.anomalies.hide()
         self.failure_message = ''
@@ -120,7 +121,12 @@ class BatchSummaryPanel(QGroupBox):
             anomaly_text(result.get('analysis', {})), result.get('history_warning', '')))))
         self.anomalies.setVisible(bool(self.anomalies.text()))
         if result.get('preview_only'):
-            self.progress.setText('整批预览完成，未生成文件；本批次预览和总结已保留。')
+            self.progress.setText('整批预览完成，未生成文件；完整排版报告已显示，可直接复制。')
+            self.cutting.setPlainText(
+                result.get('report_text') or cutting_report(result)
+            )
+            self.cutting.setMaximumHeight(260)
+            self.cutting.show()
             return
         self.metrics.setText(f"排版长度 {result['height_mm']/1000:.3f} 米"
                              f" · 常规基准 {result['baseline_height_mm']/1000:.3f} 米"

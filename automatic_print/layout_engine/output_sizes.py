@@ -64,7 +64,9 @@ def cutting_report(result):
         review += (f"\n实际排版策略比较（分段前）：固定刀位不旋转 {normal_text} · {strategy} {comparison['rotation_m']:.3f} 米"
                    f" · 省膜 {saved_text} · 实际旋转 {comparison['rotated_images']} 张")
     for item in quality.get('single_images', []):
-        review += f"\n单排：{item['source']} · 图宽 {item['width_mm']:g} 毫米 · {item['reason']}"
+        footprint = item.get('footprint_mm')
+        occupied = f" · 含标签/刀码占位 {footprint:g} 毫米" if footprint is not None else ''
+        review += f"\n单排：{item['source']} · 图宽 {item['width_mm']:g} 毫米{occupied} · {item['reason']}"
     return ('按文件段号顺序生产，不重新排序。刀位从输出文件最左侧起算，实际膜位置还需加 RIIN 左预留。\n'
             '红色横线表示分段或批次结束，区域之间不加横线；不切入图片。刀码不添加旋转偏移。\n\n'
             +review+'\n\n'+'\n\n'.join(cutting_description(part) for part in parts))

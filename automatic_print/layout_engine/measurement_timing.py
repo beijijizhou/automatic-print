@@ -11,6 +11,7 @@ STACK = ContextVar('measurement_timing_stack', default=())
 class MeasurementTiming:
     def __init__(self):
         self.lock, self.rows = RLock(), {}
+        self.item_cache_hits = self.item_cache_misses = 0
 
     def add(self, name, seconds):
         with self.lock:
@@ -18,9 +19,18 @@ class MeasurementTiming:
             row['seconds'] += seconds
             row['calls'] += 1
 
+    def cache_item(self, hit):
+        with self.lock:
+            if hit:
+                self.item_cache_hits += 1
+            else:
+                self.item_cache_misses += 1
+
     def snapshot(self):
         with self.lock:
             return {'steps': [dict(row) for row in self.rows.values()],
+                    'item_cache_hits': self.item_cache_hits,
+                    'item_cache_misses': self.item_cache_misses,
                     'basis': '线程累计独占耗时；已扣除嵌套子步骤，并行耗时不能与总耗时相加'}
 
 
@@ -68,6 +78,9 @@ def measurement_text(data):
     lines = ['测量子步骤（线程累计，不是墙钟总耗时）']
     if data.get('cache_hit'):
         lines.append('本次命中排版缓存，以下测量未执行，耗时为0。')
+    hits, misses = data.get('item_cache_hits', 0), data.get('item_cache_misses', 0)
+    if hits or misses:
+        lines.append(f'24小时单图测量缓存：复用 {hits} 项 · 重新测量 {misses} 项')
     for row in data['steps']:
         lines.append(f"{row['name']}：{row['seconds']:.3f} 秒 · {row['calls']} 次")
     lines.append(data['basis'])

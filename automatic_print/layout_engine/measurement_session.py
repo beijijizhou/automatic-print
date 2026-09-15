@@ -6,6 +6,7 @@ from dataclasses import replace
 from PIL import Image
 from threading import RLock
 from concurrent.futures import Future
+import sqlite3
 
 SESSION = ContextVar('layout_measurements', default=None)
 SOURCE = ContextVar('layout_measurement_source', default=None)
@@ -17,6 +18,8 @@ class Measurements:
         self.items, self.dimensions, self.rectangles = {}, {}, {}
         self.bands = {}
         self.identities, self.identity_lock = {}, RLock()
+        self.persistent = None
+        self.persistent_lock = RLock()
         from .measurement_timing import MeasurementTiming
         self.timing = MeasurementTiming()
 
@@ -30,7 +33,24 @@ def measurement_session():
     try:
         yield SESSION.get()
     finally:
+        session = SESSION.get()
+        if session.persistent is not None:
+            try:
+                session.persistent.close()
+            except sqlite3.Error:
+                pass
         SESSION.reset(token)
+
+
+def persistent_cache():
+    session = SESSION.get()
+    if session is None:
+        return None
+    with session.persistent_lock:
+        if session.persistent is None:
+            from .measurement_cache import MeasurementCache
+            session.persistent = MeasurementCache()
+        return session.persistent
 
 
 def identity(path):
@@ -120,11 +140,37 @@ def measured_item(make, path, index, width, height, settings, labels, created_at
         if text is not None:
             labels[index] = text
         return item
+    persistent, persistent_key = None, None
+    if session:
+        try:
+            from .measurement_cache import item_key, decode_item
+            persistent = persistent_cache()
+            persistent_key = item_key(
+                key[0], index, width, height, key[4], rotation_degrees,
+                created_at,
+            )
+            cached = persistent.load('item', persistent_key)
+            if cached is not None:
+                item, text = decode_item(cached)
+                session.items[key] = item, text
+                session.timing.cache_item(True)
+                if text is not None:
+                    labels[index] = text
+                return item
+            session.timing.cache_item(False)
+        except (OSError, ValueError, TypeError, KeyError, sqlite3.Error):
+            persistent = persistent_key = None
     with measuring_source(path):
         item = make(path, index, width, height, settings, labels, created_at,
                     gap, offset_x, offset_y, rotation_degrees, qr_location)
     if session:
         session.items[key] = item, labels.get(index)
+        if persistent is not None and persistent_key is not None:
+            try:
+                from .measurement_cache import encode_item
+                persistent.save('item', persistent_key, encode_item(item, labels.get(index)))
+            except (OSError, ValueError, TypeError, sqlite3.Error):
+                pass
     return item
 
 
@@ -136,9 +182,30 @@ def choice_source(path, index, width, height, settings, manual):
         sizes.append((height, width, 90 if settings.rotation_direction == 'left' else -90))
     if session:
         file_key, normalized = identity(path), item_settings(settings)
-        if all((file_key, index, w, h, normalized, degrees) in session.items
-               for w, h, degrees in sizes):
+        keys = [(file_key, index, w, h, normalized, degrees)
+                for w, h, degrees in sizes]
+        if all(key in session.items for key in keys):
             yield
             return
+        try:
+            from .measurement_cache import item_key, decode_item
+            persistent = persistent_cache()
+            cached = []
+            for key, (_width, _height, degrees) in zip(keys, sizes, strict=True):
+                value = persistent.load('item', item_key(
+                    file_key, index, key[2], key[3], normalized, degrees,
+                    session.created_at,
+                ))
+                if value is None:
+                    break
+                cached.append((key, decode_item(value)))
+            if len(cached) == len(keys):
+                session.items.update(cached)
+                for _ in cached:
+                    session.timing.cache_item(True)
+                yield
+                return
+        except (OSError, ValueError, TypeError, KeyError, sqlite3.Error):
+            pass
     with measuring_source(path):
         yield

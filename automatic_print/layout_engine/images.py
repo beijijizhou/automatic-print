@@ -1,6 +1,7 @@
 from pathlib import Path
 from dataclasses import dataclass
 import math
+import sqlite3
 
 from PIL import Image
 from .measurement_timing import measured
@@ -17,11 +18,24 @@ class PrintDimensions:
 
 @measured('尺寸与DPI文件信息读取')
 def print_dimensions(path: Path, fallback_dpi: int) -> PrintDimensions:
-    from .measurement_session import SESSION, identity
+    from .measurement_session import SESSION, identity, persistent_cache
     session = SESSION.get()
     key = (identity(path), fallback_dpi) if session else None
     if session and key in session.dimensions:
         return session.dimensions[key]
+    persistent, persistent_key = None, None
+    if session:
+        try:
+            from .measurement_cache import dimension_key
+            persistent = persistent_cache()
+            persistent_key = dimension_key(key[0], fallback_dpi)
+            cached = persistent.load('dimensions', persistent_key)
+            if cached is not None:
+                result = PrintDimensions(**cached)
+                session.dimensions[key] = result
+                return result
+        except (OSError, ValueError, TypeError, KeyError, sqlite3.Error):
+            persistent = persistent_key = None
     with Image.open(path) as image:
         source = image.info.get("dpi")
         try:
@@ -38,6 +52,12 @@ def print_dimensions(path: Path, fallback_dpi: int) -> PrintDimensions:
         )
     if session:
         session.dimensions[key] = result
+        if persistent is not None and persistent_key is not None:
+            try:
+                from dataclasses import asdict
+                persistent.save('dimensions', persistent_key, asdict(result))
+            except (OSError, ValueError, TypeError, sqlite3.Error):
+                pass
     return result
 
 

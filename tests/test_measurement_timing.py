@@ -1,4 +1,5 @@
 import os
+from dataclasses import replace
 os.environ.setdefault('QT_QPA_PLATFORM', 'offscreen')
 
 from automatic_print.layout_engine import measurement_timing as timing
@@ -49,6 +50,25 @@ def test_cold_measurements_report_substeps_and_warm_cache_reports_zero(tmp_path)
     assert cached['cache_hit']
     assert all(r['seconds'] == r['calls'] == 0 for r in cached['steps'])
     assert cached['cached_original_steps'] == data['steps']
+
+
+def test_per_image_measurement_cache_survives_batch_geometry_change(tmp_path, monkeypatch):
+    paths = qr_sources(tmp_path)[:2]
+    initial = config(compare_film_sizes=False)
+    planner.plan_layout(paths, initial, None)
+    from automatic_print.layout_engine import item_factory
+    monkeypatch.setattr(
+        item_factory, '_make_item',
+        lambda *_a, **_k: (_ for _ in ()).throw(AssertionError('remeasured source')),
+    )
+    reports = []
+    planner.plan_layout(
+        paths, replace(initial, media_width_mm=initial.media_width_mm-10),
+        None, reports.append,
+    )
+    measured = reports[-1]['measurement_timings']
+    assert measured['item_cache_hits'] >= len(paths)
+    assert measured['item_cache_misses'] == 0
 
 
 def test_measurement_text_appears_in_main_data_and_output_report(tmp_path):

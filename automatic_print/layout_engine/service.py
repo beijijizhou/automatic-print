@@ -110,14 +110,17 @@ def generate_layout(
     if prepared_plan is not None:
         quantity = prepared_plan.get('batch_quantity', quantity)+' '+order_quantity(paths, '本段')
     output_path = unused_output_path(output_dir, label_output_name(quantity+' '+label_text+size_suffix+zone_suffix+filename_suffix, batch_name))
-    quality = dual_quality(planned, settings)
+    quality = dual_quality(planned, settings, analysis[-1])
     if plan_ready:
         plan_ready({"planned": planned, "labels": labels, "settings": settings, "warning": warning, "order_check": order_check, "analysis": analysis[-1], "dual_quality": quality,
                     "saved_meters": max(0,baseline_height-height)*25.4/settings.dpi/1000,
                     "canvas": (width, height, baseline_height)})
     if preview_only:
-        return {"preview_only": True, "width_px": width, "height_px": height,
-                "output_dpi": settings.dpi, "analysis": analysis[-1], "header_gap": gap_records}
+        from .preview_result import build_preview_result
+        return build_preview_result(
+            output_path.name, planned, quality, sizes, settings, analysis[-1],
+            gap_records, cut_check, order_check, width, height, baseline_height,
+        )
     reading_seconds = perf_counter() - reading_started
 
     combining_started = perf_counter()
