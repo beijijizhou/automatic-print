@@ -33,7 +33,7 @@ class LayoutActivity(QObject):
         mode = next(key for key, button in self.buttons.items() if button is self.active)
         title = self.original[mode][0]
         self.active.setText(
-            f'{title}\n{phase} · {seconds:.2f}秒 · {fraction:.1%}'
+            f'{title} · {phase} · {seconds:.2f}秒 · {fraction:.1%}'
         )
         self.active.setToolTip(
             f'当前操作：{phase}\n本步骤耗时：{seconds:.2f}秒\n占当前总耗时：{fraction:.1%}'

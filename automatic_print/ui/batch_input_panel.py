@@ -18,7 +18,7 @@ def build_batch_input(owner, panel):
         (owner.window().stop_generation_button, '暂停批次', 'stop'),
     ):
         button.setText(text)
-        button.setMinimumHeight(54)
+        button.setMinimumHeight(40)
         button.setIcon(action_icon(icon))
         row.addWidget(button, 1)
     layout.addLayout(row)
