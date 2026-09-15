@@ -68,7 +68,10 @@ def fit_oversized(paths,settings,progress=None):
             continue
         if not dimensions.embedded_dpi:
             raise ValueError(f'{path.name}：缺可靠DPI，不能自动缩小打印尺寸')
-        degree=(90 if settings.rotation_direction=='left' else 270) if dimensions.height_mm<dimensions.width_mm else 0
+        # This is the deliberately aggressive rotation path. Keep every
+        # recovered image horizontal in the rotation zone, then scale the
+        # rotated result to the dynamically measured safe width when needed.
+        degree=90 if settings.rotation_direction=='left' else 270
         candidate=measure(path,degree)
         if candidate.footprint_width<=width:
             continue
@@ -90,7 +93,7 @@ def fit_oversized(paths,settings,progress=None):
         rotations.pop(str(path.resolve()),None)
         rotations[str(prepared.resolve())]=degree
         final=print_dimensions(prepared,settings.dpi)
-        text=(f'超宽自动恢复：强制方向{degree}°（较短边横向），等比比例{factor*100:.2f}%；'
+        text=(f'超宽自动恢复：强制横向旋转{degree}°，等比比例{factor*100:.2f}%；'
               f'原尺寸{dimensions.width_mm:.2f}×{dimensions.height_mm:.2f}毫米，'
               f'缩后未旋转尺寸{final.width_mm:.2f}×{final.height_mm:.2f}毫米；'
               f'总占位宽{candidate.footprint_width*25.4/settings.dpi:.2f}毫米，'

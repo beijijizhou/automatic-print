@@ -37,6 +37,7 @@
   测量、刀位、预览和渲染链路，不生成或修改源图片副本。
 - 旋转与超宽恢复：`rotation_compare.py`、`whole_rotation.py`、`tail_rotation.py`、
   `single_rotation.py`、`width_fit.py`、`gap_fallback.py`。
+  旋转区的竖图保持横向旋转，超出当前动态安全宽度时再等比缩小；整批仍最多只有并排区和旋转区两个区域。
 - 标签与刀码：`labels.py`、`dynamic_label.py`、`marker_stack.py`、`left_marker.py`、
   `platform_label.py`、`header_region.py`、`transparent_search.py`。开发者模式的平台文字优先放入
   原图二维码卡片的已验证空位；找不到安全空位时自动回退外置，不改变普通模式现有位置。

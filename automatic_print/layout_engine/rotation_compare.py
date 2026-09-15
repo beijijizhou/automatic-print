@@ -14,8 +14,7 @@ from .marker_space import validate_embedded_marks
 
 def compare_rotation(paths, settings, progress, analysis, analysis_ready):
     normal_settings = replace(settings, cutter_rotation_zone=False,
-                              cutter_tail_rotation=False, allow_rotation=False,
-                              manual_rotations=())
+                              cutter_tail_rotation=False, allow_rotation=False)
     # Measure each source and both orientations once before plan workers start.
     # Concurrent plans consume immutable geometry and never race to decode a file.
     options, labels = read_cutter_items(

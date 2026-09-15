@@ -72,6 +72,51 @@ def test_only_oversized_rotated_leftover_is_scaled(tmp_path, monkeypatch):
     assert scaled['rotation_degrees'] == 90 and scaled['width_px'] < 580
 
 
+def test_portrait_leftover_rotates_then_scales_without_third_zone(tmp_path, monkeypatch):
+    from automatic_print.layout_engine import width_fit
+    monkeypatch.setattr(width_fit, 'cache_root', lambda: tmp_path/'cache')
+    paths = _sources(tmp_path)[:4]
+    portrait = tmp_path/'B9-1-T-Black-M-NO1-1.png'
+    Image.new('RGBA', (700, 900), 'red').save(portrait, dpi=(25.4, 25.4))
+    paths.append(portrait)
+    result = generate_layout(paths, tmp_path/'scaled-portrait', LayoutSettings(
+        dpi=25.4, media_width_mm=580, margin_mm=0, spacing_mm=8,
+        cutter_mode='dual', cutter_auto_knife=True, cutter_rotation_zone=True,
+        cutter_majority_two_zone=True, cutter_left_marker_external=True,
+        number_images=False, auto_fit_width=True,
+    ))
+    placement = next(p for p in result['placements'] if p['source'] == portrait.name)
+    assert placement['rotation_degrees'] == 90
+    assert placement['footprint_width_px'] < 580
+    assert {p['cut_zone'] for p in result['placements']} == {'并排区', '旋转区'}
+    assert len(result['analysis']['width_adjustments']) == 1
+
+
+def test_two_sided_leftover_keeps_both_faces_together_and_same_direction(tmp_path, monkeypatch):
+    from automatic_print.layout_engine import width_fit
+    monkeypatch.setattr(width_fit, 'cache_root', lambda: tmp_path/'cache')
+    paths = _sources(tmp_path)[:4]
+    faces = []
+    for face in (1, 2):
+        path = tmp_path/f'B9-1-T-Black-M-NO1-{face}.png'
+        Image.new('RGBA', (700, 900), 'red').save(path, dpi=(25.4, 25.4))
+        faces.append(path)
+    paths.extend(faces)
+    result = generate_layout(paths, tmp_path/'scaled-faces', LayoutSettings(
+        dpi=25.4, media_width_mm=580, margin_mm=0, spacing_mm=8,
+        cutter_mode='dual', cutter_auto_knife=True, cutter_rotation_zone=True,
+        cutter_majority_two_zone=True, cutter_left_marker_external=True,
+        number_images=False, auto_fit_width=True,
+    ))
+    placed = [p for p in result['placements'] if p['source'] in {f.name for f in faces}]
+    assert len(placed) == 2
+    assert len({p['cut_zone'] for p in placed}) == 1
+    assert {p['rotation_degrees'] for p in placed} == {90}
+    assert len({(p['width_px'], p['height_px']) for p in placed}) == 1
+    indexes = [result['placements'].index(p) for p in placed]
+    assert indexes[1] == indexes[0] + 1
+
+
 def test_developer_width_cap_forces_s_to_l_pairs_without_enlarging(tmp_path):
     paths = []
     for index, (width, size) in enumerate(((280, 'S'), (250, 'S'),

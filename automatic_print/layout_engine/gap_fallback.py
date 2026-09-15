@@ -8,7 +8,8 @@ def width_failure(error):
     return any(message in str(error) for message in (
         '整批图片不存在安全的统一双列刀位', '旋转与不旋转均超出单排可打印膜宽',
         '图片无法安全放入固定分区；单排必须靠左', '超过了材料可打印宽度',
-        '剩余图片旋转后仍超宽'))
+        '剩余图片旋转后仍超宽', '整批订单无法安全放入常规区或旋转区',
+        '当前膜宽不存在安全的自动分栏方案'))
 
 
 def recover_width(paths,settings,error,progress,analysis_ready):
