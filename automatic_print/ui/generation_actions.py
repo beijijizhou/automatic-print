@@ -97,6 +97,7 @@ class GenerationActionsMixin:
     def update_progress(
         self, stage: str, current: int, total: int, filename: str
     ) -> None:
+        filename=filename.split('\t',1)[-1]
         if stage == '扫描文件夹':
             percent = 0
         elif stage in {"分析批次", "读取图片尺寸", "测量标签与刀码"}:

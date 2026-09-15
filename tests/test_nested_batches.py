@@ -109,11 +109,12 @@ def test_multiple_folders_can_be_planned_as_one_virtual_batch(tmp_path,monkeypat
     config=replace(settings(),png_engine='pillow',compare_film_sizes=False)
     worker=BulkGenerationWorker([],config,3,source_root=root,combine_batches=True)
     monkeypatch.setattr('automatic_print.ui.workers.GenerateWorker._save_history',lambda *_:None)
-    scans,results,previews,stages=[],[],[],[]
+    scans,results,previews,stages,source_events=[],[],[],[],[]
     worker.discovered.connect(scans.append,Qt.DirectConnection)
     worker.finished.connect(results.append,Qt.DirectConnection)
     worker.preview.connect(lambda _index,payload:previews.append(payload),Qt.DirectConnection)
     worker.progress.connect(lambda _i,_f,stage,*_rest:stages.append(stage),Qt.DirectConnection)
+    worker.source_progress.connect(lambda *event:source_events.append(event),Qt.DirectConnection)
     worker.run()
     assert scans[0]['combined_batch_count']==len(source_folders)
     assert len(scans[0]['batches'])==1
@@ -124,6 +125,8 @@ def test_multiple_folders_can_be_planned_as_one_virtual_batch(tmp_path,monkeypat
     assert result['analysis']['image_count']==36
     assert len(previews)==1 and len(previews[0]['planned'])==36
     assert any('测量标签与刀码 · 4线程并行'==stage for stage in stages)
+    assert {event[1] for event in source_events}=={str(folder) for folder in source_folders}
+    assert all(event[3]<=event[4] for event in source_events)
     output=Path(results[0]['records'][0]['output'])
     assert output.parent==tmp_path/'切膜机文件'/'HL'
     assert (output/result['filename']).is_file()
@@ -144,6 +147,9 @@ def test_combined_status_keeps_child_folders_visible(tmp_path):
     assert item.childCount()==3 and item.isExpanded()
     assert [item.child(i).text(0) for i in range(3)]==['S','M','3XL']
     assert [item.child(i).text(2) for i in range(3)]==['12','8','4']
+    board.update_source(0,str(root/'S'),'测量标签与刀码 · 4线程并行',3,12,'S-003.png')
+    assert item.child(0).text(1).endswith('3/12')
+    assert item.child(1).text(1)=='已加入合并批次'
     board.update_batch(0,'膜规格比较',2,4)
     assert item.treeWidget() is board.groups['进行中'] and item.isExpanded()
     assert all(item.child(i).text(1).startswith('随整批处理') for i in range(3))

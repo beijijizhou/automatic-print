@@ -62,6 +62,7 @@ class BatchStatusBoard(QWidget):
                     relative=path.relative_to(root).as_posix() if root else path.name
                     child=QTreeWidgetItem([relative,'已加入合并批次',str(source['image_count'])])
                     child.setIcon(0,action_icon('folder','#64748b'))
+                    child.setData(0,Qt.UserRole+1,str(path))
                     child.setToolTip(0,str(path)+'\n'+'\n'.join(p.name for p in source.get('images',())))
                     item.addChild(child)
             self.groups['未完成'].addTopLevelItem(item)
@@ -102,13 +103,29 @@ class BatchStatusBoard(QWidget):
         item.setIcon(0, action_icon(icon, color))
         child_status='已随整批完成' if done else (
             '整批失败，未单独输出' if failed else f'随整批处理 · {stage}')
-        for child_index in range(item.childCount()):
-            item.child(child_index).setText(1,child_status)
-            item.child(child_index).setToolTip(1,child_status+count)
+        if '测量标签与刀码' not in stage:
+            for child_index in range(item.childCount()):
+                item.child(child_index).setText(1,child_status)
+                item.child(child_index).setToolTip(1,child_status+count)
         item.setSelected(index == self.index)
         for tree in self.groups.values():
             tree.blockSignals(False)
         self.counts()
+
+    def update_source(self,index,folder,stage,current,total,filename):
+        item=self.items.get(index)
+        if item is None:
+            return
+        for child_index in range(item.childCount()):
+            child=item.child(child_index)
+            if child.data(0,Qt.UserRole+1)==folder:
+                done=current>=total
+                text=f'{stage} · {current}/{total}'+(' · 已完成' if done else '')
+                child.setText(1,text)
+                child.setToolTip(1,text+'\n'+filename)
+                child.setIcon(0,action_icon('done' if done else 'refresh',
+                                           '#15803d' if done else '#2563eb'))
+                return
 
     def currentIndex(self):
         return self.index

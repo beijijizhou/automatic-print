@@ -70,6 +70,7 @@ class BulkWorkbench(QObject):
         for signal, slot in ((self.worker.discovered, self.discovered),
                              (self.worker.progress, self.progress), (self.worker.preview, self.preview),
                              (self.worker.completed, self.completed), (self.worker.timings, self.timings),
+                             (self.worker.source_progress, self.source_progress),
                              (self.worker.finished, self.complete)):
             signal.connect(slot, Qt.QueuedConnection)
         self.worker.finished.connect(self.thread.quit)
@@ -147,6 +148,10 @@ class BulkWorkbench(QObject):
         self.timing_data[index] = data
         if index == self.selector.currentIndex():
             self.panel.timings.receive(data)
+
+    @Slot(int,str,str,object,object,str)
+    def source_progress(self,index,folder,stage,current,total,filename):
+        self.selector.update_source(index,folder,stage,current,total,filename)
 
     @Slot(int, object)
     def completed(self, index, record):

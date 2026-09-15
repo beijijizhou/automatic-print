@@ -41,7 +41,7 @@ def read_parallel(read_one, paths, settings, progress):
                         size = print_dimensions(path, settings.dpi)
                         dpi = '图片内嵌 DPI' if size.embedded_dpi else '缺少 DPI，按输出 DPI 估算'
                         progress('测量标签与刀码', completed, len(paths),
-                                 f'{path.name} · {size.width_mm:.1f} × {size.height_mm:.1f} 毫米 · {dpi}')
+                                 f'{path}\t{path.name} · {size.width_mm:.1f} × {size.height_mm:.1f} 毫米 · {dpi}')
                     submit()
         finally:
             for future in pending:

@@ -93,6 +93,7 @@ class GenerationPreviewController(QObject):
     def progress(self, stage, current, total, filename):
         if not self.preview.production_active:
             return
+        filename=filename.split('\t',1)[-1]
         if stage == '膜规格比较' and current == 0:
             self.panel.summary.film_table.reset_rows('正在计算')
         self.preview.production_stage = filename if stage == "批次刀位已确定" else f"{stage} · {current}/{total}"

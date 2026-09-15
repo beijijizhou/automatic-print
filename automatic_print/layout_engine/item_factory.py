@@ -106,7 +106,7 @@ def _read_items(paths, settings, progress):
             source = "图片内嵌 DPI" if size.embedded_dpi else "缺少 DPI，按输出 DPI 估算"
             progress(
                 "测量标签与刀码", index, len(paths),
-                f"{path.name} · {size.width_mm:.1f} × {size.height_mm:.1f} 毫米 · {source}",
+                f"{path}\t{path.name} · {size.width_mm:.1f} × {size.height_mm:.1f} 毫米 · {source}",
             )
     if progress and qr_attempted:
         progress(

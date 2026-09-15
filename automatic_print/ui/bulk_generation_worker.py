@@ -17,6 +17,7 @@ class BulkGenerationWorker(QObject):
     finished = Signal(object)
     completed = Signal(int, object)
     timings = Signal(int, object)
+    source_progress = Signal(int, str, str, object, object, str)
 
     def __init__(self, folders, settings, parallelism, custom_base=None, preview_only=False,
                  source_root=None, combine_batches=False):
@@ -25,6 +26,7 @@ class BulkGenerationWorker(QObject):
         self.preview_only = preview_only
         self.source_root, self.inventory = source_root, {}
         self.combine_batches = combine_batches
+        self.image_sources,self.source_totals,self.source_done={},{},{}
         # Output grouping follows the scanned source structure. Choosing a
         # platform in the UI must never change single/multi-batch semantics.
         self.group_outputs = False
@@ -55,13 +57,22 @@ class BulkGenerationWorker(QObject):
         results, errors, stopped = [], [], []
         direct = Qt.DirectConnection
         def progress(stage, current, total, filename):
+            token,separator,detail=filename.partition('\t')
             display=stage
             if self.combine_batches and total and stage in {'读取图片尺寸','测量标签与刀码'}:
                 from ..layout_engine.parallel_measurement import measurement_workers
                 display=f'{stage} · {measurement_workers(self.settings.worker_threads,total)}线程并行'
             elif self.combine_batches and total and stage=='合成图片':
                 display=f'{stage} · {min(self.settings.worker_threads,total)}路图片准备'
-            self.progress.emit(index, str(folder), display, current, total, filename)
+            source=self.image_sources.get(token) if separator else None
+            if separator and stage=='测量标签与刀码' and current==1:
+                self.source_done={key:value for key,value in self.source_done.items() if key[1]!=stage}
+            if source and stage=='测量标签与刀码':
+                key=source,stage
+                self.source_done[key]=self.source_done.get(key,0)+1
+                self.source_progress.emit(index,source,display,self.source_done[key],
+                                          self.source_totals[source],detail)
+            self.progress.emit(index, str(folder), display, current, total, detail if separator else filename)
         worker.progress.connect(progress, direct)
         worker.preview_ready.connect(lambda payload: self.preview.emit(index, payload), direct)
         worker.timings_ready.connect(lambda data: self.timings.emit(index, data), direct)
@@ -98,6 +109,10 @@ class BulkGenerationWorker(QObject):
                     self.original_settings=replace(self.original_settings,platform_name='S2B')
                 if self.combine_batches and scan['batches']:
                     sources=scan['batches']
+                    for batch in sources:
+                        source=str(batch['folder'])
+                        self.source_totals[source]=batch['image_count']
+                        self.image_sources.update((str(image),source) for image in batch['images'])
                     images=[image for batch in sources for image in batch['images']]
                     combined={'folder':self.source_root, 'relative':self.source_root.relative_to(self.source_root),
                               'images':images, 'image_count':len(images), 'source_batches':sources}
