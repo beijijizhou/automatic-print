@@ -48,7 +48,6 @@ def build_settings_navigation(window, source):
         window.preferences.value('layout/combine_bulk_batches', False, bool))
     window.combine_bulk_batches.setToolTip(
         '多批次排版时只生成一个排版任务；直接合并原图清单，不先生成各子批次PNG。')
-    forms['输出与并行'].insertRow(1, '多批次输出方式', window.combine_bulk_batches)
     window.print_settings_tabs = tabs
     window.layout_rules_form = forms['排版规则']
     return tabs

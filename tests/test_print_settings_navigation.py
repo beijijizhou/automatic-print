@@ -13,7 +13,8 @@ def test_settings_categories_reuse_controls_and_persist_parallelism(tmp_path):
     assert tabs.widget(0).isAncestorOf(owner.cutter_settings.knife)
     assert tabs.widget(1).isAncestorOf(owner.spacing)
     assert tabs.widget(3).isAncestorOf(owner.bulk_parallelism)
-    assert tabs.widget(3).isAncestorOf(owner.combine_bulk_batches)
+    assert owner.automation_home.isAncestorOf(owner.combine_bulk_batches)
+    assert not owner.settings_dialog.isAncestorOf(owner.combine_bulk_batches)
     assert owner.worker_threads.value() == 4
     assert owner.segmented_output.workers.value() == 4
     assert owner.bulk_parallelism.value() == 4

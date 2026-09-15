@@ -1,12 +1,13 @@
 """A compact production action row; configuration belongs in print settings."""
-from PySide6.QtWidgets import QGroupBox, QHBoxLayout, QCheckBox
+from PySide6.QtWidgets import QGroupBox, QHBoxLayout, QCheckBox, QVBoxLayout
 from .action_icons import action_icon
 
 
 def build_batch_input(owner, panel):
     group = QGroupBox('批次排版')
     group.setObjectName('batchInput')
-    row = QHBoxLayout(group)
+    layout = QVBoxLayout(group)
+    row = QHBoxLayout()
     row.setSpacing(14)
     owner.preview_only = QCheckBox('仅预览，不生成文件')
     owner.preview_only.setChecked(owner.window().preferences.value('layout/preview_only', False, bool))
@@ -20,9 +21,15 @@ def build_batch_input(owner, panel):
         button.setMinimumHeight(40)
         button.setIcon(action_icon(icon))
         row.addWidget(button, 1)
-    row.addWidget(owner.preview_only)
+    layout.addLayout(row)
+    options = QHBoxLayout()
+    options.setSpacing(14)
+    options.addWidget(owner.preview_only)
+    options.addWidget(owner.window().combine_bulk_batches)
     from .header_gap import build_quick_header_gap
-    row.addWidget(build_quick_header_gap(owner.window()))
+    options.addWidget(build_quick_header_gap(owner.window()))
+    options.addStretch()
+    layout.addLayout(options)
     owner.start_layout_button.setToolTip('选择图片文件夹后立即开始排版；取消不会启动任务。')
     panel.bulk_generation_button.setToolTip('选择上级目录中的批次；并发参数在打印设置中修改。')
     owner.window().stop_generation_button.setToolTip(

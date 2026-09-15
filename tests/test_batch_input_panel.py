@@ -16,6 +16,7 @@ def test_input_cards_group_single_and_multiple_while_details_stay_below(tmp_path
     assert home.start_layout_button.text() == '单批次排版'
     assert panel.bulk_generation_button.text() == '多批次排版'
     assert inputs.isAncestorOf(home.preview_only)
+    assert inputs.isAncestorOf(owner.combine_bulk_batches)
     single = home.start_layout_button.icon().pixmap(24, 24).toImage()
     multiple = panel.bulk_generation_button.icon().pixmap(24, 24).toImage()
     assert single != multiple  # Verify after the global style has been applied.

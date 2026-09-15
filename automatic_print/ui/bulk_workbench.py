@@ -57,7 +57,9 @@ class BulkWorkbench(QObject):
         self.panel.preview.sources_ready.emit([])
         self.window.stop_generation_button.setEnabled(True)
         grouped=settings.platform_name.casefold()=='s2b'
-        self.window.status.setText('正在扫描S2B尺码子文件夹；完成文件将集中保存…' if grouped else
+        merging=self.window.combine_bulk_batches.isChecked()
+        self.window.status.setText('正在扫描所有子文件夹；随后合并为一个批次排版…' if merging else
+                                   '正在扫描S2B尺码子文件夹；完成文件将集中保存…' if grouped else
                                    '正在后台扫描各层批次目录与图片文件名…')
         self.worker = BulkGenerationWorker(self.folders, settings, self.window.bulk_parallelism.value(),
                                            custom, self.window.automation_home.preview_only.isChecked(), parent,
