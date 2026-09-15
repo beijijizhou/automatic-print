@@ -142,7 +142,11 @@ def test_combined_status_keeps_child_folders_visible(tmp_path):
     assert item.childCount()==3 and item.isExpanded()
     assert [item.child(i).text(0) for i in range(3)]==['S','M','3XL']
     assert [item.child(i).text(2) for i in range(3)]==['12','8','4']
+    board.update_batch(0,'膜规格比较',2,4)
+    assert item.treeWidget() is board.groups['进行中'] and item.isExpanded()
+    assert all(item.child(i).text(1)=='随整批处理中' for i in range(3))
     board.update_batch(0,'批次生成完成')
+    assert item.treeWidget() is board.groups['已完成'] and item.isExpanded()
     assert all(item.child(i).text(1)=='已随整批完成' for i in range(3))
     board.close()
 

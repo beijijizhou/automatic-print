@@ -90,6 +90,8 @@ class BatchStatusBoard(QWidget):
         if source is not target:
             source.takeTopLevelItem(source.indexOfTopLevelItem(item))
             target.addTopLevelItem(item)
+        if item.childCount():
+            item.setExpanded(True)
         count = f' · {current}/{total}' if total else (
             ' · 已写入 '+file_size_text(current) if stage == '保存图片' else '')
         item.setText(1, stage+count)
