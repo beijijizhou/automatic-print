@@ -11,7 +11,7 @@ def developer_task_active(window):
 
 def build_developer_mode(window, footer):
     checkbox = QCheckBox('开发者模式')
-    checkbox.setToolTip('显示算法开销和用膜历史等诊断工具；生产排版内容对所有用户可见。')
+    checkbox.setToolTip('显示算法开销和排版历史等诊断工具；生产排版内容对所有用户可见。')
     window.developer_mode_checkbox = checkbox
     checkbox.setChecked(window.preferences.value('developer/enabled', False, bool))
     footer.addWidget(checkbox)

@@ -196,7 +196,7 @@ class LabelQuickPanel(QWidget):
         self.details_button = QPushButton('订单与切割检查')
         self.details_button.setToolTip('查看订单与尺码、图片旋转、切割明细和处理日志。')
         self.details_button.clicked.connect(self.details_dialog.open_overview)
-        self.history_button = QPushButton('用膜历史')
+        self.history_button = QPushButton('排版历史')
         self.history_button.setToolTip('查看以往批次的膜方案、面积、占位率和耗时。')
         from .action_icons import action_icon
         self.history_button.setIcon(action_icon('more'))

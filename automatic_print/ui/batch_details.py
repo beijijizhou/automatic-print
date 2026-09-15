@@ -32,7 +32,7 @@ class BatchDetailsDialog(QDialog):
         if not hasattr(self, 'history_page'):
             from .film_history import FilmHistoryPage
             self.history_page = FilmHistoryPage(self)
-            self.tabs.addTab(self.history_page, '用膜历史记录')
+            self.tabs.addTab(self.history_page, '排版历史')
         self.tabs.setCurrentWidget(self.history_page)
         self.open_details()
         self.history_page.refresh()

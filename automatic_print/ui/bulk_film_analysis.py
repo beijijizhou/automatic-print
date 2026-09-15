@@ -147,7 +147,7 @@ class BulkFilmAnalysisDialog(QDialog):
         self.status.setText(f"{'已停止' if result['stopped'] else '已完成'} · "
             f"成功保存 {len(result['records'])} 批 · 失败 {len(result['errors'])} 批 · "
             f"并行 {result.get('actual_parallelism', self.active_parallelism)} 批 · "
-            f"耗时 {result['seconds']:.2f}秒；可在用膜历史记录查看。")
+            f"耗时 {result['seconds']:.2f}秒；可在排版历史查看。")
 
     @Slot()
     def cleanup(self):

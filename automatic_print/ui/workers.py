@@ -60,7 +60,7 @@ class GenerateWorker(QObject):
             from ..history.store import save_run
             save_run(self.job_id, self.source, self.output, self.settings, result)
         except Exception as error:
-            result['history_warning'] = f'本地用膜历史保存失败：{error}'
+            result['history_warning'] = f'本地排版历史保存失败：{error}'
             self.progress.emit('历史保存失败', 0, 0, result['history_warning'])
 
     def _progress(self, stage, current, total, filename) -> None:
