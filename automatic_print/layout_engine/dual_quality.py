@@ -9,7 +9,7 @@ def dual_quality(planned, settings, analysis=None):
     rows = defaultdict(list)
     for _, placement in planned:
         p = asdict(placement)
-        rows[(p['cut_zone'], p['y_px'])].append(p)
+        rows[(p['cut_zone'], p['row_y_px'])].append(p)
     paired, singles, rotated, embedded = 0, [], 0, 0
     reasons = _analysis_reasons(analysis)
     for members in rows.values():
