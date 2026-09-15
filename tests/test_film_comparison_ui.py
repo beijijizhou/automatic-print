@@ -32,7 +32,7 @@ def test_four_options_are_visible_and_copyable(tmp_path, capfd):
         for option in ('不旋转', '允许旋转'):
             assert f'{film} 厘米 · {option}' in text
     assert '（参考）' not in text
-    assert panel.film_table.horizontalHeaderItem(1).text() == '双排数量'
+    assert panel.film_table.horizontalHeaderItem(1).text() == '并排结果'
     assert panel.film_table.horizontalHeaderItem(2).text() == '实际旋转'
     assert not panel.film_table.isColumnHidden(2)
     assert panel.film_table.horizontalHeaderItem(4).text() == '面积 / ㎡'

@@ -121,7 +121,7 @@ def finish_analysis(report, planned, settings, height, baseline):
         elif companions:
             reason = '与 '+ '、'.join(companions) + ' 安全并排'
         elif order.get('rotation_policy_skip'):
-            reason = '单件双排优先；保留常规尺码块，不拆尺码或改变生产顺序'
+            reason = '单件并排优先；保留常规尺码块，不拆尺码或改变生产顺序'
         elif order.get('rotation_eligible') is False:
             reason = '整单中有图片不具备安全旋转条件（膜标签或可用空间），无法整体进入旋转区，保留完整订单在常规区'
         elif order.get('rotation_eligible'):

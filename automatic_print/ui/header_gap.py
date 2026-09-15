@@ -55,7 +55,7 @@ def build_quick_header_gap(window):
 
 def build_quick_force_pair(window):
     """Mirror the canonical S-L pairing switch in the main action area."""
-    control = QCheckBox('强行 S–L 双排（自动扣除刀码占位）')
+    control = QCheckBox('S–L 并排宽度上限（自动扣除刀码占位）')
     canonical = window.cutter_settings.force_small_pair
     control.setChecked(canonical.isChecked())
     control.setToolTip(canonical.toolTip())

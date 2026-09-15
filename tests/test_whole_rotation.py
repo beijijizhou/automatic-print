@@ -30,14 +30,15 @@ def config():
         platform_name='隆丰',platform_font_height_mm=6)
 
 
-def test_fast_path_compares_all_protected_double_rows(tmp_path):
+def test_fast_path_keeps_more_efficient_automatic_columns(tmp_path):
     paths=sources(tmp_path)
     settings=config()
     normal=plan_layout(paths,replace(settings,cutter_compare_whole_rotation=False),None)
     rotated=plan_layout(paths,settings,None)
-    assert len({p.row_y_px for _,p in normal[0]})==2
-    assert all(p.rotation_degrees==90 for _,p in rotated[0])
-    assert rotated[3]<normal[3]
+    assert len({p.row_y_px for _,p in normal[0]})==1
+    assert {p.cut_column_count for _, p in normal[0]} == {4}
+    assert all(p.rotation_degrees==0 for _,p in rotated[0])
+    assert rotated[3] == normal[3]
 
 
 def test_gap_validator_rejects_text_moved_inside_rotated_source(tmp_path):
@@ -47,7 +48,7 @@ def test_gap_validator_rejects_text_moved_inside_rotated_source(tmp_path):
     plan=plan_layout(paths,settings,None)
     path,p=plan[0][0]
     unsafe=replace(p,number_x_px=p.x_px+40,number_y_px=p.y_px+10)
-    with pytest.raises(ValueError,match='禁用区域'):
+    with pytest.raises(ValueError,match='禁用区域|覆盖原图'):
         validate_embedded_marks([(path,unsafe)],settings)
 
 
@@ -58,8 +59,8 @@ def test_film_comparison_includes_whole_rotation_not_only_tail(tmp_path):
     normal=next(r for r in rows if r['film_mm']==600 and not r['rotation_allowed'])
     rotated=next(r for r in rows if r['film_mm']==600 and r['rotation_allowed'])
     assert not normal['error'] and not rotated['error']
-    assert rotated['rotated_images']==4
-    assert rotated['length_m']<normal['length_m']
+    assert rotated['rotated_images']==0
+    assert rotated['length_m']==normal['length_m']
 
 
 @pytest.mark.parametrize('engine',['pillow','libvips'])

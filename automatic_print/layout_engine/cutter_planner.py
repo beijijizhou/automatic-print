@@ -3,13 +3,13 @@ from dataclasses import replace
 from math import ceil
 
 from .images import print_dimensions
-from .order_groups import ordered_paths, order_key
+from .order_groups import ordered_paths
 from .item_factory import read_items
 from .models import mm_to_px
-from .units import UnitChoice, UnitMember, build_units
+from .units import build_units
 from .single_order_sequence import arrange_groups
-from .size_policy import same_single_size
 from .measurement_session import resolved_name
+from .column_solver import solve_groups, horizontal as _horizontal, group_rows as _group_rows
 
 
 def plan_cutter_layout(paths, settings, progress, prepared=None, preserve_sequence=False):
@@ -27,15 +27,20 @@ def plan_cutter_layout(paths, settings, progress, prepared=None, preserve_sequen
         progress('计算排版', 0, len(paths), '整理完整订单与固定分区占位')
     units = build_units(items, spacing)
     groups = [[member.item for member in choices[0].members] for choices in units]
+    knives = ()
     if settings.cutter_mode == "dual" and settings.cutter_auto_knife:
-        from .knife_optimizer import select_batch_knife
-        settings = select_batch_knife(groups, settings, spacing, progress)
-    lanes = _lanes(settings, width)
+        from .dynamic_columns import select_columns
+        settings, lanes, knives = select_columns(groups, settings, spacing, progress)
+    else:
+        lanes = _lanes(settings, width)
+        if settings.cutter_mode == 'dual':
+            knives = (mm_to_px(settings.cutter_knife_mm, settings.dpi),)
     if not preserve_sequence:
         groups = arrange_groups(groups, lanes, settings)
     if progress:
-        progress("批次刀位已确定", mm_to_px(settings.cutter_knife_mm, settings.dpi),
-                 settings.dpi, f"整批固定刀位 {settings.cutter_knife_mm:.2f} 毫米")
+        knife_text = '、'.join(f'{knife*25.4/settings.dpi:.2f}' for knife in knives)
+        progress("批次刀位已确定", knives[0] if knives else 0,
+                 settings.dpi, f"自动 {len(lanes)} 列；固定刀位 {knife_text or '无'} 毫米")
     solution = solve_groups(groups, lanes, spacing, settings.cutter_majority_two_zone)
     if solution is None:
         from .error_parameters import groups_failure
@@ -44,7 +49,11 @@ def plan_cutter_layout(paths, settings, progress, prepared=None, preserve_sequen
     planned, index, y = [], 0, margin
     while index < len(groups):
         count, row = plans[index]
-        planned.extend(_place_choice(row, 0, y))
+        planned.extend((path, replace(placement,
+                                     cut_knife_x_px=knives[0] if knives else None,
+                                     cut_knife_xs_px=knives,
+                                     cut_column_count=len(lanes)))
+                       for path, placement in _place_choice(row, 0, y))
         y += row.height + spacing
         index += count
     height = y - spacing + margin
@@ -67,37 +76,14 @@ def cutter_output_width(planned, settings, maximum):
     if settings.cutter_mode != 'dual':
         return min(maximum, used)
     safety = ceil(settings.cutter_safety_mm*settings.dpi/25.4)
-    knives = [p.cut_knife_x_px for _path, p in planned if p.cut_knife_x_px is not None]
+    knives = [knife for _path, p in planned for knife in p.cut_knife_xs_px]
+    if not knives and any(p.cut_column_count == 1 for _path, p in planned):
+        return min(maximum, used)
+    if not knives:
+        knives = [p.cut_knife_x_px for _path, p in planned if p.cut_knife_x_px is not None]
     if not knives:
         knives = [mm_to_px(settings.cutter_knife_mm, settings.dpi)]
     return min(maximum, max(used, max(knives)+safety+1))
-
-
-def solve_groups(groups, lanes, spacing, pair_adjacent=False):
-    from collections import Counter
-    counts = Counter(order_key(item.path) for group in groups for item in group)
-    costs, plans = [float("inf")] * (len(groups) + 1), [None] * len(groups)
-    costs[-1] = 0
-    for index in range(len(groups) - 1, -1, -1):
-        candidates = [(1, row) for row in _group_rows(groups[index], lanes, spacing)]
-        if len(lanes) == 2 and index + 1 < len(groups):
-            if len(groups[index]) == len(groups[index + 1]) == 1:
-                pair = groups[index] + groups[index + 1]
-                keys = [order_key(item.path) for item in pair]
-                from .source_metadata import source_color
-                compatible = (source_color(pair[0].path) == source_color(pair[1].path)
-                              if pair_adjacent else same_single_size(pair[0].path, pair[1].path))
-                share = keys[0] == keys[1] or (all(counts[key] == 1 for key in keys) and compatible)
-                row = _horizontal(pair, lanes) if share else None
-                if row:
-                    candidates.insert(0, (2, row))
-        for count, row in candidates:
-            cost = row.height + spacing + costs[index + count]
-            if cost < costs[index]:
-                costs[index], plans[index] = cost, (count, row)
-        if plans[index] is None:
-            return None
-    return costs[0], plans
 
 
 def _lanes(settings, width):
@@ -112,61 +98,6 @@ def _lanes(settings, width):
     if marker >= width:
         raise ValueError("右侧色块基准超出了膜宽。")
     return [(0, knife - safety, None), (knife + safety, width, marker)]
-
-
-def _member(item, lane, y=0):
-    start, end, marker = lane
-    if marker is None:
-        from .left_marker import external_left_item
-        item = external_left_item(item)
-    x = start if marker is None else marker - item.block_rx
-    if x < start or x + item.footprint_width > end:
-        return None
-    return UnitMember(item, x, y)
-
-
-def _row(members):
-    return UnitChoice(
-        max(m.x + m.item.footprint_width for m in members),
-        max(m.y + m.item.footprint_height for m in members),
-        tuple(members), 0,
-    )
-
-
-def _horizontal(group, lanes):
-    if len(lanes) != 2 or any(item.rotation_degrees for item in group):
-        return None
-    members = [_member(item, lane) for item, lane in zip(group, lanes)]
-    if any(member is None for member in members):
-        members = [_member(item, lane) for item, lane in zip(group, reversed(lanes))]
-        if any(member is None for member in members):
-            return None
-    anchor_y = max(member.item.image_ry for member in members)
-    return _row([
-        replace(member, y=anchor_y - member.item.image_ry)
-        for member in members
-    ])
-
-
-def _group_rows(group, lanes, spacing):
-    rows = []
-    if len(group) == 2:
-        horizontal = _horizontal(group, lanes)
-        if horizontal:
-            return [horizontal]
-    # A vertical/single-image row must be readable by the film's left sensor.
-    # Right-lane placement is only valid with an actual horizontal companion.
-    for lane in lanes[:1]:
-        members, y = [], 0
-        for item in group:
-            member = _member(item, lane, y)
-            if member is None:
-                break
-            members.append(member)
-            y += item.footprint_height + spacing
-        if len(members) == len(group):
-            rows.append(_row(members))
-    return rows
 
 
 def read_cutter_items(paths, settings, progress, prepare_rotations=False, include_choices=False):

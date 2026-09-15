@@ -22,15 +22,21 @@ def footer_text(planned, settings, notice):
         rows = {}
         for _, p in members:
             rows.setdefault(p.row_y_px, []).append(p)
-        pairs = sum(len(row) == 2 for row in rows.values())
-        knife = members[0][1].cut_knife_x_px
-        knife_mm = knife*25.4/settings.dpi if knife is not None else settings.cutter_knife_mm
+        counts = {}
+        for row in rows.values():
+            if len(row) > 1:
+                counts[len(row)] = counts.get(len(row), 0) + 1
+        parallel = '、'.join(f'{columns}排{count}行' for columns, count in sorted(counts.items())) or '无并排'
+        placement = members[0][1]
+        knives = placement.cut_knife_xs_px or ((placement.cut_knife_x_px,)
+                  if placement.cut_knife_x_px is not None else ())
+        knife_text = '、'.join(f'{knife*25.4/settings.dpi:.1f}' for knife in knives)
         sizes = size_range_label([path for path, _ in members]) or '尺码待核对'
-        title = '旋转区' if name == '旋转区' else '双排区/常规区'
+        title = '旋转区' if name == '旋转区' else '并排区/常规区'
         length = (max(p.row_y_px+p.footprint_height_px for _, p in members)-
                   min(p.row_y_px for _, p in members))*25.4/settings.dpi/1000
-        cut = f'刀位{knife_mm:.1f}毫米' if settings.cutter_mode == 'dual' else '单列/自由排版'
-        lines.append(f'{title}：{len(members)}张 · {pairs}行双排 · {sizes} · {length:.3f}米 · {cut}')
+        cut = f'刀位{knife_text}毫米' if knives else '无内部刀位'
+        lines.append(f'{title}：{len(members)}张 · {parallel} · {sizes} · {length:.3f}米 · {cut}')
     return '\n'.join(lines)+('\n'+settings.batch_footer_context if settings.batch_footer_context else '')
 
 

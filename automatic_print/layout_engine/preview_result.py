@@ -8,6 +8,7 @@ def build_preview_result(
     output_name, planned, quality, sizes, settings, analysis, gap_records,
     cut_check, order_check, width, height, baseline_height,
 ):
+    from .knife_positions import result_fields
     result = {
         'preview_only': True,
         'filename': output_name,
@@ -19,9 +20,7 @@ def build_preview_result(
         'header_gap': gap_records,
         'cutter_mode': settings.cutter_mode,
         'cut_corridor': cut_check,
-        'cutter_knife_mm': (
-            settings.cutter_knife_mm if settings.cutter_mode == 'dual' else None
-        ),
+        **result_fields(planned, settings),
         'cutter_safety_mm': settings.cutter_safety_mm,
         'width_px': width,
         'height_px': height,

@@ -5,26 +5,22 @@ from dataclasses import replace
 from .order_groups import ordered_paths
 from .batch_analysis import analyze_batch, finish_analysis
 from .transition_marks import marked_height
-
 from .item_factory import read_items
 from .metrics import basic_ordered_height
 from .models import LayoutSettings, Placement, ProgressCallback, mm_to_px
 from .row_optimizer import optimal_ordered_layout
 from .units import build_units, optimizer_options
 from .measurement_session import resolved_name
-
 def plan_layout(
     paths: list[Path],
     settings: LayoutSettings,
     progress: ProgressCallback | None,
     analysis_ready=None,
-) -> tuple[list[tuple[Path, Placement]], dict[int, str], int, int, int]:
+    ) -> tuple[list[tuple[Path, Placement]], dict[int, str], int, int, int]:
     from .measurement_session import measurement_session
     from .cached_planner import plan_with_cache
     with measurement_session() as session:
         return plan_with_cache(_measured_plan, paths, settings, progress, analysis_ready, session)
-
-
 def _measured_plan(paths, settings, progress, analysis_ready):
     settings = replace(settings, sequence_numbers=settings.sequence_numbers or
                        tuple((resolved_name(path), i) for i, path in enumerate(paths, 1)),
@@ -44,7 +40,7 @@ def _measured_plan(paths, settings, progress, analysis_ready):
         from .whole_rotation import compare_whole
         previously_selected = result
         comparison = analysis.get('rotation_comparison')
-        if not (comparison and comparison.get('selected_strategy') == '多数双排区 + 剩余旋转区'):
+        if not (comparison and comparison.get('selected_strategy') == '多数并排区 + 剩余旋转区'):
             result = compare_whole(paths, settings, progress, result)
         from .rotation_compare import update_selected_comparison
         update_selected_comparison(comparison, result, settings,
@@ -63,7 +59,7 @@ def _measured_plan(paths, settings, progress, analysis_ready):
         {'source': name, 'path': path, 'kind': text,
          'action': '已按开发者设置等比缩小；请核对预览和实际烫印尺寸'}
         for name, text, path in settings.width_adjustments
-        if text.startswith('强制 S–L 双排：')
+        if text.startswith('S–L 并排宽度上限：')
     )
     if analysis.get('rotation_recovery'):
         analysis['image_anomalies'].append({'source':'整批旋转恢复','kind':analysis['rotation_recovery']['action'],
@@ -71,8 +67,6 @@ def _measured_plan(paths, settings, progress, analysis_ready):
     if analysis_ready:
         analysis_ready(finish_analysis(analysis, result[0], settings, result[3], result[4]))
     return result
-
-
 def _plan_layout(paths, settings, progress, analysis, analysis_ready):
     if settings.cutter_mode != "free":
         if settings.cutter_mode == 'single' and settings.cutter_single_row_rotation:
@@ -128,8 +122,6 @@ def _plan_layout(paths, settings, progress, analysis, analysis_ready):
     )
     used_width = min(canvas_width, _used_canvas_width(planned))
     return planned, labels, used_width, canvas_height, baseline_height
-
-
 def _used_canvas_width(planned):
     right_edges = []
     for _path, placement in planned:
@@ -146,8 +138,6 @@ def _used_canvas_width(planned):
                 + placement.color_block_width_px
             )
     return max(right_edges)
-
-
 def _baseline_choice(choices, usable_width):
     fitting = next(
         (choice for choice in choices if choice.width <= usable_width),
@@ -156,8 +146,6 @@ def _baseline_choice(choices, usable_width):
     if fitting is None:
         raise ValueError("至少一个图片组超过了材料可打印宽度。")
     return fitting.width, fitting.height
-
-
 def _place_rows(units, rows, top_margin, spacing):
     planned, y = [], top_margin
     for start, end, choice_indexes in rows:
@@ -174,8 +162,6 @@ def _place_rows(units, rows, top_margin, spacing):
             x += choice.width + spacing
         y += row_height + spacing
     return planned
-
-
 def _place_choice(choice, unit_x, row_y):
     placed = []
     for member in choice.members:

@@ -92,6 +92,7 @@ def vips_corridor_is_clear(image, check, boxes=(), rectangles=()):
 def validate_vips_canvas(canvas, check):
     if check is None:
         return
-    for zone in check.get('zones', [check]):
+    from .cut_validation import corridor_checks
+    for zone in corridor_checks(check):
         if not vips_corridor_is_clear(canvas, zone):
             raise ValueError('合成图片进入整批切割安全通道，已禁止保存打印文件。')

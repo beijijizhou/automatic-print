@@ -9,7 +9,7 @@ def validate_order_placements(paths, planned):
     if Counter(paths) != Counter(path for path, _ in planned):
         raise ValueError('排版丢失或重复了源图片，禁止输出。')
     if len({placement.cut_zone for _path, placement in planned}) > 2:
-        raise ValueError('一个批次最多只能包含双排区和旋转区两个区域，禁止输出。')
+        raise ValueError('一个批次最多只能包含并排区和旋转区两个区域，禁止输出。')
     orders, pairs = defaultdict(list), defaultdict(list)
     for index, (path, placement) in enumerate(planned):
         orders[order_key(path)].append((index, placement))

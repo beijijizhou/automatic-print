@@ -30,10 +30,10 @@
   `output_dpi.py`。
 - 订单、双面、颜色与尺码：`order_groups.py`、`batch_analysis.py`、
   `single_order_sequence.py`、`color_policy.py`、`size_policy.py`。
-- 行、刀位和区域规划：`planner.py`、`row_optimizer.py`、`cutter_planner.py`、
-  `knife_optimizer.py`、`adaptive_knife.py`、`zone_optimizer.py`、`rotation_zones.py`。多数双排路径由
-  `adaptive_knife.py` 唯一组装“双排区 + 剩余旋转区”，旋转仍超宽时复用 `width_fit.py` 缩小缓存。
-- 主界面默认开启的强制 S–L 双排宽度上限由 `layout_engine/pair_width.py` 唯一计算；通过单图尺寸覆盖交给既有
+- 行、刀位和区域规划：`planner.py`、`row_optimizer.py`、`cutter_planner.py`、`dynamic_columns.py`、
+  `knife_optimizer.py`、`adaptive_knife.py`、`zone_optimizer.py`、`rotation_zones.py`。列数由膜宽与真实占位
+  动态形成，`adaptive_knife.py` 唯一组装“并排区 + 剩余旋转区”，旋转仍超宽时复用 `width_fit.py` 缩小缓存。
+- 主界面默认开启的 S–L 并排宽度上限由 `layout_engine/pair_width.py` 唯一计算；通过单图尺寸覆盖交给既有
   测量、刀位、预览和渲染链路，不生成或修改源图片副本。
 - 旋转与超宽恢复：`rotation_compare.py`、`whole_rotation.py`、`tail_rotation.py`、
   `single_rotation.py`、`width_fit.py`、`gap_fallback.py`。

@@ -29,7 +29,8 @@ def validate_marked_pillow(canvas, check, boxes=(), rectangles=(), progress=None
 def _validate(canvas, check, boxes, rectangles, progress, stack):
     if check is None:
         return
-    for zone in check.get('zones', [check]):
+    from .cut_validation import corridor_checks
+    for zone in corridor_checks(check):
         left, right = zone['safe_left_px'], zone['safe_right_px']
         top, bottom = zone.get('start_y_px', 0), zone.get('end_y_px', canvas.height)
         glyphs = footer_glyphs(rectangles, left, top, right, bottom, stack)

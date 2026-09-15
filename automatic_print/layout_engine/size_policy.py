@@ -53,7 +53,7 @@ def validate_single_size_blocks(paths, planned):
     ordered = sorted(planned, key=lambda entry: (entry[1].row_y_px, entry[1].x_px))
     zones = {placement.cut_zone for _path, placement in ordered}
     groups = ({zone: [(path, p) for path, p in ordered if p.cut_zone == zone]
-               for zone in ('双排区', '旋转区')} if zones == {'双排区', '旋转区'}
+               for zone in ('并排区', '旋转区')} if zones == {'并排区', '旋转区'}
               else {'整批': ordered})
     sequences = []
     for zone, entries in groups.items():

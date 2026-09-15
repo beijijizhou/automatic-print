@@ -11,7 +11,7 @@ class FilmComparisonTable(QTableWidget):
         self.last_comparison = None
         self.last_report = None
         self.setHorizontalHeaderLabels(
-            ['用膜方案', '双排数量', '实际旋转', '长度 / 米', '面积 / ㎡', '图片占位', '可用区占位', '批次构成'])
+            ['用膜方案', '并排结果', '实际旋转', '长度 / 米', '面积 / ㎡', '图片占位', '可用区占位', '批次构成'])
         self.setEditTriggers(QAbstractItemView.NoEditTriggers)
         self.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
         self.horizontalHeader().setSectionResizeMode(0, QHeaderView.ResizeToContents)
@@ -55,7 +55,8 @@ class FilmComparisonTable(QTableWidget):
             else:
                 name = result['name'] + ('（当前输出）' if result.get('production_selected') else '')
                 values = (name,
-                          f"{result.get('paired_rows', 0)}行 / {result.get('paired_images', 0)}张",
+                          result.get('parallel_text') or
+                          f"双排 {result.get('paired_rows', 0)} 行",
                           f"{result.get('rotated_images', 0)}张",
                           f"{result['length_m']:.3f}",
                           f"{result['film_area_m2']:.3f}",

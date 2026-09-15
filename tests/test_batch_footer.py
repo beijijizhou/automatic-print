@@ -41,7 +41,7 @@ def test_footer_and_cut_spacing_preserve_full_batch_pixels_and_zones(tmp_path, e
         footer, line = part['transition_marks']
         assert footer['kind'] == '批次信息'
         assert '批次6单' in footer['text']
-        assert '双排区/常规区' in footer['text']
+        assert '并排区/常规区' in footer['text']
         assert '旋转区' in footer['text']
         content = max(max(p['y_px']+p['height_px'],
             p['number_y_px']+p['number_height_px'],

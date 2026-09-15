@@ -59,6 +59,28 @@ def test_single_column_preserves_double_pair_without_rotation(tmp_path):
     assert result["rotation_count"] == 0
 
 
+def test_automatic_cutter_columns_are_an_output_of_film_width(tmp_path):
+    paths = [_image(tmp_path / f"B{i}-1-T-Black-M-NO1-1.png", width=250, height=100)
+             for i in range(6)]
+    result = generate_layout(paths, tmp_path / "wide", _settings(
+        media_width_mm=900, cutter_auto_knife=True,
+        cutter_left_marker_external=True))
+    assert result['dual_quality']['column_rows'] == {3: 2}
+    assert {tuple(p['cut_knife_xs_px']) for p in result['placements']} == {(300, 600)}
+    assert len(result['cut_corridor']['zones'][0]['corridors']) == 2
+
+
+def test_automatic_cutter_can_resolve_to_one_column(tmp_path):
+    paths = [_image(tmp_path / f"B{i}-1-T-Black-M-NO1-1.png", width=250, height=100)
+             for i in range(2)]
+    result = generate_layout(paths, tmp_path / "narrow", _settings(
+        media_width_mm=280, cutter_auto_knife=True,
+        cutter_left_marker_external=True))
+    assert result['dual_quality']['column_rows'] == {}
+    assert {p['cut_column_count'] for p in result['placements']} == {1}
+    assert result['cut_corridor']['knife_xs_px'] == []
+
+
 def test_cutter_mode_rejects_missing_dpi_but_reader_reports_estimate(tmp_path):
     path = _image(tmp_path / "no-dpi.png", dpi=False)
     size = print_dimensions(path, 100)

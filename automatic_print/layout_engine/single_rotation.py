@@ -82,14 +82,15 @@ def plan_single_rotation(baseline, targets, rotated_items, rotated_labels, setti
     boundary = prefix[best[1]]+spacing if normal else 0
     planned = normal+[(path, replace(p, y_px=p.y_px+boundary, row_y_px=p.row_y_px+boundary,
         number_y_px=p.number_y_px+boundary, color_block_y_px=p.color_block_y_px+boundary,
-        platform_y_px=p.platform_y_px+boundary, cut_zone='旋转区', cut_knife_x_px=rotated[3]))
+        platform_y_px=p.platform_y_px+boundary, cut_zone='旋转区', cut_knife_x_px=rotated[3],
+        cut_knife_xs_px=(rotated[3],), cut_column_count=2))
         for path, p in rotated[0]]
     height = marked_height(planned, settings, width, boundary+rotated[2])
     if height >= original_height:
         return _baseline_result(baseline, settings, progress)
     if progress:
         progress('批次刀位已确定', normal_knife if normal else rotated[3], settings.dpi,
-                 '单件双排优先；仅完整末尾单排尺码块旋转')
+                 '单件并排优先；仅完整末尾单排尺码块旋转')
         progress('旋转区节省', original_height-height, settings.dpi,
                  f'旋转区 {len(chosen)} 张；保留双排，不拆订单、双面或尺码块')
     selected_labels = {p.sequence_number: rotated_labels[p.sequence_number] for _, p in rotated[0]

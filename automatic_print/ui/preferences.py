@@ -1,8 +1,6 @@
 from pathlib import Path
 import re
-
 from PySide6.QtWidgets import QFileDialog, QMessageBox
-
 
 class PreferencesMixin:
     def choose_and_generate(self):

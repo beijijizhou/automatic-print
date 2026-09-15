@@ -48,7 +48,7 @@ def test_independent_check_rejects_size_interleaving(tmp_path):
         plan_ready=payloads.append)
     planned = payloads[0]['planned']
     by_path = dict(planned)
-    broken = [(path, replace(by_path[path], row_y_px=i*300, cut_zone='双排区'))
+    broken = [(path, replace(by_path[path], row_y_px=i*300, cut_zone='并排区'))
               for i, path in enumerate((paths[0], paths[2], paths[1]))]
     with pytest.raises(ValueError, match='尺码从小到大'):
         validate_single_size_blocks(paths, broken)

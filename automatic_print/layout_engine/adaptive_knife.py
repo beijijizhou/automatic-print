@@ -15,7 +15,7 @@ from .color_policy import order_color_key
 def plan_adaptive_knife_zones(paths, settings, progress, prepared=None):
     """Keep the pairable majority together and rotate complete leftovers."""
     if settings.cutter_mode != 'dual' or not settings.cutter_auto_knife:
-        raise ValueError('多数双排分区只适用于自动双刀模式。')
+        raise ValueError('多数并排分区只适用于自动多列切膜模式。')
     base = replace(settings, cutter_rotation_zone=False, cutter_tail_rotation=False,
                    allow_rotation=False)
     paths = ordered_paths(paths)
@@ -41,7 +41,7 @@ def plan_adaptive_knife_zones(paths, settings, progress, prepared=None):
         if stage == '批次刀位已确定':
             effective[0] = replace(base, cutter_knife_mm=current*25.4/total)
         if progress:
-            progress('双排区：'+stage, current, total, filename)
+            progress('并排区：'+stage, current, total, filename)
     normal = plan_cutter_layout(
         normal_paths, base, report,
         prepared=([[items[path]] for path in normal_paths], labels),
@@ -50,11 +50,11 @@ def plan_adaptive_knife_zones(paths, settings, progress, prepared=None):
 
     if not rotated_paths:
         knife = mm_to_px(effective[0].cutter_knife_mm, base.dpi)
-        planned = [(path, replace(p, cut_zone='双排区', cut_knife_x_px=knife))
+        planned = [(path, replace(p, cut_zone='并排区', cut_knife_x_px=knife))
                    for path, p in normal[0]]
         if progress:
             progress('双排与旋转分区', len(paths), len(paths),
-                     f'全部{len(paths)}张进入双排区；没有剩余旋转区；共1个区域')
+                     f'全部{len(paths)}张进入并排区；没有剩余旋转区；共1个区域')
         return planned, normal[1], normal[2], normal[3], normal[4]
 
     from .rotation_zones import _rotated, rotation_items
@@ -81,7 +81,7 @@ def plan_adaptive_knife_zones(paths, settings, progress, prepared=None):
     rotated = _rotated(rotated_paths, base, (rotated_items, rotated_labels))
     boundary = normal[3]+spacing
     normal_knife = mm_to_px(effective[0].cutter_knife_mm, base.dpi)
-    planned = [(path, replace(p, cut_zone='双排区', cut_knife_x_px=normal_knife))
+    planned = [(path, replace(p, cut_zone='并排区', cut_knife_x_px=normal_knife))
                for path, p in normal[0]]
     planned.extend(_shift(path, placement, boundary, rotated[3])
                    for path, placement in rotated[0])
@@ -91,7 +91,7 @@ def plan_adaptive_knife_zones(paths, settings, progress, prepared=None):
     )
     if progress:
         progress('双排与旋转分区', len(paths), len(paths),
-                 f'双排区{len(normal_paths)}张；旋转区{len(rotated_paths)}张；共2个区域')
+                 f'并排区{len(normal_paths)}张；旋转区{len(rotated_paths)}张；共2个区域')
     return planned, labels | rotated_labels, width, height, height
 
 
@@ -135,4 +135,5 @@ def _shift(path, placement, offset, knife):
         color_block_y_px=placement.color_block_y_px+offset,
         platform_y_px=placement.platform_y_px+offset,
         cut_zone='旋转区', cut_knife_x_px=knife,
+        cut_knife_xs_px=(knife,), cut_column_count=2,
     )

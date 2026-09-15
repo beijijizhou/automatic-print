@@ -5,6 +5,32 @@ from dataclasses import replace
 from .models import mm_to_px
 
 
+def corridor_checks(check):
+    """Flatten whole-output, zone and multi-knife checks into physical corridors."""
+    if not check:
+        return []
+    result = []
+    for zone in check.get('zones', [check]):
+        inherited = {key: zone[key] for key in ('name', 'start_y_px', 'end_y_px')
+                     if key in zone}
+        for corridor in zone.get('corridors', [zone]):
+            if 'safe_left_px' in corridor:
+                result.append(corridor | inherited)
+    return result
+
+
+def mark_pixel_verified(check):
+    if not check:
+        return
+    check['pixel_verified'] = True
+    for zone in check.get('zones', ()):
+        zone['pixel_verified'] = True
+        for corridor in zone.get('corridors', ()):
+            corridor['pixel_verified'] = True
+    for corridor in check.get('corridors', ()):
+        corridor['pixel_verified'] = True
+
+
 def validate_cut_corridor(planned, settings, canvas_width, left_marker_px=0):
     if settings.cutter_left_marker_external and settings.cutter_mode in {'single', 'dual'}:
         for path, p in planned:
@@ -20,19 +46,22 @@ def validate_cut_corridor(planned, settings, canvas_width, left_marker_px=0):
             raise ValueError("单排色块必须位于输出文件最左边缘，禁止输出。")
     if settings.cutter_mode != "dual":
         return None
-    if any(p.cut_knife_x_px is not None for _,p in planned):
+    if planned and all(p.cut_column_count == 1 for _, p in planned):
+        return {"knife_xs_px": [], "corridors": [],
+                "checked_images": len(planned), "continuous": True,
+                "left_marker_x_px": left_marker_px, "column_count": 1}
+    if any(p.cut_knife_x_px is not None or p.cut_knife_xs_px for _,p in planned):
         zones = []
         for name in dict.fromkeys(p.cut_zone for _,p in planned):
             members = [(path,p) for path,p in planned if p.cut_zone == name]
-            knives = {p.cut_knife_x_px for _,p in members}
-            if len(knives) != 1 or None in knives:
+            knife_sets = {_placement_knives(p) for _, p in members}
+            if len(knife_sets) != 1:
                 raise ValueError("同一区域的刀位不统一，禁止输出。")
-            knife = next(iter(knives))
+            knives = next(iter(knife_sets))
             if name == "旋转区" and len({p.row_y_px for _,p in members}) != len(members):
                 raise ValueError("旋转区必须每一行只有一张图片。")
-            checked = validate_cut_corridor([(path,replace(p,cut_zone="",cut_knife_x_px=None)) for path,p in members],
-                      replace(settings,cutter_knife_mm=knife*25.4/settings.dpi),canvas_width,
-                      0)
+            checked = _validate_fixed_knives(members, settings, canvas_width,
+                                             knives, 0)
             checked.update(name=name,start_y_px=min(p.row_y_px for _,p in members),
                            end_y_px=max(p.row_y_px+p.footprint_height_px for _,p in members))
             zones.append(checked)
@@ -41,13 +70,28 @@ def validate_cut_corridor(planned, settings, canvas_width, left_marker_px=0):
             raise ValueError("刀位区域重叠，禁止输出。")
         return {"zones":zones,"checked_images":len(planned),"continuous":len(zones)==1,
                 "knife_changes":len(zones)-1}
-    knife = mm_to_px(settings.cutter_knife_mm, settings.dpi)
+    knives = _placement_knives(planned[0][1]) if planned else ()
+    if not knives:
+        knives = (mm_to_px(settings.cutter_knife_mm, settings.dpi),)
+    return _validate_fixed_knives(planned, settings, canvas_width, knives,
+                                  left_marker_px)
+
+
+def _placement_knives(placement):
+    if placement.cut_knife_xs_px:
+        return tuple(placement.cut_knife_xs_px)
+    return ((placement.cut_knife_x_px,)
+            if placement.cut_knife_x_px is not None else ())
+
+
+def _validate_fixed_knives(planned, settings, canvas_width, knives, left_marker_px):
     safety = ceil(settings.cutter_safety_mm * settings.dpi / 25.4)
-    left, right = knife-safety, knife+safety
-    if not 0 < left < right < canvas_width:
+    corridors = [(knife-safety, knife+safety) for knife in knives]
+    if any(not 0 < left < right < canvas_width for left, right in corridors):
         raise ValueError("整批切割线或安全通道超出输出画布，已停止生成。")
-    expected_marker = right+mm_to_px(settings.cutter_marker_offset_mm, settings.dpi)
-    left_rows = {(p.row_y_px, p.y_px) for _, p in planned if p.x_px < knife}
+    offset = mm_to_px(settings.cutter_marker_offset_mm, settings.dpi)
+    first_rows = {(p.row_y_px, p.y_px) for _, p in planned
+                  if not knives or p.x_px < knives[0]}
     violations = []
     for path, p in planned:
         for title, x, width in (
@@ -56,58 +100,63 @@ def validate_cut_corridor(planned, settings, canvas_width, left_marker_px=0):
             ("色块", p.color_block_x_px, p.color_block_width_px),
             ('平台名称', p.platform_x_px, p.platform_width_px),
         ):
-            if width and x < right and x+width > left:
-                violations.append(f"{path.name}：{title}进入整批切割安全通道")
+            for left, right in corridors:
+                if width and x < right and x+width > left:
+                    violations.append(f"{path.name}：{title}进入整批切割安全通道")
         if p.color_block_width_px:
-            if p.x_px >= knife and (p.row_y_px, p.y_px) not in left_rows:
+            lane = sum(p.x_px >= knife for knife in knives)
+            if lane and (p.row_y_px, p.y_px) not in first_rows:
                 violations.append(f"{path.name}：单排色块不在输出文件最左边缘")
-            expected = left_marker_px if p.x_px < knife else expected_marker
+            expected = (left_marker_px if lane == 0 else
+                        knives[lane-1] + safety + offset)
             if p.color_block_x_px != expected:
                 violations.append(f"{path.name}：色块未对齐固定分区左边缘")
     if violations:
         raise ValueError("整批贯穿切割检查失败，禁止输出：\n"+"\n".join(violations[:20]))
-    return {"knife_x_px": knife, "safe_left_px": left, "safe_right_px": right,
-            "checked_images": len(planned), "continuous": True, "left_marker_x_px": left_marker_px}
+    checks = [{"knife_x_px": knife, "safe_left_px": left,
+               "safe_right_px": right} for knife, (left, right)
+               in zip(knives, corridors)]
+    result = {"knife_xs_px": list(knives), "corridors": checks,
+              "checked_images": len(planned), "continuous": True,
+              "left_marker_x_px": left_marker_px}
+    if len(checks) == 1:
+        result.update(checks[0])
+    return result
 
 
 def validate_canvas_pixels(canvas, check, progress=None):
     if check is None:
         return
-    if "zones" in check:
-        for zone in check["zones"]:
-            validate_canvas_pixels(canvas,zone,progress)
-        check["pixel_verified"] = True
-        return
-    left, right = check["safe_left_px"], check["safe_right_px"]
-    top, bottom = check.get("start_y_px",0),check.get("end_y_px",canvas.height)
-    for x in range(left, right, 8):
-        # Crop BEFORE extracting alpha: never allocate a full-canvas alpha image.
-        stripe = canvas.crop((x, top, min(x+8, right), bottom))
-        occupied = stripe.getchannel("A").getbbox() is not None
-        stripe.close()
-        if occupied:
-            raise ValueError("合成图片进入整批切割安全通道，已禁止保存打印文件。")
-        if progress:
-            progress("核对切割通道", min(x+8, right)-left, right-left, "逐段检查全长透明通道")
-    check["pixel_verified"] = True
+    for corridor in corridor_checks(check):
+        left, right = corridor["safe_left_px"], corridor["safe_right_px"]
+        top = corridor.get("start_y_px", 0)
+        bottom = corridor.get("end_y_px", canvas.height)
+        for x in range(left, right, 8):
+            stripe = canvas.crop((x, top, min(x+8, right), bottom))
+            occupied = stripe.getchannel("A").getbbox() is not None
+            stripe.close()
+            if occupied:
+                raise ValueError("合成图片进入整批切割安全通道，已禁止保存打印文件。")
+            if progress:
+                progress("核对切割通道", min(x+8, right)-left, right-left,
+                         "逐段检查全长透明通道")
+    mark_pixel_verified(check)
 
 
 def validate_vips_output(path, check, progress=None, guide_boxes=(), transition_rectangles=()):
     if check is None:
         return
-    if "zones" in check:
-        for zone in check["zones"]:
-            validate_vips_output(path,zone,progress,guide_boxes,transition_rectangles)
-        check["pixel_verified"] = True
-        return
     import pyvips
     if progress:
         progress("核对切割通道", 0, 1, "扫描输出 PNG 的全长切割通道")
-    image = pyvips.Image.new_from_file(str(path), access="sequential")
+    corridors = corridor_checks(check)
+    image = pyvips.Image.new_from_file(
+        str(path), access="random" if len(corridors) > 1 else "sequential")
     from .printed_guides import vips_corridor_is_clear
-    if not vips_corridor_is_clear(image, check, guide_boxes, transition_rectangles):
-        path.rename(path.with_suffix(".禁止打印"))
-        raise ValueError("最终 PNG 进入切割安全通道，文件已标记为禁止打印。")
-    check["pixel_verified"] = True
+    for corridor in corridors:
+        if not vips_corridor_is_clear(image, corridor, guide_boxes, transition_rectangles):
+            path.rename(path.with_suffix(".禁止打印"))
+            raise ValueError("最终 PNG 进入切割安全通道，文件已标记为禁止打印。")
+    mark_pixel_verified(check)
     if progress:
         progress("核对切割通道", 1, 1, "输出 PNG 全长通道检查通过")

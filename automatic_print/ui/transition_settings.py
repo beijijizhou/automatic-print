@@ -42,6 +42,6 @@ class TransitionSettings(QGroupBox):
             widget.valueChanged.connect(lambda value, key=key: preferences.setValue('cutter/'+key, value))
             setattr(self, name, widget)
             form.addRow(title, widget)
-        note = QLabel('刀码保持左侧固定识别基准。红线仅在批次或输出分段结束处，双排区与旋转区之间不加红线。')
+        note = QLabel('刀码保持各分栏固定识别基准。红线仅在批次或输出分段结束处，并排区与旋转区之间不加红线。')
         note.setWordWrap(True)
         form.addRow(note)

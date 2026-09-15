@@ -53,9 +53,9 @@ def guide_spans(planned, settings, bands):
             bottoms.append(floor(p.y_px + band.bottom*p.height_px))
         top, bottom = max(tops), min(bottoms)
         p = members[0][1]
-        knife = p.cut_knife_x_px
-        if knife is None:
-            knife = mm_to_px(settings.cutter_knife_mm, settings.dpi)
         if top < bottom:
-            spans.append(GuideSpan(knife, top, bottom))
+            knives = p.cut_knife_xs_px or ((p.cut_knife_x_px,)
+                if p.cut_knife_x_px is not None else
+                (mm_to_px(settings.cutter_knife_mm, settings.dpi),))
+            spans.extend(GuideSpan(knife, top, bottom) for knife in knives)
     return spans

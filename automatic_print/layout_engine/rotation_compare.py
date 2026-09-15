@@ -77,9 +77,9 @@ def compare_rotation(paths, settings, progress, analysis, analysis_ready):
             )
         adaptive = checked(adaptive_plan, settings, progress)
     else:
-        adaptive = (None, None, 0, '开发者模式的“多数双排集中在一起”未启用')
+        adaptive = (None, None, 0, '“多数并排集中在一起”未启用')
     if adaptive[0] is not None:
-        strategy, selected = '多数双排区 + 剩余旋转区', adaptive
+        strategy, selected = '多数并排区 + 剩余旋转区', adaptive
     elif rotated[0] is not None:
         strategy, selected = '旋转区域', rotated
     else:

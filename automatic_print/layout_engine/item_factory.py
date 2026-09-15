@@ -1,9 +1,7 @@
 from __future__ import annotations
-
 from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
-
 from .images import print_dimensions
 from .labels import format_label, settings_label_badge, label_layout
 from .decorations import combined_footprint, outside_position
@@ -17,7 +15,6 @@ from .rotated_marks import rotated_marks
 from .qr_placement import signed_mm as _signed_mm, rotated_qr as _rotated_qr, qr_label_layout as _qr_label_layout
 from .measurement_session import SESSION, measured_item, choice_source, resolved_name
 from .item_block import block_position as _block_position
-
 
 @dataclass(frozen=True)
 class LayoutItem:
@@ -119,8 +116,6 @@ def _read_items(paths, settings, progress):
             f"识别成功 {qr_detected} 张，未识别 {len(paths) - qr_detected} 张",
         )
     return items, labels
-
-
 def _make_item(
     path, index, width, height, settings, labels,
     created_at, gap, offset_x, offset_y, rotation_degrees, qr_location,

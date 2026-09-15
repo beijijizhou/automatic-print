@@ -9,7 +9,7 @@ def limits_text(settings, actual=True):
     return (f"{'失败点实际限制参数' if actual else '请求参数（实际输出网格见失败点）'}：\n"
         f"膜宽 {full:g} 毫米 · RIIN左/右预留 {settings.riin_left_mm:g}/{settings.riin_right_mm:g} 毫米"
         f" · 可打印宽度 {settings.media_width_mm:g} 毫米\n"
-        f"排版模式 {dict(free='自由排版',single='单排切膜',dual='双排切膜').get(settings.cutter_mode,settings.cutter_mode)}"
+        f"排版模式 {dict(free='自由排版',single='单排切膜',dual='自动多列切膜').get(settings.cutter_mode,settings.cutter_mode)}"
         f" · {'实际输出' if actual else '配置'}DPI {settings.dpi:g}"
         f" · 自动刀位 {'开' if settings.cutter_auto_knife else '关'}"
         f" · {'参考刀位（自动无解时不是最终值）' if settings.cutter_auto_knife else '固定刀位'} {settings.cutter_knife_mm:g} 毫米 · 刀位两侧安全距离 {settings.cutter_safety_mm:g} 毫米\n"

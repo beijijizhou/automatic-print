@@ -112,7 +112,7 @@ class MarkerExamples(QGroupBox):
             caption.setText(kind+'\n'+data['detail'])
             picture.setToolTip(data['source'] or '示意样板；位置由生产排版模块计算，不生成打印文件。')
         count = sum(r['production'] for r in results)
-        mode = {'free':'自由排版','single':'单列切膜','dual':'双列切膜'}.get(settings.cutter_mode,settings.cutter_mode)
+        mode = {'free':'自由排版','single':'单列切膜','dual':'自动多列切膜'}.get(settings.cutter_mode,settings.cutter_mode)
         self.status.setText(f'四种情况已更新 · {mode} · {count}种使用当前批次生产图。使用当前模式标记位置；'
                            '位置取自当前参数，不预设文字在刀码下方。抽样前24张，示例不替代整批刀位检查。')
         self.draw_images()

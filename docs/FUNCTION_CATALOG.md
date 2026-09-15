@@ -10,11 +10,12 @@
 | 批次数据快照与并行测量 | `layout_engine/batch_snapshot.py`, `measurement_session.py`, `parallel_measurement.py` | 生成、仅预览和批量分析从首次读取到最终报告共享一个批次会话；保持结果原顺序，线程完成顺序不能改变生产顺序。 |
 | 订单、双面、尺码归组及批次构成 | `layout_engine/order_groups.py`, `batch_analysis.py`, `size_policy.py` | 排版、比较、结果表、报告和安全检查使用同一身份；单件显示尺码-数量，多件显示订单号-件数。 |
 | 颜色与生产顺序 | `layout_engine/color_policy.py`, `single_order_sequence.py` | 颜色优先、尺码业务顺序集中维护。 |
-| 普通行和双排行规划 | `layout_engine/planner.py`, `row_optimizer.py`, `single_rows.py` | 入口不得自己拼 Placement。 |
-| 整批刀位 | `layout_engine/cutter_planner.py`, `knife_optimizer.py`, `adaptive_knife.py` | 线性贪心配对；多数可双排时形成一个双排区，其余完整订单形成一个旋转区；禁止超过两个区域。 |
+| 普通行和自动多列规划 | `layout_engine/planner.py`, `cutter_planner.py`, `dynamic_columns.py`, `column_solver.py` | 膜宽与真实占位决定列数；一至八列共用同一Placement入口。 |
+| 整批刀位 | `layout_engine/cutter_planner.py`, `dynamic_columns.py`, `knife_optimizer.py`, `adaptive_knife.py` | N列生成N-1条区域固定刀位；多数可并排时形成一个并排区，其余完整订单形成一个旋转区；禁止超过两个区域。 |
 | 旋转区域和整批旋转 | `layout_engine/rotation_zones.py`, `rotation_compare.py`, `whole_rotation.py` | 以完整订单或尺码块评估，不复制候选算法。 |
 | 单排超宽恢复 | `layout_engine/width_fit.py`, `gap_fallback.py` | 先旋转、符合规则时再等比缩小；保留恢复报告。 |
-| 强制 S–L 双排 | `layout_engine/pair_width.py` | 主界面默认开启；固定双列贪心方案按270毫米上限并扣除当前刀码安全占位后生成尺寸覆盖；预览、比较、输出和统一刀位复用该事实，不修改源图。 |
+| S–L并排宽度上限 | `layout_engine/pair_width.py` | 主界面默认开启；按270毫米上限生成尺寸覆盖，实际列数仍由膜宽和自动多列规划决定；不修改源图。 |
+| 多刀位安全事实 | `layout_engine/knife_positions.py`, `cut_validation.py` | 输出、预览、像素检查和报告复用实际刀位列表；每条安全通道独立核验。 |
 | 标签、平台文字和刀码 | `layout_engine/labels.py`, `marker_stack.py`, `platform_label.py` | 测量、预览、输出使用同一几何结果。 |
 | 二维码侧别与空白带 | `layout_engine/qr_corners.py`, `qr_placement.py`, `header_region.py` | 只测顶部有限条带的位置和可用空间，不做二维码解码或整图像素读取。 |
 | 透明区域搜索 | `layout_engine/transparent_search.py`, `platform_space.py`, `marker_space.py` | 像素读取结果进入测量缓存，不在每个方案重复扫描。 |

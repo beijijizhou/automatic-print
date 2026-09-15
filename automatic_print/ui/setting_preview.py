@@ -1,12 +1,9 @@
 from __future__ import annotations
-
 from datetime import datetime
 import re
-
 from PySide6.QtCore import QRectF, Qt
 from PySide6.QtGui import QColor, QFont, QFontMetrics, QPainter, QPen
 from PySide6.QtWidgets import QWidget
-
 
 class SettingPreview(QWidget):
     def __init__(self, kind: str, values, parent=None) -> None:
@@ -14,7 +11,6 @@ class SettingPreview(QWidget):
         self.kind = kind
         self.values = values
         self.setMinimumHeight(230)
-
     def sample_text(self) -> str:
         template = self.values().get("text", "{编号}")
         if self.values().get('source_order_enabled'):
@@ -44,7 +40,6 @@ class SettingPreview(QWidget):
         for field, value in replacements.items():
             template = template.replace(field, value)
         return re.sub(r"_{2,}", "", template) or "（空文字）"
-
     def paintEvent(self, _event) -> None:
         painter = QPainter()
         if not painter.begin(self):

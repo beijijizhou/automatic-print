@@ -28,17 +28,17 @@ def apply_pair_width_cap(paths, settings, progress=None):
         if dimensions.width_mm <= cap:
             continue
         if not dimensions.embedded_dpi:
-            raise ValueError(f'{path.name}：缺可靠DPI，不能执行强制 S–L 双排缩小。')
+            raise ValueError(f'{path.name}：缺可靠DPI，不能执行 S–L 并排宽度上限。')
         factor = cap / dimensions.width_mm
         height = dimensions.height_mm * factor
         overrides[resolved_name(path)] = (cap, height)
-        text = (f'强制 S–L 双排：原尺寸 {dimensions.width_mm:.2f}×{dimensions.height_mm:.2f} 毫米，'
+        text = (f'S–L 并排宽度上限：原尺寸 {dimensions.width_mm:.2f}×{dimensions.height_mm:.2f} 毫米，'
                 f'等比缩小为 {cap:.2f}×{height:.2f} 毫米（{factor*100:.2f}%）；'
                 f'用户上限 {requested_cap:.2f} 毫米，已扣除刀码安全占位；'
                 '原文件未修改，预览和输出使用相同尺寸，刀码仍服从本区域统一刀位。')
         notices.append((path.name, text, str(path)))
         if progress:
-            progress('强制 S–L 双排', index, len(paths), path.name+' · '+text)
+            progress('S–L 并排宽度上限', index, len(paths), path.name+' · '+text)
     return replace(settings, dimension_overrides=tuple(overrides.items()),
                    width_adjustments=tuple(notices))
 

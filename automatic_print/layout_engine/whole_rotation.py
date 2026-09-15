@@ -28,7 +28,9 @@ def recover_normal_width(paths,settings,progress,error):
     rotated=_rotated(paths,settings,(items,labels))
     dual=settings.cutter_mode=='dual'
     planned=[(path,replace(p,cut_zone='旋转区' if dual else '单排区',
-                          cut_knife_x_px=rotated[3] if dual else None))
+                          cut_knife_x_px=rotated[3] if dual else None,
+                          cut_knife_xs_px=(rotated[3],) if dual else (),
+                          cut_column_count=2 if dual else 1))
              for path,p in rotated[0]]
     maximum=mm_to_px(settings.media_width_mm,settings.dpi)
     from .cutter_planner import cutter_output_width
@@ -57,7 +59,9 @@ def compare_whole(paths, settings, progress, selected, prepared=None):
         return selected
     rotated = _rotated(paths, settings, (items, labels))
     planned = [(path, replace(p, cut_zone='旋转区' if settings.cutter_mode == 'dual' else '单排区',
-                             cut_knife_x_px=rotated[3] if settings.cutter_mode == 'dual' else None))
+                             cut_knife_x_px=rotated[3] if settings.cutter_mode == 'dual' else None,
+                             cut_knife_xs_px=(rotated[3],) if settings.cutter_mode == 'dual' else (),
+                             cut_column_count=2 if settings.cutter_mode == 'dual' else 1))
                for path, p in rotated[0]]
     maximum = mm_to_px(settings.media_width_mm, settings.dpi)
     from .cutter_planner import cutter_output_width

@@ -22,19 +22,21 @@ def production_summary_text(result):
     pieces = analysis.get('piece_count', '待核对')
     images = analysis.get('image_count', len(placements))
     doubles = analysis.get('double_pairs', 0)
-    paired_rows = quality.get('paired_rows', 0)
-    paired_images = paired_rows * 2
+    parallel = quality.get('parallel_text')
+    if not parallel:
+        pairs = quality.get('paired_rows', 0)
+        parallel = f'双排 {pairs} 行 / {pairs*2} 张' if pairs else '无并排'
     singles = len(quality.get('single_images', ()))
     rotation_zone = quality.get('rotated_images', 0)
     rotations = result.get('rotation_count', 0)
-    mode = {'free': '正常排版', 'single': '单排切膜', 'dual': '双排切膜'}.get(
+    mode = {'free': '正常排版', 'single': '单排切膜', 'dual': '自动多列切膜'}.get(
         result.get('cutter_mode'), result.get('cutter_mode', '未记录'))
     lines = [
         '本批次实际输出总结',
         f"{analysis.get('batch_type', '批次')} · {orders} 个订单组 · {pieces} 件"
         f" · {images} 张图 · {doubles} 组双面",
         f"生产方案：{film_mm / 10:g} 厘米膜 · {mode}",
-        f"排版结果：双排 {paired_rows} 行 / {paired_images} 张"
+        f"排版结果：{parallel}"
         f" · 常规单排 {singles} 张 · 旋转区 {rotation_zone} 张"
         f"（实际旋转 {rotations} 张）",
         f"实际用膜：{length_m:.3f} 米 · {area:.3f} 平方米 · 图片占位 {occupancy:.1f}%",

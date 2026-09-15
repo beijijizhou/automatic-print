@@ -103,7 +103,9 @@ def _compare_films(paths, settings, progress, production=None):
                            usable_occupancy_percent=100*image_area/usable_area if usable_area else 0,
                            rotated_images=sum(bool(p.rotation_degrees) for _, p in planned),
                            paired_rows=quality.get('paired_rows', 0),
-                           paired_images=quality.get('paired_rows', 0)*2)
+                           paired_images=quality.get('paired_rows', 0)*2,
+                           column_rows=quality.get('column_rows', {}),
+                           parallel_text=quality.get('parallel_text', '无并排'))
             except ValueError as exc:
                 row['error'] = str(exc)
             row['seconds'] = monotonic()-step
@@ -130,7 +132,7 @@ def _compare_films(paths, settings, progress, production=None):
     return {'rows': rows, 'seconds': monotonic()-started,
             'best_name': best['name'] if best else '', 'parallelism': workers,
             'measurement_seconds': measured_seconds,
-            'scope': '分段前；自动刀位；单件双排优先，仅完整单排尺码后缀旋转；无手动旋转；包含标签、刀码、红线和留白；仅几何检查',
+            'scope': '分段前；自动多列与多刀位；单件并排优先，仅完整单排尺码后缀旋转；无手动旋转；包含标签、刀码、红线和留白；仅几何检查',
             'occupancy_basis': '生产图片矩形面积，含原图透明部分，不含新增标签/刀码；不是油墨覆盖率'}
 
 
@@ -163,6 +165,8 @@ def _apply_production_result(rows, production, settings):
         rotated_images=sum(bool(p.rotation_degrees) for _, p in planned),
         paired_rows=quality.get('paired_rows', 0),
         paired_images=quality.get('paired_rows', 0) * 2,
+        column_rows=quality.get('column_rows', {}),
+        parallel_text=quality.get('parallel_text', '无并排'),
     )
 
 
@@ -182,7 +186,7 @@ def comparison_text(comparison):
             lines.append(r['name']+'：无安全方案 · '+r['error'])
         else:
             lines.append(f"{r['name']}：{r['length_m']:.3f} 米 · {r['film_area_m2']:.3f} 平方米"
-                         f" · 双排 {r.get('paired_rows', 0)} 行/{r.get('paired_images', 0)} 张"
+                         f" · 并排 {r.get('parallel_text', '无并排')}"
                          f" · 图片占位 {r['image_occupancy_percent']:.1f}%"
                          f" · 可用区占位 {r['usable_occupancy_percent']:.1f}%"
                          f" · 实际旋转 {r['rotated_images']} 张"

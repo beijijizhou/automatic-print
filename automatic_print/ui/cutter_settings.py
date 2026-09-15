@@ -2,7 +2,6 @@ from PySide6.QtWidgets import QCheckBox, QComboBox, QDoubleSpinBox, QFormLayout,
 from .printable_width import PrintableWidthPanel
 from .transition_settings import TransitionSettings
 
-
 class CutterSettingsPanel(QWidget):
     """Film specification owns its valid production modes and knife settings."""
 
@@ -26,11 +25,11 @@ class CutterSettingsPanel(QWidget):
         self.auto_knife.setChecked(preferences.value("cutter/auto_knife", True, bool))
         self.rotation_zone = QCheckBox("省膜时启用独立旋转区（每行一张，换刀一次）")
         self.rotation_zone.setChecked(not self.quick_mode.isChecked() and preferences.value("cutter/rotation_zone", False, bool))
-        self.two_zone = QCheckBox('贪心双排集中：能安全双排的订单优先双排，其余进入旋转区')
+        self.two_zone = QCheckBox('贪心并排集中：能安全并排的订单优先并排，其余进入旋转区')
         legacy = preferences.value('developer/majority_two_zone', True, bool)
         self.two_zone.setChecked(preferences.value('layout/majority_two_zone', legacy, bool))
         self.two_zone.setToolTip('能安全双排的完整订单优先集中双排，其余进入旋转区；最多两个区域。')
-        self.force_small_pair = QCheckBox('强行 S–L 双排（宽度超过 270 毫米时等比缩小到 270）')
+        self.force_small_pair = QCheckBox('S–L 并排宽度上限（超过 270 毫米时等比缩小）')
         if not preferences.value('layout/force_small_pair_default_on_v1', False, bool):
             preferences.setValue('layout/force_small_pair_width', True)
             preferences.setValue('layout/force_small_pair_default_on_v1', True)
@@ -50,7 +49,7 @@ class CutterSettingsPanel(QWidget):
         self.compare_films.setChecked(preferences.value('cutter/compare_films', True, bool))
         self.compare_films.toggled.connect(lambda v: preferences.setValue('cutter/compare_films', v))
         note = QLabel(
-            "先选择膜规格，再选择排版模式。固定双列的刀位整批不变；"
+            "先选择膜规格，再选择排版模式。自动分栏的全部刀位整批不变；"
             "右侧色块左边缘 = 刀位 + 安全距离 + 色块偏移。"
             "常规区保持固定刀位；旋转区每行一张，完整订单迁移。图片必须有可靠 DPI。"
         )
@@ -63,8 +62,8 @@ class CutterSettingsPanel(QWidget):
             ('RIIN 已设置的预留', self.printable),
             ("刀位选择", self.auto_knife),
             ("旋转区域", self.rotation_zone),
-            ('双排集中', self.two_zone),
-            ('强制双排实验', self.force_small_pair),
+            ('并排集中', self.two_zone),
+            ('S–L宽度上限', self.force_small_pair),
             ('快速末尾旋转', self.tail_rotation),
             ('区域与批次提示', self.transitions),
             ('膜规格比较', self.compare_films),
@@ -112,11 +111,7 @@ class CutterSettingsPanel(QWidget):
         self.width_control.setValue(film)
         self.mode.blockSignals(True)
         self.mode.clear()
-        modes = (
-            [("单列切膜（默认）", "single"), ("固定双列切膜（小图）", "dual")]
-            if film == 450 else
-            [("固定双列切膜（默认）", "dual"), ("单列切膜", "single")]
-        )
+        modes = [("自动多列切膜（默认）", "dual"), ("强制单列切膜", "single")]
         for text, value in modes + [("正常排版（无刀码）", "free")]:
             self.mode.addItem(text, value)
         self.mode.blockSignals(False)

@@ -30,9 +30,9 @@ def test_pairable_majority_precedes_one_rotated_leftover_zone(tmp_path, engine):
     assert [placement['source'] for placement in placements] == [
         paths[i].name for i in (0, 1, 3, 4, 2)
     ]
-    assert {placement['cut_zone'] for placement in placements} == {'双排区', '旋转区'}
+    assert {placement['cut_zone'] for placement in placements} == {'并排区', '旋转区'}
     assert sum(placement['rotation_degrees'] != 0 for placement in placements) == 1
-    assert result['analysis']['rotation_comparison']['selected_strategy'] == '多数双排区 + 剩余旋转区'
+    assert result['analysis']['rotation_comparison']['selected_strategy'] == '多数并排区 + 剩余旋转区'
     assert result['width_px'] == max(
         placement['x_px']+placement['width_px'] for placement in placements
     )
@@ -67,7 +67,7 @@ def test_only_oversized_rotated_leftover_is_scaled(tmp_path, monkeypatch):
         cutter_left_marker_external=True, number_images=False, auto_fit_width=True,
     ))
     assert len(result['analysis']['width_adjustments']) == 1
-    assert {p['cut_zone'] for p in result['placements']} == {'双排区', '旋转区'}
+    assert {p['cut_zone'] for p in result['placements']} == {'并排区', '旋转区'}
     scaled = next(p for p in result['placements'] if p['source'] == oversized.name)
     assert scaled['rotation_degrees'] == 90 and scaled['width_px'] < 580
 

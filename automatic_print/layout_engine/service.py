@@ -173,6 +173,7 @@ def generate_layout(
             pyvips.cache_set_max(0)
     phase('批次信息整理')
     size = output_path.stat().st_size
+    from .knife_positions import result_fields
     result = {
         "filename": filename,
         "dual_quality": quality,
@@ -190,13 +191,8 @@ def generate_layout(
         "cut_corridor": cut_check,
         "printed_guides": {"span_count": len(guide_spans), "dot_count": len(guide_boxes),
                            "missing_qr": missing_guides},
-        "cutter_knife_mm": settings.cutter_knife_mm if settings.cutter_mode == "dual" else None,
+        **result_fields(planned, settings),
         "cutter_safety_mm": settings.cutter_safety_mm,
-        "right_marker_mm": (
-            settings.cutter_knife_mm + settings.cutter_safety_mm
-            + settings.cutter_marker_offset_mm
-            if settings.cutter_mode == "dual" else None
-        ),
         "source_dimensions": [
             {"source": path.name, **asdict(print_dimensions(path, settings.dpi))}
             for path in paths

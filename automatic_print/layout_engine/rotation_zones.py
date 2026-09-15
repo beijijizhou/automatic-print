@@ -146,7 +146,8 @@ def plan_rotation_zones(paths, settings, progress, analysis=None, analysis_ready
     planned.extend((path, replace(p, y_px=p.y_px+boundary, row_y_px=p.row_y_px+boundary,
                        number_y_px=p.number_y_px+boundary, color_block_y_px=p.color_block_y_px+boundary,
                        platform_y_px=p.platform_y_px+boundary,
-                       cut_zone='旋转区', cut_knife_x_px=rotated[3])) for path, p in rotated[0])
+                       cut_zone='旋转区', cut_knife_x_px=rotated[3],
+                       cut_knife_xs_px=(rotated[3],), cut_column_count=2)) for path, p in rotated[0])
     baseline_height = baseline[3] if baseline else new_height
     from .color_policy import validate_color_order
     try:

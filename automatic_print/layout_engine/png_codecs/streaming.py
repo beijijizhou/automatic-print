@@ -7,7 +7,8 @@ def validate_final_canvas(canvas, check, boxes, rectangles, progress=None):
     if check is None:
         return
     from ..printed_guides import vips_corridor_is_clear
-    zones = check.get('zones', [check])
+    from ..cut_validation import corridor_checks
+    zones = corridor_checks(check)
     for index, zone in enumerate(zones, 1):
         if progress:
             progress('核对最终合成通道', index-1, len(zones),
@@ -15,7 +16,8 @@ def validate_final_canvas(canvas, check, boxes, rectangles, progress=None):
         if not vips_corridor_is_clear(canvas, zone, boxes, rectangles):
             raise ValueError('最终合成画布进入切割安全通道，禁止输出。')
         zone['pixel_verified'] = True
-    check['pixel_verified'] = True
+    from ..cut_validation import mark_pixel_verified
+    mark_pixel_verified(check)
 
 
 def validate_header(path, width, height):

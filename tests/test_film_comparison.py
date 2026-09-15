@@ -95,15 +95,14 @@ def test_production_rotation_and_film_comparison_measure_cutter_batch_once(tmp_p
     assert calls == ['cutter']
 
 
-def test_future_width_can_fit_without_becoming_production_selection(tmp_path):
+def test_reference_widths_stay_out_of_current_comparison(tmp_path):
     path = tmp_path / 'B1-1-T-Black-M-NO1-1.png'
     Image.new('RGBA', (650, 650), 'blue').save(path, dpi=(25.4, 25.4))
     settings = LayoutSettings(dpi=25.4, media_width_mm=580, number_images=False, compare_reference_films=True)
     result = compare_films([path], settings)
-    future = [row for row in result['rows'] if row['film_mm'] == 800]
-    assert all(not row['error'] and not row['available'] for row in future)
-    assert all(row['error'] for row in result['rows'] if row['film_mm'] < 700)
-    assert result['best_name'].startswith('70 厘米')
+    assert {row['film_mm'] for row in result['rows']} == {450, 600}
+    assert all(row['error'] for row in result['rows'])
+    assert result['best_name'] == ''
     assert settings.media_width_mm == 580
     assert '不代表当前设备可生产' in comparison_text(result)
 

@@ -117,6 +117,8 @@ class Placement:
     color_block_height_px: int = 0
     cut_zone: str = ""
     cut_knife_x_px: int | None = None
+    cut_knife_xs_px: tuple[int, ...] = ()
+    cut_column_count: int = 0
     platform_x_px: int = 0
     platform_y_px: int = 0
     platform_width_px: int = 0
