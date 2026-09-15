@@ -104,6 +104,18 @@ def test_s2b_size_folder_uses_design_order_and_parent_size(tmp_path):
     assert source_size(path) == 'L'
 
 
+def test_putian_prefix_uses_real_order_size_color_and_side(tmp_path):
+    from automatic_print.layout_engine.order_groups import order_key
+    from automatic_print.layout_engine.source_metadata import source_color, source_size
+    path = tmp_path/'PT-CVC面料00006-BOBXY4T-1-CVC-NY1--黑色-XL-NO1-1.png'
+    assert order_key(path) == 'bobxy4t'
+    assert source_size(path) == 'XL'
+    assert source_color(path) == '黑色'
+    assert pair_identity(path) == (
+        'bobxy4t-1-cvc-ny1--黑色-xl-no1', '1'
+    )
+
+
 def test_rotation_can_fit_batch_without_a_feasible_normal_baseline(tmp_path):
     paths = [source(tmp_path, 'BORDER-1-NO1-1', 700, 100)]
     baseline, _, _, _, _ = plan_layout(paths, settings(cutter_rotation_zone=False), None)
