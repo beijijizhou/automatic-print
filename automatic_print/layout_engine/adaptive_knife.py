@@ -3,11 +3,13 @@ from dataclasses import replace
 
 from .cutter_planner import (
     _horizontal, _lanes, cutter_output_width, plan_cutter_layout,
-    read_cutter_items,
+    read_cutter_items, solve_groups,
 )
 from .models import mm_to_px
 from .order_groups import complete_orders, ordered_paths
 from .single_order_sequence import lane_fits
+from .units import build_units
+from .color_policy import order_color_key
 
 
 def plan_adaptive_knife_zones(paths, settings, progress):
@@ -22,7 +24,9 @@ def plan_adaptive_knife_zones(paths, settings, progress):
     lanes = _lanes(replace(base, cutter_auto_knife=False,
                            cutter_knife_mm=base.media_width_mm/2),
                    mm_to_px(base.media_width_mm, base.dpi))
-    double_orders, leftovers = _partition(complete_orders(paths), items, lanes)
+    spacing = mm_to_px(base.spacing_mm, base.dpi)
+    double_orders, leftovers = _partition(
+        complete_orders(paths), items, lanes, spacing)
     normal_paths = [path for order in double_orders for path in order]
     rotated_paths = [path for order in leftovers for path in order]
     if len(normal_paths) <= len(rotated_paths):
@@ -66,7 +70,6 @@ def plan_adaptive_knife_zones(paths, settings, progress):
     if missing:
         raise ValueError('剩余图片旋转后仍超宽，需要进入等比缩小恢复：'+'、'.join(missing))
     rotated = _rotated(rotated_paths, base, (rotated_items, rotated_labels))
-    spacing = mm_to_px(base.spacing_mm, base.dpi)
     boundary = normal[3]+spacing
     normal_knife = mm_to_px(effective[0].cutter_knife_mm, base.dpi)
     planned = [(path, replace(p, cut_zone='双排区', cut_knife_x_px=normal_knife))
@@ -83,17 +86,22 @@ def plan_adaptive_knife_zones(paths, settings, progress):
     return planned, labels | rotated_labels, width, height, height
 
 
-def _partition(orders, items, lanes):
+def _partition(orders, items, lanes, spacing):
     double, leftovers = [], []
     for order in orders:
-        (double if _pairable(order, items, lanes) else leftovers).append(order)
+        (double if _pairable(order, items, lanes, spacing) else leftovers).append(order)
+    # The physical output is double zone followed by rotation zone. Once one
+    # colour reaches the second zone, later colours must also stay there so the
+    # output never returns to an earlier colour after the zone boundary.
+    if leftovers:
+        boundary = min(map(order_color_key, leftovers))
+        moved = [order for order in double if order_color_key(order) > boundary]
+        double = [order for order in double if order_color_key(order) <= boundary]
+        leftovers = sorted(leftovers + moved, key=order_color_key)
     return double, leftovers
 
 
-def _pairable(order, items, lanes):
-    from .source_metadata import source_size
-    if any(source_size(path) in {'3XL', '4XL', '5XL'} for path in order):
-        return False
+def _pairable(order, items, lanes, spacing):
     members = [items[path] for path in order]
     if any(item.rotation_degrees for item in members):
         return False
@@ -101,7 +109,13 @@ def _pairable(order, items, lanes):
         return all(lane_fits(members[0], lane) for lane in lanes)
     if len(members) == 2:
         return _horizontal(members, lanes) is not None
-    return False
+    units = build_units([[item] for item in members], spacing)
+    groups = [[member.item for member in choices[0].members] for choices in units]
+    solution = solve_groups(groups, lanes, spacing, pair_adjacent=True)
+    if solution is None:
+        return False
+    return any(count == 2 or len({member.x for member in row.members}) > 1
+               for count, row in solution[1])
 
 
 def _shift(path, placement, offset, knife):
