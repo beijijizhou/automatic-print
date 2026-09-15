@@ -13,6 +13,7 @@ def test_s2b_is_platform_but_does_not_replace_batch_actions(tmp_path,monkeypatch
     label=owner.label_settings
     assert label.platform.findText('S2B')>=0
     label.platform.setCurrentText('S2B')
+    assert owner.cutter_settings.mode.currentData() == 'dual'
     assert owner.combine_bulk_batches.isChecked()
     assert owner.cutter_settings.force_small_pair.isChecked()
     assert owner.quick_force_small_pair.isChecked()
@@ -44,6 +45,7 @@ def test_single_folder_selection_detects_s2b_without_changing_action(tmp_path,mo
     assert owner.choose_folder()
     assert owner.folder.text()==str(root/'3XL')
     assert owner.label_settings.platform.currentText()=='S2B'
+    assert owner.cutter_settings.mode.currentData()=='dual'
     assert owner.combine_bulk_batches.isChecked()
     assert owner.cutter_settings.force_small_pair.isChecked()
     assert owner.cutter_settings.two_zone.isChecked()

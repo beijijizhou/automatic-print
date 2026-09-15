@@ -52,6 +52,9 @@ def build_settings_navigation(window, source):
     def platform_defaults(name):
         if name.strip().casefold() != 's2b':
             return
+        dual_index = window.cutter_settings.mode.findData('dual')
+        if dual_index >= 0:
+            window.cutter_settings.mode.setCurrentIndex(dual_index)
         window.combine_bulk_batches.setChecked(True)
         window.cutter_settings.force_small_pair.setChecked(True)
         window.cutter_settings.two_zone.setChecked(True)
@@ -59,6 +62,7 @@ def build_settings_navigation(window, source):
         window.cutter_settings.rotation_zone.setChecked(True)
         window.cutter_settings.tail_rotation.setChecked(False)
         window.preferences.setValue('layout/combine_bulk_batches', True)
+        window.preferences.setValue('cutter/mode', 'dual')
         window.preferences.setValue('layout/force_small_pair_width', True)
         window.preferences.setValue('layout/majority_two_zone', True)
         window.preferences.setValue('cutter/quick_mode', False)
