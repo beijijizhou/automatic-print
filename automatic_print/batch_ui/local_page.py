@@ -80,7 +80,7 @@ def build_local_page(owner) -> QWidget:
         from ..ui.batch_input_panel import build_batch_input, build_batch_tools
         owner.batch_input_panel = build_batch_input(owner, owner.label_quick_panel)
         layout.addWidget(owner.batch_input_panel)
-        build_batch_tools(owner.label_quick_panel)
+        owner.batch_tools = build_batch_tools(owner.label_quick_panel)
         layout.addWidget(owner.label_quick_panel)
         owner.label_quick_panel.details_dialog.add_page('预览与处理日志', [
             preview_button, window.run_log, owner.log,

@@ -35,6 +35,7 @@ def test_default_shows_production_layout_but_hides_diagnostic_tools(tmp_path, mo
     assert panel.summary.film_table.rowCount() == 4
     assert not owner._layout_settings().compare_reference_films
     assert not panel.history_button.isVisible() and not panel.bulk_analysis_button.isVisible()
+    navigation_before = owner.automation_home.batch_tools.mapTo(owner, owner.rect().topLeft())
     panel.details_dialog.open_history()
     panel.details_dialog.open_bulk_analysis()
     assert not hasattr(panel.details_dialog, 'history_page')
@@ -62,6 +63,7 @@ def test_default_shows_production_layout_but_hides_diagnostic_tools(tmp_path, mo
     owner.automation_home.workbench_scroll.verticalScrollBar().setValue(999999)
     APP.processEvents()
     assert settings_button.mapTo(owner, settings_button.rect().topLeft()) == before
+    assert owner.automation_home.batch_tools.mapTo(owner, owner.rect().topLeft()) == navigation_before
     assert settings_button.isVisible()
     settings_button.click()
     assert owner.settings_dialog.isVisible()

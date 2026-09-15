@@ -1,5 +1,5 @@
 """A compact production action row; configuration belongs in print settings."""
-from PySide6.QtWidgets import QGroupBox, QHBoxLayout, QCheckBox, QVBoxLayout
+from PySide6.QtWidgets import QGroupBox, QHBoxLayout, QCheckBox, QLabel, QVBoxLayout, QWidget
 from .action_icons import action_icon
 
 
@@ -44,10 +44,17 @@ def build_batch_input(owner, panel):
 
 
 def build_batch_tools(panel):
-    """Secondary actions belong below the data, not alongside input choices."""
-    row = QHBoxLayout()
-    row.addStretch()
+    """Global inspection actions stay fixed above the scrolling workbench."""
+    navigation = QWidget()
+    navigation.setObjectName('pinnedWorkbenchNavigation')
+    row = QHBoxLayout(navigation)
+    row.setContentsMargins(8, 4, 8, 4)
+    row.addWidget(QLabel('工作台导航'))
     row.addWidget(panel.details_button)
     for button in (panel.history_button, panel.bulk_analysis_button, panel.algorithm_costs_button):
         row.addWidget(button)
-    panel.summary.layout().addLayout(row)
+    row.addStretch()
+    navigation.setStyleSheet(
+        'QWidget#pinnedWorkbenchNavigation { background: #f1f5f9; '
+        'border: 1px solid #cbd5e1; border-radius: 7px; }')
+    return navigation

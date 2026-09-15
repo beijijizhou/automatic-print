@@ -2,7 +2,7 @@ from PySide6.QtCore import QPoint
 from test_developer_mode import window, APP
 
 
-def test_input_cards_group_single_and_multiple_while_details_stay_below(tmp_path):
+def test_input_cards_group_single_and_multiple_while_tools_stay_pinned(tmp_path):
     owner = window(tmp_path/'prefs.ini')
     home = owner.automation_home
     panel = home.label_quick_panel
@@ -11,7 +11,8 @@ def test_input_cards_group_single_and_multiple_while_details_stay_below(tmp_path
     assert inputs.isAncestorOf(home.start_layout_button)
     assert inputs.isAncestorOf(panel.bulk_generation_button)
     assert not inputs.isAncestorOf(panel.details_button)
-    assert panel.summary.isAncestorOf(panel.details_button)
+    assert home.batch_tools.isAncestorOf(panel.details_button)
+    assert not home.workbench_scroll.isAncestorOf(home.batch_tools)
     assert inputs.isAncestorOf(owner.stop_generation_button)
     assert home.start_layout_button.text() == '单批次排版'
     assert panel.bulk_generation_button.text() == '多批次排版'
@@ -21,7 +22,7 @@ def test_input_cards_group_single_and_multiple_while_details_stay_below(tmp_path
     multiple = panel.bulk_generation_button.icon().pixmap(24, 24).toImage()
     assert single != multiple  # Verify after the global style has been applied.
     assert owner.stop_generation_button.text() == '暂停批次'
-    assert panel.details_button.mapTo(owner, QPoint()).y() > inputs.mapTo(owner, QPoint()).y()
+    assert panel.details_button.mapTo(owner, QPoint()).y() < inputs.mapTo(owner, QPoint()).y()
     assert not panel.history_button.isVisible()
     assert not panel.algorithm_costs_button.isVisible()
     APP.processEvents()

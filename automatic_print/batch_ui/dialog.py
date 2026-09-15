@@ -141,6 +141,8 @@ class AutomationDialog(
             layout.addWidget(QLabel("生产平台"))
             layout.addWidget(self.platform)
         layout.addWidget(self.loading_panel)
+        if hasattr(self, 'batch_tools'):
+            layout.addWidget(self.batch_tools)
         scroll = QScrollArea()
         self.workbench_scroll = scroll
         scroll.setWidgetResizable(True)
