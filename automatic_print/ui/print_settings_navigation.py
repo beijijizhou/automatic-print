@@ -54,8 +54,16 @@ def build_settings_navigation(window, source):
             return
         window.combine_bulk_batches.setChecked(True)
         window.cutter_settings.force_small_pair.setChecked(True)
+        window.cutter_settings.two_zone.setChecked(True)
+        window.cutter_settings.quick_mode.setChecked(False)
+        window.cutter_settings.rotation_zone.setChecked(True)
+        window.cutter_settings.tail_rotation.setChecked(False)
         window.preferences.setValue('layout/combine_bulk_batches', True)
         window.preferences.setValue('layout/force_small_pair_width', True)
+        window.preferences.setValue('layout/majority_two_zone', True)
+        window.preferences.setValue('cutter/quick_mode', False)
+        window.preferences.setValue('cutter/rotation_zone', True)
+        window.preferences.setValue('cutter/tail_rotation', False)
     window.label_settings.platform.currentTextChanged.connect(platform_defaults)
     platform_defaults(window.label_settings.platform.currentText())
     window.print_settings_tabs = tabs
