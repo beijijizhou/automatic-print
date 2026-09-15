@@ -24,10 +24,17 @@ def _normal(paths, settings, prepared=None, preserve_sequence=False):
     return plan, effective[0]
 
 
-def rotation_items(paths, settings, progress=None):
+def rotation_items(paths, settings, progress=None, prepared=None):
     from .cut_guide_geometry import detect_guide_band
+    original_paths = paths
     sequence = settings.sequence_numbers or tuple((resolved_name(p), i)
                                                 for i, p in enumerate(paths, 1))
+    if prepared is None:
+        from .cutter_measurements import load_cutter_measurements
+        prepared = load_cutter_measurements(original_paths, replace(
+            settings, allow_rotation=True, manual_rotations=(),
+            color_block_position='left_top', color_block_offset_y_mm=0,
+        ))
     if settings.platform_name:
         paths = [p for p in paths if detect_guide_band(p) is not None]
     if not paths:
@@ -39,12 +46,20 @@ def rotation_items(paths, settings, progress=None):
                       cutter_mode='single' if settings.cutter_mode=='free' and settings.color_block_enabled else settings.cutter_mode,
                       color_block_position='left_top', color_block_offset_y_mm=0,
                       sequence_numbers=sequence)
-    options, labels = read_items(paths, rotated, progress)
+    if prepared is not None:
+        measured, labels = prepared
+        by_path = {row[0].path: row for row in measured}
+        options = [by_path[path] for path in paths if path in by_path]
+    else:
+        options, labels = read_items(paths, rotated, progress)
     width = mm_to_px(settings.media_width_mm, settings.dpi)
     safety = ceil(settings.cutter_safety_mm*settings.dpi/25.4)
     items = {}
     for row in options:
-        item = rotation_marker_item(row[0], settings)
+        candidate = next((item for item in row if item.rotation_degrees), None)
+        if candidate is None:
+            continue
+        item = rotation_marker_item(candidate, settings)
         if (item.footprint_width+2*safety >= width if settings.cutter_mode == 'dual' else item.footprint_width > width):
             continue
         try:

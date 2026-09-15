@@ -37,9 +37,13 @@ def _compare_films(paths, settings, progress, production=None):
                      cutter_mode='dual', cutter_auto_knife=True, cutter_rotation_zone=False,
                      cutter_tail_rotation=False, allow_rotation=False,
                      manual_rotations=(), compare_film_sizes=False)
-    options, labels = read_cutter_items(paths, shared, progress, prepare_rotations=True)
-    # Both orientations were populated above; this pass only selects cached geometry.
-    rotated_items, rotated_labels = rotation_items(paths, shared, None)
+    choices, labels = read_cutter_items(
+        paths, shared, progress, prepare_rotations=True, include_choices=True,
+    )
+    options = [[row[0]] for row in choices]
+    rotated_items, rotated_labels = rotation_items(
+        paths, shared, None, prepared=(choices, labels),
+    )
     analysis = analyze_batch(paths, shared)
     measured_seconds = monotonic()-started
     if progress:

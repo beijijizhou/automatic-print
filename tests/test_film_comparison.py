@@ -7,6 +7,7 @@ import pytest
 from automatic_print.layout import LayoutSettings
 from automatic_print.layout_engine.film_comparison import compare_films, comparison_text
 from automatic_print.layout_engine.planner import plan_layout
+from automatic_print.layout_engine import cutter_planner, rotation_zones
 
 
 def sources(tmp_path):
@@ -68,6 +69,30 @@ def test_planner_comparison_is_optional_and_preserves_selected_plan(tmp_path):
     actual = plan_layout(paths, replace(settings, compare_film_sizes=True), None, reports.append)
     assert actual == expected
     assert len(reports[-1]['film_comparison']['rows']) == 18
+
+
+def test_production_rotation_and_film_comparison_measure_cutter_batch_once(tmp_path, monkeypatch):
+    paths = sources(tmp_path)
+    calls = []
+    original_cutter = cutter_planner.read_items
+    original_rotation = rotation_zones.read_items
+
+    def cutter_read(*args, **kwargs):
+        calls.append('cutter')
+        return original_cutter(*args, **kwargs)
+
+    def rotation_read(*args, **kwargs):
+        calls.append('rotation')
+        return original_rotation(*args, **kwargs)
+
+    monkeypatch.setattr(cutter_planner, 'read_items', cutter_read)
+    monkeypatch.setattr(rotation_zones, 'read_items', rotation_read)
+    plan_layout(paths, LayoutSettings(
+        dpi=25.4, cutter_mode='dual', media_width_mm=580,
+        number_images=False, cutter_auto_knife=True,
+        compare_film_sizes=True, cutter_compare_whole_rotation=True,
+    ), None)
+    assert calls == ['cutter']
 
 
 def test_future_width_can_fit_without_becoming_production_selection(tmp_path):

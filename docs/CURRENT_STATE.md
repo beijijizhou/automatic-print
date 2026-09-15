@@ -48,8 +48,9 @@
 - 膜方案与统计：`film_comparison.py`、`film_specs.py`、`metrics.py`、
   `operation_timing.py`、`algorithm_costs.py`。
 - 缓存：`plan_cache.py`、`normal_plan_cache.py`、`cached_planner.py`；单图测量由
-  `measurement_cache.py` 持久化，并由 `measurement_session.py` 在任务内共享连接。单图缓存24小时，
-  重新组批、膜宽变化和普通版本更新不触发源图重新测量。
+  `measurement_cache.py` 持久化，并由 `measurement_session.py` 在任务内共享连接；
+  `cutter_measurements.py` 保存本批正常/旋转刀码几何，生产方案、整批旋转和膜规格比较直接复用。
+  单图缓存24小时，重新组批、膜宽变化和普通版本更新不触发源图重新测量。
 
 ## UI 与本地数据
 

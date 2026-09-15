@@ -169,15 +169,21 @@ def _group_rows(group, lanes, spacing):
     return rows
 
 
-def read_cutter_items(paths, settings, progress, prepare_rotations=False):
+def read_cutter_items(paths, settings, progress, prepare_rotations=False, include_choices=False):
     if settings.cutter_mode not in {"single", "dual"}:
         raise ValueError("未知的切膜排版模式。")
     if not settings.color_block_enabled:
         raise ValueError("切膜模式必须启用左侧识别色块。")
     safe_settings = replace(
-        settings, allow_rotation=bool(prepare_rotations or settings.compare_film_sizes), color_block_position="left_top",
+        settings, allow_rotation=bool(prepare_rotations or settings.compare_film_sizes
+                                      or settings.cutter_compare_whole_rotation), color_block_position="left_top",
         color_block_offset_y_mm=0,
     )
+    from .cutter_measurements import load_cutter_measurements, store_cutter_measurements
+    cached = load_cutter_measurements(paths, safe_settings)
+    if cached is not None:
+        items, labels = cached
+        return (items if include_choices else [[choices[0]] for choices in items]), labels
     if progress:
         progress('读取图片尺寸', 0, len(paths), '读取内嵌 DPI、尺寸和标签占位')
     dimensions = [print_dimensions(path, settings.dpi) for path in paths]
@@ -188,5 +194,6 @@ def read_cutter_items(paths, settings, progress, prepare_rotations=False):
             + "\n".join(missing[:20])
         )
     items, labels = read_items(paths, safe_settings, progress)
+    store_cutter_measurements(paths, safe_settings, items, labels)
     # Cache both directions while each source is open; production baseline stays upright.
-    return [[choices[0]] for choices in items], labels
+    return (items if include_choices else [[choices[0]] for choices in items]), labels
