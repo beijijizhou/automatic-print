@@ -50,7 +50,18 @@ def plan_adaptive_knife_zones(paths, settings, progress):
         return planned, normal[1], normal[2], normal[3], normal[4]
 
     from .rotation_zones import _rotated, rotation_items
+    from .transition_marks import rotation_marker_item
     rotated_items, rotated_labels = rotation_items(rotated_paths, base, progress)
+    full_width = mm_to_px(base.media_width_mm, base.dpi)
+    safety = mm_to_px(base.cutter_safety_mm, base.dpi)
+    # A non-pairable item belongs in the second zone even when rotating it would
+    # make it wider. Keep its original direction if that safely fits the full film.
+    for path in rotated_paths:
+        if path in rotated_items:
+            continue
+        candidate = rotation_marker_item(items[path], base)
+        if candidate.footprint_width + 2 * safety < full_width:
+            rotated_items[path] = candidate
     missing = [path.name for path in rotated_paths if path not in rotated_items]
     if missing:
         raise ValueError('剩余图片旋转后仍超宽，需要进入等比缩小恢复：'+'、'.join(missing))
