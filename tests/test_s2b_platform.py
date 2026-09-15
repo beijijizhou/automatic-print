@@ -13,6 +13,9 @@ def test_s2b_is_platform_but_does_not_replace_batch_actions(tmp_path,monkeypatch
     label=owner.label_settings
     assert label.platform.findText('S2B')>=0
     label.platform.setCurrentText('S2B')
+    assert owner.combine_bulk_batches.isChecked()
+    assert owner.cutter_settings.force_small_pair.isChecked()
+    assert owner.quick_force_small_pair.isChecked()
     button=owner.automation_home.start_layout_button
     assert button.text()=='单批次排版'
     assert owner.automation_home.label_quick_panel.bulk_generation_button.text()=='多批次排版'
@@ -38,6 +41,8 @@ def test_single_folder_selection_detects_s2b_without_changing_action(tmp_path,mo
     assert owner.choose_folder()
     assert owner.folder.text()==str(root/'3XL')
     assert owner.label_settings.platform.currentText()=='S2B'
+    assert owner.combine_bulk_batches.isChecked()
+    assert owner.cutter_settings.force_small_pair.isChecked()
     assert owner.automation_home.start_layout_button.text()=='单批次排版'
     owner.close()
 

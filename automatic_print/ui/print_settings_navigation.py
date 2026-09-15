@@ -49,6 +49,15 @@ def build_settings_navigation(window, source):
         window.preferences.value('layout/combine_bulk_batches', False, bool))
     window.combine_bulk_batches.setToolTip(
         '多批次排版时只生成一个排版任务；直接合并原图清单，不先生成各子批次PNG。')
+    def platform_defaults(name):
+        if name.strip().casefold() != 's2b':
+            return
+        window.combine_bulk_batches.setChecked(True)
+        window.cutter_settings.force_small_pair.setChecked(True)
+        window.preferences.setValue('layout/combine_bulk_batches', True)
+        window.preferences.setValue('layout/force_small_pair_width', True)
+    window.label_settings.platform.currentTextChanged.connect(platform_defaults)
+    platform_defaults(window.label_settings.platform.currentText())
     window.print_settings_tabs = tabs
     window.layout_rules_form = forms['排版规则']
     return tabs
