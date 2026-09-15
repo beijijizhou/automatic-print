@@ -5,8 +5,6 @@ from ..layout_engine.film_specs import AVAILABLE_WIDTHS, COMPARISON_COUNT, compa
 
 
 class FilmComparisonTable(QTableWidget):
-    ROTATION_COLUMN = 2
-
     def __init__(self, parent=None):
         super().__init__(COMPARISON_COUNT, 7, parent)
         self.include_references = True
@@ -17,7 +15,6 @@ class FilmComparisonTable(QTableWidget):
         self.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
         self.horizontalHeader().setSectionResizeMode(0, QHeaderView.ResizeToContents)
         self.verticalHeader().hide()
-        self.setColumnHidden(self.ROTATION_COLUMN, True)
         self.setMinimumHeight(275)
         self.setMaximumHeight(290)
         self.reset_rows()
@@ -79,6 +76,3 @@ class FilmComparisonTable(QTableWidget):
             self.show_comparison(cached)
         else:
             self.reset_rows()
-
-    def set_developer_mode(self, enabled):
-        self.setColumnHidden(self.ROTATION_COLUMN, not enabled)
