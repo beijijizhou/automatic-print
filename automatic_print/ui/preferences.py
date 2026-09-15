@@ -9,10 +9,6 @@ class PreferencesMixin:
         if self.has_active_tasks():
             return
         if self.choose_folder():
-            if self.label_settings.platform.currentText().strip().casefold()=='s2b':
-                from .bulk_workbench import start_bulk
-                start_bulk(self,Path(self.folder.text()))
-                return
             self.generate(preview_only=self.automation_home.preview_only.isChecked())
 
     def build_reset_button(self):
@@ -27,6 +23,10 @@ class PreferencesMixin:
         )
         if folder:
             remember_image_directory(self, folder)
+            from ..layout_engine.platform_detection import detect_selected_platform
+            platform=detect_selected_platform(folder)
+            if platform:
+                self.label_settings.platform.setCurrentText(platform)
             unchanged = self.folder.text() == folder
             self.folder.setText(folder)
             from .quick_fields import show_selected_source

@@ -23,6 +23,9 @@ class BulkGenerationWorker(QObject):
         self.folders, self.custom_base = folders, custom_base
         self.preview_only = preview_only
         self.source_root, self.inventory = source_root, {}
+        # Output grouping follows the scanned source structure. Choosing a
+        # platform in the UI must never change single/multi-batch semantics.
+        self.group_outputs = False
         self.original_settings = settings
         self.parallelism = max(1, min(parallelism, len(folders))) if folders else max(1, parallelism)
         self.settings = replace(settings, worker_threads=max(1, settings.worker_threads//self.parallelism),
@@ -36,7 +39,7 @@ class BulkGenerationWorker(QObject):
         if self.source_root is not None:
             base = self.custom_base or self.source_root.parent
             relative = folder.relative_to(self.source_root).parts
-            grouped = self.original_settings.platform_name.casefold()=='s2b'
+            grouped = self.group_outputs
             parts = (self.source_root.name,) if grouped else (
                 ((self.source_root.name,) if self.source_root.name else ())+relative)
             batch_name = ' - '.join(relative) if grouped and relative else folder.name
@@ -82,6 +85,9 @@ class BulkGenerationWorker(QObject):
                 scan = scan_batches(self.source_root, lambda *a: self.progress.emit(-1, str(self.source_root), *a),
                                     self.cancellation)
                 self.inventory = {b['folder']: b for b in scan['batches']}
+                if scan.get('platform')=='S2B':
+                    self.group_outputs=True
+                    self.original_settings=replace(self.original_settings,platform_name='S2B')
                 self.folders = list(self.inventory)
                 self.parallelism = max(1, min(self.parallelism, len(self.folders)))
                 config = self.original_settings

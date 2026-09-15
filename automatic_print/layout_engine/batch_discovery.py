@@ -33,4 +33,6 @@ def scan_batches(root, progress=None, cancellation=None):
             if progress:
                 progress('扫描目录失败，继续下一层', visited, 0, f'{folder}：{error}')
         visited += 1
-    return {'batches': batches, 'errors': errors, 'directories': visited}
+    from .platform_detection import detect_scanned_platform
+    return {'batches': batches, 'errors': errors, 'directories': visited,
+            'platform':detect_scanned_platform(Path(root),batches)}

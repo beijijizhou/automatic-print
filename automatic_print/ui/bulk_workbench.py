@@ -76,6 +76,8 @@ class BulkWorkbench(QObject):
 
     @Slot(object)
     def discovered(self, scan):
+        if scan.get('platform'):
+            self.window.label_settings.platform.setCurrentText(scan['platform'])
         self.inventory = {i: b for i, b in enumerate(scan['batches'])}
         self.folders = [b['folder'] for b in scan['batches']]
         self.selector.reset(self.folders, self.root, self.inventory)
