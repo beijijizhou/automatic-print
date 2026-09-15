@@ -8,7 +8,8 @@ class LayoutActivity(QObject):
     def __init__(self, single, multiple, parent):
         super().__init__(parent)
         self.buttons = {'single': single, 'multiple': multiple}
-        self.original = {key: (b.text(), b.icon(), b.styleSheet()) for key,b in self.buttons.items()}
+        self.original = {key: (b.text(), b.icon(), b.styleSheet(), b.toolTip())
+                         for key,b in self.buttons.items()}
         self.active, self.frame = None, 0
         self.timer = QTimer(self)
         self.timer.setInterval(80)
@@ -17,13 +18,26 @@ class LayoutActivity(QObject):
     def start(self, mode):
         if self.active is not None:
             self.stop()
-        self.original = {key: (b.text(), b.icon(), b.styleSheet()) for key,b in self.buttons.items()}
+        self.original = {key: (b.text(), b.icon(), b.styleSheet(), b.toolTip())
+                         for key,b in self.buttons.items()}
         self.active = self.buttons[mode]
         self.active.setText(self.original[mode][0]+' · 进行中')
         self.active.setStyleSheet('QPushButton:disabled {background:#dbeafe; color:#1d4ed8;'
             'border:2px solid #3b82f6; border-radius:8px; font-weight:bold;}')
         self.tick()
         self.timer.start()
+
+    def update_phase(self, phase, seconds, fraction):
+        if self.active is None:
+            return
+        mode = next(key for key, button in self.buttons.items() if button is self.active)
+        title = self.original[mode][0]
+        self.active.setText(
+            f'{title}\n{phase} · {seconds:.2f}秒 · {fraction:.1%}'
+        )
+        self.active.setToolTip(
+            f'当前操作：{phase}\n本步骤耗时：{seconds:.2f}秒\n占当前总耗时：{fraction:.1%}'
+        )
 
     def tick(self):
         if self.active is None:
@@ -52,8 +66,9 @@ class LayoutActivity(QObject):
     def stop(self):
         self.timer.stop()
         for key,button in self.buttons.items():
-            text,icon,style = self.original[key]
+            text,icon,style,tooltip = self.original[key]
             button.setText(text)
             button.setIcon(icon)
             button.setStyleSheet(style)
+            button.setToolTip(tooltip)
         self.active = None

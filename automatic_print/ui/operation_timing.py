@@ -80,6 +80,13 @@ class OperationTimingPanel(QGroupBox):
         if active != self.display_phase:
             self.table.scrollToTop()
             self.display_phase = active
+        if active:
+            active_index = next(index for index, row in enumerate(rows)
+                                if row['name'] == active)
+            activity = getattr(self.window(), 'layout_activity', None)
+            if activity:
+                activity.update_phase(active, values[active_index],
+                                      values[active_index]/max(total, .001))
         slowest = rows[values.index(max(values))]['name'] if values else '等待开始'
         current = f' · 当前：{active}' if active else ''
         self.summary.setText(f"{self.data['status']} · 总计 {total:.2f} 秒{current} · 最耗时：{slowest}")
