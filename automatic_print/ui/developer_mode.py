@@ -23,6 +23,14 @@ def build_developer_mode(window, footer):
             checkbox.blockSignals(False)
             return
         window.developer_mode_enabled = enabled
+        migration = 'developer/greedy_layout_default_v1'
+        if enabled and not window.preferences.value(migration, False, bool):
+            control = window.cutter_settings.two_zone
+            control.blockSignals(True)
+            control.setChecked(True)
+            control.blockSignals(False)
+            window.preferences.setValue('developer/majority_two_zone', True)
+            window.preferences.setValue(migration, True)
         window.quick_header_gap_group.setVisible(enabled)
         window.layout_rules_form.setRowVisible(window.membrane_gap_enabled, enabled)
         window.layout_rules_form.setRowVisible(window.membrane_gap, enabled)

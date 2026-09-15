@@ -26,7 +26,7 @@ class CutterSettingsPanel(QWidget):
         self.auto_knife.setChecked(preferences.value("cutter/auto_knife", True, bool))
         self.rotation_zone = QCheckBox("省膜时启用独立旋转区（每行一张，换刀一次）")
         self.rotation_zone.setChecked(not self.quick_mode.isChecked() and preferences.value("cutter/rotation_zone", False, bool))
-        self.two_zone = QCheckBox('多数可双排时：双排集中在一起，剩余图片进入旋转区（最多两个区域）')
+        self.two_zone = QCheckBox('启用贪心排版：能双排就双排，其余进入旋转区（最多两个区域）')
         self.two_zone.setChecked(preferences.value('developer/majority_two_zone', False, bool))
         self.two_zone.setToolTip('开发者测试功能；普通生产模式不会启用。')
         self.tail_rotation = QCheckBox('单件批次末尾 3XL 及以上：省膜时整尺码块旋转')
