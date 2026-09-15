@@ -26,8 +26,9 @@ def build_batch_input(owner, panel):
     options.setSpacing(14)
     options.addWidget(owner.preview_only)
     options.addWidget(owner.window().combine_bulk_batches)
-    from .header_gap import build_quick_header_gap
+    from .header_gap import build_quick_force_pair, build_quick_header_gap
     options.addWidget(build_quick_header_gap(owner.window()))
+    options.addWidget(build_quick_force_pair(owner.window()))
     options.addStretch()
     layout.addLayout(options)
     owner.start_layout_button.setToolTip('选择图片文件夹后立即开始排版；取消不会启动任务。')

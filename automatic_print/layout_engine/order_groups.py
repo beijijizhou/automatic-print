@@ -4,11 +4,16 @@ import re
 from functools import lru_cache
 
 PREFIX = re.compile(r"^(?:CVC面料\d+-|A\d+-(?!\d+-))", re.I)
+S2B_PREFIX = re.compile(r"^[A-Z0-9]+-\d+-\d+-", re.I)
+SIZE_FOLDER = re.compile(r"^(?:XXS|XS|S|M|L|XL|XXL|[2-9]XL)$", re.I)
 SIDE = re.compile(r"^(?P<job>.+-NO\d+)-(?P<side>[12])$", re.I)
 
 
 def production_stem(path):
-    return PREFIX.sub("", path.stem, count=1).casefold()
+    stem = PREFIX.sub("", path.stem, count=1)
+    if SIZE_FOLDER.fullmatch(path.parent.name.strip()):
+        stem = S2B_PREFIX.sub("", stem, count=1)
+    return stem.casefold()
 
 
 @lru_cache(maxsize=4096)

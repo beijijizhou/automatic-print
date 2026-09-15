@@ -96,6 +96,14 @@ def test_already_normalized_order_code_is_not_stripped_again(tmp_path):
     assert order_key(tmp_path/'A0000001-BORDER-1-T-White-L-NO1-1.png') == 'border'
 
 
+def test_s2b_size_folder_uses_design_order_and_parent_size(tmp_path):
+    from automatic_print.layout_engine.order_groups import order_key
+    from automatic_print.layout_engine.source_metadata import source_size
+    path = tmp_path/'L'/'26OP3LGLUEUV-179-2-V4TEDS-1-1-1-222-棉-L.png'
+    assert order_key(path) == 'v4teds'
+    assert source_size(path) == 'L'
+
+
 def test_rotation_can_fit_batch_without_a_feasible_normal_baseline(tmp_path):
     paths = [source(tmp_path, 'BORDER-1-NO1-1', 700, 100)]
     baseline, _, _, _, _ = plan_layout(paths, settings(cutter_rotation_zone=False), None)

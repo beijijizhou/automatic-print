@@ -14,7 +14,7 @@
 | 整批刀位 | `layout_engine/cutter_planner.py`, `knife_optimizer.py`, `adaptive_knife.py` | 线性贪心配对；多数可双排时形成一个双排区，其余完整订单形成一个旋转区；禁止超过两个区域。 |
 | 旋转区域和整批旋转 | `layout_engine/rotation_zones.py`, `rotation_compare.py`, `whole_rotation.py` | 以完整订单或尺码块评估，不复制候选算法。 |
 | 单排超宽恢复 | `layout_engine/width_fit.py`, `gap_fallback.py` | 先旋转、符合规则时再等比缩小；保留恢复报告。 |
-| 开发者强制 S–L 双排 | `layout_engine/pair_width.py` | 仅固定双列贪心方案按270毫米上限生成尺寸覆盖；预览、比较、输出和统一刀位复用该事实，不修改源图。 |
+| 强制 S–L 双排 | `layout_engine/pair_width.py` | 主界面默认开启；固定双列贪心方案按270毫米上限并扣除当前刀码安全占位后生成尺寸覆盖；预览、比较、输出和统一刀位复用该事实，不修改源图。 |
 | 标签、平台文字和刀码 | `layout_engine/labels.py`, `marker_stack.py`, `platform_label.py` | 测量、预览、输出使用同一几何结果。 |
 | 二维码侧别与空白带 | `layout_engine/qr_corners.py`, `qr_placement.py`, `header_region.py` | 只测顶部有限条带的位置和可用空间，不做二维码解码或整图像素读取。 |
 | 透明区域搜索 | `layout_engine/transparent_search.py`, `platform_space.py`, `marker_space.py` | 像素读取结果进入测量缓存，不在每个方案重复扫描。 |

@@ -22,6 +22,9 @@ def source_size(path):
         value = parts[-3]
         if _size_rank(value) < 1000 or re.fullmatch(r'\d+(?:\.\d+)?', value):
             return canonical_size(value)
+    from .platform_detection import is_size_name
+    if is_size_name(path.parent.name):
+        return canonical_size(path.parent.name)
     return '未识别尺码'
 
 

@@ -31,8 +31,11 @@ class CutterSettingsPanel(QWidget):
         self.two_zone.setChecked(preferences.value('layout/majority_two_zone', legacy, bool))
         self.two_zone.setToolTip('能安全双排的完整订单优先集中双排，其余进入旋转区；最多两个区域。')
         self.force_small_pair = QCheckBox('强行 S–L 双排（宽度超过 270 毫米时等比缩小到 270）')
-        self.force_small_pair.setChecked(preferences.value('developer/force_small_pair_width', False, bool))
-        self.force_small_pair.setToolTip('仅开发者模式生效；不放大小图，XL 及以上不处理，刀码仍按区域统一刀位。')
+        if not preferences.value('layout/force_small_pair_default_on_v1', False, bool):
+            preferences.setValue('layout/force_small_pair_width', True)
+            preferences.setValue('layout/force_small_pair_default_on_v1', True)
+        self.force_small_pair.setChecked(preferences.value('layout/force_small_pair_width', True, bool))
+        self.force_small_pair.setToolTip('默认开启；不放大小图，XL 及以上不处理，刀码仍按区域统一刀位。')
         self.tail_rotation = QCheckBox('单件批次末尾 3XL 及以上：省膜时整尺码块旋转')
         self.tail_rotation.setChecked(preferences.value('cutter/tail_rotation', True, bool))
         self.safety = self._box(3, 0.1, 30)
@@ -170,7 +173,7 @@ class CutterSettingsPanel(QWidget):
         }.items():
             self.preferences.setValue("cutter/" + key, value)
         self.preferences.setValue('layout/majority_two_zone', self.two_zone.isChecked())
-        self.preferences.setValue('developer/force_small_pair_width', self.force_small_pair.isChecked())
+        self.preferences.setValue('layout/force_small_pair_width', self.force_small_pair.isChecked())
 
     def _rotation_requested(self, enabled):
         if enabled and self.mode.currentData() == 'dual':
@@ -185,13 +188,13 @@ class CutterSettingsPanel(QWidget):
             self.tail_rotation.setChecked(False)
 
     def _force_small_pair_requested(self, enabled):
-        self.preferences.setValue('developer/force_small_pair_width', enabled)
+        self.preferences.setValue('layout/force_small_pair_width', enabled)
         if enabled and self.mode.currentData() == 'dual':
             self.two_zone.setChecked(True)
 
     def set_developer_mode(self, enabled):
-        self.force_small_pair.setVisible(enabled)
-        self.force_small_pair_label.setVisible(enabled)
+        self.force_small_pair.setVisible(True)
+        self.force_small_pair_label.setVisible(True)
 
     @staticmethod
     def _box(value, minimum, maximum):
