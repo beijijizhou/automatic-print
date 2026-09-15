@@ -55,7 +55,13 @@ class BulkGenerationWorker(QObject):
         results, errors, stopped = [], [], []
         direct = Qt.DirectConnection
         def progress(stage, current, total, filename):
-            self.progress.emit(index, str(folder), stage, current, total, filename)
+            display=stage
+            if self.combine_batches and total and stage in {'读取图片尺寸','测量标签与刀码'}:
+                from ..layout_engine.parallel_measurement import measurement_workers
+                display=f'{stage} · {measurement_workers(self.settings.worker_threads,total)}线程并行'
+            elif self.combine_batches and total and stage=='合成图片':
+                display=f'{stage} · {min(self.settings.worker_threads,total)}路图片准备'
+            self.progress.emit(index, str(folder), display, current, total, filename)
         worker.progress.connect(progress, direct)
         worker.preview_ready.connect(lambda payload: self.preview.emit(index, payload), direct)
         worker.timings_ready.connect(lambda data: self.timings.emit(index, data), direct)

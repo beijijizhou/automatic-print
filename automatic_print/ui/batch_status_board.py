@@ -101,9 +101,10 @@ class BatchStatusBoard(QWidget):
             else ('refresh', '#2563eb'))
         item.setIcon(0, action_icon(icon, color))
         child_status='已随整批完成' if done else (
-            '整批失败，未单独输出' if failed else '随整批处理中')
+            '整批失败，未单独输出' if failed else f'随整批处理 · {stage}')
         for child_index in range(item.childCount()):
             item.child(child_index).setText(1,child_status)
+            item.child(child_index).setToolTip(1,child_status+count)
         item.setSelected(index == self.index)
         for tree in self.groups.values():
             tree.blockSignals(False)

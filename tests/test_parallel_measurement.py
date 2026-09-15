@@ -29,6 +29,18 @@ def test_measurement_runs_four_workers_with_bounded_queue_and_original_numbers(t
     assert len(labels) == 12
 
 
+def test_measurement_honors_eight_worker_setting(tmp_path):
+    paths=qr_sources(tmp_path)
+    barrier,observed=Barrier(8),set()
+    def measure(paths,config,progress):
+        if get_ident() not in observed:
+            observed.add(get_ident())
+            barrier.wait(5)
+        return [[paths[0].name]],{}
+    items,_=read_parallel(measure,paths,replace(settings(),worker_threads=8),None)
+    assert len(observed)==8 and len(items)==len(paths)
+
+
 def test_measurement_stop_does_not_enqueue_whole_batch(tmp_path):
     paths = qr_sources(tmp_path)
     visited = []
