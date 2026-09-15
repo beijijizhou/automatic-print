@@ -33,8 +33,9 @@ def test_four_options_are_visible_and_copyable(tmp_path, capfd):
             assert f'{film} 厘米 · {option}' in text
     assert text.count('（参考）') == 14
     assert panel.film_table.horizontalHeaderItem(1).text() == '双排数量'
-    assert panel.film_table.horizontalHeaderItem(3).text() == '面积 / ㎡'
-    assert panel.film_table.horizontalHeaderItem(4).text() == '图片占位'
+    assert panel.film_table.horizontalHeaderItem(2).text() == '实际旋转'
+    assert panel.film_table.horizontalHeaderItem(4).text() == '面积 / ㎡'
+    assert panel.film_table.horizontalHeaderItem(5).text() == '图片占位'
     assert sum('（当前输出）' in panel.film_table.item(row, 0).text()
                for row in range(18)) == 1
     selected = next(row for row in reports[-1]['film_comparison']['rows']
@@ -42,6 +43,9 @@ def test_four_options_are_visible_and_copyable(tmp_path, capfd):
     assert round(selected['length_m'], 6) == round(reports[-1]['height_m'], 6)
     assert selected['paired_rows'] == dual_quality(plan[0], settings)['paired_rows']
     assert selected['rotated_images'] == sum(bool(p.rotation_degrees) for _, p in plan[0])
+    selected_row = next(row for row in range(18)
+                        if '（当前输出）' in panel.film_table.item(row, 0).text())
+    assert panel.film_table.item(selected_row, 2).text() == f"{selected['rotated_images']}张"
     assert panel.metrics.textInteractionFlags() & Qt.TextSelectableByMouse
     assert panel.grab().save(str(tmp_path/'four-film-comparison.png'))
     panel.film_table.set_reference_mode(False)
