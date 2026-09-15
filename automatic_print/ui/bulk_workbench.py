@@ -14,9 +14,13 @@ def open_bulk(window):
                                                  image_dialog_start(window))
     if not directory:
         return
-    remember_image_directory(window, directory)
+    start_bulk(window,Path(directory))
+
+
+def start_bulk(window,directory):
+    remember_image_directory(window, str(directory))
     from .quick_fields import show_selected_source
-    show_selected_source(window.automation_home.label_quick_panel, directory, 'multiple', window)
+    show_selected_source(window.automation_home.label_quick_panel, str(directory), 'multiple', window)
     if not hasattr(window, 'bulk_controller'):
         window.bulk_controller = BulkWorkbench(window)
     window.bulk_controller.begin(Path(directory))
@@ -52,7 +56,9 @@ class BulkWorkbench(QObject):
         self.panel.summary.start(str(parent), 0)
         self.panel.preview.sources_ready.emit([])
         self.window.stop_generation_button.setEnabled(True)
-        self.window.status.setText('正在后台扫描各层批次目录与图片文件名…')
+        grouped=settings.platform_name.casefold()=='s2b'
+        self.window.status.setText('正在扫描S2B尺码子文件夹；完成文件将集中保存…' if grouped else
+                                   '正在后台扫描各层批次目录与图片文件名…')
         self.worker = BulkGenerationWorker(self.folders, settings, self.window.bulk_parallelism.value(),
                                            custom, self.window.automation_home.preview_only.isChecked(), parent)
         self.thread = QThread(self)

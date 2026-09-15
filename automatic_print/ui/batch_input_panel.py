@@ -28,6 +28,14 @@ def build_batch_input(owner, panel):
     owner.window().stop_generation_button.setToolTip(
         '立即退出软件，不等待任务完成；未完成批次禁止打印，已完成批次保留。')
     owner.start_layout_button.setProperty('importance', 'primary')
+    def platform_action(name):
+        s2b=name.strip().casefold()=='s2b'
+        owner.start_layout_button.setText('S2B批次排版' if s2b else '单批次排版')
+        owner.start_layout_button.setToolTip(
+            '选择S2B批次目录；按尺码子文件夹并行排版，结果集中保存。' if s2b else
+            '选择图片文件夹后立即开始排版；取消不会启动任务。')
+    panel.label.platform.currentTextChanged.connect(platform_action)
+    platform_action(panel.label.platform.currentText())
     from .layout_activity import LayoutActivity
     owner.window().layout_activity = LayoutActivity(owner.start_layout_button, panel.bulk_generation_button, group)
     group.setStyleSheet('''

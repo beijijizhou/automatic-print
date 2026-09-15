@@ -35,10 +35,17 @@ class BulkGenerationWorker(QObject):
         base, parts = self.custom_base or folder.parent, ()
         if self.source_root is not None:
             base = self.custom_base or self.source_root.parent
-            parts = ((self.source_root.name,) if self.source_root.name else ())+folder.relative_to(self.source_root).parts
-        output = batch_output_directory(base, folder.name, job, parts)
+            relative = folder.relative_to(self.source_root).parts
+            grouped = self.original_settings.platform_name.casefold()=='s2b'
+            parts = (self.source_root.name,) if grouped else (
+                ((self.source_root.name,) if self.source_root.name else ())+relative)
+            batch_name = ' - '.join(relative) if grouped and relative else folder.name
+        else:
+            batch_name = folder.name
+        output = batch_output_directory(base, batch_name, job, parts)
         images = self.inventory[folder]['images'] if folder in self.inventory else None
-        worker = GenerateWorker(images, folder, output, job, self.settings, preview_only=self.preview_only)
+        worker = GenerateWorker(images, folder, output, job, self.settings,
+                                preview_only=self.preview_only,batch_name=batch_name)
         worker.cancellation = self.cancellation
         results, errors, stopped = [], [], []
         direct = Qt.DirectConnection

@@ -9,6 +9,10 @@ class PreferencesMixin:
         if self.has_active_tasks():
             return
         if self.choose_folder():
+            if self.label_settings.platform.currentText().strip().casefold()=='s2b':
+                from .bulk_workbench import start_bulk
+                start_bulk(self,Path(self.folder.text()))
+                return
             self.generate(preview_only=self.automation_home.preview_only.isChecked())
 
     def build_reset_button(self):

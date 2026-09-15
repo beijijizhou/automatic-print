@@ -32,6 +32,7 @@ class GenerateWorker(QObject):
         job_id: str,
         settings: LayoutSettings,
         preview_only=False,
+        batch_name=None,
     ) -> None:
         super().__init__()
         self.images = images
@@ -40,6 +41,7 @@ class GenerateWorker(QObject):
         self.job_id = job_id
         self.settings = settings
         self.preview_only = preview_only
+        self.batch_name = batch_name or self.source.resolve().name
         self.cancellation = Cancellation()
         self.timing = None
         self.failure_stage = '开始读取批次'
@@ -90,7 +92,7 @@ class GenerateWorker(QObject):
                 self.images, self.output, self.settings, self._progress,
                 plan_ready=self.preview_ready.emit, preview_only=self.preview_only,
                 analysis_ready=self.analysis_ready.emit,
-                batch_name=self.source.resolve().name,
+                batch_name=self.batch_name,
                 phase_ready=self._phase,
             )
             self.cancellation.check()

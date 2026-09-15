@@ -70,6 +70,26 @@ def test_nested_outputs_preserve_source_tree_and_do_not_merge_parent_images(tmp_
         assert not (output/'批次未完成，禁止打印.txt').exists()
 
 
+def test_s2b_size_batches_share_one_output_parent(tmp_path,monkeypatch):
+    root=tmp_path/'S2B批次'
+    folders=tree(root)
+    config=replace(settings(),platform_name='S2B',png_engine='pillow',compare_film_sizes=False)
+    worker=BulkGenerationWorker([],config,3,source_root=root)
+    monkeypatch.setattr('automatic_print.ui.workers.GenerateWorker._save_history',lambda *_:None)
+    results=[]
+    worker.finished.connect(results.append,Qt.DirectConnection)
+    worker.run()
+    assert not results[0]['errors'] and len(results[0]['records'])==3
+    output_root=tmp_path/'切膜机文件'/'S2B批次'
+    outputs=[Path(record['output']) for record in results[0]['records']]
+    assert all(output.parent==output_root for output in outputs)
+    assert len({output.name for output in outputs})==3
+    assert any('白色 - 批次A' in output.name for output in outputs)
+    for record,output in zip(results[0]['records'],outputs):
+        assert (output/record['result']['filename']).is_file()
+        assert (output/'排版报告.txt').is_file()
+
+
 def test_nested_scan_off_gui_and_selected_file_information_before_preview(tmp_path, monkeypatch):
     root = tmp_path/'HL'
     tree(root)
