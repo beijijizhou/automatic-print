@@ -67,7 +67,6 @@ class LabelQuickPanel(QWidget):
         date_button = QPushButton("添加日期")
         date_button.clicked.connect(self._add_date)
         self.sequence = self._checkbox('序号从 1 到最后一张', label.sequence)
-        self.source_order = self._checkbox('文件名＋正序/倒序', label.source_order)
         self.platform = QComboBox()
         self.platform.setEditable(True)
         for index in range(label.platform.count()):
@@ -186,16 +185,11 @@ class LabelQuickPanel(QWidget):
         self.read_folder_button.clicked.connect(lambda: self.preview.use_folder(window.folder.text()))
         stop_preview = QPushButton('停止后台预览计算')
         stop_preview.clicked.connect(self.preview.stop_loading)
-        self.details_dialog.add_page('订单与尺码', [self.analysis])
-        self.details_dialog.add_page('图片检查与旋转', [
-            self.manual_rotation, self.read_folder_button, stop_preview,
-        ])
         self.summary.layout().removeWidget(self.summary.cutting)
         self.summary.cutting.setMaximumHeight(16777215)
-        self.details_dialog.add_page('切割明细', [self.summary.cutting])
-        self.details_button = QPushButton('订单与切割检查')
-        self.details_button.setToolTip('查看订单与尺码、图片旋转、切割明细和处理日志。')
-        self.details_button.clicked.connect(self.details_dialog.open_overview)
+        for internal in (self.analysis, self.manual_rotation, self.read_folder_button,
+                         stop_preview, self.summary.cutting):
+            internal.hide()
         self.history_button = QPushButton('排版历史')
         self.history_button.setToolTip('查看以往批次的膜方案、面积、占位率和耗时。')
         from .action_icons import action_icon

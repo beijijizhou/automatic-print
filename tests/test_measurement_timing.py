@@ -84,7 +84,7 @@ def test_per_image_measurement_cache_survives_batch_geometry_change(tmp_path, mo
     assert measured['item_cache_misses'] == 0
 
 
-def test_measurement_text_appears_in_main_data_and_output_report(tmp_path):
+def test_measurement_text_stays_internal_to_diagnostics(tmp_path):
     from PySide6.QtWidgets import QApplication
     from automatic_print.ui.batch_summary import BatchSummaryPanel
     from automatic_print.layout_engine.output_sizes import cutting_report
@@ -94,10 +94,9 @@ def test_measurement_text_appears_in_main_data_and_output_report(tmp_path):
     panel = BatchSummaryPanel()
     panel.start(tmp_path)
     panel.show_analysis(reports[-1])
-    assert '膜标签卡片定位' in panel.measurement.text()
+    assert not hasattr(panel, 'measurement')
     report = cutting_report({'analysis': reports[-1], 'parts': [],
         'filename': 'test.png', 'placements': [], 'output_dpi': 25.4})
-    assert '读取与解压' in report
+    assert '测量子步骤' not in report and '读取与解压' not in report
     panel.start(tmp_path/'next')
-    assert not panel.measurement.text()
     panel.close()

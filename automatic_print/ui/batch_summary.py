@@ -18,12 +18,9 @@ class BatchSummaryPanel(QGroupBox):
             'font-size: 17px; font-weight: bold; }')
         self.metrics = QLabel('排版后显示总长度、节省用膜和旋转数量。')
         self.progress = QLabel('尚未开始')
-        self.measurement = QLabel()
         self.gap_loss = QLabel()
         self.gap_loss.setWordWrap(True)
         self.gap_loss.setTextInteractionFlags(Qt.TextSelectableByMouse)
-        self.measurement.setWordWrap(True)
-        self.measurement.setTextInteractionFlags(Qt.TextSelectableByMouse)
         self.anomalies = QLabel()
         self.anomalies.setWordWrap(True)
         self.anomalies.setTextInteractionFlags(Qt.TextSelectableByMouse)
@@ -46,14 +43,12 @@ class BatchSummaryPanel(QGroupBox):
             label.setTextInteractionFlags(Qt.TextSelectableByMouse)
             layout.addWidget(label)
         layout.addWidget(self.cutting)
-        layout.addWidget(self.measurement)
         layout.addWidget(self.gap_loss)
         layout.addWidget(self.anomalies)
         layout.addWidget(self.film_table)
 
     def start(self, folder, count=None):
         self.save_report = ''
-        self.measurement.clear()
         self.gap_loss.clear()
         self.film_table.reset_rows()
         self.cutting.clear()
@@ -81,10 +76,8 @@ class BatchSummaryPanel(QGroupBox):
     def show_analysis(self, report):
         if not report:
             return
-        from ..layout_engine.measurement_timing import measurement_text
         from ..layout_engine.gap_loss import gap_loss_text
         self.gap_loss.setText(gap_loss_text(report.get('gap_loss')))
-        self.measurement.setText(measurement_text(report.get('measurement_timings')))
         folder = self.info.text().split('\n')[0]
         self.info.setText(f"{folder}\n{report['batch_type']} · {report['order_count']} 个订单组"
                           f" · {report['piece_count']} 件 / {report['image_count']} 张图"

@@ -36,6 +36,7 @@ def build_developer_mode(window, footer):
         panel.developer_tools_label.setVisible(enabled)
         panel.source_order.setVisible(enabled)
         panel.reference_films_label.setVisible(enabled)
+        window.automation_home.batch_tools.setVisible(enabled)
         panel.summary.film_table.set_reference_mode(enabled)
         window.label_settings.form.setRowVisible(window.label_settings.source_order, enabled)
         window.cutter_settings.compare_films.setText(

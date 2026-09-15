@@ -22,8 +22,6 @@ def build_local_page(owner) -> QWidget:
     owner.start_layout_button = QPushButton('选择文件夹并开始排版…')
     owner.start_layout_button.clicked.connect(lambda: owner.window().choose_and_generate())
     owner.manual_layout_button = owner.start_layout_button  # Compatibility: one primary action.
-    preview_button = QPushButton("仅预览整批（不生成文件）")
-    preview_button.clicked.connect(lambda: owner.window().generate(preview_only=True))
     owner.local_summary = QLabel("尚未读取本地生产批次。")
     owner.local_table = _table(
         ["选择", "来源", "批次号", "图片数", "本地更新时间", "文件夹"],
@@ -82,9 +80,8 @@ def build_local_page(owner) -> QWidget:
         layout.addWidget(owner.batch_input_panel)
         owner.batch_tools = build_batch_tools(owner.label_quick_panel)
         layout.addWidget(owner.label_quick_panel)
-        owner.label_quick_panel.details_dialog.add_page('预览与处理日志', [
-            preview_button, window.run_log, owner.log,
-        ])
+        window.run_log.hide()
+        owner.log.hide()
     # Keep legacy workflow objects available to workers, but out of the workbench.
     for widget in (
         owner.platform, owner.output, owner.local_summary, owner.local_table,
