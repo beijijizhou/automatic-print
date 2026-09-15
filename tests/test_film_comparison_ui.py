@@ -37,6 +37,9 @@ def test_four_options_are_visible_and_copyable(tmp_path, capfd):
     assert not panel.film_table.isColumnHidden(2)
     assert panel.film_table.horizontalHeaderItem(4).text() == '面积 / ㎡'
     assert panel.film_table.horizontalHeaderItem(5).text() == '图片占位'
+    assert panel.film_table.horizontalHeaderItem(7).text() == '批次构成'
+    assert '尺码群分布' in panel.film_table.item(0, 7).text()
+    assert panel.film_table.rowSpan(0, 7) == 4
     assert sum('（当前输出）' in panel.film_table.item(row, 0).text()
                for row in range(4)) == 1
     selected = next(row for row in reports[-1]['film_comparison']['rows']

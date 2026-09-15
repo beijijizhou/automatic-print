@@ -96,7 +96,7 @@ class BatchSummaryPanel(QGroupBox):
         self.anomalies.setVisible(bool(self.anomalies.text()))
 
     def _show_comparison(self, report):
-        self.film_table.show_comparison(report.get('film_comparison'))
+        self.film_table.show_comparison(report.get('film_comparison'), report)
         if report.get('stage') == '排版结果' and not report.get('film_comparison'):
             self.film_table.reset_rows('比较未启用')
         comparison = report.get('rotation_comparison')
