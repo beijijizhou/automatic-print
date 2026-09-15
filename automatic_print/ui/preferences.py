@@ -197,6 +197,7 @@ class PreferencesMixin:
             "layout/dpi": self.dpi.value(),
             "layout/worker_threads": self.worker_threads.value(),
             "layout/preview_only": self.automation_home.preview_only.isChecked(),
+            "layout/combine_bulk_batches": self.combine_bulk_batches.isChecked(),
             "developer/bulk_parallelism": self.bulk_parallelism.value(),
             "layout/number_images": self.number_images.isChecked(),
             "layout/allow_rotation": self.allow_rotation.isChecked(),

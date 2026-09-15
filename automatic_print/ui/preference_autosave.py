@@ -24,7 +24,7 @@ class PreferenceAutosave(QObject):
         )]
         signals += [window.allow_rotation.toggled, cutter.auto_knife.toggled, cutter.rotation_zone.toggled]
         signals += [window.folder.textChanged, window.output_location.textChanged]
-        signals += [window.output_beside_source.toggled]
+        signals += [window.output_beside_source.toggled, window.combine_bulk_batches.toggled]
         signals += [cutter.quick_mode.toggled]
         home = window.automation_home
         signals += [home.preview_only.toggled]

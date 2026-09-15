@@ -18,11 +18,13 @@ class BulkGenerationWorker(QObject):
     completed = Signal(int, object)
     timings = Signal(int, object)
 
-    def __init__(self, folders, settings, parallelism, custom_base=None, preview_only=False, source_root=None):
+    def __init__(self, folders, settings, parallelism, custom_base=None, preview_only=False,
+                 source_root=None, combine_batches=False):
         super().__init__()
         self.folders, self.custom_base = folders, custom_base
         self.preview_only = preview_only
         self.source_root, self.inventory = source_root, {}
+        self.combine_batches = combine_batches
         # Output grouping follows the scanned source structure. Choosing a
         # platform in the UI must never change single/multi-batch semantics.
         self.group_outputs = False
@@ -88,6 +90,13 @@ class BulkGenerationWorker(QObject):
                 if scan.get('platform')=='S2B':
                     self.group_outputs=True
                     self.original_settings=replace(self.original_settings,platform_name='S2B')
+                if self.combine_batches and scan['batches']:
+                    sources=scan['batches']
+                    images=[image for batch in sources for image in batch['images']]
+                    combined={'folder':self.source_root, 'relative':self.source_root.relative_to(self.source_root),
+                              'images':images, 'image_count':len(images)}
+                    scan=dict(scan,batches=[combined],combined_batch_count=len(sources))
+                self.inventory = {b['folder']: b for b in scan['batches']}
                 self.folders = list(self.inventory)
                 self.parallelism = max(1, min(self.parallelism, len(self.folders)))
                 config = self.original_settings

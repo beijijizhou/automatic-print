@@ -13,9 +13,11 @@ def test_settings_categories_reuse_controls_and_persist_parallelism(tmp_path):
     assert tabs.widget(0).isAncestorOf(owner.cutter_settings.knife)
     assert tabs.widget(1).isAncestorOf(owner.spacing)
     assert tabs.widget(3).isAncestorOf(owner.bulk_parallelism)
+    assert tabs.widget(3).isAncestorOf(owner.combine_bulk_batches)
     assert owner.worker_threads.value() == 4
     assert owner.segmented_output.workers.value() == 4
     assert owner.bulk_parallelism.value() == 4
+    assert not owner.combine_bulk_batches.isChecked()
     # The spacing callback still owns the same label after layout transfer.
     owner.cutter_settings.mode.setCurrentIndex(owner.cutter_settings.mode.findData('free'))
     label = tabs.widget(1).layout().labelForField(owner.spacing)
@@ -26,6 +28,7 @@ def test_settings_categories_reuse_controls_and_persist_parallelism(tmp_path):
         APP.processEvents()
         assert owner.settings_dialog.grab().save(str(tmp_path/f'settings-{index}.png'))
     owner.bulk_parallelism.setValue(2)
+    owner.combine_bulk_batches.setChecked(True)
     owner.worker_threads.setValue(3)
     owner.preference_autosave.flush()
     dialog = BulkGenerationDialog(owner)
@@ -38,5 +41,6 @@ def test_settings_categories_reuse_controls_and_persist_parallelism(tmp_path):
     owner.close()
     reopened = window(path)
     assert reopened.bulk_parallelism.value() == 2
+    assert reopened.combine_bulk_batches.isChecked()
     assert reopened.worker_threads.value() == 3
     reopened.close()

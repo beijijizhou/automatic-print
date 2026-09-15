@@ -1,5 +1,5 @@
 """Categorize canonical settings without duplicating controls or preferences."""
-from PySide6.QtWidgets import QTabWidget, QWidget, QFormLayout, QSpinBox
+from PySide6.QtWidgets import QTabWidget, QWidget, QFormLayout, QSpinBox, QCheckBox
 
 
 def build_settings_navigation(window, source):
@@ -43,6 +43,12 @@ def build_settings_navigation(window, source):
     window.bulk_parallelism.setValue(window.preferences.value('developer/bulk_parallelism', 4, int))
     window.bulk_parallelism.setToolTip('独立批次滚动处理；完成一批立即补下一批。启动后使用参数快照。')
     forms['输出与并行'].insertRow(0, '同时处理批次数', window.bulk_parallelism)
+    window.combine_bulk_batches = QCheckBox('合并所有子文件夹为一个批次')
+    window.combine_bulk_batches.setChecked(
+        window.preferences.value('layout/combine_bulk_batches', False, bool))
+    window.combine_bulk_batches.setToolTip(
+        '多批次排版时只生成一个排版任务；直接合并原图清单，不先生成各子批次PNG。')
+    forms['输出与并行'].insertRow(1, '多批次输出方式', window.combine_bulk_batches)
     window.print_settings_tabs = tabs
     window.layout_rules_form = forms['排版规则']
     return tabs

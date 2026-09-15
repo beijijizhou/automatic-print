@@ -60,7 +60,8 @@ class BulkWorkbench(QObject):
         self.window.status.setText('正在扫描S2B尺码子文件夹；完成文件将集中保存…' if grouped else
                                    '正在后台扫描各层批次目录与图片文件名…')
         self.worker = BulkGenerationWorker(self.folders, settings, self.window.bulk_parallelism.value(),
-                                           custom, self.window.automation_home.preview_only.isChecked(), parent)
+                                           custom, self.window.automation_home.preview_only.isChecked(), parent,
+                                           self.window.combine_bulk_batches.isChecked())
         self.thread = QThread(self)
         self.worker.moveToThread(self.thread)
         self.thread.started.connect(self.worker.run)
@@ -81,7 +82,10 @@ class BulkWorkbench(QObject):
         self.inventory = {i: b for i, b in enumerate(scan['batches'])}
         self.folders = [b['folder'] for b in scan['batches']]
         self.selector.reset(self.folders, self.root, self.inventory)
-        self.window.status.setText(f"已扫描{scan['directories']}个目录，发现{len(self.folders)}个图片批次，开始滚动处理")
+        combined=scan.get('combined_batch_count',0)
+        self.window.status.setText(
+            f"已扫描{scan['directories']}个目录，合并{combined}个子文件夹为一个批次，开始排版" if combined else
+            f"已扫描{scan['directories']}个目录，发现{len(self.folders)}个图片批次，开始滚动处理")
 
     @Slot(int)
     def select(self, index):

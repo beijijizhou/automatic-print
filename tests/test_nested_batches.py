@@ -96,6 +96,37 @@ def test_s2b_size_batches_share_one_output_parent(tmp_path,monkeypatch):
         assert (output/'排版报告.txt').is_file()
 
 
+def test_multiple_folders_can_be_planned_as_one_virtual_batch(tmp_path,monkeypatch):
+    root=tmp_path/'HL'
+    source_folders=[]
+    for tag,name in (('A','S'),('B','M'),('C','L')):
+        folder=root/name
+        folder.mkdir(parents=True)
+        qr_sources(folder)
+        for path in folder.glob('*.png'):
+            path.rename(path.with_name(tag+path.name))
+        source_folders.append(folder)
+    config=replace(settings(),png_engine='pillow',compare_film_sizes=False)
+    worker=BulkGenerationWorker([],config,3,source_root=root,combine_batches=True)
+    monkeypatch.setattr('automatic_print.ui.workers.GenerateWorker._save_history',lambda *_:None)
+    scans,results,previews=[],[],[]
+    worker.discovered.connect(scans.append,Qt.DirectConnection)
+    worker.finished.connect(results.append,Qt.DirectConnection)
+    worker.preview.connect(lambda _index,payload:previews.append(payload),Qt.DirectConnection)
+    worker.run()
+    assert scans[0]['combined_batch_count']==len(source_folders)
+    assert len(scans[0]['batches'])==1
+    assert scans[0]['batches'][0]['image_count']==36
+    assert len(results[0]['records'])==1 and not results[0]['errors'],results[0]
+    result=results[0]['records'][0]['result']
+    assert result['analysis']['image_count']==36
+    assert len(previews)==1 and len(previews[0]['planned'])==36
+    output=Path(results[0]['records'][0]['output'])
+    assert output.parent==tmp_path/'切膜机文件'/'HL'
+    assert (output/result['filename']).is_file()
+    assert (output/'排版报告.txt').is_file()
+
+
 def test_nested_scan_off_gui_and_selected_file_information_before_preview(tmp_path, monkeypatch):
     root = tmp_path/'HL'
     tree(root)
