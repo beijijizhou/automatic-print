@@ -28,16 +28,16 @@ class BatchStatusBoard(QWidget):
             heading.addStretch()
             body.addLayout(heading)
             tree = QTreeWidget()
-            tree.setHeaderLabels(['批次相对路径', '当前状态', '图片数'])
-            tree.setRootIsDecorated(False)
+            tree.setHeaderLabels(['批次 / 子文件夹相对路径', '当前状态', '图片数'])
+            tree.setRootIsDecorated(True)
             tree.setWordWrap(True)
             tree.setColumnWidth(0, 180)
             tree.itemSelectionChanged.connect(lambda t=tree: self.choose(t))
             body.addWidget(tree)
             row.addLayout(body, 1)
             self.groups[name], self.titles[name] = tree, title
-        self.setMinimumHeight(155)
-        self.setMaximumHeight(230)
+        self.setMinimumHeight(210)
+        self.setMaximumHeight(360)
 
     def reset(self, folders, root=None, information=None):
         self.blockSignals(True)
@@ -54,7 +54,19 @@ class BatchStatusBoard(QWidget):
             item.setData(0, Qt.UserRole, index)
             item.setIcon(0, action_icon('waiting', '#b45309'))
             item.setToolTip(0, str(folder)+'\n'+'\n'.join(p.name for p in info.get('images', [])))
+            sources=info.get('source_batches',())
+            if sources:
+                item.setText(1,f'等待合并 · {len(sources)}个子文件夹')
+                for source in sources:
+                    path=source['folder']
+                    relative=path.relative_to(root).as_posix() if root else path.name
+                    child=QTreeWidgetItem([relative,'已加入合并批次',str(source['image_count'])])
+                    child.setIcon(0,action_icon('folder','#64748b'))
+                    child.setToolTip(0,str(path)+'\n'+'\n'.join(p.name for p in source.get('images',())))
+                    item.addChild(child)
             self.groups['未完成'].addTopLevelItem(item)
+            if sources:
+                item.setExpanded(True)
             self.items[index] = item
         for tree in self.groups.values():
             tree.blockSignals(False)
@@ -86,6 +98,10 @@ class BatchStatusBoard(QWidget):
             ('warning', '#be123c') if failed else ('waiting', '#b45309') if group == '未完成'
             else ('refresh', '#2563eb'))
         item.setIcon(0, action_icon(icon, color))
+        child_status='已随整批完成' if done else (
+            '整批失败，未单独输出' if failed else '随整批处理中')
+        for child_index in range(item.childCount()):
+            item.child(child_index).setText(1,child_status)
         item.setSelected(index == self.index)
         for tree in self.groups.values():
             tree.blockSignals(False)

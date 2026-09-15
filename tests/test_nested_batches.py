@@ -117,6 +117,7 @@ def test_multiple_folders_can_be_planned_as_one_virtual_batch(tmp_path,monkeypat
     assert scans[0]['combined_batch_count']==len(source_folders)
     assert len(scans[0]['batches'])==1
     assert scans[0]['batches'][0]['image_count']==36
+    assert [b['folder'].name for b in scans[0]['batches'][0]['source_batches']]==['L','M','S']
     assert len(results[0]['records'])==1 and not results[0]['errors'],results[0]
     result=results[0]['records'][0]['result']
     assert result['analysis']['image_count']==36
@@ -125,6 +126,25 @@ def test_multiple_folders_can_be_planned_as_one_virtual_batch(tmp_path,monkeypat
     assert output.parent==tmp_path/'切膜机文件'/'HL'
     assert (output/result['filename']).is_file()
     assert (output/'排版报告.txt').is_file()
+
+
+def test_combined_status_keeps_child_folders_visible(tmp_path):
+    root=tmp_path/'S2B'
+    sources=[]
+    for name,count in (('S',12),('M',8),('3XL',4)):
+        folder=root/name
+        folder.mkdir(parents=True)
+        sources.append({'folder':folder,'images':[], 'image_count':count})
+    combined={'folder':root,'images':[],'image_count':24,'source_batches':sources}
+    board=BatchStatusBoard()
+    board.reset([root],root,{0:combined})
+    item=board.items[0]
+    assert item.childCount()==3 and item.isExpanded()
+    assert [item.child(i).text(0) for i in range(3)]==['S','M','3XL']
+    assert [item.child(i).text(2) for i in range(3)]==['12','8','4']
+    board.update_batch(0,'批次生成完成')
+    assert all(item.child(i).text(1)=='已随整批完成' for i in range(3))
+    board.close()
 
 
 def test_nested_scan_off_gui_and_selected_file_information_before_preview(tmp_path, monkeypatch):

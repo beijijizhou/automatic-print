@@ -94,7 +94,7 @@ class BulkGenerationWorker(QObject):
                     sources=scan['batches']
                     images=[image for batch in sources for image in batch['images']]
                     combined={'folder':self.source_root, 'relative':self.source_root.relative_to(self.source_root),
-                              'images':images, 'image_count':len(images)}
+                              'images':images, 'image_count':len(images), 'source_batches':sources}
                     scan=dict(scan,batches=[combined],combined_batch_count=len(sources))
                 self.inventory = {b['folder']: b for b in scan['batches']}
                 self.folders = list(self.inventory)
