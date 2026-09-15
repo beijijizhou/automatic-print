@@ -33,6 +33,7 @@
 | 错误上下文与复制 | `layout_engine/error_context.py`, `error_parameters.py`, `ui/failure_panel.py` | 所有失败复用完整订单/参数诊断，不散落拼字符串。 |
 | 参数持久化与模式可见性 | `ui/preferences.py`, `preference_autosave.py`, `layout_values.py`, `developer_mode.py` | 稳定生产控件对普通用户开放；新实验功能默认只在开发者模式显示并生效。控件只绑定一个当前配置键，父项变化同步清理非法子项。 |
 | 批次及膜历史 | `history/store.py`, `history/batch_queue.py`, `history/bulk_analysis.py` | 历史格式由存储模块维护，UI不直接写日志文件。 |
+| ERP生产批次读取与下载 | `automation/batch_browser.py`, `automation/batch_downloads.py`, `automation/erp_api.py` | 外层工厂页面与内嵌生产模块共用一个批次内容定位入口；列表、搜索、就绪状态和下载不得各自假设表格位于顶层页面。 |
 | 源码更新 | `updates/`, `updater.py` | 检查、应用、重启为一个状态机，不要求点击两次。 |
 | 协作取消 | `cancellation.py`, `ui/stop_actions.py`, `thread_lifecycle.py` | 长循环定期检查；停止不关闭应用，关闭可立即退出。 |
 

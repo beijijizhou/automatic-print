@@ -5,6 +5,8 @@ from dataclasses import dataclass
 from pathlib import Path
 from zipfile import ZipFile
 
+from .erp_api import production_batch_frame
+
 
 ProgressCallback = Callable[[str], None]
 PRODUCTION_IMAGE_EXTENSIONS = {
@@ -102,8 +104,9 @@ def _classify_batches(batch_groups, output_root, progress):
 
 
 def _search_batches(page, batch_numbers: list[str]) -> None:
-    search = page.locator("input[placeholder*='批次号']")
-    button = page.get_by_text("搜 索", exact=True)
+    frame = production_batch_frame(page)
+    search = frame.locator("input[placeholder*='批次号']")
+    button = frame.get_by_text("搜 索", exact=True)
     if search.count() != 1 or button.count() != 1:
         return
     search.fill(",".join(batch_numbers))
@@ -113,14 +116,14 @@ def _search_batches(page, batch_numbers: list[str]) -> None:
         timeout=30_000,
     ):
         button.click()
-    page.locator("tbody tr").filter(
+    frame.locator("tbody tr").filter(
         has_text=batch_numbers[0]
     ).first.wait_for(state="visible", timeout=10_000)
 
 
 def _start_parallel_downloads(page, tasks, progress):
     active = []
-    rows = page.locator("tbody tr")
+    rows = production_batch_frame(page).locator("tbody tr")
     for task in tasks:
         matching = rows.filter(has_text=task.batch_number)
         if matching.count() != 1:

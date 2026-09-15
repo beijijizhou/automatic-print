@@ -12,6 +12,7 @@ from .chrome_session import connect_debug_chrome, open_authenticated_page
 from .erp_api import (
     list_batches,
     list_batches_between,
+    production_batch_frame,
     production_item_count,
 )
 from .platforms import get_erp_platform
@@ -88,8 +89,9 @@ def load_batch_records_between(
 def _search_batch_codes(page, codes: list[str]) -> set[str]:
     if not codes:
         return set()
-    search = page.locator("input[placeholder*='批次号']")
-    button = page.get_by_text("搜 索", exact=True)
+    frame = production_batch_frame(page)
+    search = frame.locator("input[placeholder*='批次号']")
+    button = frame.get_by_text("搜 索", exact=True)
     if search.count() != 1 or button.count() != 1:
         return set()
     ready = set()
@@ -102,10 +104,10 @@ def _search_batch_codes(page, codes: list[str]) -> set[str]:
             timeout=30_000,
         ):
             button.click()
-        page.locator("tbody tr").filter(has_text=group[0]).first.wait_for(
+        frame.locator("tbody tr").filter(has_text=group[0]).first.wait_for(
             state="visible", timeout=10_000
         )
-        for text in page.locator("tbody tr:visible").all_inner_texts():
+        for text in frame.locator("tbody tr:visible").all_inner_texts():
             if text.count("下载") >= 3 and "生成成功" in text:
                 ready.update(code for code in group if code in text)
     return ready
@@ -154,11 +156,27 @@ def _batch_page(browser, url: str):
         for page in context.pages
         if "/productionBatch/index" in page.url
         and host in page.url
-        and page.locator("th:visible").count()
     ]
-    if pages:
-        return pages[-1]
-    return open_authenticated_page(browser, url, "th:visible")
+    page = pages[-1] if pages else open_authenticated_page(
+        browser, url, "iframe"
+    )
+    if "/productionBatch/index" not in page.url:
+        production = page.get_by_text("生产", exact=True)
+        if production.count():
+            production.first.click()
+        link = page.locator("a[href*='/productionBatch/index']")
+        link.first.wait_for(state="visible", timeout=10_000)
+        link.first.click()
+        page.wait_for_url("**/productionBatch/index", timeout=30_000)
+    for _ in range(60):
+        try:
+            frame = production_batch_frame(page)
+            if frame.locator("th:visible").count():
+                return page
+        except RuntimeError:
+            pass
+        page.wait_for_timeout(500)
+    raise RuntimeError("ERP 生产批次表格在 30 秒内没有加载完成。")
 
 
 def _parse_api_rows(page) -> list[BatchRecord]:
@@ -169,10 +187,11 @@ def _parse_api_rows(page) -> list[BatchRecord]:
 
 def _records_from_rows(page, api_rows, ready_codes=None) -> list[BatchRecord]:
     ready_codes = ready_codes or set()
+    frame = production_batch_frame(page)
     records = []
     visible_text = {
         match.group(1): text
-        for text in page.locator("tbody tr:visible").all_inner_texts()
+        for text in frame.locator("tbody tr:visible").all_inner_texts()
         if (match := re.search(r"\b(\d{12})\b", text))
     }
     composition_names = {

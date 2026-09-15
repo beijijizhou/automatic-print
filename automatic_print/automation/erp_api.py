@@ -25,6 +25,24 @@ def production_api_frame(page):
     return frames[0]
 
 
+def production_batch_frame(page):
+    """Return the visible batch table in either a direct or shell page."""
+    if page.locator("tbody tr, th").count():
+        return page
+    frames = [
+        frame
+        for frame in page.frames
+        if "/productionBatch/index" in frame.url
+        and frame.parent_frame is not None
+    ]
+    for frame in reversed(frames):
+        if frame.locator("tbody tr, th").count():
+            return frame
+    if frames:
+        return frames[-1]
+    raise RuntimeError("ERP 生产批次内容区域尚未加载完成，请刷新后重试。")
+
+
 def module_url(page, filename_prefix: str, fallback: str | None = None) -> str:
     frame = production_api_frame(page)
     resources = frame.evaluate(

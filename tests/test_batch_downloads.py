@@ -139,11 +139,14 @@ def test_three_downloads_are_started_before_files_are_saved(
         def filter(self, has_text):
             return Row(self.page, has_text)
 
+        def count(self):
+            return 1
+
     class Page:
         pending = ""
 
         def locator(self, selector):
-            assert selector == "tbody tr"
+            assert selector in {"tbody tr", "tbody tr, th"}
             return Rows(self)
 
         def expect_download(self, timeout):
