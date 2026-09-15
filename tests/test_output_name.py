@@ -4,6 +4,7 @@ import pytest
 from automatic_print.layout import LayoutSettings, generate_layout
 from automatic_print.layout_engine.output_name import (
     label_output_name, batch_directory_name, batch_output_directory, order_quantity,
+    production_quantity,
 )
 
 
@@ -15,6 +16,10 @@ def test_order_quantity_deduplicates_prefixes_pieces_and_faces(tmp_path):
         'B2-1-T-Black-M-NO1-1.png')]
     assert order_quantity(paths) == '批次2单'
     assert order_quantity(paths+[tmp_path/'unknown.png']) == '批次已识别2单 订单待核对'
+    assert production_quantity(paths) == '批次2单 3件'
+    assert production_quantity(paths+[tmp_path/'unknown.png']) == (
+        '批次已识别2单 订单待核对 件数待核对'
+    )
 
 
 def test_whole_output_name_includes_order_count_and_source_batch(tmp_path):
@@ -24,7 +29,7 @@ def test_whole_output_name_includes_order_count_and_source_batch(tmp_path):
     result = generate_layout(paths, tmp_path/'out', LayoutSettings(
         number_images=False, color_block_enabled=False, label_text_template='CY26'),
         batch_name='609140634009')
-    assert result['filename'] == '609140634009_批次2单 CY26 M.png'
+    assert result['filename'] == '609140634009_批次2单 2件 CY26 M.png'
 
 
 @pytest.mark.parametrize("text, expected", [
@@ -44,10 +49,10 @@ def test_generation_uses_label_name_without_overwriting_existing_file(tmp_path):
     settings = LayoutSettings(number_images=False, color_block_enabled=False,
                               label_text_template="CY______26 {机器号}", machine_number="M11")
     result = generate_layout([path], tmp_path / "out", settings)
-    assert result["filename"] == "批次订单待核对 CY26 M11.png"
+    assert result["filename"] == "批次订单待核对 件数待核对 CY26 M11.png"
     assert (tmp_path / "out" / result["filename"]).is_file()
     second = generate_layout([path], tmp_path / "out", settings)
-    assert second["filename"] == "批次订单待核对 CY26 M11 (2).png"
+    assert second["filename"] == "批次订单待核对 件数待核对 CY26 M11 (2).png"
 
 
 def test_batch_name_is_in_directory_and_png(tmp_path):
@@ -60,8 +65,8 @@ def test_batch_name_is_in_directory_and_png(tmp_path):
                               label_text_template='CY26 M1')
     first = generate_layout([path], tmp_path / 'out', settings, batch_name='批次123')
     second = generate_layout([path], tmp_path / 'out', settings, batch_name='批次123')
-    assert first['filename'] == '批次123_批次订单待核对 CY26 M1.png'
-    assert second['filename'] == '批次123_批次订单待核对 CY26 M1 (2).png'
+    assert first['filename'] == '批次123_批次订单待核对 件数待核对 CY26 M1.png'
+    assert second['filename'] == '批次123_批次订单待核对 件数待核对 CY26 M1 (2).png'
 
 
 def test_same_second_job_uses_new_directory(tmp_path):

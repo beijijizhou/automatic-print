@@ -9,7 +9,7 @@ from time import time
 
 
 ITEM_SCHEMA = 1
-DIMENSION_SCHEMA = 1
+DIMENSION_SCHEMA = 2
 TTL_SECONDS = 24 * 60 * 60
 
 

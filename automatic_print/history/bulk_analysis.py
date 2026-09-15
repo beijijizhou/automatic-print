@@ -8,6 +8,7 @@ from ..layout import discover_images
 from ..layout_engine.batch_analysis import analyze_batch
 from ..layout_engine.film_comparison import compare_films
 from .store import save_run
+from ..layout_engine.batch_snapshot import batch_measurements
 
 
 def analyze_folders(folders, settings, progress=None, cancellation=None, path=None, parallelism=4):
@@ -16,6 +17,7 @@ def analyze_folders(folders, settings, progress=None, cancellation=None, path=No
     workers = max(1, min(8, int(parallelism), len(folders)))
     settings = replace(settings, compare_reference_films=True, film_geometry_workers=max(1, 4//workers))
     started = monotonic()
+    @batch_measurements
     def calculate(index, folder):
         def report(stage, current, total, filename):
             if cancellation:

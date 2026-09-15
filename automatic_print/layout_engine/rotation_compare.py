@@ -22,7 +22,7 @@ def compare_rotation(paths, settings, progress, analysis, analysis_ready):
         paths, normal_settings, progress, prepare_rotations=True,
     )
     rotated_items, rotated_labels = rotation_items(
-        paths, normal_settings, progress,
+        paths, normal_settings, None,
     )
 
     def normal_progress(stage, current, total, filename):

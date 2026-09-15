@@ -7,6 +7,7 @@ from PySide6.QtGui import QDesktopServices
 from PySide6.QtWidgets import QMessageBox
 from ..layout import LayoutSettings
 from ..layout_engine.metrics import saving_text
+from ..layout_engine.output_file_info import production_summary_text
 from ..layout_engine.output_name import batch_output_directory
 from .workers import GenerateWorker
 from .layout_values import settings_from_window
@@ -201,6 +202,8 @@ class GenerationActionsMixin:
                 f"已自动裁去右侧空白 {result['trimmed_right_mm']:.1f} 毫米"
             )
         saving = saving_text(result)
+        summary = production_summary_text(result)
+        self.run_log.appendPlainText(summary)
         self.run_log.appendPlainText(saving)
         self.status.setText(f"{self.status.text()} · {saving}")
         self.generate_button.setEnabled(True)
@@ -208,7 +211,7 @@ class GenerationActionsMixin:
         QMessageBox.information(
             self,
             "生成完成",
-            f"{saving}\n\n打印图片已保存到：\n{output}",
+            f"{summary}\n\n打印图片已保存到：\n{output}",
         )
         QDesktopServices.openUrl(
             QUrl.fromLocalFile(str(Path(output).resolve()))

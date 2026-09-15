@@ -46,7 +46,8 @@ class FilmComparisonTable(QTableWidget):
             if result['error']:
                 values = (result['name'], '—', '无安全方案', '—', '—', '—')
             else:
-                values = (result['name'],
+                name = result['name'] + ('（当前输出）' if result.get('production_selected') else '')
+                values = (name,
                           f"{result.get('paired_rows', 0)}行 / {result.get('paired_images', 0)}张",
                           f"{result['length_m']:.3f}",
                           f"{result['film_area_m2']:.3f}",
@@ -56,7 +57,8 @@ class FilmComparisonTable(QTableWidget):
                 if col == 0 and not result.get('available', True):
                     value += '（参考）'
                 item = QTableWidgetItem(value)
-                item.setToolTip(result.get('availability', '现有规格')+'；不自动切换生产参数；'+(result['error'] or
+                selected = '当前输出的真实排版数据；' if result.get('production_selected') else ''
+                item.setToolTip(selected+result.get('availability', '现有规格')+'；不自动切换生产参数；'+(result['error'] or
                     f"实际旋转 {result['rotated_images']} 张；比当前显示最省方案多 {extra:.3f} 平方米")
                 )
                 if not result['error'] and extra < .000001:

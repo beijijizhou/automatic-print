@@ -17,17 +17,19 @@ def window(path):
     return result
 
 
-def test_default_hides_tools_and_gates_direct_open(tmp_path, monkeypatch):
+def test_default_shows_production_layout_but_hides_diagnostic_tools(tmp_path, monkeypatch):
     import automatic_print.ui.film_history as history
     monkeypatch.setattr(history, 'load_runs', lambda *_a: (_ for _ in ()).throw(AssertionError('history read')))
     owner = window(tmp_path/'prefs.ini')
     panel = owner.automation_home.label_quick_panel
     assert not owner.developer_mode_checkbox.isChecked()
-    assert not owner.quick_header_gap_group.isVisible()
-    assert not owner.layout_rules_form.isRowVisible(owner.membrane_gap_enabled)
-    assert not owner.layout_rules_form.isRowVisible(owner.membrane_gap)
-    assert not owner.layout_rules_form.isRowVisible(owner.cutter_settings.two_zone)
-    assert not owner._layout_settings().cutter_majority_two_zone
+    assert owner.quick_header_gap_group.isVisible()
+    assert owner.layout_rules_form.isRowVisible(owner.membrane_gap_enabled)
+    assert owner.layout_rules_form.isRowVisible(owner.membrane_gap)
+    assert owner.layout_rules_form.isRowVisible(owner.cutter_settings.two_zone)
+    assert owner._layout_settings().cutter_majority_two_zone
+    assert owner.batch_record_group.isVisible()
+    assert panel.summary.gap_loss.isVisible()
     assert owner.membrane_gap.value() == 40
     assert owner._layout_settings().membrane_gap_mm == 0
     assert panel.summary.film_table.rowCount() == 4
@@ -68,7 +70,7 @@ def test_default_hides_tools_and_gates_direct_open(tmp_path, monkeypatch):
     owner.close()
 
 
-def test_two_zone_layout_is_visible_and_active_only_in_developer_mode(tmp_path):
+def test_two_zone_layout_stays_visible_and_active_outside_developer_mode(tmp_path):
     owner = window(tmp_path/'two-zone.ini')
     control = owner.cutter_settings.two_zone
     owner.developer_mode_checkbox.setChecked(True)
@@ -76,8 +78,8 @@ def test_two_zone_layout_is_visible_and_active_only_in_developer_mode(tmp_path):
     control.setChecked(True)
     assert owner._layout_settings().cutter_majority_two_zone
     owner.developer_mode_checkbox.setChecked(False)
-    assert not owner.layout_rules_form.isRowVisible(control)
-    assert not owner._layout_settings().cutter_majority_two_zone
+    assert owner.layout_rules_form.isRowVisible(control)
+    assert owner._layout_settings().cutter_majority_two_zone
     owner.close()
 
 
@@ -107,10 +109,10 @@ def test_toggle_persists_and_existing_history_tab_hides(tmp_path, monkeypatch):
     details = panel.details_dialog
     assert details.tabs.currentWidget() is details.history_page
     owner.developer_mode_checkbox.setChecked(False)
-    assert owner._layout_settings().membrane_gap_mm == 0
+    assert owner._layout_settings().membrane_gap_mm == 42
     assert owner.membrane_gap.value() == 42
-    assert not owner.layout_rules_form.isRowVisible(owner.membrane_gap_enabled)
-    assert not owner.layout_rules_form.isRowVisible(owner.membrane_gap)
+    assert owner.layout_rules_form.isRowVisible(owner.membrane_gap_enabled)
+    assert owner.layout_rules_form.isRowVisible(owner.membrane_gap)
     assert panel.summary.film_table.rowCount() == 4
     assert not details.tabs.isTabVisible(details.tabs.indexOf(details.history_page))
     assert not panel.history_button.isVisible()

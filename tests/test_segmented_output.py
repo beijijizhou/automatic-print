@@ -58,7 +58,7 @@ def test_one_large_order_cannot_be_split(tmp_path):
         cutter_mode='dual', output_parts=4, number_images=False))
     assert result['segment_count'] == 1
     assert len(result['parts'][0]['placements']) == 4
-    assert '批次1单 本段1单' in result['filename']
+    assert '批次1单 4件 本段1单 4件' in result['filename']
 
 
 def test_partial_segment_failure_quarantines_only_new_files(tmp_path, monkeypatch):

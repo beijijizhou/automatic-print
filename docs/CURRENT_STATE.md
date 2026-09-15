@@ -8,10 +8,15 @@
 - 主窗口：`automatic_print/ui/main_window.py`，负责构造应用级状态和连接各控制器。
 - 主工作台：`automatic_print/automation_dialog.py` 为兼容门面；实际页面在
   `automatic_print/batch_ui/` 和 `automatic_print/ui/label_quick_panel.py`。
-- 开发者模式当前仅开放45/60厘米方案；40–80厘米批量研究入口处于隐藏停用状态。补足膜间距由
-  `ui/header_gap.py` 的独立开关控制，保存的毫米数值本身不会自动启用。
+- 普通模式显示生产排版规则、45/60厘米方案、批次处理记录、膜标签间距和额外损耗；40–80厘米
+  批量研究入口仍处于隐藏停用状态。补足膜间距由 `ui/header_gap.py` 的独立开关控制，保存的毫米
+  数值本身不会自动启用。开发者模式只控制算法开销和用膜历史等诊断入口。
 - 单批次生成编排：`automatic_print/ui/generation_actions.py`、`workers.py`、
   `generation_preview.py`。
+- 单批生成、仅预览及批量分析的每个批次均由 `layout_engine/measurement_session.py` 建立一份数据
+  快照；DPI、尺寸、膜标签位置和各方向刀码占位在后续方案与报告中直接复用。
+- 生成完成弹窗由 `layout_engine/output_file_info.py` 汇总最终生产结果；膜规格表把当前膜行替换为
+  同一最终计划的真实统计，输出名由 `layout_engine/output_name.py` 同时写入订单数和件数。
 - 多批次生成编排：`automatic_print/ui/bulk_workbench.py`、
   `bulk_generation_worker.py`、`batch_status_board.py`。
 

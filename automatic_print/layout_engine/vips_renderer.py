@@ -34,7 +34,6 @@ demand_lock = RLock()
 def available() -> bool:
     return pyvips is not None
 
-
 def _rgba(path: Path, width: int, height: int, rotation_degrees: int):
     # Pixel validation can evaluate a source before PNG saving re-reads it.
     # A forward-only decoder fails on that second pass, especially after rotation.

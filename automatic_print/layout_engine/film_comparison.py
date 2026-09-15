@@ -20,14 +20,14 @@ from .normal_plan_cache import NormalPlans
 from .dual_quality import dual_quality
 
 
-def compare_films(paths, settings, progress=None):
+def compare_films(paths, settings, progress=None, production=None):
     with measurement_session():
-        result = _compare_films(paths, settings, progress)
+        result = _compare_films(paths, settings, progress, production)
         verify_sources()
         return result
 
 
-def _compare_films(paths, settings, progress):
+def _compare_films(paths, settings, progress, production=None):
     rows = []
     started = monotonic()
     widths = comparison_widths(settings.compare_reference_films)
@@ -38,7 +38,8 @@ def _compare_films(paths, settings, progress):
                      cutter_tail_rotation=False, allow_rotation=False,
                      manual_rotations=(), compare_film_sizes=False)
     options, labels = read_cutter_items(paths, shared, progress, prepare_rotations=True)
-    rotated_items, rotated_labels = rotation_items(paths, shared, progress)
+    # Both orientations were populated above; this pass only selects cached geometry.
+    rotated_items, rotated_labels = rotation_items(paths, shared, None)
     analysis = analyze_batch(paths, shared)
     measured_seconds = monotonic()-started
     if progress:
@@ -117,6 +118,7 @@ def _compare_films(paths, settings, progress):
                        for rotation in (False, True) for film in widths]
             collect(future.result() for future in as_completed(futures))
     rows.sort(key=lambda r: (widths.index(r['film_mm']), r['rotation_allowed']))
+    _apply_production_result(rows, production, settings)
     valid = [r for r in rows if not r['error']]
     best = min(valid, key=lambda r: r['film_area_m2']) if valid else None
     for row in valid:
@@ -126,6 +128,38 @@ def _compare_films(paths, settings, progress):
             'measurement_seconds': measured_seconds,
             'scope': '分段前；自动刀位；单件双排优先，仅完整单排尺码后缀旋转；无手动旋转；包含标签、刀码、红线和留白；仅几何检查',
             'occupancy_basis': '生产图片矩形面积，含原图透明部分，不含新增标签/刀码；不是油墨覆盖率'}
+
+
+def _apply_production_result(rows, production, settings):
+    """Make the current-film row report the exact plan that will be written."""
+    if production is None:
+        return
+    planned, _labels, _width, height = production[:4]
+    film = settings.media_width_mm + settings.riin_left_mm + settings.riin_right_mm
+    rotation = bool(
+        settings.cutter_rotation_zone or settings.cutter_majority_two_zone
+        or settings.cutter_tail_rotation or any(p.rotation_degrees for _, p in planned)
+    )
+    row = next((item for item in rows if abs(item['film_mm'] - film) < .01
+                and item['rotation_allowed'] == rotation), None)
+    if row is None:
+        return
+    scale = 25.4 / settings.dpi / 1000
+    length = height * scale
+    image_area = sum(p.width_px * p.height_px for _, p in planned) * scale ** 2
+    area = film / 1000 * length
+    usable_area = settings.media_width_mm / 1000 * length
+    quality = dual_quality(planned, settings)
+    row.update(
+        error='', production_selected=True, length_m=length,
+        film_area_m2=area, usable_area_m2=usable_area,
+        image_area_m2=image_area,
+        image_occupancy_percent=100 * image_area / area if area else 0,
+        usable_occupancy_percent=100 * image_area / usable_area if usable_area else 0,
+        rotated_images=sum(bool(p.rotation_degrees) for _, p in planned),
+        paired_rows=quality.get('paired_rows', 0),
+        paired_images=quality.get('paired_rows', 0) * 2,
+    )
 
 
 def comparison_text(comparison):

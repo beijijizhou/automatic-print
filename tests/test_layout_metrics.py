@@ -26,3 +26,21 @@ def test_saving_text_reports_rotations_without_false_saving() -> None:
     assert saving_text(
         {"saved_length_m": 0, "rotation_count": 1}
     ) == "本次排版长度已是最短 · 旋转 1 张"
+
+
+def test_completed_output_summary_uses_actual_batch_result():
+    from automatic_print.layout_engine.output_file_info import production_summary_text
+    text = production_summary_text({
+        'analysis': {'batch_type': '单件单面批次', 'order_count': 60,
+                     'piece_count': 60, 'image_count': 60, 'double_pairs': 0},
+        'dual_quality': {'paired_rows': 5, 'single_images': [{}] * 20,
+                         'rotated_images': 30},
+        'placements': [{'width_px': 100, 'height_px': 200}] * 60,
+        'output_dpi': 100, 'film_width_mm': 600, 'height_mm': 50000,
+        'cutter_mode': 'dual', 'rotation_count': 30,
+        'saved_length_m': 32.635, 'saved_percent': 42,
+        'filename': '批次60单 60件.png',
+    })
+    assert '60 个订单组 · 60 件 · 60 张图' in text
+    assert '双排 5 行 / 10 张 · 常规单排 20 张 · 旋转区 30 张（实际旋转 30 张）' in text
+    assert '实际用膜：50.000 米 · 30.000 平方米' in text

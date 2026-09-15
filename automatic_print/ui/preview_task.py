@@ -10,6 +10,7 @@ from ..layout_engine.models import mm_to_px
 from ..layout_engine.order_validation import validate_order_placements
 from ..layout_engine.cut_validation import validate_cut_corridor
 from .preview_diagnostics import diagnostic_layout
+from ..layout_engine.batch_snapshot import batch_measurements
 
 
 class PreviewSignals(QObject):
@@ -33,6 +34,7 @@ class PreviewTask(QRunnable):
         except RuntimeError:
             raise TaskCancelled()
 
+    @batch_measurements
     def run(self):
         payload, error = None, ''
         try:

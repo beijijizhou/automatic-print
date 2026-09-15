@@ -4,6 +4,7 @@ os.environ.setdefault('QT_QPA_PLATFORM', 'offscreen')
 
 from automatic_print.layout_engine import measurement_timing as timing
 from automatic_print.layout_engine.measurement_session import measurement_session
+from automatic_print.layout_engine.images import print_dimensions
 from automatic_print.layout_engine import planner
 from test_persistent_plan_cache import config
 from test_parallel_film_geometry import qr_sources
@@ -29,6 +30,18 @@ def test_nested_steps_are_exclusive_and_errors_still_record(monkeypatch):
     assert rows['解压']['seconds'] == 3
     assert rows['失败步骤']['seconds'] == 1
     assert timing.STACK.get() == ()
+
+
+def test_dimension_timing_counts_physical_read_once_per_batch(tmp_path):
+    path = tmp_path/'source.png'
+    from PIL import Image
+    Image.new('RGBA', (20, 10)).save(path, dpi=(200, 200))
+    with measurement_session() as session:
+        first = print_dimensions(path, 300)
+        second = print_dimensions(path, 150)
+        rows = {row['name']: row for row in session.timing.snapshot()['steps']}
+    assert first == second
+    assert rows['尺寸与DPI文件信息读取']['calls'] == 1
 
 
 def test_cold_measurements_report_substeps_and_warm_cache_reports_zero(tmp_path):

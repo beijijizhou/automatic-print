@@ -1,4 +1,4 @@
-"""Geometry-only developer comparison against unchanged source images."""
+"""Geometry-only comparison against unchanged source images."""
 from dataclasses import replace
 from pathlib import Path
 from time import perf_counter

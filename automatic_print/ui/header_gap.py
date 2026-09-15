@@ -6,9 +6,10 @@ def build_header_gap(window):
     from .width_fit import build_width_fit
     build_width_fit(window)
     enabled = QCheckBox('启用膜标签/二维码与图案间距补足')
-    enabled.setChecked(window.preferences.value('developer/membrane_gap_enabled', False, bool))
+    legacy = window.preferences.value('developer/membrane_gap_enabled', False, bool)
+    enabled.setChecked(window.preferences.value('layout/membrane_gap_enabled', legacy, bool))
     enabled.toggled.connect(
-        lambda value: window.preferences.setValue('developer/membrane_gap_enabled', value))
+        lambda value: window.preferences.setValue('layout/membrane_gap_enabled', value))
     window.membrane_gap_enabled = enabled
     field = QDoubleSpinBox()
     field.setRange(0, 200)

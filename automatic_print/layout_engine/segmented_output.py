@@ -9,7 +9,7 @@ from .order_groups import order_key
 from .operation_timing import OperationTiming
 from .metrics import saving_metrics
 from .output_sizes import size_range_label
-from .output_name import order_quantity
+from .output_name import production_quantity
 
 
 def partition_plan(planned, count):
@@ -98,7 +98,7 @@ def generate_segments(paths, output_dir, settings, progress, plan_ready,
     lock, counts, results = RLock(), {}, {}
     reading = perf_counter()-started
     rendering = perf_counter()
-    batch_quantity = order_quantity(paths)
+    batch_quantity = production_quantity(paths, payload['analysis'])
     def render(index):
         members, height = plans[index]
         end_notice = '批次结束' if index == len(parts)-1 else '分段结束'

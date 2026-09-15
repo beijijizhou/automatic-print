@@ -11,7 +11,7 @@ def developer_task_active(window):
 
 def build_developer_mode(window, footer):
     checkbox = QCheckBox('开发者模式')
-    checkbox.setToolTip('显示用膜历史和批量数据分析；批量分析不生成最终文件。')
+    checkbox.setToolTip('显示算法开销和用膜历史等诊断工具；生产排版内容对所有用户可见。')
     window.developer_mode_checkbox = checkbox
     checkbox.setChecked(window.preferences.value('developer/enabled', False, bool))
     footer.addWidget(checkbox)
@@ -23,21 +23,13 @@ def build_developer_mode(window, footer):
             checkbox.blockSignals(False)
             return
         window.developer_mode_enabled = enabled
-        migration = 'developer/greedy_layout_default_v1'
-        if enabled and not window.preferences.value(migration, False, bool):
-            control = window.cutter_settings.two_zone
-            control.blockSignals(True)
-            control.setChecked(True)
-            control.blockSignals(False)
-            window.preferences.setValue('developer/majority_two_zone', True)
-            window.preferences.setValue(migration, True)
-        window.quick_header_gap_group.setVisible(enabled)
-        window.layout_rules_form.setRowVisible(window.membrane_gap_enabled, enabled)
-        window.layout_rules_form.setRowVisible(window.membrane_gap, enabled)
-        window.layout_rules_form.setRowVisible(window.cutter_settings.two_zone, enabled)
+        window.quick_header_gap_group.setVisible(True)
+        window.layout_rules_form.setRowVisible(window.membrane_gap_enabled, True)
+        window.layout_rules_form.setRowVisible(window.membrane_gap, True)
+        window.layout_rules_form.setRowVisible(window.cutter_settings.two_zone, True)
         panel = window.automation_home.label_quick_panel
-        window.batch_record_group.setVisible(enabled)
-        panel.summary.gap_loss.setVisible(enabled)
+        window.batch_record_group.setVisible(True)
+        panel.summary.gap_loss.setVisible(True)
         panel.history_button.setVisible(enabled)
         panel.bulk_analysis_button.setVisible(False)
         panel.algorithm_costs_button.setVisible(enabled)

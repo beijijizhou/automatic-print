@@ -13,6 +13,23 @@ def order_quantity(paths, scope="批次"):
     return f'{scope}{len(keys)}单'
 
 
+def production_quantity(paths, analysis=None, scope="批次"):
+    """Format the verified order and physical-piece counts used by output names."""
+    orders = order_quantity(paths, scope)
+    report = analysis or {}
+    known = report.get('orders', ())
+    if known and all(order.get('pieces') is not None for order in known):
+        return f"{orders} {sum(order['pieces'] for order in known)}件"
+    from .order_groups import complete_orders, order_key, pair_identity
+    pieces = 0
+    for group in complete_orders(paths):
+        identities = [pair_identity(path) for path in group]
+        if order_key(group[0]) == '未识别订单组' or not all(identities):
+            return orders+' 件数待核对'
+        pieces += len({identity[0] for identity in identities})
+    return f'{orders} {pieces}件'
+
+
 def label_output_name(text, batch_name=""):
     if batch_name:
         text = f"{batch_name}_{text}"

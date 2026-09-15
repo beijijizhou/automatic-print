@@ -2,6 +2,49 @@
 from .png_codecs.fast import timing_text
 
 
+def production_summary_text(result):
+    """One visible summary sourced only from the completed production result."""
+    analysis = result.get('analysis', {})
+    quality = result.get('dual_quality', {})
+    dpi = result.get('output_dpi') or 1
+    length_m = result.get('height_mm', 0) / 1000
+    film_mm = result.get('film_width_mm')
+    if film_mm is None:
+        film_mm = result.get('maximum_width_mm', 0)
+    area = length_m * film_mm / 1000
+    placements = result.get('placements', ())
+    image_area = sum(
+        placement.get('width_px', 0) * placement.get('height_px', 0)
+        for placement in placements
+    ) * (25.4 / dpi / 1000) ** 2
+    occupancy = 100 * image_area / area if area else 0
+    orders = analysis.get('order_count', '待核对')
+    pieces = analysis.get('piece_count', '待核对')
+    images = analysis.get('image_count', len(placements))
+    doubles = analysis.get('double_pairs', 0)
+    paired_rows = quality.get('paired_rows', 0)
+    paired_images = paired_rows * 2
+    singles = len(quality.get('single_images', ()))
+    rotation_zone = quality.get('rotated_images', 0)
+    rotations = result.get('rotation_count', 0)
+    mode = {'free': '正常排版', 'single': '单排切膜', 'dual': '双排切膜'}.get(
+        result.get('cutter_mode'), result.get('cutter_mode', '未记录'))
+    lines = [
+        '本批次实际输出总结',
+        f"{analysis.get('batch_type', '批次')} · {orders} 个订单组 · {pieces} 件"
+        f" · {images} 张图 · {doubles} 组双面",
+        f"生产方案：{film_mm / 10:g} 厘米膜 · {mode}",
+        f"排版结果：双排 {paired_rows} 行 / {paired_images} 张"
+        f" · 常规单排 {singles} 张 · 旋转区 {rotation_zone} 张"
+        f"（实际旋转 {rotations} 张）",
+        f"实际用膜：{length_m:.3f} 米 · {area:.3f} 平方米 · 图片占位 {occupancy:.1f}%",
+        f"相对常规基准节省：{result.get('saved_length_m', 0):.3f} 米"
+        f"（{result.get('saved_percent', 0):.1f}%）",
+        f"输出：{result.get('filename', '未记录')} · {dpi:g} DPI",
+    ]
+    return '\n'.join(lines)
+
+
 def file_information_text(result):
     if result.get('preview_only'):
         return ''

@@ -26,10 +26,10 @@ class CutterSettingsPanel(QWidget):
         self.auto_knife.setChecked(preferences.value("cutter/auto_knife", True, bool))
         self.rotation_zone = QCheckBox("省膜时启用独立旋转区（每行一张，换刀一次）")
         self.rotation_zone.setChecked(not self.quick_mode.isChecked() and preferences.value("cutter/rotation_zone", False, bool))
-        self.two_zone = QCheckBox('贪心排版默认启用：S–2XL优先双排，3XL–5XL进入旋转区')
-        self.two_zone.setChecked(preferences.value('developer/majority_two_zone', False, bool))
-        self.two_zone.setToolTip('开发者模式固定启用；此处只展示当前规则。')
-        self.two_zone.setEnabled(False)
+        self.two_zone = QCheckBox('贪心双排集中：能安全双排的订单优先双排，其余进入旋转区')
+        legacy = preferences.value('developer/majority_two_zone', True, bool)
+        self.two_zone.setChecked(preferences.value('layout/majority_two_zone', legacy, bool))
+        self.two_zone.setToolTip('能安全双排的完整订单优先集中双排，其余进入旋转区；最多两个区域。')
         self.tail_rotation = QCheckBox('单件批次末尾 3XL 及以上：省膜时整尺码块旋转')
         self.tail_rotation.setChecked(preferences.value('cutter/tail_rotation', True, bool))
         self.safety = self._box(3, 0.1, 30)
@@ -126,7 +126,7 @@ class CutterSettingsPanel(QWidget):
             control.setEnabled(mode == "dual")
         self.auto_knife.setEnabled(mode == "dual")
         self.rotation_zone.setEnabled(mode == "dual")
-        self.two_zone.setEnabled(False)
+        self.two_zone.setEnabled(mode == 'dual')
         self.tail_rotation.setEnabled(mode == 'dual')
         if self.quick_mode.isChecked():
             self.rotation_zone.setChecked(False)
@@ -160,7 +160,7 @@ class CutterSettingsPanel(QWidget):
             'left_marker_lift_mm': self.left_marker_lift.value(),
         }.items():
             self.preferences.setValue("cutter/" + key, value)
-        self.preferences.setValue('developer/majority_two_zone', self.two_zone.isChecked())
+        self.preferences.setValue('layout/majority_two_zone', self.two_zone.isChecked())
 
     def _rotation_requested(self, enabled):
         if enabled and self.mode.currentData() == 'dual':
@@ -168,7 +168,7 @@ class CutterSettingsPanel(QWidget):
             self.tail_rotation.setChecked(False)
 
     def _two_zone_requested(self, enabled):
-        self.preferences.setValue('developer/majority_two_zone', enabled)
+        self.preferences.setValue('layout/majority_two_zone', enabled)
         if enabled and self.mode.currentData() == 'dual':
             self.quick_mode.setChecked(False)
             self.rotation_zone.setChecked(True)

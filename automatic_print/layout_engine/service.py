@@ -8,7 +8,7 @@ from typing import Iterable
 from .models import LayoutSettings, ProgressCallback, mm_to_px
 from .images import print_dimensions
 from .labels import normalize_machine_number, format_label
-from .output_name import label_output_name, unused_output_path, order_quantity
+from .output_name import label_output_name, unused_output_path, production_quantity
 from .dual_quality import dual_quality
 from .marker_space import validate_embedded_marks
 from .cut_validation import validate_cut_corridor, validate_canvas_pixels, validate_vips_output
@@ -22,8 +22,8 @@ from .vips_renderer import available, build_vips_canvas
 from .transition_marks import marked_height, transition_rects, paint_transition_lines
 from .output_sizes import size_range_label
 from .marked_pixel_validation import validate_marked_pillow
-def png_engine_name() -> str:
-    return "大图节省内存模式" if available() else "标准兼容模式"
+from .batch_snapshot import batch_measurements
+@batch_measurements
 def generate_layout(
     image_paths: Iterable[Path],
     output_dir: Path,
@@ -101,9 +101,9 @@ def generate_layout(
     size_suffix = f' {sizes}' if sizes else ''
     zones = {p.cut_zone for _, p in planned}
     zone_suffix = ' 旋转区' if zones == {'旋转区'} else ' 常规+旋转区' if '旋转区' in zones else ''
-    quantity = order_quantity(paths)
+    quantity = production_quantity(paths, analysis[-1])
     if prepared_plan is not None:
-        quantity = prepared_plan.get('batch_quantity', quantity)+' '+order_quantity(paths, '本段')
+        quantity = prepared_plan.get('batch_quantity', quantity)+' '+production_quantity(paths, scope='本段')
     output_path = unused_output_path(output_dir, label_output_name(quantity+' '+label_text+size_suffix+zone_suffix+filename_suffix, batch_name))
     quality = dual_quality(planned, settings, analysis[-1])
     if plan_ready:
@@ -177,6 +177,7 @@ def generate_layout(
         "filename": filename,
         "dual_quality": quality,
         "size_range": sizes, "output_dpi": settings.dpi,
+        "film_width_mm": settings.media_width_mm + settings.riin_left_mm + settings.riin_right_mm,
         "output_dpi_origin": settings.output_dpi_origin,
         "transition_marks": transitions,
         "rotation_marker_shift_mm": 0,

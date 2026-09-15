@@ -52,7 +52,7 @@ def _measured_plan(paths, settings, progress, analysis_ready):
     result = planned, labels, width, height+extra, baseline+extra
     if settings.compare_film_sizes and settings.cutter_mode != 'free':
         from .film_comparison import compare_films
-        analysis['film_comparison'] = compare_films(paths, settings, progress)
+        analysis['film_comparison'] = compare_films(paths, settings, progress, result)
     from .image_anomalies import collect_image_anomalies
     analysis['image_anomalies'] = collect_image_anomalies(paths, settings)
     if analysis.get('rotation_recovery'):

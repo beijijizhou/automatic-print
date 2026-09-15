@@ -4,7 +4,7 @@ import math
 import sqlite3
 
 from PIL import Image
-from .measurement_timing import measured
+from .measurement_timing import substep
 
 
 @dataclass(frozen=True)
@@ -16,45 +16,57 @@ class PrintDimensions:
     embedded_dpi: bool
 
 
-@measured('尺寸与DPI文件信息读取')
 def print_dimensions(path: Path, fallback_dpi: int) -> PrintDimensions:
     from .measurement_session import SESSION, identity, persistent_cache
     session = SESSION.get()
-    key = (identity(path), fallback_dpi) if session else None
-    if session and key in session.dimensions:
-        return session.dimensions[key]
+    file_key = identity(path) if session else None
+    embedded_key = (file_key, None) if session else None
+    fallback_key = (file_key, fallback_dpi) if session else None
+    if session and embedded_key in session.dimensions:
+        return session.dimensions[embedded_key]
+    if session and fallback_key in session.dimensions:
+        return session.dimensions[fallback_key]
     persistent, persistent_key = None, None
     if session:
         try:
             from .measurement_cache import dimension_key
             persistent = persistent_cache()
-            persistent_key = dimension_key(key[0], fallback_dpi)
+            persistent_key = dimension_key(file_key, None)
             cached = persistent.load('dimensions', persistent_key)
+            if cached is None:
+                persistent_key = dimension_key(file_key, fallback_dpi)
+                cached = persistent.load('dimensions', persistent_key)
             if cached is not None:
                 result = PrintDimensions(**cached)
-                session.dimensions[key] = result
+                cache_key = embedded_key if result.embedded_dpi else fallback_key
+                session.dimensions[cache_key] = result
                 return result
         except (OSError, ValueError, TypeError, KeyError, sqlite3.Error):
             persistent = persistent_key = None
-    with Image.open(path) as image:
-        source = image.info.get("dpi")
-        try:
-            x_dpi, y_dpi = float(source[0]), float(source[1])
-            valid = all(math.isfinite(v) and v > 0 for v in (x_dpi, y_dpi))
-        except (TypeError, ValueError, IndexError):
-            valid = False
-        if not valid:
-            x_dpi = y_dpi = float(fallback_dpi)
-        result = PrintDimensions(
-            image.width * 25.4 / x_dpi,
-            image.height * 25.4 / y_dpi,
-            x_dpi, y_dpi, valid,
-        )
+    with substep('尺寸与DPI文件信息读取'):
+        with Image.open(path) as image:
+            source = image.info.get("dpi")
+            try:
+                x_dpi, y_dpi = float(source[0]), float(source[1])
+                valid = all(math.isfinite(v) and v > 0 for v in (x_dpi, y_dpi))
+            except (TypeError, ValueError, IndexError):
+                valid = False
+            if not valid:
+                x_dpi = y_dpi = float(fallback_dpi)
+            result = PrintDimensions(
+                image.width * 25.4 / x_dpi,
+                image.height * 25.4 / y_dpi,
+                x_dpi, y_dpi, valid,
+            )
     if session:
-        session.dimensions[key] = result
+        cache_key = embedded_key if result.embedded_dpi else fallback_key
+        session.dimensions[cache_key] = result
         if persistent is not None and persistent_key is not None:
             try:
                 from dataclasses import asdict
+                persistent_key = dimension_key(
+                    file_key, None if result.embedded_dpi else fallback_dpi,
+                )
                 persistent.save('dimensions', persistent_key, asdict(result))
             except (OSError, ValueError, TypeError, sqlite3.Error):
                 pass

@@ -6,6 +6,7 @@ from PySide6.QtWidgets import QApplication
 
 from automatic_print.layout import LayoutSettings
 from automatic_print.layout_engine.planner import plan_layout
+from automatic_print.layout_engine.dual_quality import dual_quality
 from automatic_print.ui.batch_summary import BatchSummaryPanel
 from test_film_comparison import sources
 
@@ -16,7 +17,7 @@ def test_four_options_are_visible_and_copyable(tmp_path, capfd):
     settings = LayoutSettings(dpi=25.4, media_width_mm=580, cutter_mode='dual',
                               cutter_auto_knife=True, allow_rotation=False,
                               number_images=False, compare_film_sizes=True, compare_reference_films=True)
-    plan_layout(sources(tmp_path), settings, None, reports.append)
+    plan = plan_layout(sources(tmp_path), settings, None, reports.append)
     panel = BatchSummaryPanel()
     for _ in range(3):
         panel.film_table.reset_rows()
@@ -34,6 +35,13 @@ def test_four_options_are_visible_and_copyable(tmp_path, capfd):
     assert panel.film_table.horizontalHeaderItem(1).text() == '双排数量'
     assert panel.film_table.horizontalHeaderItem(3).text() == '面积 / ㎡'
     assert panel.film_table.horizontalHeaderItem(4).text() == '图片占位'
+    assert sum('（当前输出）' in panel.film_table.item(row, 0).text()
+               for row in range(18)) == 1
+    selected = next(row for row in reports[-1]['film_comparison']['rows']
+                    if row.get('production_selected'))
+    assert round(selected['length_m'], 6) == round(reports[-1]['height_m'], 6)
+    assert selected['paired_rows'] == dual_quality(plan[0], settings)['paired_rows']
+    assert selected['rotated_images'] == sum(bool(p.rotation_degrees) for _, p in plan[0])
     assert panel.metrics.textInteractionFlags() & Qt.TextSelectableByMouse
     assert panel.grab().save(str(tmp_path/'four-film-comparison.png'))
     panel.film_table.set_reference_mode(False)

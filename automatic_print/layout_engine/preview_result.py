@@ -15,6 +15,7 @@ def build_preview_result(
         'size_range': sizes,
         'output_dpi': settings.dpi,
         'output_dpi_origin': settings.output_dpi_origin,
+        'film_width_mm': settings.media_width_mm + settings.riin_left_mm + settings.riin_right_mm,
         'header_gap': gap_records,
         'cutter_mode': settings.cutter_mode,
         'cut_corridor': cut_check,

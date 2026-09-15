@@ -7,7 +7,7 @@
 | --- | --- | --- |
 | 图片发现与嵌套批次扫描 | `layout_engine/discovery.py`, `batch_discovery.py` | 单批、多批和分析功能复用，不各自遍历目录。 |
 | 图片尺寸、DPI与源信息 | `layout_engine/source_metadata.py`, `images.py`, `output_dpi.py` | 一次读取形成共享事实；标签、排版和报告不得重复解码。 |
-| 并行测量与完成即补位 | `layout_engine/parallel_measurement.py`, `measurement_session.py` | 保持结果原顺序；线程完成顺序不能改变生产顺序。 |
+| 批次数据快照与并行测量 | `layout_engine/batch_snapshot.py`, `measurement_session.py`, `parallel_measurement.py` | 生成、仅预览和批量分析从首次读取到最终报告共享一个批次会话；保持结果原顺序，线程完成顺序不能改变生产顺序。 |
 | 订单、双面和尺码归组 | `layout_engine/order_groups.py`, `batch_analysis.py`, `size_policy.py` | 排版、比较、报告和安全检查使用同一身份。 |
 | 颜色与生产顺序 | `layout_engine/color_policy.py`, `single_order_sequence.py` | 颜色优先、尺码业务顺序集中维护。 |
 | 普通行和双排行规划 | `layout_engine/planner.py`, `row_optimizer.py`, `single_rows.py` | 入口不得自己拼 Placement。 |
@@ -19,9 +19,9 @@
 | 透明区域搜索 | `layout_engine/transparent_search.py`, `platform_space.py`, `marker_space.py` | 像素读取结果进入测量缓存，不在每个方案重复扫描。 |
 | 膜规格方案比较 | `layout_engine/film_comparison.py`, `film_specs.py` | 比较方案不自动替用户选择生产膜。 |
 | Pillow 渲染 | `layout_engine/pillow_renderer.py` | 与 vips 共享规划和安全契约，不复制排版业务。 |
-| libvips 分块渲染与运行时门禁 | `layout_engine/vips_renderer.py`, `png_codecs/` | 使用浅层画布图和固定快速滤波完成合成编码；外层延迟任务通过共享门禁串行进入，libvips 内部仍可多线程，正常退出前清理缓存并关闭原生线程。 |
+| libvips 分块渲染与运行时门禁 | `layout_engine/vips_renderer.py`, `engine_info.py`, `png_codecs/` | 使用浅层画布图和固定快速滤波完成合成编码；外层延迟任务通过共享门禁串行进入，libvips 内部仍可多线程，正常退出前清理缓存并关闭原生线程。 |
 | 分段输出 | `layout_engine/segmented_output.py`, `atomic_png.py` | 按完整行/订单切分，失败文件不可冒充可打印结果。 |
-| 输出命名与信息 | `layout_engine/output_name.py`, `output_sizes.py`, `output_file_info.py` | 单批、多批、分段统一命名和报告字段。 |
+| 输出命名与完成总结 | `layout_engine/output_name.py`, `output_sizes.py`, `output_file_info.py` | 单批、多批、分段统一订单/件数命名和报告字段；完成弹窗与当前膜表格行只读最终生产结果。 |
 | 订单与刀位安全 | `layout_engine/order_validation.py`, `cut_validation.py`, `marked_pixel_validation.py` | 规划后和真实像素阶段分别核验，不能由 UI 绕过。 |
 | 计划和测量缓存 | `layout_engine/plan_cache.py`, `measurement_cache.py`, `measurement_session.py`, `normal_plan_cache.py`, `cached_planner.py` | 整批计划与单图测量分层缓存；单图缓存不因膜宽、组批或普通软件版本变化而失效，均使用文件指纹和24小时绝对失效策略。 |
 | 仅预览报告 | `layout_engine/preview_result.py`, `output_sizes.py`, `ui/batch_summary.py` | 不渲染、不写打印图片；仍返回完整排版、刀位、单排原因和耗时报告供界面复制。 |
@@ -29,7 +29,7 @@
 | 多批次滚动编排 | `ui/bulk_workbench.py`, `bulk_generation_worker.py` | 外层线程池有空位立即补批次；合并批次复用内部图片线程。 |
 | 主界面进度展示 | `ui/busy_spinner.py`, `operation_timing.py`, `generation_panel.py` | 未知总量用旋转指示，已知总量用真实进度条。 |
 | 错误上下文与复制 | `layout_engine/error_context.py`, `error_parameters.py`, `ui/failure_panel.py` | 所有失败复用完整订单/参数诊断，不散落拼字符串。 |
-| 参数持久化 | `ui/preferences.py`, `preference_autosave.py`, `layout_values.py` | 控件只绑定一个配置键，父项变化同步清理非法子项。 |
+| 参数持久化与模式可见性 | `ui/preferences.py`, `preference_autosave.py`, `layout_values.py`, `developer_mode.py` | 生产排版控件在普通模式可见并生效；开发者模式只控制诊断工具。控件只绑定一个当前配置键，父项变化同步清理非法子项。 |
 | 批次及膜历史 | `history/store.py`, `history/batch_queue.py`, `history/bulk_analysis.py` | 历史格式由存储模块维护，UI不直接写日志文件。 |
 | 源码更新 | `updates/`, `updater.py` | 检查、应用、重启为一个状态机，不要求点击两次。 |
 | 协作取消 | `cancellation.py`, `ui/stop_actions.py`, `thread_lifecycle.py` | 长循环定期检查；停止不关闭应用，关闭可立即退出。 |
