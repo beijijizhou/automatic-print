@@ -50,7 +50,14 @@ def build_settings_navigation(window, source):
     window.combine_bulk_batches.setToolTip(
         '多批次排版时只生成一个排版任务；直接合并原图清单，不先生成各子批次PNG。')
     def platform_defaults(name):
-        if name.strip().casefold() != 's2b':
+        platform = name.strip()
+        if platform == '莆田' and getattr(window, 'developer_mode_enabled', False):
+            window.membrane_gap.setValue(40)
+            window.membrane_gap_enabled.setChecked(True)
+            window.preferences.setValue('layout/membrane_gap_mm', 40)
+            window.preferences.setValue('layout/membrane_gap_enabled', True)
+            return
+        if platform.casefold() != 's2b':
             return
         dual_index = window.cutter_settings.mode.findData('dual')
         if dual_index >= 0:
@@ -68,6 +75,7 @@ def build_settings_navigation(window, source):
         window.preferences.setValue('cutter/quick_mode', False)
         window.preferences.setValue('cutter/rotation_zone', True)
         window.preferences.setValue('cutter/tail_rotation', False)
+    window.apply_platform_defaults = platform_defaults
     window.label_settings.platform.currentTextChanged.connect(platform_defaults)
     platform_defaults(window.label_settings.platform.currentText())
     window.print_settings_tabs = tabs

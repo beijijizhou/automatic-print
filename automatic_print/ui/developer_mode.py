@@ -2,6 +2,28 @@
 from PySide6.QtWidgets import QCheckBox
 
 
+EXPERIMENTAL_PLATFORMS = ('莆田',)
+
+
+def sync_experimental_platforms(window, enabled):
+    canonical = window.label_settings.platform
+    quick = window.automation_home.label_quick_panel.platform
+    combos = (canonical, quick)
+    if enabled:
+        for combo in combos:
+            for name in EXPERIMENTAL_PLATFORMS:
+                if combo.findText(name) < 0:
+                    combo.addItem(name)
+        return
+    if canonical.currentText().strip() in EXPERIMENTAL_PLATFORMS:
+        canonical.setCurrentText('隆丰')
+    for combo in combos:
+        for name in EXPERIMENTAL_PLATFORMS:
+            index = combo.findText(name)
+            if index >= 0:
+                combo.removeItem(index)
+
+
 def developer_task_active(window):
     details = window.automation_home.label_quick_panel.details_dialog
     dialog = getattr(details, 'bulk_dialog', None)
@@ -23,6 +45,8 @@ def build_developer_mode(window, footer):
             checkbox.blockSignals(False)
             return
         window.developer_mode_enabled = enabled
+        sync_experimental_platforms(window, enabled)
+        window.apply_platform_defaults(window.label_settings.platform.currentText())
         window.quick_header_gap_group.setVisible(True)
         window.layout_rules_form.setRowVisible(window.membrane_gap_enabled, True)
         window.layout_rules_form.setRowVisible(window.membrane_gap, True)
@@ -36,7 +60,7 @@ def build_developer_mode(window, footer):
         panel.algorithm_costs_button.setVisible(enabled)
         panel.developer_tools_label.setVisible(enabled)
         panel.source_order.setVisible(enabled)
-        panel.reference_films_label.setVisible(False)
+        panel.reference_films_label.setVisible(enabled)
         window.automation_home.batch_tools.setVisible(enabled)
         panel.summary.film_table.set_reference_mode(enabled)
         window.label_settings.form.setRowVisible(window.label_settings.source_order, enabled)
