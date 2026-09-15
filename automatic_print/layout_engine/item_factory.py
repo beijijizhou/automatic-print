@@ -43,6 +43,7 @@ class LayoutItem:
     left_marker_lift_px: int = 0
     preserve_header_gap: bool = False
     platform_below_marker: bool = False
+    platform_reuse_qr: bool = False
 
 
 def read_items(paths, settings, progress):
@@ -179,6 +180,12 @@ def _make_item(
     from .marker_stack import stacked_coordinates
     block_x, block_y, label_x, label_y, px, py = stacked_coordinates(settings,
         (block_x, block_y, block_width, block_height), (label_x, label_y, label_width, label_height), (px, py, pw, ph))
+    if (settings.platform_reuse_qr and pw and ph and px < width and px+pw > 0
+            and py < height and py+ph > 0):
+        from .marker_space import transparent_rect
+        if not transparent_rect(path, width, height, rotation_degrees,
+                                (px, py, pw, ph)):
+            raise ValueError(f'{path.name}：平台文字没有可复用的二维码透明空位。')
     decorations = [
         (px, py, pw, ph),
         (label_x, label_y, label_width, label_height),
@@ -200,6 +207,7 @@ def _make_item(
         if settings.cutter_left_marker_external and settings.cutter_mode != 'free' else 0,
         settings.preserve_header_gap,
         settings.platform_below_marker,
+        settings.platform_reuse_qr,
     )
 
 

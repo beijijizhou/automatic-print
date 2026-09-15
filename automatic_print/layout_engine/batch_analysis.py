@@ -95,6 +95,17 @@ def distribution_text(report, limit=None):
     return f"{distribution['title']}：{values}{suffix}"
 
 
+def compact_distribution_text(report, limit=None):
+    """Short table text; the column heading already explains the grouping."""
+    distribution = report.get('group_distribution') or group_distribution(report)
+    items = distribution['items']
+    shown = items if limit is None else items[:limit]
+    values = ' · '.join(f'{name} {count}件' for name, count in shown)
+    if len(shown) < len(items):
+        values += f' · +{len(items)-len(shown)}项'
+    return values or '—'
+
+
 def finish_analysis(report, planned, settings, height, baseline):
     result = deepcopy(report)
     placements = {str(path): p for path, p in planned}

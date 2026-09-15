@@ -61,7 +61,10 @@ def load(key):
         if not row or sha256(row[0].encode()).hexdigest() != row[1]:
             return None
         data = json.loads(row[0])
-        planned = [(Path(path), Placement(**p)) for path, p in data['placements']]
+        planned = []
+        for path, placement in data['placements']:
+            placement['cut_knife_xs_px'] = tuple(placement.get('cut_knife_xs_px', ()))
+            planned.append((Path(path), Placement(**placement)))
         labels = {int(k): v for k, v in data['labels'].items()}
         result = planned, labels, data['width'], data['height'], data['baseline']
         return result, data['analysis'], data['knife_mm']

@@ -29,17 +29,21 @@ class BulkGenerationDialog(BulkFilmAnalysisDialog):
         self.preview.overview = True
         self.preview.auto_refresh_enabled = False
         self.preview.detail = '选中批次后显示它的真实排版预览，不混用其他批次。'
+        from .batch_distribution import BatchDistributionLabel
+        self.batch_distribution = BatchDistributionLabel(self)
         scroll = QScrollArea()
         scroll.setWidgetResizable(True)
         scroll.setMinimumHeight(300)
         scroll.setWidget(self.preview)
         from .preview_viewport import PreviewViewport
+        self.layout().addWidget(self.batch_distribution)
         self.layout().addWidget(PreviewViewport(self.preview, scroll))
         self.folders.currentRowChanged.connect(self.show_batch)
 
     def make_worker(self, folders, settings):
         self.payloads.clear()
         self.preview.clear_for_generation()
+        self.batch_distribution.reset()
         parent = self.parent()
         custom = None if parent.output_beside_source.isChecked() else Path(parent.output_location.text().strip())
         if custom is not None and not custom.is_dir():
@@ -73,11 +77,13 @@ class BulkGenerationDialog(BulkFilmAnalysisDialog):
     @Slot(int)
     def show_batch(self, index):
         self.preview.clear_for_generation()
+        self.batch_distribution.reset()
         payload = self.payloads.get(index)
         if not payload:
             self.preview.detail = '此批尚未计算完成；等待本批预览，不显示旧批次。'
             return
         self.preview.batch_payload = payload
+        self.batch_distribution.show_report(payload.get('analysis', {}))
         install_snapshot(self.preview, payload['planned'], payload['labels'],
                          payload['settings'], payload.get('warning', ''))
         name = Path(self.folders.item(index).data(Qt.UserRole)).name

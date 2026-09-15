@@ -57,7 +57,8 @@ def _badge_data(text, target_height):
 def platform_geometry(path, settings, width, height, degrees):
     if not settings.platform_name or not settings.number_images:
         return 0, 0, 0, 0
-    if settings.platform_below_marker and settings.color_block_enabled and settings.platform_font_height_mm > 0:
+    if (settings.platform_below_marker and not settings.platform_reuse_qr
+            and settings.color_block_enabled and settings.platform_font_height_mm > 0):
         target = max(2, mm_to_px(settings.platform_font_height_mm, settings.dpi))
         badge = platform_badge(settings.platform_name, target)
         badge_width = badge.width
@@ -77,9 +78,13 @@ def platform_geometry(path, settings, width, height, degrees):
     badge_width = badge.width
     badge.close()
     gap = mm_to_px(settings.platform_gap_mm, settings.dpi)
-    if settings.platform_below_marker and settings.color_block_enabled:
+    if settings.platform_below_marker and not settings.platform_reuse_qr and settings.color_block_enabled:
         return 0, 0, badge_width, target
-    x = None if settings.preserve_header_gap and degrees % 180 else header_space(path, region, width, height, badge_width, target, gap, degrees)
+    # Developer mode may explicitly reuse verified QR-card space even while
+    # the original header gap is preserved.
+    x = (header_space(path, region, width, height, badge_width, target, gap, degrees)
+         if settings.platform_reuse_qr or not (settings.preserve_header_gap and degrees % 180 == 0)
+         else None)
     if x is None:
         # Never append a wide platform name to the artwork's right edge.
         x = -gap-badge_width

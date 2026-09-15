@@ -38,14 +38,15 @@
 - 旋转与超宽恢复：`rotation_compare.py`、`whole_rotation.py`、`tail_rotation.py`、
   `single_rotation.py`、`width_fit.py`、`gap_fallback.py`。
 - 标签与刀码：`labels.py`、`dynamic_label.py`、`marker_stack.py`、`left_marker.py`、
-  `platform_label.py`、`header_region.py`、`transparent_search.py`。
+  `platform_label.py`、`header_region.py`、`transparent_search.py`。开发者模式的平台文字优先放入
+  原图二维码卡片的已验证空位；找不到安全空位时自动回退外置，不改变普通模式现有位置。
 - 渲染与编码：`pillow_renderer.py`、`vips_renderer.py`、`png_codecs/`、
   `segmented_output.py`、`atomic_png.py`。活动的大图路径使用顶部有限条带测量、平衡行画布图和固定
   UP 滤波；保存计时包含 libvips 延迟合成、编码与写入，不能解释成纯磁盘耗时。多个 Python
   工作线程的 libvips 外层延迟任务由共享门禁协调，原生库内部仍保留并行，并在正常退出时完成清理。
 - 输出安全：`order_validation.py`、`cut_validation.py`、
   `marked_pixel_validation.py`、`printed_guides.py`、`output_file_info.py`。
-- 膜方案与统计：`film_comparison.py`、`film_specs.py`、`metrics.py`、
+- 膜方案与统计：`film_comparison.py` 直接复用当前实际输出行并并行计算其余方案；`film_specs.py`、`metrics.py`、
   `operation_timing.py`、`algorithm_costs.py`。
 - 缓存：`plan_cache.py`、`normal_plan_cache.py`、`cached_planner.py`；单图测量由
   `measurement_cache.py` 持久化，并由 `measurement_session.py` 在任务内共享连接；
@@ -55,6 +56,8 @@
 ## UI 与本地数据
 
 - 设置和持久化：`ui/preferences.py`、`preference_autosave.py`、`layout_values.py`。
+- 批次构成：`ui/batch_distribution.py` 在单批和多批真实预览上方显示当前批次的紧凑尺码群或订单群；
+  膜规格比较表不再承载该信息。
 - 进度、停止和线程生命周期：`ui/busy_spinner.py`、`layout_activity.py`、
   `operation_timing.py`、`stop_actions.py`、`thread_lifecycle.py`、`worker_bridge.py`。
 - 预览：`ui/production_preview.py`、`preview_*`、`pair_preview.py`、

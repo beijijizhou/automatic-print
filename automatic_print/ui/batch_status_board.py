@@ -131,8 +131,8 @@ class BatchStatusBoard(QWidget):
         item = self.items.get(index)
         if item is None:
             return
-        from ..layout_engine.batch_analysis import distribution_text
-        item.setText(3, distribution_text(report, limit=4))
+        from ..layout_engine.batch_analysis import compact_distribution_text, distribution_text
+        item.setText(3, compact_distribution_text(report, limit=4))
         item.setToolTip(3, distribution_text(report))
 
     def currentIndex(self):

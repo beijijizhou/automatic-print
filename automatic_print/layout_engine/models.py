@@ -68,6 +68,7 @@ class LayoutSettings:
     preserve_header_gap: bool = False
     membrane_gap_mm: float = 0  # GUI remembers a value, but a developer-only checkbox gates it.
     platform_below_marker: bool = False  # GUI uses one vertical marker stack.
+    platform_reuse_qr: bool = False  # Experimental: keep platform text inside verified QR-card space.
     cutter_knife_mm: float = 300
     cutter_safety_mm: float = 3
     cutter_marker_offset_mm: float = 0

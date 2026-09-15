@@ -12,10 +12,13 @@ def external_left_item(item):
     image_x = item.image_rx+dx
     if item.platform_below_marker:
         lift = item.image_ry-item.left_marker_lift_px-item.block_ry
-        label_y, platform_y = item.label_ry+lift, item.platform_ry+lift
-        return replace(item, image_rx=image_x, block_rx=0, label_rx=0, platform_rx=0,
+        label_y = item.label_ry+lift
+        platform_x = item.platform_rx+dx if item.platform_reuse_qr else 0
+        platform_y = item.platform_ry if item.platform_reuse_qr else item.platform_ry+lift
+        return replace(item, image_rx=image_x, block_rx=0, label_rx=0, platform_rx=platform_x,
             block_ry=item.image_ry-item.left_marker_lift_px, label_ry=label_y, platform_ry=platform_y,
-            footprint_width=max(image_x+item.width, item.block_width, item.label_width, item.platform_width),
+            footprint_width=max(image_x+item.width, item.block_width, item.label_width,
+                                platform_x+item.platform_width),
             footprint_height=max(item.image_ry+item.height, item.image_ry-item.left_marker_lift_px+item.block_height,
                 label_y+item.label_height if item.label_width else 0,
                 platform_y+item.platform_height if item.platform_width else 0))

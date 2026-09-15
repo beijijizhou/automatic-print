@@ -50,6 +50,7 @@ def _compare_films(paths, settings, progress, production=None):
         progress('膜规格比较', 0, count, f'测量已完成，{count}套方案最多{workers}路计算，不合成图片、不切换生产参数')
     completed = [0]
     normals = NormalPlans(plan_cutter_layout)
+    production_key = _production_key(production, settings)
     def calculate(film, rotation):
             usable = film-settings.riin_left_mm-settings.riin_right_mm
             name = f'{film/10:g} 厘米 · '+('允许旋转' if rotation else '不旋转')
@@ -70,6 +71,10 @@ def _compare_films(paths, settings, progress, production=None):
             try:
                 if usable <= 0:
                     raise ValueError('RIIN 预留之和不小于膜宽')
+                if production_key == (film, rotation):
+                    row.update(_production_values(production, settings))
+                    row['seconds'] = monotonic()-step
+                    return row
                 baseline, normal_config, normal_error = normals.get(
                     film, paths, config, report, (options, labels))
                 if rotation:
@@ -140,23 +145,36 @@ def _apply_production_result(rows, production, settings):
     """Make the current-film row report the exact plan that will be written."""
     if production is None:
         return
-    planned, _labels, _width, height = production[:4]
+    film, rotation = _production_key(production, settings)
+    row = next((item for item in rows if abs(item['film_mm'] - film) < .01
+                and item['rotation_allowed'] == rotation), None)
+    if row is None:
+        return
+    row.update(_production_values(production, settings))
+
+
+def _production_key(production, settings):
+    if production is None:
+        return None
+    planned = production[0]
     film = settings.media_width_mm + settings.riin_left_mm + settings.riin_right_mm
     rotation = bool(
         settings.cutter_rotation_zone or settings.cutter_majority_two_zone
         or settings.cutter_tail_rotation or any(p.rotation_degrees for _, p in planned)
     )
-    row = next((item for item in rows if abs(item['film_mm'] - film) < .01
-                and item['rotation_allowed'] == rotation), None)
-    if row is None:
-        return
+    return film, rotation
+
+
+def _production_values(production, settings):
+    planned, _labels, _width, height = production[:4]
+    film, _rotation = _production_key(production, settings)
     scale = 25.4 / settings.dpi / 1000
     length = height * scale
     image_area = sum(p.width_px * p.height_px for _, p in planned) * scale ** 2
     area = film / 1000 * length
     usable_area = settings.media_width_mm / 1000 * length
     quality = dual_quality(planned, settings)
-    row.update(
+    return dict(
         error='', production_selected=True, length_m=length,
         film_area_m2=area, usable_area_m2=usable_area,
         image_area_m2=image_area,

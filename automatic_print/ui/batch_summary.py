@@ -82,8 +82,6 @@ class BatchSummaryPanel(QGroupBox):
         self.info.setText(f"{folder}\n{report['batch_type']} · {report['order_count']} 个订单组"
                           f" · {report['piece_count']} 件 / {report['image_count']} 张图"
                           f" · {report['double_pairs']} 组双面")
-        from ..layout_engine.batch_analysis import distribution_text
-        self.info.setText(self.info.text()+'\n'+distribution_text(report))
         if report.get('cache', {}).get('hit'):
             self.info.setText(self.info.text()+'\n本地缓存命中：已复用测量、刀位、排版与用膜方案')
         if 'height_m' in report:

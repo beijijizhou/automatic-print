@@ -8,6 +8,7 @@ from automatic_print.layout import LayoutSettings
 from automatic_print.layout_engine.film_comparison import compare_films, comparison_text
 from automatic_print.layout_engine.planner import plan_layout
 from automatic_print.layout_engine import cutter_planner, rotation_zones
+from automatic_print.layout_engine import film_comparison
 
 
 def sources(tmp_path):
@@ -112,3 +113,25 @@ def test_normal_comparison_computes_only_current_widths(tmp_path):
     assert len(result['rows']) == 4
     assert {row['film_mm'] for row in result['rows']} == {450, 600}
     assert '45/60厘米' in comparison_text(result)
+
+
+def test_current_production_scheme_is_not_recalculated(tmp_path, monkeypatch):
+    paths = sources(tmp_path)
+    settings = LayoutSettings(
+        dpi=25.4, cutter_mode='dual', media_width_mm=580,
+        number_images=False, cutter_auto_knife=True,
+        cutter_rotation_zone=True, cutter_majority_two_zone=True,
+    )
+    production = plan_layout(paths, settings, None)
+    original, widths = film_comparison.plan_rotation_zones, []
+
+    def counted(paths, config, *args, **kwargs):
+        widths.append(config.media_width_mm)
+        return original(paths, config, *args, **kwargs)
+
+    monkeypatch.setattr(film_comparison, 'plan_rotation_zones', counted)
+    result = compare_films(paths, settings, production=production)
+    assert widths == [430]
+    selected = [row for row in result['rows'] if row.get('production_selected')]
+    assert len(selected) == 1
+    assert selected[0]['film_mm'] == 600

@@ -49,6 +49,7 @@ def settings_from_window(window) -> LayoutSettings:
         force_small_pair_width=window.cutter_settings.force_small_pair.isChecked(),
         developer_gap_loss=True,
         platform_below_marker=True,
+        platform_reuse_qr=getattr(window, 'developer_mode_enabled', False),
         membrane_gap_mm=(window.membrane_gap.value() if cutting
                          and window.membrane_gap_enabled.isChecked() else 0),
         cutter_left_marker_lift_mm=window.cutter_settings.left_marker_lift.value(),

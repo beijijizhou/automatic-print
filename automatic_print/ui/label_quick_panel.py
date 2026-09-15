@@ -104,9 +104,13 @@ class LabelQuickPanel(QWidget):
         self.preview.plan_loaded.connect(self.summary.show_plan)
         self.preview.analysis_ready.connect(self.analysis.show_report)
         self.preview.analysis_ready.connect(self.summary.show_analysis)
+        from .batch_distribution import BatchDistributionLabel
+        self.batch_distribution = BatchDistributionLabel(self)
+        self.preview.analysis_ready.connect(self.batch_distribution.show_report)
         self.preview.analysis_failed.connect(self.analysis.failed)
         self.preview.analysis_failed.connect(self.summary.show_failure)
         self.preview.analysis_started.connect(self.analysis.clear)
+        self.preview.analysis_started.connect(self.batch_distribution.reset)
         self.preview.analysis_started.connect(lambda: self.summary.start(window.folder.text()))
         self.analysis.source_selected.connect(self._select_analysis_source)
         label.settings_changed.connect(self.preview.schedule_refresh)
@@ -166,6 +170,7 @@ class LabelQuickPanel(QWidget):
         self.preview_tabs.addTab(self.actual_preview_page, '整批排版预览')
         self.preview_tabs.addTab(self.marker_examples, '刀码四种情况')
         self.preview_tabs.setCurrentIndex(1)
+        preview_layout.addWidget(self.batch_distribution)
         preview_layout.addWidget(self.preview_tabs)
         self.preview.detail = '尚未读取批次。选择文件夹或点击“读取当前文件夹”后开始。'
         self.summary.progress.setText('软件已就绪，未读取上次批次。')

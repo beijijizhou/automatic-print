@@ -6,12 +6,12 @@ from ..layout_engine.film_specs import AVAILABLE_WIDTHS, COMPARISON_COUNT, compa
 
 class FilmComparisonTable(QTableWidget):
     def __init__(self, parent=None):
-        super().__init__(COMPARISON_COUNT, 8, parent)
+        super().__init__(COMPARISON_COUNT, 7, parent)
         self.include_references = False
         self.last_comparison = None
         self.last_report = None
         self.setHorizontalHeaderLabels(
-            ['用膜方案', '并排结果', '实际旋转', '长度 / 米', '面积 / ㎡', '图片占位', '可用区占位', '批次构成'])
+            ['用膜方案', '并排结果', '实际旋转', '长度 / 米', '面积 / ㎡', '图片占位', '可用区占位'])
         self.setEditTriggers(QAbstractItemView.NoEditTriggers)
         self.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
         self.horizontalHeader().setSectionResizeMode(0, QHeaderView.ResizeToContents)
@@ -31,7 +31,7 @@ class FilmComparisonTable(QTableWidget):
                  ('（参考）' if film not in AVAILABLE_WIDTHS else '')
                  for film in widths for rotation in (False, True))
         for row, name in enumerate(names):
-            for col, value in enumerate((name, '—', '—', text, '—', '—', '—', '等待批次分析')):
+            for col, value in enumerate((name, '—', '—', text, '—', '—', '—')):
                 self.setItem(row, col, QTableWidgetItem(value))
         self.setToolTip('只比较45/60厘米；不自动切换生产参数；图片占位不是油墨覆盖率。')
 
@@ -46,12 +46,10 @@ class FilmComparisonTable(QTableWidget):
         best_area = min(valid) if valid else 0
         self.setRowCount(len(rows))
         self.clearSpans()
-        from ..layout_engine.batch_analysis import distribution_text
-        distribution = distribution_text(report or {})
         for row, result in enumerate(rows):
             extra = result.get('film_area_m2', 0)-best_area
             if result['error']:
-                values = (result['name'], '—', '—', '无安全方案', '—', '—', '—', '')
+                values = (result['name'], '—', '—', '无安全方案', '—', '—', '—')
             else:
                 name = result['name'] + ('（当前输出）' if result.get('production_selected') else '')
                 values = (name,
@@ -61,7 +59,7 @@ class FilmComparisonTable(QTableWidget):
                           f"{result['length_m']:.3f}",
                           f"{result['film_area_m2']:.3f}",
                           f"{result['image_occupancy_percent']:.1f}%",
-                          f"{result['usable_occupancy_percent']:.1f}%", '')
+                          f"{result['usable_occupancy_percent']:.1f}%")
             for col, value in enumerate(values):
                 if col == 0 and not result.get('available', True):
                     value += '（参考）'
@@ -74,12 +72,6 @@ class FilmComparisonTable(QTableWidget):
                     item.setBackground(QColor('#dcfce7'))
                     item.setForeground(QColor('#166534'))
                 self.setItem(row, col, item)
-        if rows:
-            self.setSpan(0, 7, len(rows), 1)
-            item = QTableWidgetItem(distribution)
-            item.setToolTip(distribution)
-            self.setItem(0, 7, item)
-
     def set_reference_mode(self, enabled):
         self.include_references = False
         self.setMinimumHeight(165)

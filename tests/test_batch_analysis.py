@@ -4,7 +4,7 @@ from pathlib import Path
 from PIL import Image
 
 from automatic_print.layout import LayoutSettings, generate_layout
-from automatic_print.layout_engine.batch_analysis import analyze_batch
+from automatic_print.layout_engine.batch_analysis import analyze_batch, compact_distribution_text
 from automatic_print.layout_engine.planner import plan_layout
 from automatic_print.layout_engine.order_groups import order_key
 from automatic_print.layout_engine.source_metadata import source_size
@@ -36,6 +36,7 @@ def test_batch_counts_garments_not_images_and_normalizes_xxl(tmp_path):
     assert report['sizes']['3XL']==1
     assert report['group_distribution']['kind']=='orders'
     assert ('BMULTI', 2) in report['group_distribution']['items']
+    assert 'BMULTI 2件' in compact_distribution_text(report)
     assert stages[0]['stage']=='文件名分析'
     assert 'width_mm' not in stages[0]['orders'][0]['items'][0]['images'][0]
     assert 'width_mm' in stages[-1]['orders'][0]['items'][0]['images'][0]
@@ -49,6 +50,7 @@ def test_single_single_sizes_stay_together_with_aliases(tmp_path):
     assert report['group_distribution']=={
         'kind':'sizes','title':'单件批次尺码群分布',
         'items':[('S',2),('M',2),('XL',2),('2XL',2)]}
+    assert compact_distribution_text(report) == 'S 2件 · M 2件 · XL 2件 · 2XL 2件'
 
 
 def test_small_image_can_pair_with_large_size_without_breaking_a_double(tmp_path):

@@ -1,7 +1,20 @@
 from pathlib import Path
 from PySide6.QtCore import Qt
 from automatic_print.ui.batch_status_board import BatchStatusBoard
+from automatic_print.ui.batch_distribution import BatchDistributionLabel
 from test_developer_mode import APP
+
+
+def test_compact_distribution_sits_above_preview_without_verbose_copy():
+    label = BatchDistributionLabel()
+    label.show_report({'sizes': {'S': 12, 'M': 8}})
+    assert label.text() == '尺码群：S 12件 · M 8件'
+    assert '单件批次尺码群分布' in label.toolTip()
+    label.show_report({'orders': [
+        {'order': 'ORDER-A', 'pieces': 3},
+        {'order': 'ORDER-B', 'pieces': 1},
+    ]})
+    assert label.text() == '订单群：ORDER-A 3件 · ORDER-B 1件'
 
 
 def test_all_batches_are_visible_in_three_groups_with_live_independent_states(tmp_path):
@@ -23,7 +36,7 @@ def test_all_batches_are_visible_in_three_groups_with_live_independent_states(tm
     before = list(selected)
     board.update_batch(2, '批次预览完成')
     board.update_distribution(2, {'sizes': {'S': 12, 'M': 8}})
-    assert board.items[2].text(3) == '单件批次尺码群分布：S-12、M-8'
+    assert board.items[2].text(3) == 'S 12件 · M 8件'
     assert board.currentIndex() == 2
     assert selected == before  # Moving between groups does not change the preview.
     assert board.items[2].isSelected()

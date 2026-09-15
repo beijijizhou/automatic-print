@@ -24,6 +24,25 @@ def test_explicit_stack_font_does_not_search_membrane_card(monkeypatch):
     assert width > 0
 
 
+def test_platform_badge_reuses_qr_card_when_header_is_preserved(monkeypatch):
+    from automatic_print.layout_engine import platform_label
+    from automatic_print.layout_engine.membrane_region import MembraneRegion
+    region = MembraneRegion(.7, .05, .9, .2)
+    monkeypatch.setattr(platform_label, 'detect_guide_band', lambda _path: region)
+    monkeypatch.setattr(platform_label, 'header_space', lambda *_args: 42)
+    settings = LayoutSettings(
+        dpi=25.4, platform_name='隆丰', platform_font_height_mm=6,
+        platform_below_marker=True, platform_reuse_qr=True,
+        preserve_header_gap=True,
+    )
+    x, _y, width, height = platform_label.platform_geometry(
+        Path('unused.png'), settings, 270, 300, 0,
+    )
+    assert x == 42
+    assert width > 0
+    assert height == 6
+
+
 @pytest.mark.parametrize('mode', ['free', 'single', 'dual'])
 @pytest.mark.parametrize('side', ['left', 'right'])
 @pytest.mark.parametrize('degrees', [0, 90])

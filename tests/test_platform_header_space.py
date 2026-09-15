@@ -4,6 +4,7 @@ from automatic_print.layout import generate_layout
 from automatic_print.layout_engine.cut_guide_geometry import detect_guide_band
 from test_platform_labels import settings, qr_image
 from automatic_print.layout_engine.output_sizes import cutting_report
+from automatic_print.layout_engine.cut_validation import corridor_checks
 
 
 @pytest.mark.parametrize('engine', ['pillow', 'libvips'])
@@ -35,9 +36,10 @@ def test_entire_batch_reuses_header_without_losing_pairs(tmp_path, engine, side)
                 p['platform_y_px']+p['platform_height_px'])
             assert output.crop(box).getchannel('A').getbbox()
         assert all(len(row) == 2 for row in rows.values())
-        corridor = result['cut_corridor']
-        stripe = output.crop((corridor['safe_left_px'], 0, corridor['safe_right_px'], output.height))
-        assert all(pixel[3] == 0 or pixel[:3] == (255, 0, 0) for pixel in stripe.getdata())
+        for corridor in corridor_checks(result['cut_corridor']):
+            stripe = output.crop((corridor['safe_left_px'], corridor.get('start_y_px', 0),
+                corridor['safe_right_px'], corridor.get('end_y_px', output.height)))
+            assert all(pixel[3] == 0 or pixel[:3] == (255, 0, 0) for pixel in stripe.getdata())
         # The renderer independently validates the exact printed dot mask.
     assert result['cut_corridor']['pixel_verified']
     assert result['dual_quality']['paired_rows'] == 6
