@@ -71,7 +71,7 @@ def test_batch_name_is_in_directory_and_png(tmp_path):
 
 def test_same_second_job_uses_new_directory(tmp_path):
     first = batch_output_directory(tmp_path, '批次123', 'JOB_20260913_120000')
-    assert first.parent == tmp_path / '切膜机文件'
+    assert first.parent == tmp_path / '排版日志' / '.处理中'
     assert not first.parent.exists()  # Path calculation does not create folders.
     first.mkdir(parents=True)
     second = batch_output_directory(tmp_path, '批次123', 'JOB_20260913_120000')
@@ -82,22 +82,50 @@ def test_same_second_job_uses_new_directory(tmp_path):
 def test_different_batches_share_cutting_container(tmp_path):
     first = batch_output_directory(tmp_path, '批次123', 'JOB_1')
     second = batch_output_directory(tmp_path, '批次456', 'JOB_2')
-    assert first.parent == second.parent == tmp_path / '切膜机文件'
+    assert first.parent == second.parent == tmp_path / '排版日志' / '.处理中'
     assert first != second
 
 
 def test_finished_directory_matches_png_and_preserves_existing_output(tmp_path):
-    from automatic_print.layout_engine.output_name import finish_output_directory
-    stage = tmp_path/'批次123'
-    stage.mkdir()
+    from automatic_print.layout_engine.output_name import finish_output_files
+    stage = batch_output_directory(tmp_path, '批次123', 'JOB_1')
+    stage.mkdir(parents=True)
     filename = '批次123_批次4单 CY26 M1 M-XL.png'
     Image.new('RGBA',(1,1),'red').save(stage/filename)
-    final = finish_output_directory(stage,filename)
-    assert final.name == filename[:-4]
+    final, mapping = finish_output_files(stage,filename)
+    assert final == tmp_path/'切膜机文件'
+    assert mapping[filename] == filename
     assert (final/filename).is_file() and not stage.exists()
-    stage.mkdir()
+    stage = batch_output_directory(tmp_path, '批次123', 'JOB_2')
+    stage.mkdir(parents=True)
     Image.new('RGBA',(1,1),'blue').save(stage/filename)
-    second = finish_output_directory(stage,filename)
-    assert second.name == final.name+' (2)'
+    second, mapping = finish_output_files(stage,filename)
+    assert second == final and mapping[filename] == filename[:-4]+' (2).png'
     with Image.open(final/filename) as old:
         assert old.getpixel((0,0)) == (255,0,0,255)
+
+
+def test_segment_files_flatten_and_result_names_follow_collision(tmp_path):
+    from automatic_print.layout_engine.output_name import (
+        finish_output_files, remap_result_files,
+    )
+    stage = batch_output_directory(tmp_path, '批次123', 'JOB_3')
+    stage.mkdir(parents=True)
+    names = ['批次123 第001段.png', '批次123 第002段.png']
+    for name in names:
+        Image.new('RGBA', (1, 1), 'red').save(stage/name)
+    print_root = tmp_path/'切膜机文件'
+    print_root.mkdir()
+    Image.new('RGBA', (1, 1), 'blue').save(print_root/names[0])
+    output, mapping = finish_output_files(stage, names)
+    result = {'filename': names[0], 'files': names.copy(),
+              'parts': [{'filename': name} for name in names],
+              'placements': [{'output_filename': names[0]}],
+              'transition_marks': [{'filename': names[1]}]}
+    remap_result_files(result, mapping)
+    assert output == print_root
+    assert result['filename'] == '批次123 第001段 (2).png'
+    assert all((output/name).is_file() for name in result['files'])
+    assert result['parts'][0]['filename'] == result['filename']
+    assert result['placements'][0]['output_filename'] == result['filename']
+    assert result['transition_marks'][0]['filename'] == names[1]

@@ -13,7 +13,7 @@ class BulkGenerationDialog(BulkFilmAnalysisDialog):
         super().__init__(parent)
         self.setWindowTitle('多批次排版 · 独立生成切膜机文件')
         self.layout().itemAt(0).widget().setText(
-            '选择上级目录；每批独立读取、排版、保存PNG及报告，完成一批立即补下一批。')
+            '选择上级目录；每批独立读取和排版，最终PNG集中保存，报告单独进入排版日志。')
         self.start.setText('开始批量排版')
         self.stop.setText('暂停批次')
         self.stop.setToolTip('安全停止，不再启动后续批次；保留已完成文件，暂不支持断点续跑。')
@@ -22,7 +22,7 @@ class BulkGenerationDialog(BulkFilmAnalysisDialog):
             widget = concurrency.itemAt(index).widget()
             if widget:
                 widget.hide()
-        self.status.setText('确认批次及打印参数后直接开始；输出到各批同级的“切膜机文件”。')
+        self.status.setText('确认批次及打印参数后直接开始；“切膜机文件”内只保存最终PNG。')
         self.results.setMaximumHeight(180)
         self.payloads = {}
         self.preview = PairProductionPreview(parent._layout_settings, self)
@@ -99,7 +99,7 @@ class BulkGenerationDialog(BulkFilmAnalysisDialog):
         self.results.setPlainText('\n\n'.join(lines))
         self.status.setText(f"{'已停止' if result['stopped'] else '已完成'} · "
                            f"已生成{len(result['records'])}批 · 失败{len(result['errors'])}批 · "
-                           f"总耗时{result['seconds']:.2f}秒；各批文件夹内含排版报告。")
+                           f"总耗时{result['seconds']:.2f}秒；排版报告保存在独立日志文件夹。")
 
     def set_busy(self, busy):
         super().set_busy(busy)

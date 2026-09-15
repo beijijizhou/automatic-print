@@ -1,8 +1,5 @@
 from __future__ import annotations
 
-import json
-from dataclasses import asdict
-from datetime import datetime
 from pathlib import Path
 
 from PySide6.QtCore import QObject, Signal, Slot
@@ -107,22 +104,15 @@ class GenerateWorker(QObject):
                 self._save_history(result)
                 self.finished.emit("", result)
                 return
-            from ..layout_engine.output_name import finish_output_directory
-            self._progress('整理输出文件夹',0,1,'按输出图片名称保存文件夹')
-            self.output = finish_output_directory(self.output,result['filename'])
-            marker = self.output/marker.name
-            self._progress('整理输出文件夹',1,1,str(self.output))
-            manifest = {
-                "job_id": self.job_id,
-                "created_at": datetime.now().astimezone().isoformat(),
-                "source_folder": str(self.source),
-                "settings": asdict(self.settings),
-                "source_count": len(self.images),
-                "print_image": result,
-            }
-            (self.output / "manifest.json").write_text(
-                json.dumps(manifest, indent=2), encoding="utf-8"
+            from ..layout_engine.output_name import (
+                finish_output_files, output_log_path, remap_result_files,
             )
+            self._progress('整理输出文件夹',0,1,'将合格排版图移入切膜机文件')
+            marker.unlink(missing_ok=True)
+            files = result.get('files') or [result['filename']]
+            self.output, mapping = finish_output_files(self.output, files)
+            remap_result_files(result, mapping)
+            self._progress('整理输出文件夹',1,1,str(self.output))
             report_text = timing_report(result['operation_timings'])
             if 'actual_save_parallelism' in result:
                 report_text += (f"\n分段保存：{result['segment_count']} 个文件 · 同时处理 {result['actual_save_parallelism']} 段"
@@ -133,9 +123,12 @@ class GenerateWorker(QObject):
                     '计时从文件名扫描开始，到批次信息整理完成',
                     '本段计时从复用整批排版开始，到本段信息整理完成')
             combined = cutting_report(result) + '\n\n耗时与并行处理\n' + report_text
-            (self.output / '排版报告.txt').write_text(combined, encoding='utf-8')
+            try:
+                output_log_path(self.output, result['filename']).write_text(combined, encoding='utf-8')
+            except OSError as error:
+                result['log_warning'] = f'排版图已完成，但日志保存失败：{error}'
+                self.progress.emit('日志保存失败', 0, 0, result['log_warning'])
             self._save_history(result)
-            marker.unlink(missing_ok=True)
         except TaskCancelled:
             self.timings_ready.emit(self.timing.finish('已停止'))
             self.cancelled.emit()

@@ -160,7 +160,7 @@ class MainWindow(
         form.addRow("任务保存位置", output_row)
         self.job_path = QLineEdit()
         self.job_path.setReadOnly(True)
-        form.addRow("本次任务文件夹", self.job_path)
+        form.addRow("切膜机文件位置", self.job_path)
         self.progress = QProgressBar()
         self.progress.setRange(0, 100)
         self.progress.setFormat("尚未开始")

@@ -4,6 +4,7 @@ import os
 os.environ.setdefault('QT_QPA_PLATFORM', 'offscreen')
 
 from PySide6.QtWidgets import QApplication
+from PIL import Image
 from automatic_print.history.store import save_run, load_runs, export_csv
 from automatic_print.layout import LayoutSettings
 from automatic_print.layout_engine.film_comparison import compare_films
@@ -60,17 +61,23 @@ def test_history_failures_do_not_block_finished_production(tmp_path, monkeypatch
     import automatic_print.history.store as store
     import automatic_print.ui.workers as workers
     monkeypatch.setattr(store, 'save_run', lambda *_a, **_k: (_ for _ in ()).throw(OSError('disk unavailable')))
-    monkeypatch.setattr(workers, 'generate_layout',
-                        lambda *_a, **_k: {'analysis': {}, 'filename': tmp_path.name+'.png'})
+    filename = tmp_path.name+'.png'
+    def generated(_images, output, *_a, **_k):
+        Image.new('RGBA', (1, 1), 'blue').save(output/filename)
+        return {'analysis': {}, 'filename': filename}
+    monkeypatch.setattr(workers, 'generate_layout', generated)
     monkeypatch.setattr(workers, 'cutting_report', lambda *_a: 'report')
-    worker = GenerateWorker([], tmp_path, tmp_path, 'job', LayoutSettings())
+    from automatic_print.layout_engine.output_name import batch_output_directory
+    worker = GenerateWorker([], tmp_path, batch_output_directory(tmp_path, tmp_path.name, 'job'),
+                            'job', LayoutSettings())
     finished, failed = [], []
     worker.finished.connect(lambda output, result: finished.append(result))
     worker.failed.connect(failed.append)
     worker.run()
     assert not failed and len(finished) == 1
     assert 'disk unavailable' in finished[0]['history_warning']
-    assert (tmp_path/'manifest.json').exists()
+    assert not list((tmp_path/'切膜机文件').glob('*.json'))
+    assert list((tmp_path/'切膜机文件').glob('*.png'))
 
 
 def test_disabled_comparison_creates_no_history_database(tmp_path):
@@ -85,9 +92,14 @@ def test_successful_worker_appends_one_record_and_stopped_task_does_not(tmp_path
     settings = LayoutSettings(dpi=25.4, media_width_mm=580, number_images=False)
     result = {'filename': tmp_path.name+'.png',
               'analysis': {'film_comparison': compare_films(sources(tmp_path), settings)}}
-    monkeypatch.setattr(workers, 'generate_layout', lambda *_a, **_k: result)
+    def generated(_images, output, *_a, **_k):
+        Image.new('RGBA', (1, 1), 'blue').save(output/result['filename'])
+        return result
+    monkeypatch.setattr(workers, 'generate_layout', generated)
     monkeypatch.setattr(workers, 'cutting_report', lambda *_a: 'report')
-    worker = GenerateWorker([], tmp_path, tmp_path, 'completed', settings)
+    from automatic_print.layout_engine.output_name import batch_output_directory
+    worker = GenerateWorker([], tmp_path, batch_output_directory(tmp_path, tmp_path.name, 'completed'),
+                            'completed', settings)
     worker.run()
     assert len(load_runs()) == 1
     stopped = GenerateWorker([], tmp_path, tmp_path, 'stopped', settings)

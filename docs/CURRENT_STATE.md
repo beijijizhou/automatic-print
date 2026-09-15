@@ -17,6 +17,8 @@
   快照；DPI、尺寸、膜标签位置和各方向刀码占位在后续方案与报告中直接复用。
 - 生成完成弹窗由 `layout_engine/output_file_info.py` 汇总最终生产结果；膜规格表把当前膜行替换为
   同一最终计划的真实统计，输出名由 `layout_engine/output_name.py` 同时写入订单数和件数。
+- `layout_engine/output_name.py` 统一管理输出落点：生成期间写入 `排版日志/.处理中` 隔离目录，
+  安全检查完成后把最终PNG扁平移入 `切膜机文件`；文本报告保存在平级 `排版日志`，不写输出JSON。
 - 多批次生成编排：`automatic_print/ui/bulk_workbench.py`、
   `bulk_generation_worker.py`、`batch_status_board.py`。
 

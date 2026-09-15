@@ -59,15 +59,16 @@ def test_nested_outputs_preserve_source_tree_and_do_not_merge_parent_images(tmp_
     worker.run()
     assert len(scans[0]['batches']) == 3 and not results[0]['errors']
     assert {Path(r['folder']) for r in results[0]['records']} == set(folders)
-    output_root = (base or tmp_path)/'切膜机文件'/'HL'
+    output_root = (base or tmp_path)/'切膜机文件'
     for record in results[0]['records']:
         source, output = Path(record['folder']), Path(record['output'])
-        assert output.parent == output_root/source.relative_to(root)
+        assert output == output_root
         assert record['result']['order_check'] and record['result']['cut_corridor']['pixel_verified']
         assert len(record['result']['placements']) == 12
-        assert (output/record['result']['filename']).is_file()
-        assert (output/'排版报告.txt').is_file()
-        assert not (output/'批次未完成，禁止打印.txt').exists()
+        filename = record['result']['filename']
+        assert (output/filename).is_file()
+        assert list(((base or tmp_path)/'排版日志').glob(f'{Path(filename).stem}_排版报告*.txt'))
+        assert not list(output.glob('*.json'))
 
 
 def test_s2b_size_batches_share_one_output_parent(tmp_path,monkeypatch):
@@ -86,14 +87,15 @@ def test_s2b_size_batches_share_one_output_parent(tmp_path,monkeypatch):
     worker.run()
     assert not results[0]['errors'] and len(results[0]['records'])==3
     assert worker.original_settings.platform_name=='S2B'
-    output_root=tmp_path/'切膜机文件'/'S2B批次'
+    output_root=tmp_path/'切膜机文件'
     outputs=[Path(record['output']) for record in results[0]['records']]
-    assert all(output.parent==output_root for output in outputs)
-    assert len({output.name for output in outputs})==3
-    assert any('3XL' in output.name for output in outputs)
+    assert set(outputs)=={output_root}
+    assert len({record['result']['filename'] for record in results[0]['records']})==3
+    assert any('3XL' in record['result']['filename'] for record in results[0]['records'])
     for record,output in zip(results[0]['records'],outputs):
-        assert (output/record['result']['filename']).is_file()
-        assert (output/'排版报告.txt').is_file()
+        filename=record['result']['filename']
+        assert (output/filename).is_file()
+        assert list((tmp_path/'排版日志').glob(f'{Path(filename).stem}_排版报告*.txt'))
 
 
 def test_multiple_folders_can_be_planned_as_one_virtual_batch(tmp_path,monkeypatch):
@@ -128,9 +130,9 @@ def test_multiple_folders_can_be_planned_as_one_virtual_batch(tmp_path,monkeypat
     assert {event[1] for event in source_events}=={str(folder) for folder in source_folders}
     assert all(event[3]<=event[4] for event in source_events)
     output=Path(results[0]['records'][0]['output'])
-    assert output.parent==tmp_path/'切膜机文件'/'HL'
+    assert output==tmp_path/'切膜机文件'
     assert (output/result['filename']).is_file()
-    assert (output/'排版报告.txt').is_file()
+    assert list((tmp_path/'排版日志').glob(f"{Path(result['filename']).stem}_排版报告*.txt"))
 
 
 def test_combined_status_keeps_child_folders_visible(tmp_path):

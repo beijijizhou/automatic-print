@@ -39,17 +39,15 @@ class BulkGenerationWorker(QObject):
     def calculate(self, index, folder):
         self.cancellation.check()
         job = datetime.now().strftime('JOB_%Y%m%d_%H%M%S')+'_'+uuid4().hex[:8]
-        base, parts = self.custom_base or folder.parent, ()
+        base = self.custom_base or folder.parent
         if self.source_root is not None:
             base = self.custom_base or self.source_root.parent
             relative = folder.relative_to(self.source_root).parts
             grouped = self.group_outputs
-            parts = (self.source_root.name,) if grouped else (
-                ((self.source_root.name,) if self.source_root.name else ())+relative)
             batch_name = ' - '.join(relative) if grouped and relative else folder.name
         else:
             batch_name = folder.name
-        output = batch_output_directory(base, batch_name, job, parts)
+        output = batch_output_directory(base, batch_name, job)
         images = self.inventory[folder]['images'] if folder in self.inventory else None
         worker = GenerateWorker(images, folder, output, job, self.settings,
                                 preview_only=self.preview_only,batch_name=batch_name)

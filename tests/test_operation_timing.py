@@ -33,7 +33,6 @@ def test_exclusive_timings_accumulate_repeated_phases_and_freeze():
 
 
 def test_worker_reports_scan_through_output_and_persists_timings(tmp_path):
-    import json
     source = tmp_path/'batch123'
     source.mkdir()
     for i in range(3):
@@ -53,10 +52,10 @@ def test_worker_reports_scan_through_output_and_persists_timings(tmp_path):
             '合成像素安全检查', '膜标签与辅助线处理', '保存输出图片'} <= set(names)
     assert abs(sum(s['seconds'] for s in result['steps'])-result['total_seconds']) < .01
     assert result['status'] == '已完成'
-    manifest = json.loads((worker.output/'manifest.json').read_text())
-    assert manifest['print_image']['operation_timings'] == result
     assert updates[-1] == result
-    report = (worker.output/'排版报告.txt').read_text()
+    assert worker.output == tmp_path/'切膜机文件'
+    assert not list(worker.output.glob('*.json'))
+    report = next((tmp_path/'排版日志').glob('*_排版报告*.txt')).read_text()
     assert '扫描文件名' in report and '最耗时步骤' in report
     assert '耗时与并行处理' in report
     assert '输出文件信息' in report

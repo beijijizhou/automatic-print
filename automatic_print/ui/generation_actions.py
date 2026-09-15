@@ -50,7 +50,8 @@ class GenerationActionsMixin:
         output = batch_output_directory(base, source.resolve().name, job_id)
         self.preferences.setValue("source_location", str(source))
         self.preferences.setValue("output_location", str(base))
-        self.job_path.setText(str(output))
+        self.active_staging_output = output
+        self.job_path.setText(str(base/'切膜机文件'))
         self.status.setText('正在开始：后台扫描图片文件名，再读取尺寸与排版…')
         self.current_file.setText("当前文件：—")
         self.progress.setValue(0)
@@ -59,7 +60,7 @@ class GenerationActionsMixin:
         self.run_log.clear()
         self.run_log.appendPlainText(f"任务：{job_id}")
         self.run_log.appendPlainText('正在后台扫描图片文件名…')
-        self.run_log.appendPlainText(f"输出位置：{output}")
+        self.run_log.appendPlainText(f"输出位置：{base/'切膜机文件'}")
         self.generate_button.setEnabled(False)
         self.stop_generation_button.setEnabled(True)
         self.started_at = time.monotonic()
@@ -159,7 +160,7 @@ class GenerationActionsMixin:
     def _saving_detail(self) -> str:
         if self.current_stage != "保存图片":
             return ""
-        path = Path(self.job_path.text()) / getattr(self, "active_output_filename", "")
+        path = Path(getattr(self, 'active_staging_output', self.job_path.text())) / getattr(self, "active_output_filename", "")
         size = path.stat().st_size if path.is_file() else 0
         return f" · 已写入 {file_size_text(size)}"
     @Slot()

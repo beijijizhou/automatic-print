@@ -22,7 +22,7 @@
 | Pillow 渲染 | `layout_engine/pillow_renderer.py` | 与 vips 共享规划和安全契约，不复制排版业务。 |
 | libvips 分块渲染与运行时门禁 | `layout_engine/vips_renderer.py`, `engine_info.py`, `png_codecs/` | 使用浅层画布图和固定快速滤波完成合成编码；外层延迟任务通过共享门禁串行进入，libvips 内部仍可多线程，正常退出前清理缓存并关闭原生线程。 |
 | 分段输出 | `layout_engine/segmented_output.py`, `atomic_png.py` | 按完整行/订单切分，失败文件不可冒充可打印结果。 |
-| 输出命名与完成总结 | `layout_engine/output_name.py`, `output_sizes.py`, `output_file_info.py` | 单批、多批、分段统一订单/件数命名和报告字段；完成弹窗与当前膜表格行只读最终生产结果。 |
+| 输出命名与完成总结 | `layout_engine/output_name.py`, `output_sizes.py`, `output_file_info.py` | 单批、多批、分段统一订单/件数命名和报告字段；最终PNG扁平移入`切膜机文件`，文本报告进入平级`排版日志`，不生成输出JSON。 |
 | 订单与刀位安全 | `layout_engine/order_validation.py`, `cut_validation.py`, `marked_pixel_validation.py` | 规划后和真实像素阶段分别核验，不能由 UI 绕过。 |
 | 计划和测量缓存 | `layout_engine/plan_cache.py`, `measurement_cache.py`, `measurement_session.py`, `normal_plan_cache.py`, `cached_planner.py` | 整批计划与单图测量分层缓存；单图缓存不因膜宽、组批或普通软件版本变化而失效，均使用文件指纹和24小时绝对失效策略。 |
 | 仅预览报告 | `layout_engine/preview_result.py`, `output_sizes.py`, `ui/batch_summary.py` | 不渲染、不写打印图片；仍返回完整排版、刀位、单排原因和耗时报告供界面复制。 |

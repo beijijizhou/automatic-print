@@ -2,7 +2,6 @@ import os
 os.environ.setdefault('QT_QPA_PLATFORM', 'offscreen')
 from pathlib import Path
 from dataclasses import replace
-import json
 import numpy as np
 import pytest
 from PIL import Image
@@ -36,12 +35,11 @@ def test_normal_bulk_generates_independent_complete_batches(tmp_path, monkeypatc
     assert worker.settings.save_parallelism == 1
     for record in result['records']:
         output, folder, data = Path(record['output']), Path(record['folder']), record['result']
-        assert output.parent == tmp_path/'切膜机文件'
-        assert folder.name in output.name and folder.name in data['filename']
-        assert (output/'排版报告.txt').is_file()
-        assert not (output/'批次未完成，禁止打印.txt').exists()
+        assert output == tmp_path/'切膜机文件'
+        assert folder.name in data['filename']
+        assert list((tmp_path/'排版日志').glob(f"{Path(data['filename']).stem}_排版报告*.txt"))
         assert not list(output.glob('*.未完成'))
-        assert json.loads((output/'manifest.json').read_text())['source_count'] == 12
+        assert not list(output.glob('*.json'))
         assert data['order_check'] and data['cut_corridor']['pixel_verified']
         with Image.open(output/data['filename']) as image:
             for p in data['placements']:
@@ -51,6 +49,7 @@ def test_normal_bulk_generates_independent_complete_batches(tmp_path, monkeypatc
                     p['x_px']+original.shape[1], p['y_px']+original.shape[0])))
                 mask = original[:, :, 3] > 0
                 assert np.array_equal(rendered[mask], original[mask])
+    assert all(path.suffix.lower() == '.png' for path in (tmp_path/'切膜机文件').iterdir())
 
 
 def test_normal_entry_and_active_task_protection(tmp_path, monkeypatch):

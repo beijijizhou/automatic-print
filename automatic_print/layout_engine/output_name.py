@@ -1,5 +1,6 @@
 """Portable output names derived from rendered label text."""
 import re
+from pathlib import Path
 
 
 def order_quantity(paths, scope="批次"):
@@ -52,26 +53,61 @@ def batch_directory_name(batch_name, job_id):
     return label_output_name(batch_name)[:-4]
 
 
-def finish_output_directory(directory, filename):
-    """Name the completed directory after its PNG, preserving old outputs."""
-    from pathlib import Path
-    name = Path(filename).stem
-    target, index = directory.parent/name, 2
-    if target == directory:
-        return directory
+def finish_output_files(directory, filename):
+    """Move verified PNGs from log staging into the flat print directory."""
+    directory = Path(directory)
+    staged = directory.parent.name == '.处理中' and directory.parent.parent.name == '排版日志'
+    log_root = directory.parent.parent if staged else directory.parent/'排版日志'
+    base = log_root.parent if staged else directory.parent
+    print_root = base/'切膜机文件'
+    print_root.mkdir(parents=True, exist_ok=True)
+    names = [filename] if isinstance(filename, str) else list(filename)
+    mapping = {}
+    for name in names:
+        source = directory/name
+        if not source.is_file():
+            raise ValueError(f'完成输出时找不到排版文件：{source}')
+        target = unused_output_path(print_root, name)
+        source.replace(target)
+        mapping[name] = target.name
+    directory.rmdir()
+    try:
+        directory.parent.rmdir()
+    except OSError:
+        pass
+    return print_root, mapping
+
+
+def output_log_path(print_root, filename, kind='排版报告'):
+    log_root = Path(print_root).parent/'排版日志'
+    log_root.mkdir(parents=True, exist_ok=True)
+    target = log_root/f'{Path(filename).stem}_{kind}.txt'
+    index = 2
     while target.exists():
-        target = directory.parent/f'{name} ({index})'
+        target = log_root/f'{Path(filename).stem}_{kind} ({index}).txt'
         index += 1
-    return directory.rename(target)
+    return target
 
 
-def batch_output_directory(base, batch_name, job_id, relative_parts=()):
-    base = base / "切膜机文件"
-    for part in relative_parts:
-        if part in ('', '.', '..') or '/' in part or '\\' in part:
-            raise ValueError('输出目录层级无效')
-        base = base / part
-    name = batch_directory_name(batch_name, job_id)
+def remap_result_files(result, mapping):
+    result['filename'] = mapping.get(result['filename'], result['filename'])
+    if 'files' in result:
+        result['files'] = [mapping.get(name, name) for name in result['files']]
+    for part in result.get('parts', ()):
+        part['filename'] = mapping.get(part['filename'], part['filename'])
+    for placement in result.get('placements', ()):
+        name = placement.get('output_filename')
+        if name:
+            placement['output_filename'] = mapping.get(name, name)
+    for mark in result.get('transition_marks', ()):
+        name = mark.get('filename')
+        if name:
+            mark['filename'] = mapping.get(name, name)
+
+
+def batch_output_directory(base, batch_name, job_id):
+    base = base/'排版日志'/'.处理中'
+    name = label_output_name(f'{batch_directory_name(batch_name, job_id)}_{job_id}')[:-4]
     path, index = base / name, 2
     while path.exists():
         path = base / f"{name} ({index})"
