@@ -34,8 +34,7 @@ from .preference_autosave import PreferenceAutosave
 from .generation_preview import GenerationPreviewController
 from .update_actions import UpdateActionsMixin
 from .worker_bridge import MainWindowWorkerBridge
-
-
+from .busy_spinner import BusySpinner
 class MainWindow(
     PreferencesMixin,
     GenerationActionsMixin,
@@ -167,6 +166,7 @@ class MainWindow(
         self.progress = QProgressBar()
         self.progress.setRange(0, 100)
         self.progress.setFormat("尚未开始")
+        self.busy_spinner = BusySpinner(self)
         self.status = QLabel("请选择包含图片的文件夹。")
         self.current_file = QLabel("当前文件：—")
         self.run_log = QPlainTextEdit()

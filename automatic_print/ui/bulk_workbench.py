@@ -5,6 +5,7 @@ from PySide6.QtWidgets import QFileDialog
 from .batch_status_board import BatchStatusBoard
 from .folder_dialog_paths import image_dialog_start, remember_image_directory
 from .bulk_generation_worker import BulkGenerationWorker
+from .busy_spinner import show_busy, show_progress
 
 
 def open_bulk(window):
@@ -116,11 +117,15 @@ class BulkWorkbench(QObject):
 
     def show_stage(self, index):
         stage, current, total, filename = self.stages[index]
-        self.window.progress.setRange(0, 100 if total else 0)
         if total:
+            show_progress(self.window)
+            self.window.progress.setRange(0, 100)
             self.window.progress.setValue(round(current / total * 100))
-        self.window.progress.setFormat(stage+' · %p%' if total else stage+' · 进行中')
-        self.window.status.setText(f'{self.folders[index].name} · {stage} · {current}/{total}')
+            self.window.progress.setFormat(stage+' · %p%')
+        else:
+            show_busy(self.window)
+        amount = f'{current}/{total}' if total else '进行中'
+        self.window.status.setText(f'{self.folders[index].name} · {stage} · {amount}')
         self.window.current_file.setText('当前文件：'+filename)
         self.window.generation_preview.progress(stage, current, total, filename)
 
@@ -129,7 +134,7 @@ class BulkWorkbench(QObject):
         if index < 0:
             self.window.status.setText(f'{stage} · 已检查{current}个目录')
             self.window.current_file.setText('当前目录：'+filename)
-            self.window.progress.setRange(0, 0)
+            show_busy(self.window)
             return
         self.stages[index] = stage, current, total, filename
         self.selector.update_batch(index, stage, current, total, filename)
@@ -167,6 +172,10 @@ class BulkWorkbench(QObject):
                 stage = self.stages.get(index, ('未执行', 0, 0, ''))
                 self.selector.update_batch(index, *stage, group='未完成')
         self.window.generation_preview.end()
+        show_progress(self.window)
+        self.window.progress.setRange(0, 100)
+        self.window.progress.setValue(100 if not result['stopped'] else 0)
+        self.window.progress.setFormat('已停止' if result['stopped'] else '100% — 已完成')
         self.window.stop_generation_button.setEnabled(False)
         text = (f"{'已停止' if result['stopped'] else '已完成'} · 成功{len(result['records'])}批"
                 f" · 失败{len(result['errors'])}批 · 总耗时{result['seconds']:.2f}秒")

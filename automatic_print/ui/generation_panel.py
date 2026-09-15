@@ -13,8 +13,13 @@ def build_data_panel(window, summary, timings):
     timings.setStyleSheet('QGroupBox#integratedTimings { border: none; margin: 0; '
                          'padding: 0; background: transparent; }')
     left = QVBoxLayout()
-    for widget in (summary.info, summary.metrics, summary.progress, window.progress,
-                   window.status, window.current_file):
+    for widget in (summary.info, summary.metrics, summary.progress):
+        left.addWidget(widget)
+    activity = QHBoxLayout()
+    activity.addWidget(window.busy_spinner)
+    activity.addWidget(window.progress, 1)
+    left.addLayout(activity)
+    for widget in (window.status, window.current_file):
         left.addWidget(widget)
     window.status.setWordWrap(True)
     window.current_file.setWordWrap(True)

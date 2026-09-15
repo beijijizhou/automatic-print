@@ -26,6 +26,8 @@ class GenerationPreviewController(QObject):
         bridge.layout_cancelled.connect(self.cancelled)
 
     def start(self, mode='single'):
+        from .busy_spinner import show_busy
+        show_busy(self.window)
         self.window.layout_activity.start(mode)
         self.panel.marker_examples.clear_batch()
         bulk = getattr(self.window, 'bulk_controller', None)
@@ -104,6 +106,8 @@ class GenerationPreviewController(QObject):
         self.preview.update()
 
     def end(self, *_args):
+        from .busy_spinner import show_progress
+        show_progress(self.window)
         self.window.layout_activity.stop()
         self.panel.summary.progress.show()
         self.preview.production_active = False

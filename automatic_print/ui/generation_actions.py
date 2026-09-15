@@ -12,6 +12,7 @@ from .workers import GenerateWorker
 from .layout_values import settings_from_window
 from .output_location import output_base
 from .progress_format import duration_text, file_size_text
+from .busy_spinner import show_busy, show_progress
 from .thread_lifecycle import (
     defer_finished_thread_cleanup,
     discard_stopped_thread,
@@ -54,6 +55,7 @@ class GenerationActionsMixin:
         self.current_file.setText("当前文件：—")
         self.progress.setValue(0)
         self.progress.setFormat("正在开始…")
+        show_busy(self)
         self.run_log.clear()
         self.run_log.appendPlainText(f"任务：{job_id}")
         self.run_log.appendPlainText('正在后台扫描图片文件名…')
@@ -98,16 +100,17 @@ class GenerationActionsMixin:
         self, stage: str, current: int, total: int, filename: str
     ) -> None:
         filename=filename.split('\t',1)[-1]
+        ratio = current / total if total else 0
         if stage == '扫描文件夹':
             percent = 0
         elif stage in {"分析批次", "读取图片尺寸", "测量标签与刀码"}:
-            percent = round(current / total * 20) if stage == "分析批次" else 20 + round(current / total * 25)
+            percent = round(ratio * 20) if stage == "分析批次" else 20 + round(ratio * 25)
         elif stage in {'识别膜标签', '膜规格比较'}:
             percent = 45
         elif stage in {"整理双面图片", "切膜安全检查", "计算排版", "计算批次刀位", "批次刀位已确定", "比较旋转区域"}:
             percent = 45
         elif stage == "合成图片":
-            percent = 45 + round(current / total * 45)
+            percent = 45 + round(ratio * 45)
         else:
             percent = 95
         if stage != self.current_stage:
@@ -116,14 +119,12 @@ class GenerationActionsMixin:
         self.current_stage = stage
         self.current_count = current
         self.current_total = total
-        if stage == '扫描文件夹':
-            self.progress.setRange(0, 0)
-            self.progress.setFormat('正在扫描图片文件名…')
-        elif stage == "保存图片":
+        if stage == "保存图片":
             self.active_output_filename = filename
-            self.progress.setRange(0, 0)
-            self.progress.setFormat("正在保存图片…")
+        if not total:
+            show_busy(self)
         else:
+            show_progress(self)
             self.progress.setRange(0, 100)
             self.progress.setValue(percent)
             self.progress.setFormat(f"{percent}% — {stage}")
@@ -174,6 +175,7 @@ class GenerationActionsMixin:
     def generation_finished(self, output: str, result: dict) -> None:
         self.clock.stop()
         if result.get("preview_only"):
+            show_progress(self)
             self.progress.setRange(0, 100)
             self.progress.setValue(100)
             self.progress.setFormat("预览完成")
@@ -184,6 +186,7 @@ class GenerationActionsMixin:
             return
         timings = result["timings_seconds"]
         self.job_path.setText(output)
+        show_progress(self)
         self.progress.setRange(0, 100)
         self.progress.setValue(100)
         self.progress.setFormat("100% — 已完成")
@@ -219,6 +222,7 @@ class GenerationActionsMixin:
     @Slot(str)
     def generation_failed(self, message: str) -> None:
         self.clock.stop()
+        show_progress(self)
         self.progress.setRange(0, 100)
         self.progress.setFormat("生成失败")
         self.status.setText('生成失败；请查看报错诊断区。')
@@ -231,6 +235,7 @@ class GenerationActionsMixin:
     @Slot()
     def generation_cancelled(self) -> None:
         self.clock.stop()
+        show_progress(self)
         self.progress.setRange(0, 100)
         self.progress.setFormat("已停止")
         self.status.setText("当前排版已安全停止，已经完成的文件会保留。")
