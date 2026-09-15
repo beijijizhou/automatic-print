@@ -12,14 +12,18 @@ from .units import build_units
 from .color_policy import order_color_key
 
 
-def plan_adaptive_knife_zones(paths, settings, progress):
+def plan_adaptive_knife_zones(paths, settings, progress, prepared=None):
     """Keep the pairable majority together and rotate complete leftovers."""
     if settings.cutter_mode != 'dual' or not settings.cutter_auto_knife:
         raise ValueError('多数双排分区只适用于自动双刀模式。')
     base = replace(settings, cutter_rotation_zone=False, cutter_tail_rotation=False,
                    allow_rotation=False)
     paths = ordered_paths(paths)
-    options, labels = read_cutter_items(paths, base, progress)
+    if prepared:
+        options, labels, prepared_rotated_items, prepared_rotated_labels = prepared
+    else:
+        options, labels = read_cutter_items(paths, base, progress)
+        prepared_rotated_items = prepared_rotated_labels = None
     items = {row[0].path: row[0] for row in options}
     lanes = _lanes(replace(base, cutter_auto_knife=False,
                            cutter_knife_mm=base.media_width_mm/2),
@@ -55,7 +59,12 @@ def plan_adaptive_knife_zones(paths, settings, progress):
 
     from .rotation_zones import _rotated, rotation_items
     from .transition_marks import rotation_marker_item
-    rotated_items, rotated_labels = rotation_items(rotated_paths, base, progress)
+    if prepared_rotated_items is None:
+        rotated_items, rotated_labels = rotation_items(rotated_paths, base, progress)
+    else:
+        rotated_items = {path: prepared_rotated_items[path] for path in rotated_paths
+                         if path in prepared_rotated_items}
+        rotated_labels = prepared_rotated_labels
     full_width = mm_to_px(base.media_width_mm, base.dpi)
     safety = mm_to_px(base.cutter_safety_mm, base.dpi)
     # A non-pairable item belongs in the second zone even when rotating it would

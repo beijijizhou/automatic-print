@@ -70,7 +70,12 @@ def compare_rotation(paths, settings, progress, analysis, analysis_ready):
             normal, rotated = normal.result(), rotated.result()
     if settings.cutter_majority_two_zone:
         from .adaptive_knife import plan_adaptive_knife_zones
-        adaptive = checked(plan_adaptive_knife_zones, settings, progress)
+        def adaptive_plan(paths, config, report):
+            return plan_adaptive_knife_zones(
+                paths, config, report,
+                prepared=(options, labels, rotated_items, rotated_labels),
+            )
+        adaptive = checked(adaptive_plan, settings, progress)
     else:
         adaptive = (None, None, 0, '开发者模式的“多数双排集中在一起”未启用')
     if adaptive[0] is not None:
