@@ -31,6 +31,17 @@ def test_preview_uses_same_end_block_rectangle():
     assert image.pixelColor(0,block['y']).alpha()==0
 
 
+def test_disabled_end_block_keeps_content_width(tmp_path):
+    path=tmp_path/'B1-1-T-Black-M-NO1-1.png'
+    Image.new('RGBA',(100,140),'blue').save(path,dpi=(25.4,25.4))
+    settings=LayoutSettings(dpi=25.4,media_width_mm=580,cutter_mode='free',
+                            number_images=False,color_block_enabled=False,batch_end_block=False,
+                            allow_rotation=False)
+    result=generate_layout([path],tmp_path/'out',settings)
+    with Image.open(tmp_path/'out'/result['filename']) as output:
+        assert output.width==100
+
+
 @pytest.mark.parametrize('engine',['pillow','libvips'])
 @pytest.mark.parametrize('mode',['free','single','dual'])
 def test_end_block_only_last_segment_and_source_pixels_preserved(tmp_path,engine,mode):

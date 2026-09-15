@@ -14,6 +14,7 @@ def test_normal_mode_has_no_markers_or_inserted_gap(tmp_path):
     window.developer_mode_enabled=True
     window.membrane_gap.setValue(40)
     cutter=window.cutter_settings
+    assert not cutter.transitions.end_block.isChecked()
     cutter.mode.setCurrentIndex(cutter.mode.findData('free'))
     window.number_images.setChecked(False)
     window.label_settings.platform_enabled.setChecked(False)
