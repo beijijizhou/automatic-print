@@ -68,7 +68,7 @@ def _plan_layout(paths, settings, progress, analysis, analysis_ready):
         if settings.cutter_mode == 'single' and settings.cutter_single_row_rotation:
             from .single_rows import plan_single_rows
             return plan_single_rows(paths,settings,progress)
-        if settings.cutter_rotation_zone and settings.cutter_mode == "dual":
+        if (settings.cutter_rotation_zone or settings.cutter_majority_two_zone) and settings.cutter_mode == "dual":
             from .rotation_compare import compare_rotation
             return compare_rotation(paths, settings, progress, analysis, analysis_ready)
         if settings.cutter_tail_rotation and settings.cutter_mode == 'dual':
