@@ -38,6 +38,7 @@ def test_default_shows_production_layout_but_hides_diagnostic_tools(tmp_path, mo
     assert panel.summary.film_table.rowCount() == 4
     assert not owner._layout_settings().compare_reference_films
     assert not panel.history_button.isVisible() and not panel.bulk_analysis_button.isVisible()
+    assert not panel.source_order.isVisible() and not panel.reference_films_label.isVisible()
     navigation_before = owner.automation_home.batch_tools.mapTo(owner, owner.rect().topLeft())
     panel.details_dialog.open_history()
     panel.details_dialog.open_bulk_analysis()
@@ -109,9 +110,12 @@ def test_toggle_persists_and_existing_history_tab_hides(tmp_path, monkeypatch):
     assert owner._layout_settings().membrane_gap_mm == 45
     owner.membrane_gap.setValue(42)
     assert owner.quick_membrane_gap.value() == 42
-    assert panel.summary.film_table.rowCount() == 4
-    assert not owner._layout_settings().compare_reference_films
-    assert panel.history_button.isVisible() and not panel.bulk_analysis_button.isVisible()
+    assert panel.summary.film_table.rowCount() == 18
+    assert owner._layout_settings().compare_reference_films
+    assert panel.history_button.isVisible() and panel.bulk_analysis_button.isVisible()
+    assert panel.algorithm_costs_button.isVisible()
+    assert panel.source_order.isVisible() and panel.reference_films_label.isVisible()
+    assert owner.grab().save(str(tmp_path/'developer-tools-visible.png'))
     panel.history_button.click()
     APP.processEvents()
     details = panel.details_dialog
@@ -122,6 +126,7 @@ def test_toggle_persists_and_existing_history_tab_hides(tmp_path, monkeypatch):
     assert owner.layout_rules_form.isRowVisible(owner.membrane_gap_enabled)
     assert owner.layout_rules_form.isRowVisible(owner.membrane_gap)
     assert panel.summary.film_table.rowCount() == 4
+    assert not owner._layout_settings().compare_reference_films
     assert not details.tabs.isTabVisible(details.tabs.indexOf(details.history_page))
     assert not panel.history_button.isVisible()
     details.close()
@@ -132,7 +137,7 @@ def test_toggle_persists_and_existing_history_tab_hides(tmp_path, monkeypatch):
     assert restored.quick_membrane_gap.value() == 42
     assert restored.quick_membrane_gap_enabled.isChecked()
     assert restored.quick_header_gap_group.isVisible()
-    assert not restored.automation_home.label_quick_panel.bulk_analysis_button.isVisible()
+    assert restored.automation_home.label_quick_panel.bulk_analysis_button.isVisible()
     restored.close()
 
 

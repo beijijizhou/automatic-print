@@ -67,6 +67,7 @@ class LabelQuickPanel(QWidget):
         date_button = QPushButton("添加日期")
         date_button.clicked.connect(self._add_date)
         self.sequence = self._checkbox('序号从 1 到最后一张', label.sequence)
+        self.source_order = self._checkbox('文件名＋正序/倒序', label.source_order)
         self.platform = QComboBox()
         self.platform.setEditable(True)
         for index in range(label.platform.count()):
@@ -201,6 +202,7 @@ class LabelQuickPanel(QWidget):
         self.history_button.setIcon(action_icon('more'))
         self.history_button.clicked.connect(self.details_dialog.open_history)
         self.bulk_analysis_button = QPushButton('批量分析文件夹…')
+        self.bulk_analysis_button.setToolTip('并行比较多个批次的研究膜规格，不生成打印文件。')
         self.bulk_analysis_button.setIcon(action_icon('folder'))
         self.bulk_analysis_button.clicked.connect(self.details_dialog.open_bulk_analysis)
         self.bulk_generation_button = QPushButton('多批次排版…')

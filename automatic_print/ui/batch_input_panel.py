@@ -1,5 +1,5 @@
 """A compact production action row; configuration belongs in print settings."""
-from PySide6.QtWidgets import QGroupBox, QHBoxLayout, QCheckBox, QVBoxLayout, QWidget
+from PySide6.QtWidgets import QGroupBox, QHBoxLayout, QCheckBox, QLabel, QVBoxLayout, QWidget
 from .action_icons import action_icon
 
 
@@ -51,8 +51,13 @@ def build_batch_tools(panel):
     row.setContentsMargins(0, 0, 0, 2)
     row.addStretch()
     row.addWidget(panel.details_button)
+    panel.developer_tools_label = QLabel('开发者功能：')
+    row.addWidget(panel.developer_tools_label)
     for button in (panel.history_button, panel.bulk_analysis_button, panel.algorithm_costs_button):
         row.addWidget(button)
+    row.addWidget(panel.source_order)
+    panel.reference_films_label = QLabel('40–80厘米研究膜')
+    row.addWidget(panel.reference_films_label)
     navigation.setStyleSheet(
         'QWidget#pinnedWorkbenchNavigation { background: transparent; border: none; } '
         'QWidget#pinnedWorkbenchNavigation QPushButton { padding: 5px 10px; }')

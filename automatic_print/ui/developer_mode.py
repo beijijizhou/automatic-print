@@ -31,12 +31,16 @@ def build_developer_mode(window, footer):
         window.batch_record_group.setVisible(True)
         panel.summary.gap_loss.setVisible(True)
         panel.history_button.setVisible(enabled)
-        panel.bulk_analysis_button.setVisible(False)
+        panel.bulk_analysis_button.setVisible(enabled)
         panel.algorithm_costs_button.setVisible(enabled)
-        panel.summary.film_table.set_reference_mode(False)
+        panel.developer_tools_label.setVisible(enabled)
+        panel.source_order.setVisible(enabled)
+        panel.reference_films_label.setVisible(enabled)
+        panel.summary.film_table.set_reference_mode(enabled)
         window.label_settings.form.setRowVisible(window.label_settings.source_order, enabled)
         window.cutter_settings.compare_films.setText(
-            '比较45/60厘米：常规与旋转（不自动切换）')
+            ('开发者比较40–80厘米：常规与旋转（不自动切换）' if enabled else
+             '比较45/60厘米：常规与旋转（不自动切换）'))
         details = panel.details_dialog
         algorithm = getattr(details, 'algorithm_page', None)
         if algorithm is not None:
@@ -52,6 +56,8 @@ def build_developer_mode(window, footer):
             details.bulk_dialog.hide()
         window.preferences.setValue('developer/enabled', enabled)
         window.preferences.sync()
+        if panel.preview.batch_payload and not panel.preview.production_active:
+            panel.preview.schedule_refresh()
 
     checkbox.toggled.connect(changed)
     changed(checkbox.isChecked())

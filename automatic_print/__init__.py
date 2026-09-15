@@ -2,7 +2,7 @@
 
 from .versioning import release_display
 
-__version__ = "0.1.219"
+__version__ = "0.1.220"
 __release_date__ = "2026-09-15"
-__release_iteration__ = 25
+__release_iteration__ = 26
 __version_display__ = release_display(__release_date__, __release_iteration__)
