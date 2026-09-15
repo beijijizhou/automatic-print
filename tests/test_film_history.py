@@ -26,7 +26,7 @@ def test_durable_records_and_csv_include_all_numeric_alternatives(tmp_path):
     record(tmp_path, path, 'preview', True)
     runs = load_runs(path)
     assert len(runs) == 2
-    assert len(runs[0]['comparison']['rows']) == 18
+    assert len(runs[0]['comparison']['rows']) == 4
     assert runs[0]['status'] == '仅预览' and runs[0]['output_folder'] == ''
     assert runs[1] == json.loads(json.dumps(first))
     destination = tmp_path/'statistics.csv'
@@ -34,7 +34,7 @@ def test_durable_records_and_csv_include_all_numeric_alternatives(tmp_path):
     with destination.open(encoding='utf-8-sig', newline='') as stream:
         rows = list(csv.DictReader(stream))
     assert len(rows) == 36
-    assert {float(row['方案膜宽毫米']) for row in rows} == set(range(400, 801, 50))
+    assert {float(row['方案膜宽毫米']) for row in rows} == {450, 600}
     assert all(float(row['实际膜宽毫米']) == 600 for row in rows)
     assert float(rows[0]['耗膜平方米']) > 0
 
@@ -48,7 +48,7 @@ def test_history_page_is_lazy_and_selection_never_opens_images(tmp_path, monkeyp
     from PIL import Image
     monkeypatch.setattr(Image, 'open', lambda *_a, **_k: (_ for _ in ()).throw(AssertionError('PNG read')))
     page.refresh()
-    assert page.runs.rowCount() == 1 and page.comparison.rowCount() == 18
+    assert page.runs.rowCount() == 1 and page.comparison.rowCount() == 4
     assert '间隔5厘米' in page.details.toPlainText()
     page.resize(1100, 800)
     page.show()

@@ -64,7 +64,7 @@ class BulkFilmAnalysisDialog(QDialog):
         self.folders = QListWidget()
         self.folders.setSelectionMode(QAbstractItemView.ExtendedSelection)
         layout.addWidget(self.folders)
-        self.status = QLabel('选择上级目录，确认下面的批次后开始；40–80厘米，每隔5厘米，共18套。')
+        self.status = QLabel('选择上级目录，确认下面的批次后开始；45/60厘米，共4套。')
         self.status.setWordWrap(True)
         self.status.setTextInteractionFlags(Qt.TextSelectableByMouse)
         layout.addWidget(self.status)

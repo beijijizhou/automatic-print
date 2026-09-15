@@ -10,7 +10,7 @@
   `automatic_print/batch_ui/` 和 `automatic_print/ui/label_quick_panel.py`。
 - 普通模式显示生产排版规则、45/60厘米方案、批次处理记录、膜标签间距和额外损耗。补足膜间距
   由 `ui/header_gap.py` 的独立开关控制，保存的毫米数值本身不会自动启用。开发者模式显示算法
-  诊断、排版历史、批量膜分析、文件顺序标注及40–80厘米研究膜方案。
+  诊断、排版历史、批量膜分析和文件顺序标注；膜规格比较固定为45/60厘米四套方案。
 - 单批次生成编排：`automatic_print/ui/generation_actions.py`、`workers.py`、
   `generation_preview.py`。
 - 单批生成、仅预览及批量分析的每个批次均由 `layout_engine/measurement_session.py` 建立一份数据

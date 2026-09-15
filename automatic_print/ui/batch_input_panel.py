@@ -59,7 +59,7 @@ def build_batch_tools(panel):
     panel.source_order.toggled.connect(panel.label.source_order.setChecked)
     panel.label.source_order.toggled.connect(panel.source_order.setChecked)
     row.addWidget(panel.source_order)
-    panel.reference_films_label = QLabel('40–80厘米研究膜')
+    panel.reference_films_label = QLabel('45/60厘米膜')
     row.addWidget(panel.reference_films_label)
     navigation.setStyleSheet(
         'QWidget#pinnedWorkbenchNavigation { background: transparent; border: none; } '

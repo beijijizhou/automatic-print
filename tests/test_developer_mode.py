@@ -116,7 +116,7 @@ def test_toggle_persists_and_existing_history_tab_hides(tmp_path, monkeypatch):
     assert owner._layout_settings().membrane_gap_mm == 45
     owner.membrane_gap.setValue(42)
     assert owner.quick_membrane_gap.value() == 42
-    assert panel.summary.film_table.rowCount() == 18
+    assert panel.summary.film_table.rowCount() == 4
     assert owner._layout_settings().compare_reference_films
     assert panel.history_button.isVisible() and panel.bulk_analysis_button.isVisible()
     assert panel.algorithm_costs_button.isVisible()

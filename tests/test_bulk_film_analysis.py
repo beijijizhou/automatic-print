@@ -43,7 +43,7 @@ def test_many_folders_remain_independent_and_logs_share_group(tmp_path):
     assert len(records) == 2
     assert {r['group_id'] for r in records} == {result['group_id']}
     assert all(r['status'] == '仅分析' and r['image_count'] == 2 for r in records)
-    assert all(len(r['comparison']['rows']) == 18 for r in records)
+    assert all(len(r['comparison']['rows']) == 4 for r in records)
     assert len(list(tmp_path.rglob('*.png'))) == 4  # No composite output.
     assert '汇总 2 个完成批次' in summary_text(records)
     from automatic_print.ui.film_history import FilmHistoryPage

@@ -7,7 +7,7 @@ from ..layout_engine.film_specs import AVAILABLE_WIDTHS, COMPARISON_COUNT, compa
 class FilmComparisonTable(QTableWidget):
     def __init__(self, parent=None):
         super().__init__(COMPARISON_COUNT, 7, parent)
-        self.include_references = True
+        self.include_references = False
         self.last_comparison = None
         self.setHorizontalHeaderLabels(
             ['用膜方案', '双排数量', '实际旋转', '长度 / 米', '面积 / ㎡', '图片占位', '可用区占位'])
@@ -30,8 +30,7 @@ class FilmComparisonTable(QTableWidget):
         for row, name in enumerate(names):
             for col, value in enumerate((name, '—', '—', text, '—', '—', '—')):
                 self.setItem(row, col, QTableWidgetItem(value))
-        self.setToolTip(('开发者：40–80厘米每隔5厘米比较。' if self.include_references else
-                         '普通模式：只比较45/60厘米。')+'不自动切换生产参数；图片占位不是油墨覆盖率。')
+        self.setToolTip('只比较45/60厘米；不自动切换生产参数；图片占位不是油墨覆盖率。')
 
     def show_comparison(self, comparison):
         if not comparison:
@@ -68,9 +67,9 @@ class FilmComparisonTable(QTableWidget):
                 self.setItem(row, col, item)
 
     def set_reference_mode(self, enabled):
-        self.include_references = enabled
-        self.setMinimumHeight(275 if enabled else 165)
-        self.setMaximumHeight(290 if enabled else 180)
+        self.include_references = False
+        self.setMinimumHeight(165)
+        self.setMaximumHeight(180)
         cached = self.last_comparison
         if cached:
             self.show_comparison(cached)

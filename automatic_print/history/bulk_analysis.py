@@ -15,7 +15,7 @@ def analyze_folders(folders, settings, progress=None, cancellation=None, path=No
     group = uuid4().hex
     folders = list(dict.fromkeys(Path(folder).resolve() for folder in folders))
     workers = max(1, min(8, int(parallelism), len(folders)))
-    settings = replace(settings, compare_reference_films=True, film_geometry_workers=max(1, 4//workers))
+    settings = replace(settings, compare_reference_films=False, film_geometry_workers=max(1, 4//workers))
     started = monotonic()
     @batch_measurements
     def calculate(index, folder):

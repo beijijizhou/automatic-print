@@ -40,7 +40,7 @@ class CutterSettingsPanel(QWidget):
         self.left_marker_lift = self._box(preferences.value('cutter/left_marker_lift_mm',1.5,float),0,30)
         self.left_marker_lift.valueChanged.connect(lambda v: preferences.setValue('cutter/left_marker_lift_mm',v))
         self.transitions = TransitionSettings(preferences, self)
-        self.compare_films = QCheckBox('比较40–80厘米，每隔5厘米：常规与旋转（不自动切换，结果存入历史）')
+        self.compare_films = QCheckBox('比较45/60厘米：常规与旋转（不自动切换，结果存入历史）')
         if not preferences.value('cutter/film_comparison_default_v2', False, bool):
             preferences.setValue('cutter/compare_films', True)
             preferences.setValue('cutter/film_comparison_default_v2', True)

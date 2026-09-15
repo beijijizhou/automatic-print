@@ -36,13 +36,12 @@ def build_developer_mode(window, footer):
         panel.algorithm_costs_button.setVisible(enabled)
         panel.developer_tools_label.setVisible(enabled)
         panel.source_order.setVisible(enabled)
-        panel.reference_films_label.setVisible(enabled)
+        panel.reference_films_label.setVisible(False)
         window.automation_home.batch_tools.setVisible(enabled)
         panel.summary.film_table.set_reference_mode(enabled)
         window.label_settings.form.setRowVisible(window.label_settings.source_order, enabled)
         window.cutter_settings.compare_films.setText(
-            ('开发者比较40–80厘米：常规与旋转（不自动切换）' if enabled else
-             '比较45/60厘米：常规与旋转（不自动切换）'))
+            '比较45/60厘米：常规与旋转（不自动切换）')
         details = panel.details_dialog
         algorithm = getattr(details, 'algorithm_page', None)
         if algorithm is not None:
