@@ -13,6 +13,7 @@ WINDOWS = []
 
 def test_workbench_action_hierarchy_and_icons(tmp_path):
     window = MainWindow(QSettings(str(tmp_path/'style.ini'), QSettings.IniFormat))
+    assert window.size().width() >= 1440 and window.size().height() >= 900
     WINDOWS.append(window)
     window.startup_update_timer.stop()
     window.show()

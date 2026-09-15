@@ -46,7 +46,7 @@ class MainWindow(
         super().__init__()
         self.setWindowTitle("本地排版工作台")
         self.setWindowIcon(application_icon())
-        self.resize(980, 700)
+        self.resize(1440, 900)
         self.thread: QThread | None = None
         self.worker = None
         self.worker_bridge = MainWindowWorkerBridge(self)

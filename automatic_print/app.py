@@ -29,6 +29,6 @@ def run() -> int:
     window = MainWindow()
     application.automatic_print_window = window
     install_restart_monitor(application, window)
-    window.show()
+    window.showMaximized()
     splash.finish(window)
     return application.exec()
