@@ -83,8 +83,7 @@ def settings_from_window(window) -> LayoutSettings:
         cutter_knife_mm=window.cutter_settings.knife.value(),
         cutter_auto_knife=window.cutter_settings.auto_knife.isChecked(),
         cutter_rotation_zone=window.cutter_settings.rotation_zone.isChecked() and not window.cutter_settings.quick_mode.isChecked(),
-        cutter_majority_two_zone=(getattr(window, 'developer_mode_enabled', False)
-                                  and window.cutter_settings.two_zone.isChecked()),
+        cutter_majority_two_zone=getattr(window, 'developer_mode_enabled', False),
         cutter_tail_rotation=window.cutter_settings.tail_rotation.isChecked() and window.cutter_settings.mode.currentData() == 'dual',
         cutter_safety_mm=window.cutter_settings.safety.value(),
         cutter_marker_offset_mm=window.cutter_settings.marker_offset.value(),

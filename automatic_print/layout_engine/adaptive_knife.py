@@ -80,6 +80,9 @@ def _partition(orders, items, lanes):
 
 
 def _pairable(order, items, lanes):
+    from .source_metadata import source_size
+    if any(source_size(path) in {'3XL', '4XL', '5XL'} for path in order):
+        return False
     members = [items[path] for path in order]
     if any(item.rotation_degrees for item in members):
         return False
