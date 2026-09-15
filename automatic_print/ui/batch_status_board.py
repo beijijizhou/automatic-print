@@ -28,7 +28,7 @@ class BatchStatusBoard(QWidget):
             heading.addStretch()
             body.addLayout(heading)
             tree = QTreeWidget()
-            tree.setHeaderLabels(['批次 / 子文件夹相对路径', '当前状态', '图片数'])
+            tree.setHeaderLabels(['批次 / 子文件夹相对路径', '当前状态', '图片数', '尺码群 / 订单群'])
             tree.setRootIsDecorated(True)
             tree.setWordWrap(True)
             tree.setColumnWidth(0, 180)
@@ -126,6 +126,14 @@ class BatchStatusBoard(QWidget):
                 child.setIcon(0,action_icon('done' if done else 'refresh',
                                            '#15803d' if done else '#2563eb'))
                 return
+
+    def update_distribution(self, index, report):
+        item = self.items.get(index)
+        if item is None:
+            return
+        from ..layout_engine.batch_analysis import distribution_text
+        item.setText(3, distribution_text(report, limit=4))
+        item.setToolTip(3, distribution_text(report))
 
     def currentIndex(self):
         return self.index

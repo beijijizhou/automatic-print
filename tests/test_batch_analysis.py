@@ -34,6 +34,8 @@ def test_batch_counts_garments_not_images_and_normalizes_xxl(tmp_path):
     assert report['double_pairs']==1
     assert report['single_sizes']=={'2XL':1}
     assert report['sizes']['3XL']==1
+    assert report['group_distribution']['kind']=='orders'
+    assert ('BMULTI', 2) in report['group_distribution']['items']
     assert stages[0]['stage']=='文件名分析'
     assert 'width_mm' not in stages[0]['orders'][0]['items'][0]['images'][0]
     assert 'width_mm' in stages[-1]['orders'][0]['items'][0]['images'][0]
@@ -43,6 +45,10 @@ def test_single_single_sizes_stay_together_with_aliases(tmp_path):
     paths=[source(tmp_path,f'B{i}',s) for i,s in enumerate(('XL','S','XXL','M','2XL','S','XL','M'))]
     planned=plan_layout(paths,settings(cutter_rotation_zone=False),None)[0]
     assert [source_size(p) for p,_ in planned]==['S','S','M','M','XL','XL','2XL','2XL']
+    report=analyze_batch(paths,settings())
+    assert report['group_distribution']=={
+        'kind':'sizes','title':'单件批次尺码群分布',
+        'items':[('S',2),('M',2),('XL',2),('2XL',2)]}
 
 
 def test_small_image_can_pair_with_large_size_without_breaking_a_double(tmp_path):

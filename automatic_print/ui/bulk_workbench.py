@@ -140,6 +140,7 @@ class BulkWorkbench(QObject):
     @Slot(int, object)
     def preview(self, index, payload):
         self.payloads[index] = payload
+        self.selector.update_distribution(index, payload.get('analysis', {}))
         if index == self.selector.currentIndex():
             self.panel.summary.start(str(self.folders[index]), len(payload['planned']))
             self.window.generation_preview.ready(payload)

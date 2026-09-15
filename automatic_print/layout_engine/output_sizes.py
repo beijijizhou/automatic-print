@@ -42,6 +42,8 @@ def cutting_report(result):
     parts = result.get('parts') or [result]
     quality = result.get('dual_quality', {})
     review = quality.get('text', '')
+    from .batch_analysis import distribution_text
+    review += '\n'+distribution_text(result.get('analysis', {}))
     from .film_comparison import comparison_text
     review += '\n'+comparison_text(result.get('analysis', {}).get('film_comparison'))
     from .image_anomalies import anomaly_text

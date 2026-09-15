@@ -14,7 +14,7 @@ def analyze_batch(paths, settings, progress=None, ready=None):
         for path in group:
             identity = pair_identity(path)
             pieces.setdefault(identity[0] if identity else str(path), []).append(path)
-        known = order_key(group[0]) != '未识别订单组' and all(pair_identity(p) for p in group)
+        known = order_key(group[0]) != '未识别订单组'
         orphan_back = any(len(members)==1 and pair_identity(members[0]) and
                           pair_identity(members[0])[1]=='2' for members in pieces.values())
         known = known and not orphan_back
@@ -41,6 +41,7 @@ def analyze_batch(paths, settings, progress=None, ready=None):
               'sizes': dict(sorted(total_sizes.items(), key=lambda entry: size_key(entry[0]))),
               'single_sizes': dict(Counter(size for o in orders if o['kind']=='单件单面'
                                            for size in o['sizes']))}
+    report['group_distribution'] = group_distribution(report)
     if ready:
         ready(deepcopy(report))
     count = 0
@@ -73,6 +74,25 @@ def analyze_batch(paths, settings, progress=None, ready=None):
     if ready:
         ready(deepcopy(report))
     return report
+
+
+def group_distribution(report):
+    orders = [order for order in report.get('orders', ()) if order.get('pieces')]
+    if any(order['pieces'] > 1 for order in orders):
+        return {'kind': 'orders', 'title': '多件批次订单群分布',
+                'items': [(order['order'], order['pieces']) for order in orders]}
+    return {'kind': 'sizes', 'title': '单件批次尺码群分布',
+            'items': list(report.get('sizes', {}).items())}
+
+
+def distribution_text(report, limit=None):
+    distribution = report.get('group_distribution') or group_distribution(report)
+    items = distribution['items']
+    shown = items if limit is None else items[:limit]
+    suffix = f'，另有{len(items)-len(shown)}项' if len(shown) < len(items) else ''
+    unit = '件' if distribution['kind'] == 'orders' else ''
+    values = '、'.join(f'{name}-{count}{unit}' for name, count in shown) or '无可识别数据'
+    return f"{distribution['title']}：{values}{suffix}"
 
 
 def finish_analysis(report, planned, settings, height, baseline):

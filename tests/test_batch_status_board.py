@@ -22,6 +22,8 @@ def test_all_batches_are_visible_in_three_groups_with_live_independent_states(tm
     board.setCurrentIndex(2)
     before = list(selected)
     board.update_batch(2, '批次预览完成')
+    board.update_distribution(2, {'sizes': {'S': 12, 'M': 8}})
+    assert board.items[2].text(3) == '单件批次尺码群分布：S-12、M-8'
     assert board.currentIndex() == 2
     assert selected == before  # Moving between groups does not change the preview.
     assert board.items[2].isSelected()

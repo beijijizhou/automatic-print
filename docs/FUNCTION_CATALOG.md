@@ -8,7 +8,7 @@
 | 图片发现与嵌套批次扫描 | `layout_engine/discovery.py`, `batch_discovery.py` | 单批、多批和分析功能复用，不各自遍历目录。 |
 | 图片尺寸、DPI与源信息 | `layout_engine/source_metadata.py`, `images.py`, `output_dpi.py` | 一次读取形成共享事实；标签、排版和报告不得重复解码。 |
 | 批次数据快照与并行测量 | `layout_engine/batch_snapshot.py`, `measurement_session.py`, `parallel_measurement.py` | 生成、仅预览和批量分析从首次读取到最终报告共享一个批次会话；保持结果原顺序，线程完成顺序不能改变生产顺序。 |
-| 订单、双面和尺码归组 | `layout_engine/order_groups.py`, `batch_analysis.py`, `size_policy.py` | 排版、比较、报告和安全检查使用同一身份。 |
+| 订单、双面、尺码归组及批次构成 | `layout_engine/order_groups.py`, `batch_analysis.py`, `size_policy.py` | 排版、比较、结果表、报告和安全检查使用同一身份；单件显示尺码-数量，多件显示订单号-件数。 |
 | 颜色与生产顺序 | `layout_engine/color_policy.py`, `single_order_sequence.py` | 颜色优先、尺码业务顺序集中维护。 |
 | 普通行和双排行规划 | `layout_engine/planner.py`, `row_optimizer.py`, `single_rows.py` | 入口不得自己拼 Placement。 |
 | 整批刀位 | `layout_engine/cutter_planner.py`, `knife_optimizer.py`, `adaptive_knife.py` | 线性贪心配对；多数可双排时形成一个双排区，其余完整订单形成一个旋转区；禁止超过两个区域。 |

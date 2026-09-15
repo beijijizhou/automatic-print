@@ -42,6 +42,8 @@ def production_summary_text(result):
         f"（{result.get('saved_percent', 0):.1f}%）",
         f"输出：{result.get('filename', '未记录')} · {dpi:g} DPI",
     ]
+    from .batch_analysis import distribution_text
+    lines.insert(2, distribution_text(analysis))
     return '\n'.join(lines)
 
 
