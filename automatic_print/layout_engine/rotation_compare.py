@@ -4,8 +4,8 @@ from contextvars import copy_context
 from dataclasses import replace
 from time import monotonic
 
-from .cutter_planner import plan_cutter_layout
-from .rotation_zones import plan_rotation_zones
+from .cutter_planner import plan_cutter_layout, read_cutter_items
+from .rotation_zones import plan_rotation_zones, rotation_items
 from .transition_marks import marked_height
 from .order_validation import validate_order_placements
 from .cut_validation import validate_cut_corridor
@@ -16,6 +16,14 @@ def compare_rotation(paths, settings, progress, analysis, analysis_ready):
     normal_settings = replace(settings, cutter_rotation_zone=False,
                               cutter_tail_rotation=False, allow_rotation=False,
                               manual_rotations=())
+    # Measure each source and both orientations once before plan workers start.
+    # Concurrent plans consume immutable geometry and never race to decode a file.
+    options, labels = read_cutter_items(
+        paths, normal_settings, progress, prepare_rotations=True,
+    )
+    rotated_items, rotated_labels = rotation_items(
+        paths, normal_settings, progress,
+    )
 
     def normal_progress(stage, current, total, filename):
         if progress:
@@ -42,14 +50,22 @@ def compare_rotation(paths, settings, progress, analysis, analysis_ready):
     workers = min(2, max(1, settings.film_geometry_workers))
     if progress:
         progress('比较旋转区域', 0, 2, f'最多{workers}路计算常规方案与完整订单旋转方案')
+    def normal_plan(paths, config, report):
+        return plan_cutter_layout(
+            paths, config, report, prepared=(options, labels),
+        )
+
     def rotation_plan(paths, config, report):
-        return plan_rotation_zones(paths, config, report, analysis, analysis_ready)
+        return plan_rotation_zones(
+            paths, config, report, analysis, analysis_ready,
+            prepared=(options, labels, rotated_items, rotated_labels),
+        )
     if workers == 1:
-        normal = checked(plan_cutter_layout, normal_settings, normal_progress)
+        normal = checked(normal_plan, normal_settings, normal_progress)
         rotated = checked(rotation_plan, settings, progress)
     else:
         with ThreadPoolExecutor(max_workers=workers, thread_name_prefix='layout-compare') as pool:
-            normal = pool.submit(copy_context().run, checked, plan_cutter_layout, normal_settings, normal_progress)
+            normal = pool.submit(copy_context().run, checked, normal_plan, normal_settings, normal_progress)
             rotated = pool.submit(copy_context().run, checked, rotation_plan, settings, progress)
             normal, rotated = normal.result(), rotated.result()
     if settings.cutter_majority_two_zone:
