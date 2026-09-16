@@ -15,6 +15,7 @@ from automatic_print.layout_engine.output_sizes import cutting_report
 from automatic_print.layout_engine.models import Placement
 from automatic_print.layout_engine.printed_guides import collect_guides, dot_boxes
 from automatic_print.layout_engine.marked_pixel_validation import validate_marked_pillow
+from automatic_print.layout_engine.cut_validation import corridor_checks
 from automatic_print.ui.batch_summary import BatchSummaryPanel
 from tests.test_platform_labels import qr_image
 
@@ -48,9 +49,8 @@ def test_missing_qr_keeps_whole_orders_and_actual_pixels(tmp_path, engine, parts
         all_sources += [p['source'] for p in placements]
         assert all(p['cut_zone'] != '旋转区' for p in placements)
         assert all(p['platform_width_px'] == 0 for p in placements if p['source'] in missing)
-        effective = replace(settings, cutter_knife_mm=part['cut_corridor']['knife_x_px'])
         planned = [(tmp_path/p['source'], Placement(**p)) for p in placements]
-        spans, _ = collect_guides(planned, effective)
+        spans, _ = collect_guides(planned, settings)
         with Image.open(tmp_path/'out'/part['filename']) as image:
             validate_marked_pillow(image, part['cut_corridor'], list(dot_boxes(spans, settings.dpi)),
                                    part['transition_marks'])

@@ -65,6 +65,22 @@ def test_vips_multi_zone_corridors_share_one_safe_scan():
     assert not printed_guides.vips_corridors_are_clear(second_zone, checks)
 
 
+def test_vips_corridor_scan_uses_bounded_height(monkeypatch):
+    pyvips = pytest.importorskip('pyvips')
+    blank = pyvips.Image.black(100, 10000, bands=4)
+    heights = []
+    original = printed_guides._vips_allowed_mask
+    def observed(width, height, left, top, boxes, rectangles):
+        heights.append(height)
+        return original(width, height, left, top, boxes, rectangles)
+    monkeypatch.setattr(printed_guides, '_vips_allowed_mask', observed)
+    assert printed_guides.vips_corridors_are_clear(
+        blank, [{'safe_left_px': 45, 'safe_right_px': 55}],
+    )
+    assert len(heights) == 3
+    assert max(heights) <= printed_guides.CORRIDOR_SCAN_ROWS
+
+
 def test_missing_qr_is_reported_without_fallback(tmp_path, monkeypatch):
     monkeypatch.setattr(printed_guides, 'detect_guide_band', lambda path: None)
     path = tmp_path/'missing.png'

@@ -18,6 +18,7 @@ def test_platform_and_sequence_default_and_persist(tmp_path):
     assert panel.platform.currentText() == '隆丰'
     assert panel.sequence.isChecked()
     assert window._layout_settings().platform_name == '隆丰'
+    assert window._layout_settings().platform_reuse_qr
     assert panel.platform_font_height.value() == 6
     panel.platform_font_height.setValue(4.5)
     assert window.label_settings.platform_font_height.value() == 4.5
@@ -49,7 +50,9 @@ def test_old_erp_selection_is_corrected_and_new_manual_label_starts_empty(tmp_pa
     window.startup_update_timer.stop()
     assert window.label_settings.platform.currentText() == '隆丰'
     assert window.label_settings.text_template.text() == ''
-    assert window.label_settings.preview.sample_text() == 'M1 12'
+    sample = window.label_settings.preview.sample_text()
+    assert sample.endswith('M1')
+    assert '正序 12/20' in sample and '倒序 9/20' in sample
     window.close()
 
 

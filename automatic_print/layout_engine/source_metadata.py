@@ -35,6 +35,10 @@ def size_key(size):
 
 @lru_cache(maxsize=4096)
 def source_color(path):
+    from ..automation.api.s2b.metadata import color_for_path
+    api_color = color_for_path(path)
+    if api_color:
+        return api_color
     parts = production_stem(path).split('-')
     if len(parts) < 6 or not re.fullmatch(r'no\d+',parts[-2]):
         return '未识别颜色'

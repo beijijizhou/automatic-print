@@ -1,6 +1,7 @@
 """Reset production preferences only; never touch files or ERP login state."""
 from PySide6.QtCore import QSettings
-from PySide6.QtWidgets import QApplication, QMessageBox, QPushButton
+from PySide6.QtWidgets import QMessageBox, QPushButton
+from ..restart_control import request_application_restart
 
 GROUPS = ('layout', 'label', 'color_block', 'cutter', 'riin', 'output')
 KEYS = ('source_location', 'output_location', 'local/test_mode', 'local/merge_batches',
@@ -31,7 +32,7 @@ def reset_settings(window):
     answer = QMessageBox.question(window, '恢复默认设置',
         '清除保存的膜宽、间距、标签文字、机器号、手动旋转、分段并行参数及上次文件路径。'
         '\n不删除源图片、输出文件、批次报告或平台登录信息。'
-        '\n恢复后软件会退出，请重新打开。是否继续？',
+        '\n恢复后软件会自动重启并加载出厂参数。是否继续？',
         QMessageBox.Yes | QMessageBox.No, QMessageBox.No)
     if answer != QMessageBox.Yes:
         return False
@@ -47,14 +48,18 @@ def reset_settings(window):
     window.centralWidget().setEnabled(False)
     window.settings_dialog.setEnabled(False)
     QMessageBox.information(window, '已恢复默认设置',
-        '保存的排版参数已清除。软件即将退出，重新打开后使用默认设置；图片和输出文件未删除。')
-    window.close()
-    QApplication.instance().quit()
-    return True
+        '保存的排版参数已清除。软件现在自动重启；图片和输出文件未删除。')
+    if request_application_restart(window):
+        return True
+    window.centralWidget().setEnabled(True)
+    window.settings_dialog.setEnabled(True)
+    QMessageBox.warning(window, '自动重启失败',
+        '出厂参数已恢复，但软件无法自动重启。请手动重新打开软件。')
+    return False
 
 
 def reset_button(window):
-    button = QPushButton('恢复默认设置并退出')
+    button = QPushButton('恢出厂设置并重启')
     button.clicked.connect(lambda: reset_settings(window))
-    button.setToolTip('清除所有保存的排版参数，不删除图片；重新打开生效。')
+    button.setToolTip('清除保存的排版参数，不删除图片；重启后立即生效。')
     return button

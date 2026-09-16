@@ -4,7 +4,7 @@ from PIL import Image
 import pytest
 
 from automatic_print.layout import LayoutSettings, generate_layout
-from automatic_print.layout_engine.cut_validation import validate_cut_corridor
+from automatic_print.layout_engine.cut_validation import corridor_checks, validate_cut_corridor
 
 
 @pytest.mark.parametrize('engine', ['pillow', 'libvips'])
@@ -32,8 +32,12 @@ def test_all_single_rows_have_left_edge_marker_in_saved_png(tmp_path, engine, mo
         if mode == 'dual':
             check = result['cut_corridor']
             assert check['pixel_verified']
-            stripe = image.crop((check['safe_left_px'], 0, check['safe_right_px'], image.height))
-            assert stripe.getchannel('A').getextrema() == (0, 0)
+            for corridor in corridor_checks(check):
+                stripe = image.crop((
+                    corridor['safe_left_px'], corridor.get('start_y_px', 0),
+                    corridor['safe_right_px'], corridor.get('end_y_px', image.height),
+                ))
+                assert stripe.getchannel('A').getextrema() == (0, 0)
 
 
 def test_manual_knife_recovers_single_image_without_right_only_marker(tmp_path):

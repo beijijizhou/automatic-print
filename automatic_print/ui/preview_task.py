@@ -43,6 +43,10 @@ class PreviewTask(QRunnable):
             self.emit(self.signals.sources, paths)
             if not paths:
                 raise ValueError('所选文件夹没有可读取的图片，请重新选择。')
+            from ..automation.api.s2b.prepare import prepare_s2b_metadata
+            prepare_s2b_metadata(paths, self.settings,
+                lambda stage, current, total, name: self.emit(
+                    self.signals.progress, f'{stage} · {current}/{total} · {name}'))
             from ..layout_engine.header_gap import prepare_paths
             paths, self.settings, gap_records = prepare_paths(paths, self.settings,
                 lambda stage, current, total, name: self.emit(self.signals.progress,

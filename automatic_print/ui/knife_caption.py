@@ -3,8 +3,8 @@ from math import isfinite
 
 
 def knife_caption(planned, dpi, separator=' · '):
-    zones = {p.cut_zone: (p.cut_knife_xs_px or ((p.cut_knife_x_px,)
-             if p.cut_knife_x_px is not None else ()))
+    zones = {p.cut_zone: (getattr(p, 'cut_knife_xs_px', ()) or
+             ((p.cut_knife_x_px,) if p.cut_knife_x_px is not None else ()))
              for _, p in planned if p.cut_zone}
     captions = []
     for name, knives in zones.items():

@@ -24,7 +24,8 @@ def test_removed_batch_details_leave_only_developer_pages(tmp_path):
     for tool in (panel.summary, panel.timings, panel.preview_tabs):
         assert tool.isVisible()
     assert window.batch_record.document() is window.run_log.document()
-    assert panel.marker_examples.isVisible()
+    assert panel.preview_tabs.count() == 2
+    assert panel.preview_tabs.tabText(1) == '刀码四种情况'
     panel.preview_tabs.setCurrentIndex(0)
     assert panel.preview_scroll.isVisible()
     window.developer_mode_checkbox.setChecked(True)

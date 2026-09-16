@@ -61,7 +61,7 @@ class PairProductionPreview(ProductionPreview):
             self.schedule_refresh()
 
     def schedule_refresh(self, *_args):
-        if not self.auto_refresh_enabled:
+        if not self.auto_refresh_enabled or getattr(self, 'parameter_refresh_deferred', 0):
             return
         if self.source_folder is None and self.path is None:
             return

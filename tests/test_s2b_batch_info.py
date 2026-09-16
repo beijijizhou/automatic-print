@@ -1,0 +1,88 @@
+import json
+
+from automatic_print.automation.api.s2b.batch_name import (
+    find_s2b_batch_folder,
+    parse_s2b_batch_name,
+)
+from automatic_print.automation.api.s2b.client import (
+    DEFAULT_ENDPOINT,
+    fetch_s2b_batch_info,
+    gateway_config,
+)
+from automatic_print.automation.api.s2b.metadata import (
+    color_for_path,
+    register_batch_records,
+)
+
+
+def test_batch_name_is_parsed_from_stable_right_hand_fields():
+    parsed = parse_s2b_batch_name(
+        "LNS2B004Sg_b_S_XL_SP___352_YRJ9ZFJYTUUA_20260913_181525_kysji69n"
+    )
+    assert parsed.batch_number == "YRJ9ZFJYTUUA"
+    assert parsed.expected_count == 352
+    assert parsed.exported_date == "20260913"
+
+
+def test_batch_folder_is_found_above_size_and_image(tmp_path):
+    root = tmp_path / "LNS2B017Sg_b__SP___222_26OP3LGLUEUV_20260916_010042_5unwyr1p"
+    image = root / "S" / "26OP3LGLUEUV-1-1-2TB3P5-1-1-1-222-棉-S.png"
+    image.parent.mkdir(parents=True)
+    image.touch()
+    assert find_s2b_batch_folder(image).batch_number == "26OP3LGLUEUV"
+
+
+def test_gateway_client_posts_batch_and_account(monkeypatch):
+    captured = {}
+
+    class Response:
+        def __enter__(self): return self
+        def __exit__(self, *_args): return None
+        def read(self):
+            return json.dumps({
+                "records": [], "batch_number": "ABC123ABC123"
+            }).encode()
+
+    def open_request(request, timeout):
+        captured["body"] = json.loads(request.data)
+        captured["key"] = request.headers["X-automatic-print-key"]
+        captured["timeout"] = timeout
+        return Response()
+
+    monkeypatch.setattr(
+        "automatic_print.automation.api.s2b.client.urlopen", open_request
+    )
+    result = fetch_s2b_batch_info(
+        "ABC123ABC123",
+        endpoint="https://example.test/batch",
+        access_key="limited-key",
+    )
+    assert result["batch_number"] == "ABC123ABC123"
+    assert captured["body"] == {
+        "account": "DTF", "batch_number": "ABC123ABC123"
+    }
+    assert captured["key"] == "limited-key"
+
+
+def test_gateway_uses_shared_endpoint_without_per_machine_url(monkeypatch):
+    monkeypatch.delenv("AUTOMATIC_PRINT_S2B_BATCH_INFO_URL", raising=False)
+    monkeypatch.delenv("AUTOMATIC_PRINT_S2B_BATCH_INFO_KEY", raising=False)
+    assert gateway_config() == (DEFAULT_ENDPOINT, "")
+
+
+def test_api_color_matches_s2b_order_item_and_size(tmp_path):
+    root = tmp_path / "LNS2B017Sg_b__SP___1_26OP3LGLUEUV_20260916_010042_5unwyr1p"
+    image = root / "S" / "26OP3LGLUEUV-1-1-2TB3P5-1-1-1-1-棉-S.png"
+    image.parent.mkdir(parents=True)
+    image.touch()
+    count = register_batch_records([image], {
+        "batch_number": "26OP3LGLUEUV",
+        "records": [{
+            "order_code": "2TB3P5",
+            "order_item_code": "2TB3P5-1",
+            "color": "黑色",
+            "size": "S",
+        }],
+    })
+    assert count == 1
+    assert color_for_path(image) == "黑色"

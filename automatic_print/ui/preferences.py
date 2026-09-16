@@ -1,60 +1,8 @@
-from pathlib import Path
 import re
-from PySide6.QtWidgets import QFileDialog, QMessageBox
+from PySide6.QtWidgets import QMessageBox
+from .preference_actions import PreferenceActionsMixin
 
-class PreferencesMixin:
-    def choose_and_generate(self):
-        if self.has_active_tasks():
-            return
-        if self.choose_folder():
-            self.generate(preview_only=self.automation_home.preview_only.isChecked())
-
-    def build_reset_button(self):
-        from .settings_reset import reset_button
-        return reset_button(self)
-
-    def choose_folder(self) -> bool:
-        from .folder_dialog_paths import image_dialog_start, remember_image_directory
-        start = image_dialog_start(self)
-        folder = QFileDialog.getExistingDirectory(
-            self, "请选择包含图片的文件夹（无需选择单张图片）", start
-        )
-        if folder:
-            remember_image_directory(self, folder)
-            from ..layout_engine.platform_detection import detect_selected_platform
-            platform=detect_selected_platform(folder)
-            if platform:
-                self.label_settings.platform.setCurrentText(platform)
-            unchanged = self.folder.text() == folder
-            self.folder.setText(folder)
-            from .quick_fields import show_selected_source
-            show_selected_source(self.automation_home.label_quick_panel, folder, window=self)
-            if unchanged:
-                preview = self.generation_preview.preview
-                if self.cutter_settings.quick_mode.isChecked():
-                    preview.stage_folder(folder)
-                else:
-                    preview.use_folder(folder)
-            self.preferences.setValue("source_location", folder)
-            self.status.setText('已选择文件夹，点击开始排版统一读取和处理。' if self.cutter_settings.quick_mode.isChecked() else '已选择文件夹，正在后台读取图片名称和批次信息…')
-            return True
-        return False
-
-    def choose_output_location(self) -> None:
-        folder = QFileDialog.getExistingDirectory(
-            self,
-            "请选择打印任务的保存位置",
-            self.output_location.text().strip(),
-        )
-        if folder:
-            self.output_location.setText(folder)
-            self.preferences.setValue("output_location", folder)
-
-    def open_settings_dialog(self) -> None:
-        self.settings_dialog.show()
-        self.settings_dialog.raise_()
-        self.settings_dialog.activateWindow()
-
+class PreferencesMixin(PreferenceActionsMixin):
     def load_layout_preferences(self) -> None:
         from .spacing_settings import migrate_spacing
         migrate_spacing(self.preferences)
@@ -100,7 +48,15 @@ class PreferencesMixin:
         )
         label = self.label_settings
         label.sequence.setChecked(self.preferences.value('label/sequence_enabled', True, bool))
-        label.source_order.setChecked(self.preferences.value('label/source_order_enabled', False, bool))
+        source_order_default = self.preferences.value(
+            'label/source_order_default_version', 0, int)
+        if source_order_default < 1:
+            label.source_order.setChecked(True)
+            self.preferences.setValue('label/source_order_enabled', True)
+            self.preferences.setValue('label/source_order_default_version', 1)
+        else:
+            label.source_order.setChecked(
+                self.preferences.value('label/source_order_enabled', True, bool))
         label.platform_enabled.setChecked(self.preferences.value('label/platform_enabled', True, bool))
         label.platform_font_height.setValue(self.preferences.value('label/platform_font_height_mm', 6, float))
         platform = self.preferences.value('label/platform_name', '隆丰', str).strip()
@@ -246,4 +202,5 @@ class PreferencesMixin:
             self.preferences.setValue(key, value)
         self.preferences.sync()
         if notify:
-            QMessageBox.information(self, "参数已保存", "参数已保存，下次打开会恢复；日常修改也会自动保存。")
+            QMessageBox.information(self, "参数已保存",
+                "参数已立即生效，可以继续排版，无需重启；下次打开也会自动恢复。")

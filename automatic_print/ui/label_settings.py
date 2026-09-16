@@ -11,14 +11,10 @@ from PySide6.QtWidgets import (
     QVBoxLayout,
     QWidget,
 )
-
 from .setting_preview import SettingPreview
 from ..layout_engine.labels import compact_label_text
-
-
 class LabelSettingsDialog(QDialog):
     settings_changed = Signal()
-
     def __init__(self, parent: QWidget | None = None) -> None:
         super().__init__(parent)
         self.setWindowTitle("标签与文字设置")
@@ -28,6 +24,7 @@ class LabelSettingsDialog(QDialog):
         self.sequence = QCheckBox('自动添加序号（每批从 1 到最后一张，不重复添加）')
         self.sequence.setChecked(True)
         self.source_order = QCheckBox('标注输入文件名、正序和倒序（测试中）')
+        self.source_order.setChecked(True)
         self.platform = QComboBox()
         self.platform.setEditable(True)
         self.platform.addItem('隆丰')
@@ -125,7 +122,6 @@ class LabelSettingsDialog(QDialog):
         layout.addLayout(form)
         layout.addWidget(self.preview)
         layout.addWidget(buttons)
-
     def _preview_values(self) -> dict:
         return {
             "enabled": self.enabled.isChecked(),
@@ -144,7 +140,6 @@ class LabelSettingsDialog(QDialog):
             'platform_name': self.platform.currentText() if self.platform_enabled.isChecked() else '',
             'platform_font_height_mm': self.platform_font_height.value(),
         }
-
     def _connect_preview(self) -> None:
         self.enabled.toggled.connect(self.preview.update)
         self.follow_qr.toggled.connect(self.preview.update)
@@ -178,19 +173,16 @@ class LabelSettingsDialog(QDialog):
         self.fit_height.toggled.connect(self._sync_fit)
         self.detect_region.toggled.connect(self._sync_fit)
         self._sync_fit()
-
     def _sync_fit(self, *_args):
         dynamic = self.detect_region.isChecked()
         self.font_size.setEnabled(not dynamic)
         self.fit_height.setEnabled(not dynamic)
         self.reference_height.setEnabled(not dynamic and self.fit_height.isChecked())
-
     def _sync_position(self, *_args):
         below = self.position.currentData() == "block_below"
         self.follow_qr.setEnabled(not below)
         if below:
             self.follow_qr.setChecked(False)
-
     @staticmethod
     def _box(value, minimum, maximum) -> QDoubleSpinBox:
         box = QDoubleSpinBox()

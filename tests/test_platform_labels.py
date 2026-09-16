@@ -93,6 +93,15 @@ def test_missing_qr_warns_without_blocking_and_sequence_is_not_duplicated(tmp_pa
     badge.close()
 
 
+def test_qr_reuse_never_falls_back_to_cutter_lane(tmp_path, monkeypatch):
+    from automatic_print.layout_engine import platform_label
+    path = qr_image(tmp_path/'B1-1-T-Black-M-NO1-1.png')
+    monkeypatch.setattr(platform_label, 'header_space', lambda *_a, **_k: None)
+    assert platform_label.platform_geometry(
+        path, settings(platform_reuse_qr=True), 180, 250, 0
+    ) == (0, 0, 0, 0)
+
+
 def test_batch_labels_use_global_forward_and_reverse_numbers(tmp_path):
     paths = [qr_image(tmp_path/f'输入图{i}.png') for i in range(1, 4)]
     payloads = []

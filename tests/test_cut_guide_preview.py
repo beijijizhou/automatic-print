@@ -46,7 +46,8 @@ def test_band_tracks_real_rotation_and_zone_knife(tmp_path,degrees,expected):
     paths,settings,planned,_=sample(tmp_path)
     path,p=planned[0]
     p=replace(p,rotation_degrees=degrees,width_px=300,height_px=200,
-              cut_zone='旋转区',cut_knife_x_px=400)
+              cut_zone='旋转区',cut_knife_x_px=400,
+              cut_knife_xs_px=(400,))
     bands={path:MembraneRegion(.7,.05,.9,.15)}
     span=guide_spans([(path,p)],settings,bands)[0]
     assert (span.top,span.bottom)==expected

@@ -1,11 +1,9 @@
 from __future__ import annotations
-
 import re
 from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
 from urllib.parse import urlsplit
-
 from .batch_downloads import download_production_images
 from .batch_exports import ready_production_image_codes
 from .chrome_session import connect_debug_chrome, open_authenticated_page
@@ -16,8 +14,6 @@ from .erp_api import (
     production_item_count,
 )
 from .platforms import get_erp_platform
-
-
 @dataclass(frozen=True)
 class BatchRecord:
     batch_number: str
@@ -26,18 +22,13 @@ class BatchRecord:
     batch_type: str
     created_at: str
     production_images_ready: bool
-
-
 @dataclass(frozen=True)
 class PlatformOrderStatus:
     accepted_count: int
-
-
 def load_platform_order_status(
     platform_name: str, progress=None
 ) -> PlatformOrderStatus:
     from playwright.sync_api import sync_playwright
-
     platform = get_erp_platform(platform_name)
     with sync_playwright() as playwright:
         browser = connect_debug_chrome(
@@ -51,11 +42,8 @@ def load_platform_order_status(
         return PlatformOrderStatus(
             accepted_count=production_item_count(page, "1"),
         )
-
-
 def load_batch_records(platform_name: str) -> list[BatchRecord]:
     from playwright.sync_api import sync_playwright
-
     platform = get_erp_platform(platform_name)
     with sync_playwright() as playwright:
         browser = connect_debug_chrome(
@@ -63,13 +51,10 @@ def load_batch_records(platform_name: str) -> list[BatchRecord]:
         )
         page = _batch_page(browser, platform.production_batches_url)
         return _parse_api_rows(page)
-
-
 def load_batch_records_between(
     platform_name: str, start_code: str, end_code: str
 ) -> list[BatchRecord]:
     from playwright.sync_api import sync_playwright
-
     platform = get_erp_platform(platform_name)
     with sync_playwright() as playwright:
         browser = connect_debug_chrome(
@@ -84,8 +69,6 @@ def load_batch_records_between(
             )
         )
         return _records_from_rows(page, rows, ready_codes)
-
-
 def _search_batch_codes(page, codes: list[str]) -> set[str]:
     if not codes:
         return set()
@@ -111,8 +94,6 @@ def _search_batch_codes(page, codes: list[str]) -> set[str]:
             if text.count("下载") >= 3 and "生成成功" in text:
                 ready.update(code for code in group if code in text)
     return ready
-
-
 def _production_items_page(browser, url: str, progress=None):
     return open_authenticated_page(
         browser,
@@ -120,8 +101,6 @@ def _production_items_page(browser, url: str, progress=None):
         ".menu-item-title",
         progress=progress,
     )
-
-
 def download_selected_batches(
     platform_name: str,
     batch_numbers: list[str],
@@ -129,7 +108,6 @@ def download_selected_batches(
     progress=None,
 ) -> list[Path]:
     from playwright.sync_api import sync_playwright
-
     if not batch_numbers:
         raise ValueError("请至少选择一个生产批次。")
     platform = get_erp_platform(platform_name)
@@ -146,8 +124,6 @@ def download_selected_batches(
             progress,
             extract=True,
         )
-
-
 def _batch_page(browser, url: str):
     host = urlsplit(url).netloc
     pages = [
@@ -177,14 +153,10 @@ def _batch_page(browser, url: str):
             pass
         page.wait_for_timeout(500)
     raise RuntimeError("ERP 生产批次表格在 30 秒内没有加载完成。")
-
-
 def _parse_api_rows(page) -> list[BatchRecord]:
     rows = list_batches(page)
     ready_codes = ready_production_image_codes(page, rows)
     return _records_from_rows(page, rows, ready_codes)
-
-
 def _records_from_rows(page, api_rows, ready_codes=None) -> list[BatchRecord]:
     ready_codes = ready_codes or set()
     frame = production_batch_frame(page)

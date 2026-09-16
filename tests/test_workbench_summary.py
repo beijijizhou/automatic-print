@@ -61,8 +61,8 @@ def test_current_batch_preview_and_summary_are_visible_and_retained(tmp_path):
     assert '节省用膜' in panel.summary.metrics.text()
     assert result['filename'] in panel.summary.progress.text()
     assert result['filename'] in panel.summary.cutting.toPlainText()
-    assert not panel.summary.cutting.isVisible()
-    assert panel.details_dialog.isAncestorOf(panel.summary.cutting)
+    assert panel.summary.cutting.isVisible()
+    assert panel.summary.isAncestorOf(panel.summary.cutting)
     assert len(panel.preview.planned) == 4
     panel.summary.finished('', {'preview_only': True})
     assert '未生成文件' in panel.summary.progress.text()

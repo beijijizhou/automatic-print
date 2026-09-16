@@ -1,30 +1,21 @@
 from __future__ import annotations
-
 from dataclasses import dataclass
 from typing import Any
-
-
 PRODUCT_ITEM_MODULE = "productItemManage-"
 PROCESS_BATCH_MODULE = "processBatchManage-"
 BATCH_RULE_MODULE = "index-tzXGOuzl.js"
 GENERATE_BATCH_MODULE = "productOrderManage-B-Bfdh3C.js"
 CHUNK_ROOT = "https://fe-product.hihumbird.com/static/js/chunk/"
-
-
 @dataclass(frozen=True)
 class BatchRule:
     id: int | str
     name: str
     shipping_statuses: tuple[str, ...]
-
-
 def production_api_frame(page):
     frames = [frame for frame in page.frames if frame.name == "fnsz-sale"]
     if len(frames) != 1:
         raise RuntimeError("ERP 生产模块尚未加载完成，请刷新后重试。")
     return frames[0]
-
-
 def production_batch_frame(page):
     """Return the visible batch table in either a direct or shell page."""
     if page.locator("tbody tr, th").count():
@@ -41,8 +32,6 @@ def production_batch_frame(page):
     if frames:
         return frames[-1]
     raise RuntimeError("ERP 生产批次内容区域尚未加载完成，请刷新后重试。")
-
-
 def module_url(page, filename_prefix: str, fallback: str | None = None) -> str:
     frame = production_api_frame(page)
     resources = frame.evaluate(
@@ -59,8 +48,6 @@ def module_url(page, filename_prefix: str, fallback: str | None = None) -> str:
     if fallback:
         return CHUNK_ROOT + fallback
     raise RuntimeError(f"ERP 前端模块未加载：{filename_prefix}")
-
-
 def call_module(
     page,
     filename_prefix: str,
@@ -81,8 +68,6 @@ def call_module(
         }""",
         {"url": url, "exportName": export_name, "argument": argument},
     )
-
-
 def production_item_payload(
     *,
     status: tuple[str, ...] = ("1",),
@@ -108,8 +93,6 @@ def production_item_payload(
         "styles": {"style_sku_ids": []},
         "sort": [{"sort_by": "created", "sort_type": 2}],
     }
-
-
 def list_production_items(page, payload: dict[str, Any]) -> dict[str, Any]:
     return call_module(
         page,
@@ -118,16 +101,12 @@ def list_production_items(page, payload: dict[str, Any]) -> dict[str, Any]:
         payload,
         "productItemManage-BvTyos5U.js",
     )
-
-
 def production_item_count(page, status: str) -> int:
     result = list_production_items(
         page,
         production_item_payload(status=(status,), page_size=1),
     )
     return int(result.get("total") or 0)
-
-
 def list_all_received_items(page) -> tuple[list[dict[str, Any]], int]:
     first = list_production_items(page, production_item_payload())
     total = int(first.get("total") or 0)
@@ -147,8 +126,6 @@ def list_all_received_items(page) -> tuple[list[dict[str, Any]], int]:
             f"ERP 接口返回 {len(rows)} 项，但总数为 {total}，已停止。"
         )
     return rows, total
-
-
 def list_batch_rules(page) -> tuple[BatchRule, ...]:
     rows = call_module(
         page,
@@ -167,15 +144,11 @@ def list_batch_rules(page) -> tuple[BatchRule, ...]:
             BatchRule(row["id"], str(row.get("name") or ""), tuple(statuses))
         )
     return tuple(result)
-
-
 def find_batch_rule(page, name: str) -> BatchRule:
     matches = [rule for rule in list_batch_rules(page) if rule.name == name]
     if len(matches) != 1:
         raise RuntimeError(f"无法唯一找到批次规则“{name}”。")
     return matches[0]
-
-
 def generate_filtered_batch(
     page, payload: dict[str, Any], batch_rule_id: int | str
 ) -> Any:
@@ -192,8 +165,6 @@ def generate_filtered_batch(
         request,
         GENERATE_BATCH_MODULE,
     )
-
-
 def batch_page_payload(page: int = 1, page_size: int = 20) -> dict[str, Any]:
     return {
         "product_sale_type_list": [1],
@@ -203,8 +174,6 @@ def batch_page_payload(page: int = 1, page_size: int = 20) -> dict[str, Any]:
         "page_size": page_size,
         "sort": [{"sort_type": 2, "sort_by": "created"}],
     }
-
-
 def list_batches(page) -> list[dict[str, Any]]:
     result = call_module(
         page,
@@ -214,8 +183,6 @@ def list_batches(page) -> list[dict[str, Any]]:
         "processBatchManage-Dv3c2kZY.js",
     )
     return list(result.get("list") or [])
-
-
 def list_batches_between(
     page, start_code: str, end_code: str
 ) -> list[dict[str, Any]]:

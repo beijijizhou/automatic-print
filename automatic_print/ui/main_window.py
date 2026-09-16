@@ -14,6 +14,7 @@ from PySide6.QtWidgets import (
     QProgressBar,
     QScrollArea,
     QPushButton,
+    QSizePolicy,
     QSpinBox,
     QVBoxLayout,
     QWidget,
@@ -164,36 +165,33 @@ class MainWindow(
         self.run_log = QPlainTextEdit()
         self.run_log.setReadOnly(True)
         self.run_log.setMaximumHeight(115)
-        preview_button = QPushButton("仅预览整批（不生成文件）")
-        preview_button.clicked.connect(lambda: self.generate(preview_only=True))
-        self.generate_button = QPushButton("生成最终打印文件")
+        self.generate_button = QPushButton("生成最终打印文件", self)
         self.generate_button.clicked.connect(self.generate)
+        self.generate_button.hide()  # Compatibility state; production actions live on the workbench.
         self.stop_generation_button = QPushButton("停止当前排版")
         self.stop_generation_button.setEnabled(False)
         self.stop_generation_button.clicked.connect(self.stop_generation)
-        save_button = QPushButton("保存参数")
-        save_button.clicked.connect(self.save_layout_preferences)
+        self.save_settings_button = QPushButton("保存参数并返回排版")
         body = QVBoxLayout()
+        body.setAlignment(Qt.AlignTop)
         from .print_settings_navigation import build_settings_navigation
-        body.addWidget(build_settings_navigation(self, form))
-        body.addStretch()
-        for widget in (
-            self.progress,
-            self.status,
-            self.current_file,
-            self.run_log,
-            preview_button,
-            self.generate_button,
-            self.stop_generation_button,
-            save_button,
-        ):
-            body.addWidget(widget)
+        settings_tabs = build_settings_navigation(self, form)
+        settings_tabs.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Maximum)
+        body.addWidget(settings_tabs)
         container = QWidget()
-        body.addWidget(self.build_reset_button())
+        actions = QHBoxLayout()
+        actions.addWidget(self.build_reset_button())
+        actions.addStretch()
+        actions.addWidget(self.save_settings_button)
+        body.addLayout(actions)
         container.setLayout(body)
         self.settings_dialog = QDialog(self)
         self.settings_dialog.setWindowTitle("自动排版参数设置")
-        self.settings_dialog.resize(760, 650)
+        self.settings_dialog.resize(820, 560)
+        def save_and_return():
+            self.save_layout_preferences()
+            self.settings_dialog.accept()
+        self.save_settings_button.clicked.connect(save_and_return)
         scroll = QScrollArea()
         scroll.setWidgetResizable(True)
         scroll.setWidget(container)

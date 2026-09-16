@@ -1,10 +1,8 @@
-"""Measure once, then compare immutable geometry plans with bounded workers."""
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from contextvars import copy_context
 from copy import deepcopy
 from dataclasses import replace
 from time import monotonic
-
 from .cutter_planner import plan_cutter_layout, read_cutter_items
 from .rotation_zones import plan_rotation_zones, rotation_items
 from .models import mm_to_px
@@ -18,15 +16,11 @@ from .batch_analysis import analyze_batch
 from .film_specs import AVAILABLE_WIDTHS, availability_text, comparison_widths
 from .normal_plan_cache import NormalPlans
 from .dual_quality import dual_quality
-
-
 def compare_films(paths, settings, progress=None, production=None):
     with measurement_session():
         result = _compare_films(paths, settings, progress, production)
         verify_sources()
         return result
-
-
 def _compare_films(paths, settings, progress, production=None):
     rows = []
     started = monotonic()
@@ -139,8 +133,6 @@ def _compare_films(paths, settings, progress, production=None):
             'measurement_seconds': measured_seconds,
             'scope': '分段前；自动多列与多刀位；单件并排优先，仅完整单排尺码后缀旋转；无手动旋转；包含标签、刀码、红线和留白；仅几何检查',
             'occupancy_basis': '生产图片矩形面积，含原图透明部分，不含新增标签/刀码；不是油墨覆盖率'}
-
-
 def _apply_production_result(rows, production, settings):
     """Make the current-film row report the exact plan that will be written."""
     if production is None:
@@ -151,8 +143,6 @@ def _apply_production_result(rows, production, settings):
     if row is None:
         return
     row.update(_production_values(production, settings))
-
-
 def _production_key(production, settings):
     if production is None:
         return None
@@ -163,8 +153,6 @@ def _production_key(production, settings):
         or settings.cutter_tail_rotation or any(p.rotation_degrees for _, p in planned)
     )
     return film, rotation
-
-
 def _production_values(production, settings):
     planned, _labels, _width, height = production[:4]
     film, _rotation = _production_key(production, settings)
@@ -186,8 +174,6 @@ def _production_values(production, settings):
         column_rows=quality.get('column_rows', {}),
         parallel_text=quality.get('parallel_text', '无并排'),
     )
-
-
 def comparison_text(comparison):
     if not comparison:
         return ''

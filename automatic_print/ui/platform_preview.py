@@ -21,7 +21,11 @@ def draw_platform_badge(preview, painter, placement):
 
 
 def draw_platform_diagram(preview, painter, image):
-    qr = QRectF(image.right()-44, image.top()+12, 32, 32)
+    # This low-cost settings diagram mirrors the production relationship:
+    # QR and platform badge share the source header, never the cutter lane.
+    card = QRectF(image.left()+8, image.top()+8, min(150, image.width()-16), 42)
+    painter.fillRect(card, QColor('white'))
+    qr = QRectF(card.left()+5, card.top()+5, 32, 32)
     preview._draw_qr(painter, qr)
     painter.save()
     font = QFont()
@@ -30,6 +34,6 @@ def draw_platform_diagram(preview, painter, image):
     font.setBold(True)
     painter.setFont(font)
     painter.setPen(QColor('black'))
-    painter.drawText(QRectF(image.right()+4, qr.top(), 100, qr.height()),
+    painter.drawText(QRectF(qr.right()+6, qr.top(), card.right()-qr.right()-10, qr.height()),
                      preview.values()['platform_name'])
     painter.restore()

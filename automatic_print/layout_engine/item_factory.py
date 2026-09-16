@@ -15,7 +15,6 @@ from .rotated_marks import rotated_marks
 from .qr_placement import signed_mm as _signed_mm, rotated_qr as _rotated_qr, qr_label_layout as _qr_label_layout
 from .measurement_session import SESSION, measured_item, choice_source, resolved_name
 from .item_block import block_position as _block_position
-
 @dataclass(frozen=True)
 class LayoutItem:
     path: Path
@@ -44,13 +43,9 @@ class LayoutItem:
     preserve_header_gap: bool = False
     platform_below_marker: bool = False
     platform_reuse_qr: bool = False
-
-
 def read_items(paths, settings, progress):
     from .parallel_measurement import read_parallel
     return read_parallel(_read_items, paths, settings, progress)
-
-
 def _read_items(paths, settings, progress):
     if not paths:
         raise ValueError("没有可供排版的图片。")
@@ -209,8 +204,6 @@ def _make_item(
         settings.platform_below_marker,
         settings.platform_reuse_qr,
     )
-
-
 def _label_values(
     path, index, width, height, settings, labels,
     created_at, gap, offset_x, offset_y, rotation_degrees, qr_location,

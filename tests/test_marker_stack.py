@@ -8,7 +8,7 @@ from PIL import Image
 
 from automatic_print.layout import LayoutSettings, generate_layout
 from automatic_print.layout_engine.models import mm_to_px
-from automatic_print.layout_engine.marker_stack import validate_stack
+from automatic_print.layout_engine.marker_stack import stacked_coordinates, validate_stack
 from test_marker_examples import sources
 
 
@@ -41,6 +41,21 @@ def test_platform_badge_reuses_qr_card_when_header_is_preserved(monkeypatch):
     assert x == 42
     assert width > 0
     assert height == 6
+
+
+def test_reused_qr_badge_does_not_expand_external_marker_column():
+    settings = LayoutSettings(
+        dpi=25.4, platform_below_marker=True, platform_reuse_qr=True,
+        number_gap_mm=5, platform_gap_mm=2,
+    )
+    block, label, platform = (
+        (-15, 0, 10, 10), (-15, 15, 12, 3), (42, 5, 90, 6),
+    )
+    bx, _by, lx, _ly, px, _py = stacked_coordinates(
+        settings, block, label, platform,
+    )
+    assert bx == lx == -17
+    assert px == 42
 
 
 @pytest.mark.parametrize('mode', ['free', 'single', 'dual'])

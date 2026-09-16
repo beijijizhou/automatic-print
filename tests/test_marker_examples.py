@@ -66,8 +66,9 @@ def test_main_page_examples_start_after_show_and_refresh_on_parameters(tmp_path,
     window.startup_update_timer.stop()
     examples = window.automation_home.label_quick_panel.marker_examples
     assert examples.worker is None
-    assert window.automation_home.label_quick_panel.preview_tabs.currentIndex() == 1
+    assert window.automation_home.label_quick_panel.preview_tabs.currentIndex() == 0
     window.show()
+    window.automation_home.label_quick_panel.preview_tabs.setCurrentIndex(1)
     wait_for(lambda: len(examples.results) == 4 and examples.worker is None)
     assert examples.isVisible()
     assert all(not r['production'] for r in examples.results)
@@ -75,6 +76,12 @@ def test_main_page_examples_start_after_show_and_refresh_on_parameters(tmp_path,
     paths = sources(tmp_path)
     examples.use_batch({'planned': [(p, None) for p in paths]})
     wait_for(lambda: all(r['production'] for r in examples.results) and examples.worker is None)
+    for row in examples.results:
+        item = row['item']
+        assert item.platform_width == 0 or (
+            item.image_rx <= item.platform_rx
+            and item.platform_rx+item.platform_width <= item.image_rx+item.width
+        )
     old = examples.results[0]['item'].block_width
     window.color_block_settings.width.setValue(12)
     wait_for(lambda: examples.results[0]['item'].block_width != old and examples.worker is None)

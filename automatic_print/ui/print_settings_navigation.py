@@ -1,4 +1,5 @@
 """Categorize canonical settings without duplicating controls or preferences."""
+from PySide6.QtCore import QTimer
 from PySide6.QtWidgets import QTabWidget, QWidget, QFormLayout, QSpinBox, QCheckBox
 
 
@@ -50,35 +51,46 @@ def build_settings_navigation(window, source):
     window.combine_bulk_batches.setToolTip(
         '多批次排版时只生成一个排版任务；直接合并原图清单，不先生成各子批次PNG。')
     def platform_defaults(name):
-        platform = name.strip()
-        if platform == '莆田' and getattr(window, 'developer_mode_enabled', False):
-            window.membrane_gap.setValue(40)
-            window.membrane_gap_enabled.setChecked(True)
-            window.preferences.setValue('layout/membrane_gap_mm', 40)
-            window.preferences.setValue('layout/membrane_gap_enabled', True)
-            return
-        if platform.casefold() != 's2b':
-            return
-        dual_index = window.cutter_settings.mode.findData('dual')
-        if dual_index >= 0:
-            window.cutter_settings.mode.setCurrentIndex(dual_index)
-        window.combine_bulk_batches.setChecked(True)
-        window.cutter_settings.force_small_pair.setChecked(True)
-        window.cutter_settings.two_zone.setChecked(True)
-        window.cutter_settings.quick_mode.setChecked(False)
-        window.cutter_settings.rotation_zone.setChecked(True)
-        window.cutter_settings.tail_rotation.setChecked(False)
-        window.preferences.setValue('layout/combine_bulk_batches', True)
-        window.preferences.setValue('cutter/mode', 'dual')
-        window.preferences.setValue('layout/force_small_pair_width', True)
-        window.preferences.setValue('layout/majority_two_zone', True)
-        window.preferences.setValue('cutter/quick_mode', False)
-        window.preferences.setValue('cutter/rotation_zone', True)
-        window.preferences.setValue('cutter/tail_rotation', False)
+        from .parameter_refresh import defer_parameter_refresh
+        with defer_parameter_refresh(window):
+            platform = name.strip()
+            if platform == '莆田' and getattr(window, 'developer_mode_enabled', False):
+                window.membrane_gap.setValue(40)
+                window.membrane_gap_enabled.setChecked(True)
+                window.preferences.setValue('layout/membrane_gap_mm', 40)
+                window.preferences.setValue('layout/membrane_gap_enabled', True)
+            elif platform.casefold() == 's2b':
+                dual_index = window.cutter_settings.mode.findData('dual')
+                if dual_index >= 0:
+                    window.cutter_settings.mode.setCurrentIndex(dual_index)
+                window.combine_bulk_batches.setChecked(True)
+                window.cutter_settings.force_small_pair.setChecked(True)
+                window.cutter_settings.two_zone.setChecked(True)
+                window.cutter_settings.quick_mode.setChecked(False)
+                window.cutter_settings.rotation_zone.setChecked(True)
+                window.cutter_settings.tail_rotation.setChecked(False)
+                for key, value in (
+                    ('layout/combine_bulk_batches', True), ('cutter/mode', 'dual'),
+                    ('layout/force_small_pair_width', True), ('layout/majority_two_zone', True),
+                    ('cutter/quick_mode', False), ('cutter/rotation_zone', True),
+                    ('cutter/tail_rotation', False),
+                ):
+                    window.preferences.setValue(key, value)
     window.apply_platform_defaults = platform_defaults
     window.label_settings.platform.currentTextChanged.connect(platform_defaults)
     platform_defaults(window.label_settings.platform.currentText())
     window.print_settings_tabs = tabs
     window.layout_rules_form = forms['排版规则']
     window.output_parallel_form = forms['输出与并行']
+    def fit_current_page(index):
+        page = tabs.widget(index)
+        if page is None:
+            return
+        page.layout().activate()
+        height = tabs.tabBar().sizeHint().height() + page.sizeHint().height() + 22
+        tabs.setFixedHeight(max(120, height))
+    window.fit_settings_tabs = fit_current_page
+    tabs.currentChanged.connect(
+        lambda index: QTimer.singleShot(0, lambda: fit_current_page(index)))
+    QTimer.singleShot(0, lambda: fit_current_page(tabs.currentIndex()))
     return tabs

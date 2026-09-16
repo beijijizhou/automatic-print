@@ -75,7 +75,7 @@ def test_film_parent_clears_stale_mode_and_knife_on_first_change(tmp_path):
     width.setRange(0, 1000)
     width.setValue(450)
     panel = CutterSettingsPanel(preferences, width, rotation, direction)
-    assert panel.mode.currentData() == "single"
+    assert panel.mode.currentData() == "dual"
     panel.film.setCurrentIndex(panel.film.findData(600))
     assert width.value() == 600
     assert panel.mode.currentData() == "dual"
@@ -83,7 +83,7 @@ def test_film_parent_clears_stale_mode_and_knife_on_first_change(tmp_path):
     assert not rotation.isEnabled()
     panel.knife.setValue(310)
     panel.film.setCurrentIndex(panel.film.findData(450))
-    assert panel.mode.currentData() == "single"
+    assert panel.mode.currentData() == "dual"
     assert panel.knife.value() == 215
     assert not panel.knife.isEnabled()
     panel.save()
@@ -104,7 +104,9 @@ def test_home_hides_online_workflows_and_keeps_local_logs():
     assert not home.main_tabs.isTabVisible(1)
     assert not home.main_tabs.isTabVisible(2)
     assert home.thread is None
-    assert home.label_quick_panel.details_dialog.isAncestorOf(home.log)
+    assert home.log.isHidden()
+    assert window.batch_record.document() is window.run_log.document()
+    assert not home.label_quick_panel.details_dialog.isAncestorOf(home.log)
     assert home.local_summary.isHidden()
     assert home.local_table.isHidden()
     assert home.platform.isHidden()

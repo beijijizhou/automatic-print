@@ -12,6 +12,7 @@ OWNERS = []
 
 
 def test_reset_clears_residual_parameters_without_autosave_restoring_them(tmp_path, monkeypatch):
+    import automatic_print.ui.settings_reset as settings_reset
     prefs = QSettings(str(tmp_path/'settings.ini'), QSettings.IniFormat)
     for key, value in {'output/parts': 8, 'output/save_workers': 8,
                        'layout/spacing_mm': 19, 'layout/manual_rotations': '{}',
@@ -27,9 +28,12 @@ def test_reset_clears_residual_parameters_without_autosave_restoring_them(tmp_pa
     window.startup_update_timer.stop()
     monkeypatch.setattr(QMessageBox, 'question', lambda *a: QMessageBox.Yes)
     monkeypatch.setattr(QMessageBox, 'information', lambda *a: None)
-    monkeypatch.setattr(APP, 'quit', lambda: None)
+    restarted = []
+    monkeypatch.setattr(settings_reset, 'request_application_restart',
+                        lambda target: restarted.append(target) or True)
     window.preference_autosave.schedule()
     assert reset_settings(window)
+    assert restarted == [window]
     window.preference_autosave.flush()
     assert not prefs.contains('output/save_workers')
     assert not prefs.contains('layout/manual_rotations')
@@ -60,4 +64,19 @@ def test_reset_cancel_or_busy_preserves_parameters(tmp_path, monkeypatch):
     assert not reset_settings(window)
     assert prefs.value('output/save_workers', type=int) == 8
     window.thread = None
+    window.close()
+
+
+def test_save_parameters_returns_to_layout_without_restart(tmp_path, monkeypatch):
+    prefs = QSettings(str(tmp_path/'save.ini'), QSettings.IniFormat)
+    window = MainWindow(prefs)
+    OWNERS.append(window)
+    window.startup_update_timer.stop()
+    monkeypatch.setattr(QMessageBox, 'information', lambda *a: None)
+    window.settings_dialog.show()
+    window.spacing.setValue(12)
+    window.save_settings_button.click()
+    assert not window.settings_dialog.isVisible()
+    assert prefs.value('layout/spacing_mm', type=float) == 12
+    assert window.centralWidget().isEnabled()
     window.close()

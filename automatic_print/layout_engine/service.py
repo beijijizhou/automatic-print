@@ -1,18 +1,16 @@
 from __future__ import annotations
 from contextlib import nullcontext
-from dataclasses import asdict, replace
+from dataclasses import replace
 from datetime import datetime
 from pathlib import Path
 from time import perf_counter
 from typing import Iterable
 from .models import LayoutSettings, ProgressCallback, mm_to_px
-from .images import print_dimensions
-from .labels import normalize_machine_number, format_label
+from .labels import format_label
 from .output_name import label_output_name, unused_output_path, production_quantity
 from .dual_quality import dual_quality
 from .marker_space import validate_embedded_marks
 from .cut_validation import validate_cut_corridor, validate_canvas_pixels, validate_vips_output
-from .metrics import saving_metrics
 from .order_validation import validate_order_placements
 from .pillow_renderer import build_pillow_canvas
 from .printed_guides import collect_guides, dot_boxes, paint_guides, validate_vips_canvas
@@ -39,6 +37,8 @@ def generate_layout(
 ) -> dict:
     total_started = perf_counter()
     paths = list(image_paths)
+    from ..automation.api.s2b.prepare import prepare_s2b_metadata
+    prepare_s2b_metadata(paths, settings, progress)
     from .header_gap import prepare_paths
     if phase_ready and settings.membrane_gap_mm > 0:
         phase_ready('补足膜标签间距')
@@ -189,66 +189,21 @@ def generate_layout(
             import pyvips
             pyvips.cache_set_max(0)
     phase('批次信息整理')
-    size = output_path.stat().st_size
-    from .knife_positions import result_fields
-    result = {
-        "filename": filename,
-        "dual_quality": quality,
-        "size_range": sizes, "output_dpi": settings.dpi,
-        "film_width_mm": settings.media_width_mm + settings.riin_left_mm + settings.riin_right_mm,
-        "output_dpi_origin": settings.output_dpi_origin,
-        "transition_marks": transitions,
-        "rotation_marker_shift_mm": 0,
-        "machine_number": normalize_machine_number(settings.machine_number),
-        "header_gap": gap_records,
-        "cutter_mode": settings.cutter_mode,
-        'platform_name': settings.platform_name,
-        'platform_font_height_mm': settings.platform_font_height_mm,
-        'label_sequence_enabled': settings.label_sequence_enabled,
-        "cut_corridor": cut_check,
-        "printed_guides": {"span_count": len(guide_spans), "dot_count": len(guide_boxes),
-                           "missing_qr": missing_guides},
-        **result_fields(planned, settings),
-        "cutter_safety_mm": settings.cutter_safety_mm,
-        "source_dimensions": [
-            {"source": path.name, **asdict(print_dimensions(path, settings.dpi))}
-            for path in paths
-        ],
-        "width_px": width,
-        "height_px": height,
-        "width_mm": round(width * 25.4 / settings.dpi, 1),
-        "maximum_width_mm": settings.media_width_mm,
-        "trimmed_right_mm": round(
-            max(0, settings.media_width_mm - width * 25.4 / settings.dpi),
-            1,
-        ),
-        "height_mm": round(height * 25.4 / settings.dpi, 1),
-        "file_size_bytes": size,
-        "output_format": "TIFF" if output_format == 'tiff' else "PNG",
-        "pixel_format": "RGBA",
-        "bits_per_channel": 8, "alpha_channel": True,
-        "png_compression_level": settings.png_compression_level,
-        "png_engine": ("tifffile + imagecodecs" if output_format == 'tiff'
-                       else "libvips" if use_vips else "Pillow"),
-        "png_save_details": save_details,
-        "output_megabytes_per_second": round(
-            size / 1_000_000 / max(saving_seconds, 0.001), 1
-        ),
-        "output_megapixels_per_second": round(
-            width * height / 1_000_000 / max(saving_seconds, 0.001), 1
-        ),
-        "order_check": order_check, "analysis": analysis[-1],
-        "placements": [asdict(item) for _, item in planned],
-        "rotation_count": sum(bool(item.rotation_degrees) for _, item in planned),
-        "timings_seconds": {
-            "reading": round(reading_seconds, 3),
-            "combining": round(combining_seconds, 3),
-            "saving_png": round(saving_seconds, 3),
-            "output_validation": round(output_validation_seconds, 3),
-            "total": round(perf_counter() - total_started, 3),
-        },
-    }
-    result.update(saving_metrics(baseline_height, height, settings.dpi))
+    from .generation_result import build_result
+    result = build_result(
+        filename=filename, output_path=output_path, settings=settings,
+        paths=paths, planned=planned, analysis=analysis[-1], quality=quality,
+        sizes=sizes, gap_records=gap_records, cut_check=cut_check,
+        order_check=order_check, guide_spans=guide_spans,
+        guide_boxes=guide_boxes, missing_guides=missing_guides,
+        transitions=transitions, width=width,
+        height=height, baseline_height=baseline_height,
+        output_format=output_format, use_vips=use_vips,
+        save_details=save_details, reading_seconds=reading_seconds,
+        combining_seconds=combining_seconds, saving_seconds=saving_seconds,
+        validation_seconds=output_validation_seconds,
+        total_seconds=perf_counter() - total_started,
+    )
     from .header_gap import verify_records
     verify_records(gap_records)
     return result

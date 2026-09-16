@@ -1,16 +1,12 @@
 from __future__ import annotations
-
 import atexit
 from itertools import groupby
 from pathlib import Path
 from threading import RLock
-
 from PIL import ImageColor
-
 from .dynamic_label import source_label_badge
 from .models import LayoutSettings, Placement, ProgressCallback, mm_to_px
 from .platform_label import platform_badge
-
 try:
     import pyvips
 except (ImportError, OSError):
@@ -21,19 +17,13 @@ else:
     def _shutdown_vips():
         pyvips.cache_set_max(0)
         pyvips.shutdown()
-
     atexit.register(_shutdown_vips)
-
-
 # This Homebrew libvips build can crash when independent Python worker pools
 # start several demand evaluations at once. libvips still uses its own native
 # worker threads inside each evaluation; only the outer evaluations are gated.
 demand_lock = RLock()
-
-
 def available() -> bool:
     return pyvips is not None
-
 def _rgba(path: Path, width: int, height: int, rotation_degrees: int):
     # Pixel validation can evaluate a source before PNG saving re-reads it.
     # A forward-only decoder fails on that second pass, especially after rotation.
@@ -68,8 +58,6 @@ def _rgba(path: Path, width: int, height: int, rotation_degrees: int):
     elif image.bands > 4:
         image = image.extract_band(0, n=4)
     return image.copy(interpretation="srgb")
-
-
 def build_vips_rows(
     planned: list[tuple[Path, Placement]],
     labels: dict[int, str],
@@ -157,8 +145,6 @@ def build_vips_rows(
             )
         )
     return rows
-
-
 def build_vips_canvas(
     planned: list[tuple[Path, Placement]],
     labels: dict[int, str],
@@ -191,8 +177,6 @@ def build_vips_canvas(
         extend="background",
         background=[0, 0, 0, 0],
     ).copy(xres=pixels_per_mm, yres=pixels_per_mm)
-
-
 def _balanced_vertical_join(images):
     """Build a shallow demand graph instead of an O(rows)-deep join chain."""
     level = list(images)

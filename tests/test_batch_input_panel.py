@@ -1,4 +1,5 @@
 from test_developer_mode import window, APP
+from PySide6.QtCore import Qt
 
 
 def test_input_cards_group_single_and_multiple_while_tools_stay_pinned(tmp_path):
@@ -50,6 +51,33 @@ def test_preview_uses_current_folder_or_selects_one_without_printing(tmp_path, m
     assert len(calls) == 2
     owner.thread = None
     owner.close()
+
+
+def test_everyday_parameters_are_grouped_and_real_preview_is_default(tmp_path):
+    owner = window(tmp_path/'grouped.ini')
+    home = owner.automation_home
+    panel = home.label_quick_panel
+    titles = {group.title() for group in home.batch_input_panel.findChildren(type(home.batch_input_panel))}
+    assert {'批次', '输出', '排版', '标签'} <= titles
+    assert home.batch_input_panel.isAncestorOf(owner.quick_header_gap_group)
+    assert home.batch_input_panel.isAncestorOf(owner.quick_force_small_pair)
+    assert home.batch_input_panel.isAncestorOf(panel.source_order)
+    assert panel.source_order.isChecked()
+    assert panel.source_order_label.textInteractionFlags() & Qt.TextSelectableByMouse
+    assert panel.preview_tabs.currentWidget() is panel.actual_preview_page
+    owner.close()
+
+
+def test_source_order_default_migrates_once_but_keeps_later_user_choice(tmp_path):
+    settings = tmp_path/'source-order.ini'
+    first = window(settings)
+    assert first.label_settings.source_order.isChecked()
+    first.label_settings.source_order.setChecked(False)
+    first.save_layout_preferences(notify=False)
+    first.close()
+    restored = window(settings)
+    assert not restored.label_settings.source_order.isChecked()
+    restored.close()
 
 
 def test_primary_action_selects_then_generates_and_cancel_never_reuses_old_folder(tmp_path, monkeypatch):

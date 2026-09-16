@@ -44,49 +44,46 @@ def build_developer_mode(window, footer):
             checkbox.setChecked(True)
             checkbox.blockSignals(False)
             return
-        window.developer_mode_enabled = enabled
-        sync_experimental_platforms(window, enabled)
-        window.apply_platform_defaults(window.label_settings.platform.currentText())
-        window.quick_header_gap_group.setVisible(True)
-        window.layout_rules_form.setRowVisible(window.membrane_gap_enabled, True)
-        window.layout_rules_form.setRowVisible(window.membrane_gap, True)
-        window.layout_rules_form.setRowVisible(window.cutter_settings.two_zone, True)
-        window.cutter_settings.set_developer_mode(enabled)
-        if not enabled:
-            window.output_format.setCurrentIndex(
-                max(0, window.output_format.findData('png')))
-        window.output_parallel_form.setRowVisible(window.output_format, enabled)
-        panel = window.automation_home.label_quick_panel
-        window.batch_record_group.setVisible(True)
-        panel.summary.gap_loss.setVisible(True)
-        panel.history_button.setVisible(enabled)
-        panel.bulk_analysis_button.setVisible(enabled)
-        panel.algorithm_costs_button.setVisible(enabled)
-        panel.developer_tools_label.setVisible(enabled)
-        panel.source_order.setVisible(enabled)
-        panel.reference_films_label.setVisible(enabled)
-        window.automation_home.batch_tools.setVisible(enabled)
-        panel.summary.film_table.set_reference_mode(enabled)
-        window.label_settings.form.setRowVisible(window.label_settings.source_order, enabled)
-        window.cutter_settings.compare_films.setText(
-            '比较45/60厘米：常规与旋转（不自动切换）')
-        details = panel.details_dialog
-        algorithm = getattr(details, 'algorithm_page', None)
-        if algorithm is not None:
-            if not enabled and details.tabs.currentWidget() is algorithm:
-                details.tabs.setCurrentIndex(0)
-            details.tabs.setTabVisible(details.tabs.indexOf(algorithm), enabled)
-        history = getattr(details, 'history_page', None)
-        if history is not None:
-            if not enabled and details.tabs.currentWidget() is history:
-                details.tabs.setCurrentIndex(0)
-            details.tabs.setTabVisible(details.tabs.indexOf(history), enabled)
-        if not enabled and hasattr(details, 'bulk_dialog'):
-            details.bulk_dialog.hide()
-        window.preferences.setValue('developer/enabled', enabled)
-        window.preferences.sync()
-        if panel.preview.batch_payload and not panel.preview.production_active:
-            panel.preview.schedule_refresh()
+        from .parameter_refresh import defer_parameter_refresh
+        with defer_parameter_refresh(window):
+            window.developer_mode_enabled = enabled
+            sync_experimental_platforms(window, enabled)
+            window.apply_platform_defaults(window.label_settings.platform.currentText())
+            window.quick_header_gap_group.setVisible(True)
+            window.layout_rules_form.setRowVisible(window.membrane_gap_enabled, True)
+            window.layout_rules_form.setRowVisible(window.membrane_gap, True)
+            window.layout_rules_form.setRowVisible(window.cutter_settings.two_zone, True)
+            window.cutter_settings.set_developer_mode(enabled)
+            if not enabled:
+                window.output_format.setCurrentIndex(
+                    max(0, window.output_format.findData('png')))
+            window.output_parallel_form.setRowVisible(window.output_format, enabled)
+            panel = window.automation_home.label_quick_panel
+            window.batch_record_group.setVisible(True)
+            panel.summary.gap_loss.setVisible(True)
+            panel.history_button.setVisible(enabled)
+            panel.bulk_analysis_button.setVisible(enabled)
+            panel.algorithm_costs_button.setVisible(enabled)
+            panel.developer_tools_label.setVisible(enabled)
+            panel.source_order.setVisible(enabled)
+            panel.source_order_group.setVisible(enabled)
+            panel.reference_films_label.setVisible(enabled)
+            window.automation_home.batch_tools.setVisible(enabled)
+            panel.summary.film_table.set_reference_mode(enabled)
+            window.label_settings.form.setRowVisible(window.label_settings.source_order, enabled)
+            window.cutter_settings.compare_films.setText(
+                '比较45/60厘米：常规与旋转（不自动切换）')
+            details = panel.details_dialog
+            for page in ('algorithm_page', 'history_page'):
+                widget = getattr(details, page, None)
+                if widget is not None:
+                    if not enabled and details.tabs.currentWidget() is widget:
+                        details.tabs.setCurrentIndex(0)
+                    details.tabs.setTabVisible(details.tabs.indexOf(widget), enabled)
+            if not enabled and hasattr(details, 'bulk_dialog'):
+                details.bulk_dialog.hide()
+            window.preferences.setValue('developer/enabled', enabled)
+            window.preferences.sync()
 
     checkbox.toggled.connect(changed)
     changed(checkbox.isChecked())

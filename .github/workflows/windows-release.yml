@@ -25,6 +25,19 @@ jobs:
       - name: Install build dependencies
         run: python -m pip install -r requirements-build.txt
 
+      - name: Inject shared S2B gateway key
+        shell: pwsh
+        env:
+          S2B_BATCH_INFO_KEY: ${{ secrets.AUTOMATIC_PRINT_S2B_BATCH_INFO_KEY }}
+        run: |
+          if (-not $env:S2B_BATCH_INFO_KEY) {
+            throw "Missing AUTOMATIC_PRINT_S2B_BATCH_INFO_KEY repository secret"
+          }
+          $escaped = $env:S2B_BATCH_INFO_KEY.Replace('\\', '\\\\').Replace('"', '\\"')
+          Set-Content -Encoding UTF8 `
+            automatic_print/automation/api/s2b/deployment.py `
+            "S2B_BATCH_INFO_KEY = \"$escaped\""
+
       - name: Build application
         run: pyinstaller --noconfirm --clean AutomaticPrint.spec
 

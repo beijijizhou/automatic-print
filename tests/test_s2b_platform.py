@@ -1,4 +1,5 @@
 from test_developer_mode import window
+from PySide6.QtTest import QTest
 from PySide6.QtWidgets import QFileDialog
 
 
@@ -63,3 +64,21 @@ def test_s2b_detection_requires_a_size_folder_group(tmp_path):
     s2b=make_s2b_root(tmp_path/'S2B批次')
     assert detect_selected_platform(s2b)=='S2B'
     assert detect_selected_platform(s2b/'5XL')=='S2B'
+
+
+def test_platform_and_developer_changes_do_not_restart_batch_preview(tmp_path, monkeypatch):
+    owner = window(tmp_path/'no-auto-preview.ini')
+    preview = owner.automation_home.label_quick_panel.preview
+    preview.source_folder = tmp_path
+    requests = []
+    monkeypatch.setattr(preview.loader, 'request', lambda *args: requests.append(args))
+    owner.label_settings.platform.setCurrentText('S2B')
+    QTest.qWait(180)
+    assert requests == []
+    assert not preview.refresh_timer.isActive()
+    assert '参数已更新' in preview.production_stage
+    owner.developer_mode_checkbox.setChecked(True)
+    QTest.qWait(180)
+    assert requests == []
+    assert not preview.refresh_timer.isActive()
+    owner.close()

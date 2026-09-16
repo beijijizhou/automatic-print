@@ -11,6 +11,12 @@
 - 普通模式显示生产排版规则、45/60厘米方案、批次处理记录、膜标签间距和额外损耗。补足膜间距
   由 `ui/header_gap.py` 的独立开关控制，保存的毫米数值本身不会自动启用。开发者模式显示算法
   诊断、排版历史、批量膜分析和文件顺序标注；膜规格比较固定为45/60厘米四套方案。
+- `ui/batch_input_panel.py` 拥有主界面的批次操作和常用参数分组；批次、输出、排版和标签参数
+  使用同一层级，文件顺序标注仍受开发者模式控制。`ui/label_quick_panel.py` 进入时默认展示
+  整批真实排版预览，刀码示意不代替真实预览。
+- `ui/parameter_refresh.py` 统一抑制开发者模式和平台默认值联动期间的预览请求；参数更新后
+  保留明确提示，只有用户重新启动排版才会读取批次。应用重启由 `restart_control.py` 统一拥有，
+  源码更新和恢复出厂设置共用同一启动策略。
 - 单批次生成编排：`automatic_print/ui/generation_actions.py`、`workers.py`、
   `generation_preview.py`。
 - 单批生成、仅预览及批量分析的每个批次均由 `layout_engine/measurement_session.py` 建立一份数据
@@ -28,6 +34,11 @@
 - 完整生成服务：`automatic_print/layout_engine/service.py`。
 - 文件发现与元数据：`discovery.py`、`batch_discovery.py`、`source_metadata.py`、
   `output_dpi.py`。
+- S2B 文件夹批次号解析、中心批次查询及本地图片颜色匹配位于
+  `automation/api/s2b/`；该调用目前仅由开发者模式参数启用，中心服务未配置或不可用时不会阻断
+  本地排版。中心地址随应用提供，正式 Windows 构建从 GitHub Secret
+  `AUTOMATIC_PRINT_S2B_BATCH_INFO_KEY` 注入受限客户端密钥；源码树只保留空占位，
+  Supabase service-role 和 S2B 登录凭据都不下发到生产电脑。
 - 订单、双面、颜色与尺码：`order_groups.py`、`batch_analysis.py`、
   `single_order_sequence.py`、`color_policy.py`、`size_policy.py`。
 - 行、刀位和区域规划：`planner.py`、`row_optimizer.py`、`cutter_planner.py`、`dynamic_columns.py`、
@@ -39,8 +50,8 @@
   `single_rotation.py`、`width_fit.py`、`gap_fallback.py`。
   旋转区的竖图保持横向旋转，超出当前动态安全宽度时再等比缩小；整批仍最多只有并排区和旋转区两个区域。
 - 标签与刀码：`labels.py`、`dynamic_label.py`、`marker_stack.py`、`left_marker.py`、
-  `platform_label.py`、`header_region.py`、`transparent_search.py`。开发者模式的平台文字优先放入
-  原图二维码卡片的已验证空位；找不到安全空位时自动回退外置，不改变普通模式现有位置。
+  `platform_label.py`、`header_region.py`、`transparent_search.py`。平台文字只放入原图二维码卡片的
+  已验证透明空位，预览与输出复用同一坐标；找不到安全空位时不添加，不能回退到外置刀码一侧。
 - 渲染与编码：`pillow_renderer.py`、`vips_renderer.py`、`png_codecs/`、
   `segmented_output.py`、`atomic_png.py`、`atomic_tiff.py`。超长 PNG 由 `png_codecs/row_stream.py`
   按排版行依次解码、合成、固定 UP 滤波、压缩和写入，每行只求值一次且不生成中间图片；PNG 保存后由

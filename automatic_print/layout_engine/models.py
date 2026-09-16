@@ -69,7 +69,7 @@ class LayoutSettings:
     preserve_header_gap: bool = False
     membrane_gap_mm: float = 0  # GUI remembers a value, but a developer-only checkbox gates it.
     platform_below_marker: bool = False  # GUI uses one vertical marker stack.
-    platform_reuse_qr: bool = False  # Experimental: keep platform text inside verified QR-card space.
+    platform_reuse_qr: bool = False  # Keep platform text inside verified QR-card space.
     cutter_knife_mm: float = 300
     cutter_safety_mm: float = 3
     cutter_marker_offset_mm: float = 0
@@ -88,6 +88,7 @@ class LayoutSettings:
     label_sequence_total: int = 0
     label_machine_enabled: bool = False
     platform_name: str = ''
+    s2b_batch_api_enabled: bool = False
     platform_gap_mm: float = 2
     platform_font_height_mm: float = 0  # Zero retains automatic QR-height sizing.
     compare_film_sizes: bool = False

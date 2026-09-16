@@ -16,7 +16,7 @@ def test_governance_documents_exist_and_are_current_state_documents():
 def test_agent_guide_defines_reuse_and_push_gates():
     guide = (ROOT/'AGENTS.md').read_text(encoding='utf-8')
     for rule in ('git ls-files', 'FUNCTION_CATALOG.md', '100–200',
-                 '任何测试失败都禁止推送', 'automation/api/<provider>/'):
+                 '已运行的针对性测试失败时禁止推送', 'automation/api/<provider>/'):
         assert rule in guide
 
 

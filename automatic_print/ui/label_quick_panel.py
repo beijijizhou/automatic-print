@@ -134,7 +134,7 @@ class LabelQuickPanel(QWidget):
         window.folder.textChanged.connect(folder_changed)
         def mode_changed(*_args):
             self.preview.auto_refresh_enabled = not window.cutter_settings.quick_mode.isChecked()
-            folder_changed(window.folder.text())
+            if not getattr(self.preview, 'parameter_refresh_deferred', 0): folder_changed(window.folder.text())
         window.cutter_settings.quick_mode.toggled.connect(mode_changed)
         self.preview.auto_refresh_enabled = not window.cutter_settings.quick_mode.isChecked()
         window.dpi.valueChanged.connect(self.preview.schedule_refresh)
@@ -169,7 +169,7 @@ class LabelQuickPanel(QWidget):
         QVBoxLayout(self.actual_preview_page).addWidget(self.preview_viewport)
         self.preview_tabs.addTab(self.actual_preview_page, '整批排版预览')
         self.preview_tabs.addTab(self.marker_examples, '刀码四种情况')
-        self.preview_tabs.setCurrentIndex(1)
+        self.preview_tabs.setCurrentIndex(0)
         preview_layout.addWidget(self.batch_distribution)
         preview_layout.addWidget(self.preview_tabs)
         self.preview.detail = '尚未读取批次。选择文件夹或点击“读取当前文件夹”后开始。'

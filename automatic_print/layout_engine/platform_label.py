@@ -86,6 +86,10 @@ def platform_geometry(path, settings, width, height, degrees):
          if settings.platform_reuse_qr or not (settings.preserve_header_gap and degrees % 180 == 0)
          else None)
     if x is None:
+        if settings.platform_reuse_qr:
+            # Missing verified space means no added badge. Never move source-label
+            # content into the independent cutter-marker lane.
+            return 0, 0, 0, 0
         # Never append a wide platform name to the artwork's right edge.
         x = -gap-badge_width
     return x, top, badge_width, target

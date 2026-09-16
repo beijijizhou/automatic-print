@@ -9,7 +9,11 @@ def stacked_coordinates(settings, block, label, platform):
     if not settings.platform_below_marker or not bw:
         return bx, by, lx, ly, px, py
     gap = max(1, mm_to_px(settings.color_block_gap_mm, settings.dpi))
-    x = -max(bw, lw, pw)-gap
+    # A badge reused inside the source QR card is not part of the external
+    # cutter-marker column. Reserving its width here would count it twice and
+    # can incorrectly make otherwise safe multi-column rows impossible.
+    external_platform_width = 0 if settings.platform_reuse_qr else pw
+    x = -max(bw, lw, external_platform_width)-gap
     y = by+bh+mm_to_px(settings.number_gap_mm, settings.dpi)
     external_platform = ph and not settings.platform_reuse_qr
     label_y = y+ph+mm_to_px(settings.platform_gap_mm, settings.dpi) if external_platform else y

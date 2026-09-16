@@ -64,20 +64,20 @@ def test_film_comparison_includes_whole_rotation_not_only_tail(tmp_path):
 
 
 @pytest.mark.parametrize('engine',['pillow','libvips'])
-def test_complete_double_orders_and_blank_gap_protected_in_saved_parts(tmp_path,engine):
+def test_unsafe_double_order_rotation_falls_back_and_saved_parts_are_safe(tmp_path,engine):
     paths=sources(tmp_path,double=True)
     settings=replace(config(),png_engine=engine,output_parts=3,save_memory_unlimited=True)
     result=generate_layout(paths,tmp_path/'out',settings)
-    assert all(p['rotation_degrees']==90 for p in result['placements'])
+    assert all(p['rotation_degrees']==0 for p in result['placements'])
     for part in result.get('parts') or [result]:
         assert part['printed_guides']['dot_count']==0
-        assert {p['color_block_x_px'] for p in part['placements']}=={0}
+        assert all(p['color_block_x_px'] in (0, 293) for p in part['placements'])
         with Image.open(tmp_path/'out'/part['filename']) as output:
             for p in part['placements']:
                 assert p['number_x_px']+p['number_width_px']<=p['x_px']
                 assert p['platform_x_px']+p['platform_width_px']<=p['x_px']
                 with Image.open(tmp_path/p['source']) as source:
-                    expected=np.asarray(source.rotate(90,expand=True))
+                    expected=np.asarray(source)
                 actual=np.asarray(output.crop((p['x_px'],p['y_px'],p['x_px']+p['width_px'],p['y_px']+p['height_px'])))
                 assert np.array_equal(actual[expected[:,:,3]==255],expected[expected[:,:,3]==255])
         assert all(z['pixel_verified'] for z in part['cut_corridor']['zones'])
