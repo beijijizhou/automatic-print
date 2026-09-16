@@ -3,7 +3,7 @@ from PySide6.QtCore import QThread, QTimer, Qt, Signal
 from PySide6.QtGui import QImage, QPixmap
 from PySide6.QtWidgets import QDialog, QGridLayout, QGroupBox, QLabel, QPushButton, QScrollArea, QVBoxLayout
 
-from .marker_example_data import CASES, build_examples
+from .data import CASES, build_examples
 
 
 class ExampleWorker(QThread):
@@ -42,7 +42,7 @@ class MarkerExamples(QGroupBox):
             body = QVBoxLayout(card)
             body.addWidget(picture)
             body.addWidget(caption)
-            from .action_icons import action_icon
+            from ...action_icons import action_icon
             enlarge = QPushButton('放大检查')
             enlarge.setIcon(action_icon('expand'))
             enlarge.clicked.connect(lambda checked=False, i=index: self.enlarge(i))
@@ -102,7 +102,7 @@ class MarkerExamples(QGroupBox):
         if self.pending:
             return  # Never install an obsolete batch or parameter result.
         self.results, self.images = results, []
-        from .marker_example_annotations import annotated_example
+        from .annotations import annotated_example
         settings = self.window._layout_settings()
         for data, (picture, caption) in zip(results, self.cards):
             image = QImage(data['pixels'], *data['size'], QImage.Format_RGBA8888).copy()

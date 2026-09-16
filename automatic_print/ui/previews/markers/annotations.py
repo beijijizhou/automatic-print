@@ -1,4 +1,4 @@
-"""GUI-only dimension overlay; never used by production PNG rendering."""
+"""GUI-only marker dimensions; never used by production PNG rendering."""
 from PySide6.QtCore import QPointF, QRectF, Qt
 from PySide6.QtGui import QColor, QFont, QImage, QPainter, QPen
 

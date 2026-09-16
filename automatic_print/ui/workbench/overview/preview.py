@@ -15,7 +15,7 @@ from ...batch_details import BatchDetailsDialog
 from ...batch_distribution import BatchDistributionLabel
 from ...batch_summary import BatchSummaryPanel
 from ...manual_rotation import ManualRotationPanel
-from ...marker_examples import MarkerExamples
+from ...previews.markers import MarkerExamples
 from ...operation_timing import OperationTimingPanel
 from ...pair_preview import PairProductionPreview
 from ...preview_viewport import PreviewViewport

@@ -38,6 +38,7 @@
 | 主界面进度展示 | `ui/busy_spinner.py`, `operation_timing.py`, `generation_panel.py` | 未知总量用旋转指示，已知总量用真实进度条。 |
 | 主窗口可见页面装配 | `ui/main_window.py`, `ui/workbench/home.py`, `activity.py`, `settings.py` | 主窗口只连接应用状态和控制器；首页、任务状态与打印参数按实际UI区域各自拥有控件树，新增可见区域不得重新堆回主窗口。 |
 | 主工作台批次总览 | `ui/workbench/overview/panel.py`, `label_controls.py`, `preview.py`, `bindings.py` | 目录直接对应快捷标签、批次数据、真实预览和参数联动；根目录兼容模块不拥有控件或业务逻辑。 |
+| 刀码方向预览 | `ui/previews/markers/view.py`, `data.py`, `render.py`, `annotations.py` | 页签、示例数据、像素渲染和尺寸标注分别拥有唯一职责；预览复用生产排版对象和真实坐标。 |
 | 错误上下文与复制 | `layout_engine/error_context.py`, `error_parameters.py`, `ui/failure_panel.py` | 所有失败复用完整订单/参数诊断，不散落拼字符串。 |
 | 参数持久化与模式可见性 | `ui/workbench/preferences/`, `ui/preference_autosave.py`, `layout_values.py`, `developer_mode.py` | 读取、保存和文件夹/设置窗口动作按状态方向分离；稳定生产控件对普通用户开放，新实验功能默认只在开发者模式显示并生效。 |
 | 通用数值参数控件 | `ui/spinbox_style.py` | 所有毫米、尺寸和偏移浮点输入复用`double_spinbox`，不在页面内复制范围、精度和初始值构造代码。 |

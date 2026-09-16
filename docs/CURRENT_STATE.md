@@ -108,8 +108,8 @@
   `atomic_png.py`与输出报告复用该事实，不把libvips重叠流水线伪装成互斥CPU步骤。流式PNG完成后，
   `cut_validation.py`把全部区域刀位映射到一个连续窄条需求图，一次从上到下复核真实输出像素；失败文件
   仍改名为“禁止打印”，同时避免保存前重复求值整幅延迟画布。
-- 预览：`ui/production_preview.py`、`preview_*`、`pair_preview.py`、
-  `marker_examples.py` 及 `marker_example_*`。`layout_engine/preview_result.py` 形成不落地打印图片的
+- 预览：`ui/production_preview.py`、`preview_*`、`pair_preview.py`；“刀码四种情况”页签的视图、
+  数据、渲染与标注集中在`ui/previews/markers/`。`layout_engine/preview_result.py` 形成不落地打印图片的
   完整报告数据，`ui/batch_summary.py` 显示可复制的刀位、单排原因和耗时报告。
 - 错误诊断：`ui/failure_panel.py`、`failure_dialog.py`、
   `layout_engine/error_context.py`、`error_parameters.py`。

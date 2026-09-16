@@ -5,10 +5,10 @@ from tempfile import TemporaryDirectory
 
 from PIL import Image, ImageDraw
 
-from ..layout_engine.cut_guide_geometry import detect_guide_band
-from ..layout_engine.item_factory import read_items
-from ..layout_engine.measurement_session import measurement_session
-from .marker_example_render import render_example
+from ....layout_engine.cut_guide_geometry import detect_guide_band
+from ....layout_engine.item_factory import read_items
+from ....layout_engine.measurement_session import measurement_session
+from .render import render_example
 
 CASES = (("left", 0), ("right", 0), ("left", 90), ("right", 90))
 
@@ -49,17 +49,17 @@ def build_examples(paths, settings):
         results = []
         for side, degrees in CASES:
             path = samples.get(side, fallback[side])
-            from ..layout_engine.header_gap import prepare_paths
+            from ....layout_engine.header_gap import prepare_paths
             prepared, example_settings, _ = prepare_paths([path], settings)
             path = prepared[0]
             config = replace(example_settings, allow_rotation=False,
                 manual_rotations=((str(path.resolve()), degrees),),
                 sequence_numbers=((str(path.resolve()), 1),))
-            from ..layout_engine.output_dpi import resolve_output_dpi
+            from ....layout_engine.output_dpi import resolve_output_dpi
             config = resolve_output_dpi([path], config)
             choices, labels = read_items([path], config, None)
             item = choices[0][0]
-            from ..layout_engine.left_marker import external_left_item
+            from ....layout_engine.left_marker import external_left_item
             if config.cutter_mode in {'single', 'dual'}:
                 item = external_left_item(item)
             pixels, size = render_example(path, item, labels, config)

@@ -8,7 +8,7 @@ from PIL import Image
 from PySide6.QtCore import QSettings
 from PySide6.QtWidgets import QApplication
 
-from automatic_print.ui.marker_example_data import build_examples
+from automatic_print.ui.previews.markers.data import build_examples
 from automatic_print.ui.main_window import MainWindow
 from test_parallel_film_geometry import settings
 
@@ -104,7 +104,7 @@ def test_main_page_examples_start_after_show_and_refresh_on_parameters(tmp_path,
 
 def test_annotation_is_preview_only_and_keeps_raw_pixels(tmp_path):
     from PySide6.QtGui import QImage
-    from automatic_print.ui.marker_example_annotations import annotated_example
+    from automatic_print.ui.previews.markers.annotations import annotated_example
     config = replace(settings(),cutter_left_marker_external=True,cutter_left_marker_lift_mm=1.5)
     data = build_examples(sources(tmp_path),config)[0]
     original = data['pixels']
