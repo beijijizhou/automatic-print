@@ -18,6 +18,10 @@ def production_stem(path):
 
 @lru_cache(maxsize=4096)
 def order_key(path):
+    from ..automation.api.s2b.metadata import order_for_path
+    api_order = order_for_path(path)
+    if api_order:
+        return api_order.casefold()
     stem = production_stem(path)
     return stem.split("-", 1)[0] if "-" in stem else "未识别订单组"
 

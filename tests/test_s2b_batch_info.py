@@ -14,6 +14,7 @@ from automatic_print.automation.api.s2b.client import (
 )
 from automatic_print.automation.api.s2b.metadata import (
     color_for_path,
+    order_for_path,
     register_batch_records,
 )
 from automatic_print.automation.api.s2b.prepare import prepare_s2b_metadata
@@ -91,6 +92,44 @@ def test_api_color_matches_s2b_order_item_and_size(tmp_path):
     })
     assert count == 1
     assert color_for_path(image) == "黑色"
+
+
+def test_api_order_and_color_fall_back_to_unique_order_folder(tmp_path):
+    root = tmp_path / "AS2B014Mt______1_22UJ9KT4VCZA_20260917_014406_ucjfsdyh"
+    image = root / "ORDER7" / "S" / "unrecognizable.png"
+    image.parent.mkdir(parents=True)
+    image.touch()
+    count = register_batch_records([image], {
+        "batch_number": "22UJ9KT4VCZA",
+        "records": [{
+            "order_code": "ORDER7",
+            "order_item_code": "ORDER7-1",
+            "color": "蓝色",
+            "size": "S",
+        }],
+    })
+    from automatic_print.layout_engine.order_groups import order_key
+    assert count == 1
+    assert color_for_path(image) == "蓝色"
+    assert order_for_path(image) == "ORDER7"
+    assert order_key(image) == "order7"
+
+
+def test_order_folder_fallback_refuses_ambiguous_folder(tmp_path):
+    root = tmp_path / "AS2B014Mt______1_22UJ9KT4VCZA_20260917_014406_ucjfsdyh"
+    image = root / "ORDER7_ORDER8" / "S" / "unrecognizable.png"
+    image.parent.mkdir(parents=True)
+    image.touch()
+    count = register_batch_records([image], {
+        "batch_number": "22UJ9KT4VCZA",
+        "records": [
+            {"order_code": "ORDER7", "color": "蓝色", "size": "S"},
+            {"order_code": "ORDER8", "color": "黑色", "size": "S"},
+        ],
+    })
+    assert count == 0
+    assert color_for_path(image) is None
+    assert order_for_path(image) is None
 
 
 def test_detected_s2b_always_fetches_color_without_developer_mode(
