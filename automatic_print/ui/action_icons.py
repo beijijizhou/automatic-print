@@ -2,6 +2,7 @@
 from PySide6.QtCore import QByteArray, Qt
 from PySide6.QtGui import QIcon, QPainter, QPixmap
 from PySide6.QtSvg import QSvgRenderer
+from PySide6.QtWidgets import QApplication
 
 
 PATHS = {
@@ -30,8 +31,19 @@ PATHS = {
     'more': '<path d="M5 6h14M5 12h14M5 18h14"/>',
 }
 
+_ICON_CACHE = {}
+_APP_TOKEN = None
+
 
 def action_icon(name, color='#475569'):
+    global _APP_TOKEN
+    token = id(QApplication.instance())
+    if token != _APP_TOKEN:
+        _ICON_CACHE.clear()
+        _APP_TOKEN = token
+    key = name, color
+    if key in _ICON_CACHE:
+        return QIcon(_ICON_CACHE[key])
     icon = QIcon()
     for mode, stroke in ((QIcon.Normal, color), (QIcon.Disabled, '#94a3b8')):
         svg = f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><g fill="none" stroke="{stroke}" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">{PATHS[name]}</g></svg>'
@@ -44,4 +56,5 @@ def action_icon(name, color='#475569'):
             painter.end()
         pixmap.setDevicePixelRatio(2)
         icon.addPixmap(pixmap, mode)
-    return icon
+    _ICON_CACHE[key] = icon
+    return QIcon(icon)
