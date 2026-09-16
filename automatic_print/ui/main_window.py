@@ -215,8 +215,8 @@ class MainWindow(
         build_developer_mode(self, footer)
         self.workspace_tabs = QTabWidget()
         self.workspace_tabs.addTab(self.automation_home, "本地排版")
-        from .erp_download_entry import install_longfeng_erp_tab
-        install_longfeng_erp_tab(self, self.workspace_tabs)
+        from .erp_download_entry import install_production_platform_tab
+        install_production_platform_tab(self, self.workspace_tabs)
         layout = QVBoxLayout()
         layout.addWidget(self.build_update_status())
         layout.addWidget(self.workspace_tabs)

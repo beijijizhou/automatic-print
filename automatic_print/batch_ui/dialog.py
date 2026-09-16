@@ -56,7 +56,9 @@ class AutomationDialog(
         self.platform_names = platform_names or tuple(ERP_PLATFORMS)
         self.settings_host = parent
         self.setWindowTitle(
-            "本地排版工作台" if local_only else "隆丰 ERP 批次下载"
+            "本地排版工作台"
+            if local_only
+            else f"{self.platform_names[0]} ERP 批次下载"
         )
         self.resize(940, 640)
         self.thread = None
@@ -74,7 +76,8 @@ class AutomationDialog(
         self._build_layout()
         self.platform.currentTextChanged.connect(self.platform_changed)
         self.main_tabs.currentChanged.connect(self.main_tab_changed)
-        self.show_platform_batch_rules(self.platform.currentData())
+        if not self.download_only:
+            self.show_platform_batch_rules(self.platform.currentData())
         self.refresh_current_section()
 
     def _connect_worker_bridge(self) -> None:
@@ -137,6 +140,12 @@ class AutomationDialog(
 
     def _build_tabs(self) -> None:
         self.main_tabs = QTabWidget()
+        if self.download_only:
+            self.main_tabs.addTab(
+                build_production_page(self, self.output_row), "生产批次"
+            )
+            self.main_tabs.tabBar().hide()
+            return
         self.main_tabs.addTab(build_local_page(self), "本地排版")
         self.main_tabs.addTab(build_accepted_page(self), "已接单")
         self.main_tabs.addTab(
@@ -145,11 +154,6 @@ class AutomationDialog(
         if self.local_only:
             self.main_tabs.setTabVisible(1, False)
             self.main_tabs.setTabVisible(2, False)
-            self.main_tabs.tabBar().hide()
-        elif self.download_only:
-            self.main_tabs.setTabVisible(0, False)
-            self.main_tabs.setTabVisible(1, False)
-            self.main_tabs.setCurrentIndex(2)
             self.main_tabs.tabBar().hide()
 
     def _build_layout(self) -> None:
@@ -174,10 +178,13 @@ class AutomationDialog(
 
     def platform_changed(self, name: str) -> None:
         self.pending_batch_plan = None
-        self.generate_rules_button.setEnabled(False)
         self.records = []
         self.table.setRowCount(0)
         self.summary.setText(f"尚未读取 {name} 已生成批次。")
+        if self.download_only:
+            self.refresh_current_section()
+            return
+        self.generate_rules_button.setEnabled(False)
         self.accepted_table.setRowCount(0)
         self.accepted_summary.setText(
             f"{name}：尚未读取待生产订单数量。"
@@ -192,6 +199,9 @@ class AutomationDialog(
         if self.local_only:
             return
         if self.thread is not None:
+            return
+        if self.download_only:
+            self.show_cached_batches()
             return
         if self.main_tabs.currentIndex() == 0:
             self.refresh_local_batches()

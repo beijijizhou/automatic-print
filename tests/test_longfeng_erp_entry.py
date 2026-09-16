@@ -12,13 +12,13 @@ from automatic_print.batch_ui.processing import process_local_batches
 APP = QApplication.instance() or QApplication([])
 
 
-def test_longfeng_download_is_developer_only_and_preview_only(tmp_path):
+def test_platform_download_is_multi_select_and_preview_only(tmp_path):
     owner = MainWindow(QSettings(str(tmp_path / "prefs.ini"), QSettings.IniFormat))
     owner.startup_update_timer.stop()
     owner.show()
     APP.processEvents()
 
-    index = owner.longfeng_erp_tab_index
+    index = owner.production_platform_tab_index
     assert not owner.workspace_tabs.isTabVisible(index)
     owner.developer_mode_checkbox.setChecked(True)
     APP.processEvents()
@@ -26,17 +26,23 @@ def test_longfeng_download_is_developer_only_and_preview_only(tmp_path):
 
     owner.workspace_tabs.setCurrentIndex(index)
     APP.processEvents()
-    dialog = owner.longfeng_erp_dialog
-    assert dialog.isVisible()
-    assert owner.workspace_tabs.currentWidget() is dialog
-    assert dialog.platform.currentData() == "隆丰"
-    assert dialog.main_tabs.currentIndex() == 2
-    assert not dialog.main_tabs.isTabVisible(0)
-    assert not dialog.main_tabs.isTabVisible(1)
-    assert dialog.download_preview_only.isChecked()
-    assert not dialog.download_preview_only.isEnabled()
-    assert not dialog.test_mode.isChecked()
-    assert not dialog.test_mode.isEnabled()
+    page = owner.production_platform_download_page
+    assert owner.workspace_tabs.currentWidget() is page
+    assert page.platform_checks["隆丰"].isChecked()
+    assert not page.platform_checks["莆田"].isChecked()
+    assert page.platform_tabs.count() == 1
+    longfeng = page.workbenches["隆丰"]
+    assert longfeng.platform.currentData() == "隆丰"
+    assert longfeng.download_preview_only.isChecked()
+    assert not longfeng.download_preview_only.isEnabled()
+
+    page.platform_checks["莆田"].setChecked(True)
+    APP.processEvents()
+    assert page.platform_tabs.count() == 2
+    assert page.workbenches["莆田"].platform.currentData() == "莆田"
+    page.platform_checks["隆丰"].setChecked(False)
+    assert page.platform_tabs.count() == 1
+    assert page.platform_tabs.tabText(0) == "莆田"
 
     owner.developer_mode_checkbox.setChecked(False)
     assert not owner.workspace_tabs.isTabVisible(index)

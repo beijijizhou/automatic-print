@@ -135,7 +135,8 @@ class ThreadActionsMixin:
                 f"{len(result['batches'])} 个{mode}。"
                 f"{merged_text}\n{saving}"
             )
-            self.refresh_local_batches()
+            if hasattr(self, "local_summary"):
+                self.refresh_local_batches()
         else:
             text = (
                 f"{result['platform']}：已生成 "
@@ -157,7 +158,7 @@ class ThreadActionsMixin:
         QMessageBox.critical(self, "操作已停止", message)
 
     def _set_actions_enabled(self, enabled: bool) -> None:
-        for widget in (
+        widgets = (
             self.platform,
             self.main_tabs,
             self.refresh_button,
@@ -167,23 +168,27 @@ class ThreadActionsMixin:
             self.merge_batches,
             self.range_button,
             self.settings_button,
-            self.preview_rules_button,
-            self.local_refresh_button,
-            self.local_select_button,
-            self.local_process_button,
-            self.local_merge_batches,
-            self.local_open_button,
-            self.manual_layout_button,
+            getattr(self, "preview_rules_button", None),
+            getattr(self, "local_refresh_button", None),
+            getattr(self, "local_select_button", None),
+            getattr(self, "local_process_button", None),
+            getattr(self, "local_merge_batches", None),
+            getattr(self, "local_open_button", None),
+            getattr(self, "manual_layout_button", None),
             getattr(self, "label_quick_panel", self.settings_button),
-        ):
-            widget.setEnabled(enabled)
-        plan = self.pending_batch_plan
-        self.generate_rules_button.setEnabled(
-            enabled
-            and plan is not None
-            and bool(plan.nonempty_items)
-            and plan.total_items + plan.excluded_count == plan.received_count
         )
+        for widget in widgets:
+            if widget is not None:
+                widget.setEnabled(enabled)
+        plan = self.pending_batch_plan
+        if hasattr(self, "generate_rules_button"):
+            self.generate_rules_button.setEnabled(
+                enabled
+                and plan is not None
+                and bool(plan.nonempty_items)
+                and plan.total_items + plan.excluded_count
+                == plan.received_count
+            )
 
     @Slot()
     def clear_worker(self) -> None:

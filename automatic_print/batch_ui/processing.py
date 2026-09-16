@@ -128,7 +128,7 @@ def _render_merged(
         settings,
         _layout_progress(progress, "合并批次"),
         batch_name="_".join(codes),
-        preview_only=preview_only,
+        **({"preview_only": True} if preview_only else {}),
     )
     return [("合并批次", result)]
 
@@ -148,7 +148,7 @@ def _render_separately(
             settings,
             _layout_progress(progress, folder.name),
             batch_name=folder.name,
-            preview_only=preview_only,
+            **({"preview_only": True} if preview_only else {}),
         )
         completed.append((folder.name, result))
     return completed
