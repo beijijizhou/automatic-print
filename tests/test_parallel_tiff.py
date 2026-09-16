@@ -6,7 +6,7 @@ import tifffile
 from automatic_print.layout import LayoutSettings, generate_layout
 
 
-def test_parallel_tiff_preserves_rgba_dpi_and_tiles(tmp_path):
+def test_parallel_tiff_preserves_rgba_dpi_and_strips(tmp_path):
     source = tmp_path / 'B1-1-T-Black-M-NO1-1.png'
     Image.new('RGBA', (513, 777), (10, 20, 30, 128)).save(
         source, dpi=(25.4, 25.4))
@@ -21,12 +21,12 @@ def test_parallel_tiff_preserves_rgba_dpi_and_tiles(tmp_path):
     assert result['output_format'] == 'TIFF'
     assert result['png_engine'] == 'tifffile + imagecodecs'
     assert result['png_save_details']['worker_threads'] == 4
-    assert result['png_save_details']['tile_count'] > 1
+    assert result['png_save_details']['strip_count'] == 1
     assert not output.with_name(output.name + '.未完成').exists()
     with tifffile.TiffFile(output) as tif:
         page = tif.pages[0]
         assert page.shape == (777, 513, 4)
-        assert page.is_tiled and (page.tilewidth, page.tilelength) == (256, 256)
+        assert not page.is_tiled and page.rowsperstrip == min(1024, page.imagelength)
         assert page.extrasamples[0].name == 'UNASSALPHA'
         numerator, denominator = page.tags['XResolution'].value
         assert numerator / denominator == 25.4
