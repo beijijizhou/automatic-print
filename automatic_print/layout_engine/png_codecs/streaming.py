@@ -38,14 +38,24 @@ def validate_header(path, width, height):
 
 def validate_saved_output(path, width, height, check, boxes, rectangles,
                           progress, phase, save_details):
-    phase('输出尺寸核对')
-    validate_header(path, width, height)
-    phase('输出PNG刀位像素复核')
+    phase('输出文件安全复核')
     started = perf_counter()
-    from ..cut_validation import validate_vips_output
-    validate_vips_output(path, check, progress, boxes, rectangles)
+    try:
+        from .corridor_reader import validate
+        from ..cut_validation import corridor_checks, mark_pixel_verified
+        checks = corridor_checks(check)
+        if checks:
+            validate(path, width, height, checks, boxes, rectangles, progress)
+        else:
+            validate_header(path, width, height)
+        mark_pixel_verified(check)
+    except (OSError, ValueError, zlib.error):
+        forbidden = path.with_suffix('.禁止打印')
+        if path.exists():
+            path.rename(forbidden)
+        raise ValueError('输出PNG完整性或刀位像素检查失败，已禁止打印。')
     seconds = perf_counter() - started
     save_details.setdefault('steps', []).append({
-        'name': '输出PNG全长刀位像素复核', 'seconds': seconds,
+        'name': '输出PNG单次解压、完整性与全长刀位核对', 'seconds': seconds,
     })
     return seconds

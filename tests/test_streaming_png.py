@@ -32,14 +32,7 @@ def test_header_checks_dimensions_crc_and_complete_file(tmp_path):
         assert path.with_suffix('.禁止打印').exists()
 
 
-def test_streaming_reopens_completed_png_for_independent_pixel_check(tmp_path, monkeypatch):
-    from automatic_print.layout_engine import cut_validation
-    original = cut_validation.validate_vips_output
-    checked = []
-    def observed(*args, **kwargs):
-        checked.append(args[0])
-        return original(*args, **kwargs)
-    monkeypatch.setattr(cut_validation, 'validate_vips_output', observed)
+def test_streaming_checks_saved_png_once_without_pre_rendering_canvas(tmp_path):
     path = tmp_path/'B1-1-T-Black-M-NO1-1.png'
     with Image.new('RGBA', (100,200)) as image:
         image.paste('blue',(0,50,100,200))
@@ -48,14 +41,34 @@ def test_streaming_reopens_completed_png_for_independent_pixel_check(tmp_path, m
     settings = LayoutSettings(dpi=25.4,media_width_mm=500,cutter_mode='dual',
         cutter_auto_knife=True,png_engine='libvips',png_streaming=True)
     result = generate_layout([path],tmp_path/'out',settings,phase_ready=phases.append)
-    assert '输出PNG刀位像素复核' in phases
     assert '最终画布刀位检查' not in phases
-    assert checked == [tmp_path/'out'/result['filename']]
+    assert '输出文件安全复核' in phases
     assert '原生分块流式PNG' in result['png_save_details']['encoder']
     assert result['timings_seconds']['output_validation'] >= 0
-    assert any(row['name'] == '输出PNG全长刀位像素复核'
+    assert any(row['name'] == '输出PNG单次解压、完整性与全长刀位核对'
                for row in result['png_save_details']['steps'])
     assert result['cut_corridor']['pixel_verified']
+
+
+def test_saved_png_reader_rejects_alpha_inside_corridor(tmp_path):
+    from automatic_print.layout_engine.png_codecs.corridor_reader import validate
+    path = tmp_path/'occupied.png'
+    with Image.new('RGBA', (100, 200)) as image:
+        image.putpixel((50, 199), (1, 2, 3, 255))
+        image.save(path, compress_level=1)
+    with pytest.raises(ValueError, match='滤波方式|切割安全通道'):
+        validate(path, 100, 200, [{'safe_left_px': 45, 'safe_right_px': 55}])
+
+
+def test_saved_png_reader_allows_declared_guide_pixels(tmp_path):
+    from automatic_print.layout_engine.png_codecs.corridor_reader import validate
+    from automatic_print.layout_engine.printed_guides import dot_sprite
+    path = tmp_path/'guide.png'
+    box = (49, 190, 3)
+    with Image.new('RGBA', (100, 200)) as image, dot_sprite(3) as dot:
+        image.alpha_composite(dot, box[:2])
+        image.save(path, compress_level=1)
+    validate(path, 100, 200, [{'safe_left_px': 45, 'safe_right_px': 55}], [box])
 
 
 def test_streaming_uses_fixed_fast_png_filter(tmp_path):
