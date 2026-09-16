@@ -11,11 +11,14 @@ class S2BProductionBatch:
     piece_count: int
     name: str
     created_at: str
+    personnel_label: str = ""
 
 
 def parse_production_rows(payload: dict) -> list[S2BProductionBatch]:
     data = payload.get("data") if isinstance(payload, dict) else None
     rows = data.get("data", ()) if isinstance(data, dict) else ()
+    if isinstance(payload, dict) and isinstance(payload.get("records"), list):
+        rows = payload["records"]
     batches = []
     for row in rows:
         batch_number = str(row.get("batch_number") or "").strip()
@@ -34,11 +37,15 @@ def parse_production_rows(payload: dict) -> list[S2BProductionBatch]:
             piece_count=piece_count,
             name=str(row.get("name") or "S2B生产批次"),
             created_at=str(row.get("created_at") or row.get("created_date") or ""),
+            personnel_label=str(row.get("personnel_label") or "").strip(),
         ))
     return batches
 
 
-def list_s2b_production_batches(page) -> list[S2BProductionBatch]:
+def list_s2b_production_batches(page=None) -> list[S2BProductionBatch]:
+    if page is None:
+        from .gateway import list_batches
+        return parse_production_rows(list_batches())
     from .downloads import _api
     payload = {
         "status": "",

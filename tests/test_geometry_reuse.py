@@ -152,3 +152,25 @@ def test_batch_label_bands_survive_global_cache_eviction(tmp_path, monkeypatch):
         first = [guides.detect_guide_band(p) for p in paths]
         second = [guides.detect_guide_band(p) for p in paths]
         assert first == second and len(calls) == 600
+
+
+def test_cutter_batch_measurements_reuse_same_files_after_planner_reorders(tmp_path):
+    from automatic_print.layout_engine.cutter_measurements import (
+        load_cutter_measurements,
+        store_cutter_measurements,
+    )
+    paths = [tmp_path / name for name in ('a.png', 'b.png', 'c.png')]
+    for path in paths:
+        path.write_bytes(path.name.encode())
+    rows = tuple([replace(item(index, 100, 100), path=path)]
+                 for index, path in enumerate(paths))
+    settings = LayoutSettings(sequence_numbers=tuple(
+        (str(path.resolve()), index) for index, path in enumerate(paths, 1)
+    ))
+    with measurements.measurement_session():
+        store_cutter_measurements(paths, settings, rows, {1: 'A'})
+        loaded, labels = load_cutter_measurements(
+            [paths[2], paths[0], paths[1]], settings
+        )
+    assert [row[0].path for row in loaded] == [paths[2], paths[0], paths[1]]
+    assert labels == {1: 'A'}

@@ -16,7 +16,7 @@ def test_custom_film_updates_once_and_restores(tmp_path):
     cutter.mode.setCurrentIndex(cutter.mode.findData('single'))
     assert cutter.width_control.value()==525
     assert window._layout_settings().media_width_mm==505
-    assert '52.5 厘米' in window.generation_preview.panel.current_film.text()
+    assert window.generation_preview.panel.current_film.custom_width.value()==52.5
     assert not cutter.custom_film.isHidden()
     cutter.save()
     window.close()
@@ -40,6 +40,9 @@ def test_settings_classification_matches_operation(tmp_path):
     tabs=window.print_settings_tabs
     pages={tabs.tabText(i):tabs.widget(i) for i in range(tabs.count())}
     cutter=window.cutter_settings
+    assert cutter.safety.value() == 0
+    assert not cutter.safety.isEnabled()
+    assert window._layout_settings().cutter_safety_mm == 0
     for field in (cutter.film,cutter.custom_film,cutter.printable,cutter.knife,cutter.safety,cutter.auto_knife):
         assert pages['膜的设置'].isAncestorOf(field)
     for field in (cutter.mode,cutter.rotation_zone,cutter.quick_mode,window.spacing,window.auto_fit_width):

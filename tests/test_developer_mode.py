@@ -65,7 +65,7 @@ def test_default_shows_production_layout_but_hides_diagnostic_tools(tmp_path, mo
     assert features == [
         '排版历史', '批量分析文件夹', '算法诊断', '批次顺序标注',
         'S2B 批次信息查询', '隆丰 ERP 下载', 'S2B 生产图下载',
-        '莆田平台', '并行分块 TIFF',
+        '莆田平台', 'Haloo平台', '并行分块 TIFF',
     ]
     assert feature_dialog.grab().save(str(tmp_path/'developer-feature-list.png'))
     feature_dialog.close()

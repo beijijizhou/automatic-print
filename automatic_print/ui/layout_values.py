@@ -12,7 +12,7 @@ def settings_from_window(window) -> LayoutSettings:
     if label.enabled.isChecked() and label.platform_enabled.isChecked():
         if not platform:
             raise ValueError('请填写实际生产平台名称。')
-        if platform.casefold() in {'蜂鸟', 'haloo'}:
+        if platform.casefold() == '蜂鸟':
             raise ValueError('蜂鸟是 ERP，不是生产平台；请填写实际平台名称。')
     return LayoutSettings(
         media_width_mm=window.cutter_settings.printable.effective_width(),

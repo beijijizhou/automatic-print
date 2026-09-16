@@ -41,7 +41,7 @@ def load_batch_records(platform_name: str, progress=None) -> list[BatchRecord]:
                 record.batch_number,
                 record.item_count,
                 record.piece_count,
-                record.name,
+                " · ".join(filter(None, (record.name, record.personnel_label))),
                 record.created_at,
                 True,
             )

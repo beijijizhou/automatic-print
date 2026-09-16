@@ -38,7 +38,8 @@ class CutterSettingsPanel(QWidget):
         self.force_small_pair.setToolTip('默认开启；不放大小图，XL 及以上不处理，刀码仍按区域统一刀位。')
         self.tail_rotation = QCheckBox('单件批次末尾 3XL 及以上：省膜时整尺码块旋转')
         self.tail_rotation.setChecked(preferences.value('cutter/tail_rotation', True, bool))
-        self.safety = double_spinbox(3, 0.1, 30)
+        self.safety = double_spinbox(0, 0, 0)
+        self.safety.setToolTip('刀位是左右分栏的边界，不额外占用水平安全距离。')
         self.marker_offset = double_spinbox(0, 0, 100)
         self.left_marker_lift = double_spinbox(preferences.value('cutter/left_marker_lift_mm',1.5,float),0,30)
         self.left_marker_lift.valueChanged.connect(lambda v: preferences.setValue('cutter/left_marker_lift_mm',v))
@@ -69,7 +70,7 @@ class CutterSettingsPanel(QWidget):
             ('区域与批次提示', self.transitions),
             ('膜规格比较', self.compare_films),
             ("刀位距排版左边（毫米）", self.knife),
-            ("刀位两侧安全距离（毫米）", self.safety),
+            ("刀位左右预留（固定0毫米）", self.safety),
             ("右侧色块基准偏移（毫米）", self.marker_offset), ("", note),
             ('左图刀码高于图片（毫米，占用现有垂直间距）', self.left_marker_lift),
         ):
@@ -90,7 +91,7 @@ class CutterSettingsPanel(QWidget):
         self.mode.setCurrentIndex(max(0, self.mode.findData(mode)))
         for control, key, default in (
             (self.knife, "knife_mm", max(1, self.printable.usable_width() / 2)),
-            (self.safety, "safety_mm", 3),
+            (self.safety, "safety_mm", 0),
             (self.marker_offset, "marker_offset_mm", 0),
         ):
             control.setValue(preferences.value("cutter/" + key, default, float))
@@ -129,8 +130,9 @@ class CutterSettingsPanel(QWidget):
         if getattr(self, "_initializing", False):
             return
         mode = self.mode.currentData()
-        for control in (self.knife, self.safety, self.marker_offset):
+        for control in (self.knife, self.marker_offset):
             control.setEnabled(mode == "dual")
+        self.safety.setEnabled(False)
         self.auto_knife.setEnabled(mode == "dual")
         self.rotation_zone.setEnabled(mode == "dual")
         self.two_zone.setEnabled(mode == 'dual')

@@ -59,7 +59,7 @@ def _load_label(window) -> None:
         window.preferences.value("label/platform_font_height_mm", 6, float)
     )
     platform = window.preferences.value("label/platform_name", "隆丰", str).strip()
-    if not platform or platform.casefold() in {"蜂鸟", "haloo"}:
+    if not platform or platform.casefold() == "蜂鸟":
         platform = "隆丰"
     if label.platform.findText(platform) < 0:
         label.platform.addItem(platform)

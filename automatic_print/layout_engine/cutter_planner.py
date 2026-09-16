@@ -92,7 +92,7 @@ def _lanes(settings, width):
     knife = mm_to_px(settings.cutter_knife_mm, settings.dpi)
     safety = ceil(settings.cutter_safety_mm * settings.dpi / 25.4)
     offset = mm_to_px(settings.cutter_marker_offset_mm, settings.dpi)
-    if not 0 < knife - safety < knife + safety < width:
+    if safety < 0 or knife - safety <= 0 or knife + safety >= width:
         raise ValueError("刀位和安全区必须位于膜宽范围内，且左右分区都必须有可用空间。")
     marker = knife + safety + offset
     if marker >= width:

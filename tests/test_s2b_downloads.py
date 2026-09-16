@@ -57,6 +57,77 @@ def test_production_rows_use_progress_counts():
     )]
 
 
+def test_gateway_rows_include_platform_personnel_label():
+    records = parse_production_rows({"records": [{
+        "batch_number": "22UJ9KT4VCZA", "item_count": 30,
+        "piece_count": 40, "name": "S2B 秋季订单",
+        "personnel_label": "Andy", "created_at": "2026-09-17 01:00:00",
+    }]})
+    assert records[0].personnel_label == "Andy"
+
+
+def test_gateway_export_rows_use_normalized_contract():
+    records = parse_export_rows({"records": [{
+        "record_id": 9, "batch_number": "22UJ9KT4VCZA",
+        "image_count": 40, "created_at": "2026-09-17 01:44:06",
+        "ready": True, "download_url": "https://accelerate.s2bdiy.com/file.zip",
+        "archive_name": "production.zip",
+    }]})
+    assert records == [S2BExportRecord(
+        9, "22UJ9KT4VCZA", 40, "2026-09-17 01:44:06", True,
+        "https://accelerate.s2bdiy.com/file.zip", "production.zip",
+    )]
+
+
+def test_batch_listing_prefers_server_gateway(monkeypatch):
+    from automatic_print.automation.api.s2b.production import downloads, gateway
+    monkeypatch.setattr(gateway, "available", lambda: True)
+    monkeypatch.setattr(gateway, "list_batches", lambda: {"records": [{
+        "batch_number": "22UJ9KT4VCZA", "item_count": 30,
+        "piece_count": 40, "name": "S2B 秋季订单",
+        "personnel_label": "Andy", "created_at": "2026-09-17 01:00:00",
+    }]})
+    monkeypatch.setattr(
+        downloads, "_authenticated_page",
+        lambda _progress: (_ for _ in ()).throw(AssertionError("browser fallback")),
+    )
+    records = downloads.list_s2b_batches()
+    assert records[0].personnel_label == "Andy"
+
+
+def test_download_prefers_gateway_and_marks_only_after_extract(tmp_path, monkeypatch):
+    from automatic_print.automation.api.s2b.production import downloads, gateway
+    source = tmp_path / "source.zip"
+    with ZipFile(source, "w") as bundle:
+        bundle.writestr("AS2B_22UJ9KT4VCZA/S/sample.png", b"png")
+    record = S2BExportRecord(
+        9, "22UJ9KT4VCZA", 1, "2026-09-17 01:44:06", True,
+        "https://accelerate.s2bdiy.com/file.zip", "production.zip",
+    )
+    events = []
+    monkeypatch.setattr(gateway, "available", lambda: True)
+    monkeypatch.setattr(
+        gateway, "wait_for_exports",
+        lambda batches, parse, progress: [record],
+    )
+    monkeypatch.setattr(
+        gateway, "mark_downloaded", lambda record_id: events.append(("mark", record_id))
+    )
+    monkeypatch.setattr(
+        downloads, "_download_archive", lambda *_args, **_kwargs: source
+    )
+    original_extract = downloads._extract_archive
+    monkeypatch.setattr(
+        downloads, "_extract_archive",
+        lambda *args: (events.append(("extract", args[-1])), original_extract(*args))[1],
+    )
+    result = downloads.download_s2b_exports(
+        ["22UJ9KT4VCZA"], tmp_path / "output"
+    )
+    assert result[0].name == "AS2B_22UJ9KT4VCZA"
+    assert events == [("extract", "22UJ9KT4VCZA"), ("mark", 9)]
+
+
 def test_s2b_archive_extracts_existing_root_without_extra_nesting(tmp_path):
     archive = tmp_path / "source.zip"
     with ZipFile(archive, "w") as bundle:

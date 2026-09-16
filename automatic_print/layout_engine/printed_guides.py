@@ -57,6 +57,8 @@ def paint_guides(canvas, boxes, use_vips=False):
 
 def vips_corridor_is_clear(image, check, boxes=(), rectangles=()):
     """Allow exactly our circle alpha mask, never a whole band or arbitrary red ink."""
+    if check['safe_right_px'] <= check['safe_left_px']:
+        return True
     excess = _vips_corridor_excess(image, check, boxes, rectangles)
     from .vips_renderer import demand_lock
     with demand_lock:
@@ -65,7 +67,8 @@ def vips_corridor_is_clear(image, check, boxes=(), rectangles=()):
 
 def vips_corridors_are_clear(image, checks, boxes=(), rectangles=()):
     """Evaluate corridors top-to-bottom with a bounded native pixel window."""
-    checks = list(checks)
+    checks = [check for check in checks
+              if check['safe_right_px'] > check['safe_left_px']]
     if not checks:
         return True
     top = min(check.get('start_y_px', 0) for check in checks)

@@ -39,15 +39,33 @@ def fetch_s2b_batch_info(
     access_key=None,
     timeout=DEFAULT_TIMEOUT_SECONDS,
 ):
+    body = call_s2b_gateway(
+        {
+            "account": str(account).strip().upper() or "DTF",
+            "batch_number": str(batch_number).strip().upper(),
+        },
+        endpoint=endpoint,
+        access_key=access_key,
+        timeout=timeout,
+    )
+    if not isinstance(body.get("records"), list):
+        raise S2BBatchInfoError("共享 S2B 批次服务返回格式异常")
+    return body
+
+
+def call_s2b_gateway(
+    payload,
+    *,
+    endpoint=None,
+    access_key=None,
+    timeout=DEFAULT_TIMEOUT_SECONDS,
+):
     configured_url, configured_key = gateway_config()
     endpoint = str(endpoint or configured_url).strip()
     access_key = str(access_key or configured_key).strip()
     if not endpoint or not access_key:
         raise S2BBatchInfoError("尚未配置共享 S2B 批次信息服务")
-    payload = json.dumps({
-        "account": str(account).strip().upper() or "DTF",
-        "batch_number": str(batch_number).strip().upper(),
-    }).encode("utf-8")
+    payload = json.dumps(payload).encode("utf-8")
     request = Request(
         endpoint,
         data=payload,
@@ -68,8 +86,8 @@ def fetch_s2b_batch_info(
         ) from error
     except (URLError, TimeoutError, OSError, ValueError) as error:
         raise S2BBatchInfoError(f"无法连接共享 S2B 批次服务：{error}") from error
-    if not isinstance(body, dict) or not isinstance(body.get("records"), list):
-        raise S2BBatchInfoError("共享 S2B 批次服务返回格式异常")
+    if not isinstance(body, dict):
+        raise S2BBatchInfoError("共享 S2B 服务返回格式异常")
     return body
 
 

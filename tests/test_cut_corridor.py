@@ -10,7 +10,11 @@ from preview_wait import wait_preview
 
 from automatic_print.layout import LayoutSettings
 from automatic_print.layout_engine.planner import plan_layout
-from automatic_print.layout_engine.cut_validation import validate_cut_corridor, validate_canvas_pixels
+from automatic_print.layout_engine.cut_validation import (
+    corridor_checks,
+    validate_canvas_pixels,
+    validate_cut_corridor,
+)
 from automatic_print.ui.pair_preview import PairProductionPreview
 from PySide6.QtWidgets import QApplication
 from PySide6.QtGui import QImage
@@ -29,6 +33,27 @@ def test_independent_validator_rejects_crossing_lower_row(tmp_path):
     altered = list(planned)
     path, placement = altered[-1]
     altered[-1] = path, replace(placement, x_px=290)
+    with pytest.raises(ValueError, match="图片进入整批切割安全通道"):
+        validate_cut_corridor(altered, settings, width)
+
+
+def test_zero_clearance_still_rejects_geometry_crossing_knife(tmp_path):
+    paths = []
+    for index in range(2):
+        path = tmp_path / f"zero-{index}.png"
+        Image.new("RGBA", (100, 150), "blue").save(path, dpi=(25.4, 25.4))
+        paths.append(path)
+    settings = LayoutSettings(
+        dpi=25.4, cutter_mode="dual", cutter_safety_mm=0,
+        cutter_knife_mm=300, number_images=False,
+    )
+    planned, _, width, _, _ = plan_layout(paths, settings, None)
+    check = validate_cut_corridor(planned, settings, width)
+    corridor = corridor_checks(check)[0]
+    assert corridor['safe_left_px'] == corridor['safe_right_px'] == 300
+    altered = list(planned)
+    path, placement = altered[0]
+    altered[0] = path, replace(placement, x_px=250, width_px=100)
     with pytest.raises(ValueError, match="图片进入整批切割安全通道"):
         validate_cut_corridor(altered, settings, width)
 

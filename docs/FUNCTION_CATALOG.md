@@ -30,7 +30,7 @@
 | 分段输出 | `layout_engine/segmented_output.py`, `atomic_png.py` | 按完整行/订单切分，失败文件不可冒充可打印结果。 |
 | 输出命名与完成总结 | `layout_engine/output_name.py`, `output_sizes.py`, `output_file_info.py`, `generation_result.py` | `output_name.py`从已确定计划统一生成批次、订单、件数、尺码和区域文件名；`generation_result.py`统一构造生产输出事实，单批、多批、分段不得自行拼接命名和报告字段。 |
 | 订单与刀位安全 | `layout_engine/order_validation.py`, `cut_validation.py`, `marked_pixel_validation.py` | 规划后和真实像素阶段分别核验，不能由 UI 绕过。 |
-| 计划和测量缓存 | `layout_engine/plan_cache.py`, `measurement_cache.py`, `measurement_session.py`, `cutter_measurements.py`, `normal_plan_cache.py`, `cached_planner.py` | 整批计划、切膜几何与单图测量分层缓存；生产方案和膜规格比较复用同一批刀码几何，不重复进入逐图测量；单图缓存不因膜宽、组批或普通软件版本变化而失效，均使用文件指纹和24小时绝对失效策略；缓存锁冲突短等待后跳过，不阻塞生产。 |
+| 计划和测量缓存 | `layout_engine/plan_cache.py`, `measurement_cache.py`, `measurement_session.py`, `cutter_measurements.py`, `normal_plan_cache.py`, `cached_planner.py` | 整批计划、切膜几何与单图测量分层缓存；生产方案、整批旋转和膜规格比较即使重排同一批路径，也按文件身份重组并复用同一批刀码几何，不重复进入逐图测量；单图缓存不因膜宽、组批或普通软件版本变化而失效，均使用文件指纹和24小时绝对失效策略；缓存锁冲突短等待后跳过，不阻塞生产。 |
 | 单图读取与排版对象 | `layout_engine/item_reader.py`, `item_factory.py` | 读取层一次收集尺寸、DPI、旋转候选和膜标签位置；构造层只计算标签、刀码、平台文字与最终占位，不重复打开源图。 |
 | 仅预览报告 | `layout_engine/preview_result.py`, `output_sizes.py`, `ui/batch_summary.py` | 不渲染、不写打印图片；仍返回完整排版、刀位、单排原因和耗时报告供界面复制。 |
 | 单批次后台编排 | `controllers/layout_generation.py`, `controllers/generation_progress.py`, `ui/workbench/generation/`, `ui/workers.py` | 控制器唯一拥有工作线程生命周期和纯进度计算；UI按启动、实时进度、结果展示分离，只收集参数、构造Worker并展示不可变结果。 |
@@ -51,8 +51,8 @@
 | 生产平台下载入口 | `ui/erp_download_entry.py`, `batch_ui/dialog.py`, `batch_ui/platform/`, `batch_ui/task/` | 多选平台后分别显示独立工作区；平台页面与后台任务分层，仅下载、解压已生成批次，绝不自动启动排版。 |
 | ERP工作台壳层 | `batch_ui/local/`, `platform/`, `task/`, `shell/` | 目录直接对应本地排版、平台批次、任务执行和公共窗口外壳；根对话框只装配，控件构造、结果展示和批次表映射各有唯一所有者。 |
 | 蜂鸟ERP接口 | `automation/api/erp/gateway.py`, `items.py`, `batches.py`, `records.py` | 页面桥接、生产项与规则、生产批次、响应转换按请求对象分离；`automation/erp_api.py`只兼容旧导入。 |
-| S2B接口 | `automation/api/s2b/metadata/`, `production/` | 批次身份、共享颜色尺码元数据与本地匹配归元数据层；生产列表、导出请求和下载归生产层，排版只读取公共结果。 |
-| S2B生产图下载 | `automation/api/s2b/production.py`, `downloads.py`, `automation/batch_browser.py` | 从已登录S2B页面读取生产批次；用户选择后按实际件数补发缺失的生产图导出，轮询导出记录并读取真实下载地址，校验ZIP路径与完整性后解压；下载标记接口不承担文件传输。 |
+| S2B接口 | `automation/api/s2b/metadata/`, `production/` | 批次身份、共享颜色尺码元数据与本地匹配归元数据层；生产列表、人员标签、导出请求和下载归生产层；两者复用同一Supabase受限网关客户端，原始Token不进入客户端。 |
+| S2B生产图下载 | `automation/api/s2b/production/gateway.py`, `downloads.py`, `automation/batch_browser.py` | 优先由Supabase服务端代理生产批次、导出和记录查询，用户选择后按实际件数补发缺失导出，轮询真实下载地址，校验ZIP路径与完整性后解压；网关不可用才回退已登录页面，下载标记接口不承担文件传输。 |
 | 源码更新 | `updates/`, `updater.py` | 检查、应用、重启为一个状态机，不要求点击两次。 |
 | 协作取消 | `cancellation.py`, `controllers/thread_lifecycle.py`, `ui/stop_actions.py` | 控制器拥有线程释放，UI只路由用户停止意图；长循环定期检查，停止不关闭应用，关闭可立即退出。 |
 

@@ -84,7 +84,7 @@ def _placement_knives(placement):
 def _validate_fixed_knives(planned, settings, canvas_width, knives, left_marker_px):
     safety = ceil(settings.cutter_safety_mm * settings.dpi / 25.4)
     corridors = [(knife-safety, knife+safety) for knife in knives]
-    if any(not 0 < left < right < canvas_width for left, right in corridors):
+    if any(not 0 < left <= right < canvas_width for left, right in corridors):
         raise ValueError("整批切割线或安全通道超出输出画布，已停止生成。")
     offset = mm_to_px(settings.cutter_marker_offset_mm, settings.dpi)
     first_rows = {(p.row_y_px, p.y_px) for _, p in planned

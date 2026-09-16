@@ -28,27 +28,44 @@ class S2BExportRecord:
 def parse_export_rows(payload: dict) -> list[S2BExportRecord]:
     data = payload.get("data") if isinstance(payload, dict) else None
     rows = data.get("data", ()) if isinstance(data, dict) else ()
+    normalized = isinstance(payload, dict) and isinstance(payload.get("records"), list)
+    if normalized:
+        rows = payload["records"]
     records = []
     for row in rows:
         params = row.get("params") if isinstance(row.get("params"), dict) else {}
-        batch = str(params.get("批次号") or "").strip()
-        if not batch or int(row.get("type") or 0) != 4:
+        batch = str(row.get("batch_number") if normalized else params.get("批次号") or "").strip()
+        if not batch or (not normalized and int(row.get("type") or 0) != 4):
             continue
         file_info = row.get("oss_file") if isinstance(row.get("oss_file"), dict) else {}
         records.append(S2BExportRecord(
-            record_id=int(row.get("id") or 0),
+            record_id=int((row.get("record_id") if normalized else row.get("id")) or 0),
             batch_number=batch,
-            image_count=int(row.get("export_success_num") or row.get("export_num") or 0),
+            image_count=int((
+                row.get("image_count") if normalized else
+                row.get("export_success_num") or row.get("export_num") or 0
+            ) or 0),
             created_at=str(row.get("created_at") or ""),
-            ready=int(row.get("status") or 0) == 2 and bool(row.get("download_url")),
+            ready=(bool(row.get("ready")) if normalized else
+                   int(row.get("status") or 0) == 2 and bool(row.get("download_url"))),
             download_url=str(row.get("download_url") or ""),
-            archive_name=Path(str(file_info.get("origin_name") or f"{batch}.zip")).name,
+            archive_name=Path(str(
+                (row.get("archive_name") if normalized else file_info.get("origin_name"))
+                or f"{batch}.zip"
+            )).name,
         ))
     return records
 
 
 def list_s2b_batches(progress=None):
     from .batches import list_s2b_production_batches
+    from .gateway import available
+    if available():
+        try:
+            _report(progress, "正在通过共享 S2B 服务读取生产批次和人员标签…")
+            return list_s2b_production_batches()
+        except Exception as error:
+            _report(progress, f"共享 S2B 服务暂不可用：{error}；改用本机登录继续读取")
     with _authenticated_page(progress) as page:
         return list_s2b_production_batches(page)
 
@@ -68,18 +85,38 @@ def download_s2b_exports(batch_numbers, output_root: Path, progress=None) -> lis
             _report(progress, f"[{index}/{len(batches)}] 本地已有 S2B / {batch}，跳过下载")
     if not pending:
         return [saved[batch] for batch in batches]
+    from .gateway import available, mark_downloaded, wait_for_exports
+    selected = None
+    if available():
+        try:
+            selected = wait_for_exports(pending, parse_export_rows, progress)
+        except Exception as error:
+            _report(progress, f"共享 S2B 下载暂不可用：{error}；改用本机登录继续下载")
+    if selected is not None:
+        return _download_selected(
+            selected, saved, batches, output_root, progress, mark_downloaded
+        )
     with _authenticated_page(progress) as page:
         from .batches import wait_for_ready_exports
         selected = wait_for_ready_exports(page, pending, progress)
-        total = len(selected)
-        for index, record in enumerate(selected, 1):
-            archive = _download_archive(record, output_root, index, total, progress)
-            saved[record.batch_number] = _extract_archive(
-                archive, output_root, record.batch_number
-            )
-            _api(page, "POST", "/factory/userExportRecord/downloadRecord", {"id": record.record_id})
-            _report(progress, f"[{index}/{total}] 已下载并解压 S2B / {record.batch_number}")
-        return [saved[batch] for batch in batches]
+        return _download_selected(
+            selected, saved, batches, output_root, progress,
+            lambda record_id: _api(
+                page, "POST", "/factory/userExportRecord/downloadRecord", {"id": record_id}
+            ),
+        )
+
+
+def _download_selected(selected, saved, batches, output_root, progress, mark):
+    total = len(selected)
+    for index, record in enumerate(selected, 1):
+        archive = _download_archive(record, output_root, index, total, progress)
+        saved[record.batch_number] = _extract_archive(
+            archive, output_root, record.batch_number
+        )
+        mark(record.record_id)
+        _report(progress, f"[{index}/{total}] 已下载并解压 S2B / {record.batch_number}")
+    return [saved[batch] for batch in batches]
 
 
 def _latest_exports(page):

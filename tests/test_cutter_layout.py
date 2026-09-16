@@ -35,6 +35,23 @@ def test_fixed_dual_rows_keep_knife_marker_and_orientation(tmp_path, engine):
     assert result["source_dimensions"][0]["width_mm"] == pytest.approx(280, abs=0.1)
 
 
+@pytest.mark.parametrize("engine", ["pillow", "libvips"])
+def test_zero_horizontal_knife_clearance_keeps_exact_partition_boundary(tmp_path, engine):
+    paths = [_image(tmp_path / f"zero-{i}.png", width=280, height=300)
+             for i in range(4)]
+    result = generate_layout(paths, tmp_path / "zero-out", _settings(
+        png_engine=engine, cutter_safety_mm=0))
+    assert result['cutter_safety_mm'] == 0
+    for left, right in zip(result['placements'][::2], result['placements'][1::2]):
+        knife = right['cut_knife_x_px']
+        assert left['x_px'] + left['width_px'] <= knife
+        assert right['color_block_x_px'] == knife
+        assert right['x_px'] >= knife
+    corridor = result['cut_corridor']['zones'][0]['corridors'][0]
+    assert corridor['safe_left_px'] == corridor['safe_right_px']
+    assert result['cut_corridor']['pixel_verified']
+
+
 def test_image_that_crosses_partition_uses_safe_original_size_rotation(tmp_path):
     path = _image(tmp_path / "too-wide.png", width=310)
     result = generate_layout([path], tmp_path / "out", _settings())
@@ -64,7 +81,7 @@ def test_automatic_cutter_columns_are_an_output_of_film_width(tmp_path):
              for i in range(6)]
     result = generate_layout(paths, tmp_path / "wide", _settings(
         media_width_mm=900, cutter_auto_knife=True,
-        cutter_left_marker_external=True))
+        cutter_left_marker_external=True, cutter_safety_mm=0))
     assert result['dual_quality']['column_rows'] == {3: 2}
     assert {tuple(p['cut_knife_xs_px']) for p in result['placements']} == {(300, 600)}
     assert len(result['cut_corridor']['zones'][0]['corridors']) == 2

@@ -37,6 +37,11 @@ def build_batch_input(owner, panel):
     group = QGroupBox('批次排版')
     group.setObjectName('batchInput')
     layout = QVBoxLayout(group)
+    identities = QHBoxLayout()
+    identities.setSpacing(12)
+    identities.addWidget(panel.selected_source, 3)
+    identities.addWidget(panel.current_film, 2)
+    layout.addLayout(identities)
     row = QHBoxLayout()
     row.setSpacing(14)
     owner.preview_only = QCheckBox('仅计算排版（不生成文件）')
@@ -59,7 +64,6 @@ def build_batch_input(owner, panel):
         lambda: open_recent_output(owner.window()))
     row.addWidget(owner.recent_output_button, 1)
     refresh_recent_output_button(owner.window(), owner.recent_output_button)
-    layout.addLayout(row)
     parameters = QGridLayout()
     parameters.setHorizontalSpacing(12)
     parameters.setVerticalSpacing(8)
@@ -84,6 +88,7 @@ def build_batch_input(owner, panel):
     parameters.setColumnStretch(0, 1)
     parameters.setColumnStretch(1, 1)
     layout.addLayout(parameters)
+    layout.addLayout(row)
     owner.start_layout_button.setToolTip(
         '选择图片文件夹或上级目录；自动识别一个或多个批次，再按“合并所有子文件夹”设置排版。')
     panel.bulk_generation_button.hide()  # Compatibility handle; the primary action now covers both modes.

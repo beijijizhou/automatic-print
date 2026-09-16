@@ -54,7 +54,7 @@ def build_settings_navigation(window, source):
         from .parameter_refresh import defer_parameter_refresh
         with defer_parameter_refresh(window):
             platform = name.strip()
-            if platform == '莆田' and getattr(window, 'developer_mode_enabled', False):
+            if platform in {'莆田', 'Haloo'} and getattr(window, 'developer_mode_enabled', False):
                 window.membrane_gap.setValue(40)
                 window.membrane_gap_enabled.setChecked(True)
                 window.preferences.setValue('layout/membrane_gap_mm', 40)

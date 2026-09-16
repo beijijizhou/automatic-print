@@ -12,7 +12,7 @@ from PySide6.QtWidgets import (
 )
 
 
-EXPERIMENTAL_PLATFORMS = ('莆田',)
+EXPERIMENTAL_PLATFORMS = ('莆田', 'Haloo')
 
 DEVELOPER_FEATURES = (
     ('诊断与记录', (
@@ -28,6 +28,7 @@ DEVELOPER_FEATURES = (
         ('隆丰 ERP 下载', '下载已生成批次并仅计算排版数据'),
         ('S2B 生产图下载', '读取已生成导出记录并下载、校验和解压生产图'),
         ('莆田平台', '显示尚在验证中的莆田本地排版入口'),
+        ('Haloo平台', '显示尚在验证中的Haloo本地排版入口'),
         ('并行分块 TIFF', '允许选择实验性的 TIFF 输出格式'),
     )),
 )

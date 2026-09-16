@@ -1,7 +1,7 @@
-"""Compact common fields and a persistent, highlighted source identity."""
+"""Compact label fields plus identities owned by the pinned parameter area."""
 from pathlib import Path
 from PySide6.QtCore import Qt
-from PySide6.QtWidgets import QHBoxLayout, QLabel, QVBoxLayout
+from PySide6.QtWidgets import QHBoxLayout, QLabel
 
 
 def show_selected_source(panel, value, mode='single', window=None):
@@ -43,12 +43,8 @@ def quick_fields(panel, date_button, window):
     window.folder.textChanged.connect(show_source)
     show_selected_source(panel, window.preferences.value('layout/input_root', window.folder.text(), str),
                          window.preferences.value('layout/input_mode', 'single', str))
-    layout = QVBoxLayout()
-    layout.addLayout(row)
     from .current_film import CurrentFilmLabel
     panel.current_film = CurrentFilmLabel(window, panel)
-    identities = QHBoxLayout()
-    identities.addWidget(panel.selected_source, 3)
-    identities.addWidget(panel.current_film, 2)
-    layout.addLayout(identities)
-    return layout
+    # The batch input panel places both identities above all everyday options.
+    # Creating them here keeps the existing data bindings owned by this module.
+    return row

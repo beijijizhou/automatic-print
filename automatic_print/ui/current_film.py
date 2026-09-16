@@ -6,7 +6,6 @@ from PySide6.QtWidgets import (
     QDoubleSpinBox,
     QHBoxLayout,
     QLabel,
-    QVBoxLayout,
     QWidget,
 )
 
@@ -16,9 +15,8 @@ class CurrentFilmLabel(QWidget):
         super().__init__(parent)
         self.cutter = window.cutter_settings
         self.setObjectName("currentFilm")
-        self.setMinimumWidth(360)
+        self.setMinimumWidth(500)
         self.summary = QLabel()
-        self.summary.setWordWrap(True)
         self.summary.setTextFormat(Qt.PlainText)
         self.summary.setTextInteractionFlags(Qt.TextSelectableByMouse)
 
@@ -32,22 +30,15 @@ class CurrentFilmLabel(QWidget):
         self._copy_items(self.cutter.film, self.film)
         self._copy_items(self.cutter.mode, self.mode)
 
-        edits = QVBoxLayout()
-        edits.setContentsMargins(0, 0, 0, 0)
-        film_row = QHBoxLayout()
-        film_row.addWidget(QLabel("膜规格"))
-        film_row.addWidget(self.film)
-        film_row.addWidget(self.custom_width)
-        mode_row = QHBoxLayout()
-        mode_row.addWidget(QLabel("排版"))
-        mode_row.addWidget(self.mode)
-        edits.addLayout(film_row)
-        edits.addLayout(mode_row)
-
         layout = QHBoxLayout(self)
         layout.setContentsMargins(10, 8, 10, 8)
-        layout.addWidget(self.summary, 1)
-        layout.addLayout(edits)
+        layout.setSpacing(8)
+        layout.addWidget(QLabel("膜规格"))
+        layout.addWidget(self.film)
+        layout.addWidget(self.custom_width)
+        layout.addWidget(QLabel("排版"))
+        layout.addWidget(self.mode, 1)
+        layout.addWidget(self.summary)
 
         self.film.currentIndexChanged.connect(self._film_requested)
         self.mode.currentIndexChanged.connect(self._mode_requested)
@@ -73,18 +64,7 @@ class CurrentFilmLabel(QWidget):
         self._sync_controls()
         film = self.cutter.width_control.value()
         usable = self.cutter.printable.usable_width()
-        modes = {
-            "single": "单列切膜",
-            "dual": "自动多列切膜",
-            "free": "正常排版（无刀码）",
-        }
-        mode = modes.get(
-            self.cutter.mode.currentData(), "待选择排版模式"
-        )
-        self.summary.setText(
-            f"当前选用膜：{film / 10:g} 厘米\n"
-            f"可打印 {usable:g} 毫米 · {mode}"
-        )
+        self.summary.setText(f"可打印宽度：{usable:g} 毫米")
         self.setToolTip(
             "当前打印参数，不是自动选用面积最省方案。\n"
             f"物理膜宽 {film:g} 毫米 − RIIN左预留 "
@@ -92,18 +72,16 @@ class CurrentFilmLabel(QWidget):
             f"{self.cutter.printable.right.value():g} 毫米。"
         )
         invalid = usable <= 0
-        background = "#fee2e2" if invalid else "#fff7ed"
-        foreground = "#991b1b" if invalid else "#9a3412"
-        border = "#ef4444" if invalid else "#fb923c"
+        background = "#fee2e2" if invalid else "#f8fafc"
+        foreground = "#991b1b" if invalid else "#64748b"
+        border = "#ef4444" if invalid else "#dce4ef"
         self.setStyleSheet(
             f"QWidget#currentFilm {{ background:{background};"
-            f"border:2px solid {border};border-radius:7px; }}"
+            f"border:1px solid {border};border-radius:7px; }}"
             f"QWidget#currentFilm QLabel {{ color:{foreground};border:none; }}"
-            "QWidget#currentFilm QLabel:first-child { font-size:17px;"
-            "font-weight:bold; }"
         )
         if invalid:
-            self.summary.setText(self.summary.text() + "\n预留超过膜宽，禁止生成")
+            self.summary.setText("预留超过膜宽，禁止生成")
 
     def _sync_controls(self) -> None:
         self._copy_items(self.cutter.mode, self.mode)
