@@ -12,7 +12,7 @@ def modules(package):
 def test_new_domain_packages_stay_small_and_cohesive():
     for package in (
         'controllers', 'history', 'batch_ui/shell',
-        'layout_engine/text', 'automation/api/erp',
+        'layout_engine/text', 'automation/api/erp', 'ui/workbench',
     ):
         paths = modules(package)
         assert len(paths) <= 5, f'{package} 顶层模块超过5个，应按职责建立子包'
@@ -25,6 +25,17 @@ def test_controllers_do_not_import_widgets():
     offenders = [path.name for path in modules('controllers')
                  if 'PySide6.QtWidgets' in path.read_text(encoding='utf-8')]
     assert not offenders, f'控制器不得直接操作界面控件：{offenders}'
+
+
+def test_main_window_only_composes_visible_surfaces():
+    path = ROOT/'automatic_print/ui/main_window.py'
+    text = path.read_text(encoding='utf-8')
+    assert len(text.splitlines()) <= 110
+    assert 'build_settings(self)' in text
+    assert 'build_activity(self)' in text
+    assert 'build_home(self)' in text
+    assert 'QFormLayout' not in text
+    assert 'QTabWidget' not in text
 
 
 def test_core_layers_do_not_import_ui():

@@ -8,7 +8,6 @@ LEGACY_LIMITS = {
     'automatic_print/layout_engine/service.py': 220,
     'automatic_print/ui/generation_actions.py': 206,
     'automatic_print/ui/label_quick_panel.py': 228,
-    'automatic_print/ui/main_window.py': 237,
     'automatic_print/ui/preferences.py': 206,
 }
 

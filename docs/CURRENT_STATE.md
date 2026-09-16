@@ -5,7 +5,9 @@
 ## 入口与编排
 
 - 应用入口：`automatic_print/__main__.py`、`automatic_print/app.py`。
-- 主窗口：`automatic_print/ui/main_window.py`，负责构造应用级状态和连接各控制器。
+- 主窗口：`automatic_print/ui/main_window.py`只负责应用级状态、控制器装配和窗口生命周期；
+  界面上可见的工作台首页、任务状态和打印参数分别映射到`automatic_print/ui/workbench/home.py`、
+  `activity.py`和`settings.py`，不再把控件树堆在主窗口入口。
 - 主工作台：`automatic_print/automation_dialog.py` 为兼容门面；实际页面在
   `automatic_print/batch_ui/` 和 `automatic_print/ui/label_quick_panel.py`。
 - 旧ERP工作台的窗口外壳已按职责进入`batch_ui/shell/`：`view.py`只构造控件，`results.py`
@@ -46,7 +48,8 @@
 - S2B 文件夹批次号解析、中心批次查询及本地图片颜色匹配位于
   `automation/api/s2b/`；只要识别到 S2B 批次，预览和生成都会在排版前查询一次订单颜色并按本地
   路径缓存，不依赖开发者模式或手动平台选择。服务不可用或任一图片颜色未匹配时阻止排版并给出
-  批次诊断。中心地址随应用提供，正式 Windows 构建从 GitHub Secret
+  批次诊断；文件名不能识别订单时，以批次目录内的订单文件夹作唯一匹配回退，并把接口订单身份
+  写回共享订单归组。中心地址随应用提供，正式 Windows 构建从 GitHub Secret
   `AUTOMATIC_PRINT_S2B_BATCH_INFO_KEY` 注入受限客户端密钥；源码树只保留空占位，
   Supabase service-role 和 S2B 登录凭据都不下发到生产电脑。
 - 订单、双面、颜色与尺码：`order_groups.py`、`batch_analysis.py`、
@@ -124,7 +127,7 @@
 
 | 归属 | 遗留文件 | 后续收敛方向 |
 | --- | --- | --- |
-| 应用编排 | `ui/main_window.py`, `ui/generation_actions.py`, `ui/preferences.py` | 生成线程控制已迁入`controllers/`；主窗口继续缩为控制器装配，生成展示和参数分组进入现有UI子模块。 |
+| 应用编排 | `ui/generation_actions.py`, `ui/preferences.py` | 主窗口已缩为控制器与`ui/workbench/`可见页面装配；生成展示和参数持久化继续迁入对应UI功能目录。 |
 | 工作台展示 | `ui/label_quick_panel.py` | 数据模型、绘制和控件构造继续进入现有预览功能目录；`setting_preview.py`与`pair_preview.py`已回到普通预算。 |
 | 排版核心 | `layout_engine/service.py`, `planner.py`, `item_factory.py` | 服务只编排阶段；测量、候选和对象构造保留单一所有者。 |
 | ERP自动化 | `automation/erp_api.py`, `rule_batches.py` | 按提供商迁入`automation/api/<provider>/`，中立批次规则留共享层；`batch_browser.py`已把响应映射迁入ERP子包并回到普通预算。 |

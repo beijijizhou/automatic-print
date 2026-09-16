@@ -10,7 +10,7 @@
 | 批次数据快照与并行测量 | `layout_engine/batch_snapshot.py`, `measurement_session.py`, `parallel_measurement.py` | 生成、仅预览和批量分析从首次读取到最终报告共享一个批次会话；保持结果原顺序，线程完成顺序不能改变生产顺序。 |
 | 订单、双面、尺码归组及批次构成 | `layout_engine/order_groups.py`, `batch_analysis.py`, `size_policy.py`, `ui/batch_distribution.py` | 排版、比较、预览、报告和安全检查使用同一身份；预览上方单件显示紧凑尺码-数量，多件显示紧凑订单号-件数。 |
 | 颜色与生产顺序 | `layout_engine/color_policy.py`, `single_order_sequence.py` | 颜色优先、尺码业务顺序集中维护。 |
-| S2B批次元数据 | `automation/api/s2b/`, `.github/workflows/windows-release.yml` | 从文件夹尾部解析批次号；识别到 S2B 后不依赖开发者模式或平台选择，排版前必须一次读取共享服务并按订单项、尺码匹配全部本地图片。颜色缺失时停止排版；颜色排序和四种膜方案复用缓存，不重复访问接口。中心地址内置，受限客户端密钥只在 Windows 构建时注入。 |
+| S2B批次元数据 | `automation/api/s2b/`, `.github/workflows/windows-release.yml` | 从文件夹尾部解析批次号；识别到 S2B 后不依赖开发者模式或平台选择，排版前必须一次读取共享服务并按订单项、尺码匹配全部本地图片。文件名失效时以订单文件夹对接口订单号作唯一回退匹配。颜色缺失时停止排版；颜色排序和四种膜方案复用缓存，不重复访问接口。中心地址内置，受限客户端密钥只在 Windows 构建时注入。 |
 | 普通行和自动多列规划 | `layout_engine/planner.py`, `cutter_planner.py`, `dynamic_columns.py`, `column_solver.py` | 膜宽与真实占位决定列数；一至八列共用同一Placement入口。 |
 | 整批刀位 | `layout_engine/cutter_planner.py`, `dynamic_columns.py`, `knife_optimizer.py`, `adaptive_knife.py` | N列生成N-1条区域固定刀位；多数可并排时形成一个并排区，其余完整订单形成一个旋转区；混色订单不充当单色边界；禁止超过两个区域。 |
 | 旋转区域和整批旋转 | `layout_engine/rotation_zones.py`, `rotation_compare.py`, `whole_rotation.py` | 以完整订单或尺码块评估，不复制候选算法。 |
@@ -35,6 +35,7 @@
 | 单批次后台编排 | `controllers/layout_generation.py`, `controllers/generation_progress.py`, `ui/generation_actions.py`, `ui/workers.py` | 控制器唯一拥有工作线程生命周期和纯进度计算；UI只收集参数、构造Worker并展示不可变结果。 |
 | 统一批次排版入口与滚动编排 | `ui/preference_actions.py`, `controllers/bulk_generation.py`, `ui/bulk_workbench.py`, `bulk_generation_worker.py` | 同一入口扫描单批次或多批次目录；控制器拥有任务线程和取消，UI展示状态；外层线程池有空位立即补批次，合并批次复用内部图片线程。 |
 | 主界面进度展示 | `ui/busy_spinner.py`, `operation_timing.py`, `generation_panel.py` | 未知总量用旋转指示，已知总量用真实进度条。 |
+| 主窗口可见页面装配 | `ui/main_window.py`, `ui/workbench/home.py`, `activity.py`, `settings.py` | 主窗口只连接应用状态和控制器；首页、任务状态与打印参数按实际UI区域各自拥有控件树，新增可见区域不得重新堆回主窗口。 |
 | 错误上下文与复制 | `layout_engine/error_context.py`, `error_parameters.py`, `ui/failure_panel.py` | 所有失败复用完整订单/参数诊断，不散落拼字符串。 |
 | 参数持久化与模式可见性 | `ui/preferences.py`, `preference_actions.py`, `preference_autosave.py`, `layout_values.py`, `developer_mode.py` | 文件夹与设置窗口动作由 `preference_actions.py` 拥有；稳定生产控件对普通用户开放，新实验功能默认只在开发者模式显示并生效。 |
 | 通用数值参数控件 | `ui/spinbox_style.py` | 所有毫米、尺寸和偏移浮点输入复用`double_spinbox`，不在页面内复制范围、精度和初始值构造代码。 |

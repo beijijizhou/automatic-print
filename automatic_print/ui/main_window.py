@@ -1,40 +1,17 @@
 from __future__ import annotations
-from PySide6.QtCore import QSettings, QStandardPaths, QThread, QTimer, Qt
-from PySide6.QtWidgets import (
-    QCheckBox,
-    QComboBox,
-    QDialog,
-    QFormLayout,
-    QHBoxLayout,
-    QLabel,
-    QLineEdit,
-    QMainWindow,
-    QPlainTextEdit,
-    QProgressBar,
-    QScrollArea,
-    QPushButton,
-    QSizePolicy,
-    QSpinBox,
-    QTabWidget,
-    QVBoxLayout,
-    QWidget,
-)
-from .. import __version__, __version_display__
+from PySide6.QtCore import QSettings, QThread, QTimer, Qt
+from PySide6.QtWidgets import QLabel, QMainWindow
 from ..branding import application_icon
-from .segmented_output import SegmentedOutputSettings
-from ..automation_dialog import AutomationDialog
 from .generation_actions import GenerationActionsMixin
-from .color_block_settings import ColorBlockSettingsDialog
-from .cutter_settings import CutterSettingsPanel
-from .label_settings import LabelSettingsDialog
 from .preferences import PreferencesMixin
 from .preference_autosave import PreferenceAutosave
 from .generation_preview import GenerationPreviewController
 from .update_actions import UpdateActionsMixin
 from .worker_bridge import MainWindowWorkerBridge
-from .busy_spinner import BusySpinner
-from .spinbox_style import double_spinbox
+from .workbench import build_activity, build_home, build_settings
 from ..controllers import LayoutGenerationController
+
+
 class MainWindow(
     PreferencesMixin,
     GenerationActionsMixin,
@@ -65,8 +42,9 @@ class MainWindow(
         self.clock = QTimer(self)
         self.clock.setInterval(1000)
         self.clock.timeout.connect(self.refresh_timing)
-        self._build_settings()
-        self._build_home()
+        build_settings(self)
+        build_activity(self)
+        build_home(self)
         from .workbench_style import apply_workbench_style
         apply_workbench_style(self)
         self.preference_autosave = PreferenceAutosave(self)
@@ -86,146 +64,6 @@ class MainWindow(
         bridge.update_finished.connect(self.update_check_finished)
         bridge.update_failed.connect(self.update_check_failed)
         bridge.update_progress.connect(self.show_update_progress)
-    def _build_settings(self) -> None:
-        self.folder = QLineEdit(
-            self.preferences.value("source_location", "", str)
-        )
-        browse = QPushButton("选择图片文件夹…")
-        browse.clicked.connect(self.choose_folder)
-        folder_row = QHBoxLayout()
-        folder_row.addWidget(self.folder)
-        folder_row.addWidget(browse)
-        self.width = double_spinbox(600, 50, 5000)
-        self.spacing = double_spinbox(8, 0, 100)
-        self.margin = double_spinbox(3, 0, 100)
-        self.margin.setToolTip(
-            "只在整张批次排版图的开头和结尾保留空间，不影响图片之间的距离。"
-        )
-        self.dpi = QSpinBox()
-        self.dpi.setRange(72, 1200)
-        from .output_dpi import build_output_dpi
-        self.output_dpi_control = build_output_dpi(self)
-        from .header_gap import build_header_gap
-        build_header_gap(self)
-        self.worker_threads = QSpinBox()
-        self.worker_threads.setRange(1, 32)
-        self.segmented_output = SegmentedOutputSettings(self.preferences, self)
-        self.allow_rotation = QCheckBox("允许旋转以节省材料")
-        self.allow_rotation.setChecked(True)
-        self.rotation_direction = QComboBox()
-        self.rotation_direction.addItem("向左旋转（默认）", "left")
-        self.rotation_direction.addItem("向右旋转", "right")
-        self.label_settings = LabelSettingsDialog(self)
-        self.number_images = self.label_settings.enabled
-        label_button = QPushButton("打开标签与文字设置…")
-        label_button.clicked.connect(self.label_settings.exec)
-        self.color_block_settings = ColorBlockSettingsDialog(self)
-        color_block_button = QPushButton("打开色块设置…")
-        color_block_button.clicked.connect(self.color_block_settings.exec)
-        from .output_settings import build_output_settings
-        build_output_settings(self)
-        self.load_layout_preferences()
-        self.cutter_settings = CutterSettingsPanel(
-            self.preferences, self.width, self.allow_rotation,
-            self.rotation_direction, self, block=self.color_block_settings,
-        )
-        form = QFormLayout()
-        for label, widget in (
-            ("图片文件夹", folder_row),
-            ("膜与切膜规则", self.cutter_settings),
-            ("上下垂直间距（毫米）", self.spacing),
-            ("补足膜间距", self.membrane_gap_enabled),
-            ("膜标签与图案最小间距", self.membrane_gap),
-            ("超宽恢复", self.auto_fit_width),
-            ("批次开头与结尾留白（毫米）", self.margin),
-            ("输出分辨率", self.output_dpi_control),
-            ("并行处理线程数", self.worker_threads),
-            ("图片旋转", self.allow_rotation),
-            ("旋转方向", self.rotation_direction),
-            ("标签与文字", label_button),
-            ("剪膜机色块", color_block_button),
-            ("输出图片格式", self.output_format),
-            ("图片保存方式", self.png_engine),
-            ("图片压缩", self.png_compression),
-            ("分段与并行保存", self.segmented_output),
-        ):
-            form.addRow(label, widget)
-        from .spacing_settings import bind_spacing_description
-        bind_spacing_description(form, self)
-        default = QStandardPaths.writableLocation(QStandardPaths.DesktopLocation)
-        from .output_location import build_output_location
-        output_row = build_output_location(self, default)
-        form.addRow("任务保存位置", output_row)
-        self.job_path = QLineEdit()
-        self.job_path.setReadOnly(True)
-        form.addRow("切膜机文件位置", self.job_path)
-        self.progress = QProgressBar()
-        self.progress.setRange(0, 100)
-        self.progress.setFormat("尚未开始")
-        self.busy_spinner = BusySpinner(self)
-        self.status = QLabel("请选择包含图片的文件夹。")
-        self.current_file = QLabel("当前文件：—")
-        self.run_log = QPlainTextEdit()
-        self.run_log.setReadOnly(True)
-        self.run_log.setMaximumHeight(115)
-        self.generate_button = QPushButton("生成最终打印文件", self)
-        self.generate_button.clicked.connect(self.generate)
-        self.generate_button.hide()  # Compatibility state; production actions live on the workbench.
-        self.stop_generation_button = QPushButton("停止当前排版")
-        self.stop_generation_button.setEnabled(False)
-        self.stop_generation_button.clicked.connect(self.stop_generation)
-        self.save_settings_button = QPushButton("保存参数并返回排版")
-        body = QVBoxLayout()
-        body.setAlignment(Qt.AlignTop)
-        from .print_settings_navigation import build_settings_navigation
-        settings_tabs = build_settings_navigation(self, form)
-        settings_tabs.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Maximum)
-        body.addWidget(settings_tabs)
-        container = QWidget()
-        actions = QHBoxLayout()
-        actions.addWidget(self.build_reset_button())
-        actions.addStretch()
-        actions.addWidget(self.save_settings_button)
-        body.addLayout(actions)
-        container.setLayout(body)
-        self.settings_dialog = QDialog(self)
-        self.settings_dialog.setWindowTitle("自动排版参数设置")
-        self.settings_dialog.resize(820, 560)
-        def save_and_return():
-            self.save_layout_preferences()
-            self.settings_dialog.accept()
-        self.save_settings_button.clicked.connect(save_and_return)
-        scroll = QScrollArea()
-        scroll.setWidgetResizable(True)
-        scroll.setWidget(container)
-        QVBoxLayout(self.settings_dialog).addWidget(scroll)
-    def _build_home(self) -> None:
-        self.automation_home = AutomationDialog(self)
-        self.version_label = QLabel(f"版本 {__version_display__}")
-        self.version_label.setToolTip(f"内部版本：{__version__}")
-        self.check_update_button = QPushButton("检查更新")
-        self.check_update_button.clicked.connect(
-            lambda: self.check_for_updates(False)
-        )
-        footer = QHBoxLayout()
-        footer.addWidget(self.version_label)
-        footer.addStretch()
-        self.automation_home.settings_button.setMinimumHeight(36)
-        footer.addWidget(self.automation_home.settings_button)
-        footer.addWidget(self.check_update_button)
-        from .developer_mode import build_developer_mode
-        build_developer_mode(self, footer)
-        self.workspace_tabs = QTabWidget()
-        self.workspace_tabs.addTab(self.automation_home, "本地排版")
-        from .erp_download_entry import install_production_platform_tab
-        install_production_platform_tab(self, self.workspace_tabs)
-        layout = QVBoxLayout()
-        layout.addWidget(self.build_update_status())
-        layout.addWidget(self.workspace_tabs)
-        layout.addLayout(footer)
-        container = QWidget()
-        container.setLayout(layout)
-        self.setCentralWidget(container)
     def has_active_tasks(self) -> bool:
         from .developer_mode import developer_task_active
         return any((self.layout_generation.active, self.update_thread is not None,

@@ -21,15 +21,18 @@ def make_window(tmp_path):
     return window
 
 
-def test_main_start_directly_generates_without_settings(tmp_path, monkeypatch):
+def test_main_start_uses_unified_batch_entry_without_settings(tmp_path, monkeypatch):
     window = make_window(tmp_path)
     source = tmp_path/'selected-batch'
     source.mkdir()
     monkeypatch.setattr(QFileDialog, 'getExistingDirectory', lambda *_: str(source))
     calls = []
-    monkeypatch.setattr(window, 'generate', lambda *_args, **_kwargs: calls.append('generate'))
+    monkeypatch.setattr(
+        'automatic_print.ui.bulk_workbench.start_bulk',
+        lambda owner, directory: calls.append((owner, directory)),
+    )
     window.automation_home.start_layout_button.click()
-    assert calls == ['generate']
+    assert calls == [(window, str(source))]
     assert not window.settings_dialog.isVisible()
     for control in (window.progress, window.status, window.current_file,
                     window.stop_generation_button):
