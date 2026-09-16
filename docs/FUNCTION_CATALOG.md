@@ -22,6 +22,7 @@
 | 膜规格方案比较 | `layout_engine/film_comparison.py`, `film_specs.py` | 比较方案不自动替用户选择生产膜；当前实际输出对应的方案直接复用生产坐标，只计算另外三套几何方案。 |
 | Pillow 渲染 | `layout_engine/pillow_renderer.py` | 与 vips 共享规划和安全契约，不复制排版业务。 |
 | libvips 分块渲染与运行时门禁 | `layout_engine/vips_renderer.py`, `engine_info.py`, `atomic_png.py`, `save_progress.py`, `png_codecs/` | 使用浅层画布图和固定快速滤波完成合成编码；外层延迟任务通过共享门禁串行进入，libvips 内部仍可多线程。保存报告按首批数据、持续生成写入、编码收尾和原子发布的真实文件增长边界计时；完整PNG发布后以一个连续窄条需求图一次复核全部刀位，避免保存前重复求值庞大画布。 |
+| 输出格式选择与并行分块 BigTIFF | `layout_engine/output_encoder.py`, `atomic_tiff.py`, `ui/output_settings.py` | 仅开发者模式可选择 TIFF；复用同一 libvips 画布，按固定 Tile 有界生成，使用 tifffile/imagecodecs 多线程独立压缩并由单一写入器登记偏移；保留透明通道、DPI、原子发布与整批刀位复核。 |
 | 分段输出 | `layout_engine/segmented_output.py`, `atomic_png.py` | 按完整行/订单切分，失败文件不可冒充可打印结果。 |
 | 输出命名与完成总结 | `layout_engine/output_name.py`, `output_sizes.py`, `output_file_info.py` | 单批、多批、分段统一订单/件数命名和报告字段；最终PNG扁平移入`切膜机文件`，文本报告进入平级`排版日志`，不生成输出JSON。 |
 | 订单与刀位安全 | `layout_engine/order_validation.py`, `cut_validation.py`, `marked_pixel_validation.py` | 规划后和真实像素阶段分别核验，不能由 UI 绕过。 |

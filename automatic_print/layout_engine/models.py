@@ -24,6 +24,7 @@ class LayoutSettings:
     dimension_overrides: tuple = ()
     width_adjustments: tuple = ()
     png_compression_level: int = 1
+    output_format: str = "png"
     png_engine: str = "pillow"
     png_fast_encoding: bool = False  # GUI opt-in default; preserve direct-call compatibility.
     png_streaming: bool = False  # GUI defaults on; native bounded-memory path for large images.

@@ -94,7 +94,8 @@ def generate_segments(paths, output_dir, settings, progress, plan_ready,
     if phase_ready:
         phase_ready('分段合成、安全检查与保存')
     output_dir.mkdir(parents=True, exist_ok=True)
-    existing = set(output_dir.glob('*.png'))
+    suffix = '.tif' if settings.output_format.lower() == 'tiff' else '.png'
+    existing = set(output_dir.glob('*'+suffix))
     lock, counts, results = RLock(), {}, {}
     reading = perf_counter()-started
     rendering = perf_counter()
@@ -137,7 +138,7 @@ def generate_segments(paths, output_dir, settings, progress, plan_ready,
                     results[futures[future]] = future.result()
     except BaseException:
         # Keep unfinished files recoverable, but never leave them print-labelled.
-        for path in set(output_dir.glob('*.png'))-existing:
+        for path in set(output_dir.glob('*'+suffix))-existing:
             target, suffix = path.with_suffix('.禁止打印'), 2
             while target.exists():
                 target = path.with_name(f'{path.stem} ({suffix}).禁止打印')

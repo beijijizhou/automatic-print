@@ -22,7 +22,6 @@ from .. import __version__, __version_display__
 from ..branding import application_icon
 from .segmented_output import SegmentedOutputSettings
 from ..automation_dialog import AutomationDialog
-from ..layout import png_engine_name
 from .generation_actions import GenerationActionsMixin
 from .color_block_settings import ColorBlockSettingsDialog
 from .cutter_settings import CutterSettingsPanel
@@ -119,14 +118,8 @@ class MainWindow(
         self.color_block_settings = ColorBlockSettingsDialog(self)
         color_block_button = QPushButton("打开色块设置…")
         color_block_button.clicked.connect(self.color_block_settings.exec)
-        self.png_compression = QComboBox()
-        self.png_compression.addItem("等级 1 — 轻度压缩（推荐）", 1)
-        self.png_compression.addItem("等级 0 — 不压缩（文件最大）", 0)
-        self.png_compression.addItem("等级 3 — 中度压缩（文件更小）", 3)
-        self.png_engine = QComboBox()
-        self.png_engine.addItem("标准快速模式（推荐）", "pillow")
-        if png_engine_name() == "大图节省内存模式":
-            self.png_engine.addItem("大图节省内存模式", "libvips")
+        from .output_settings import build_output_settings
+        build_output_settings(self)
         self.load_layout_preferences()
         self.cutter_settings = CutterSettingsPanel(
             self.preferences, self.width, self.allow_rotation,
@@ -147,6 +140,7 @@ class MainWindow(
             ("旋转方向", self.rotation_direction),
             ("标签与文字", label_button),
             ("剪膜机色块", color_block_button),
+            ("输出图片格式", self.output_format),
             ("图片保存方式", self.png_engine),
             ("图片压缩", self.png_compression),
             ("分段与并行保存", self.segmented_output),

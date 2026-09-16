@@ -80,4 +80,5 @@ def build_settings_navigation(window, source):
     platform_defaults(window.label_settings.platform.currentText())
     window.print_settings_tabs = tabs
     window.layout_rules_form = forms['排版规则']
+    window.output_parallel_form = forms['输出与并行']
     return tabs

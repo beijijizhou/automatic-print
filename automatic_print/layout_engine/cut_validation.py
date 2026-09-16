@@ -147,8 +147,9 @@ def validate_vips_output(path, check, progress=None, guide_boxes=(), transition_
     if check is None:
         return
     import pyvips
+    kind = 'TIFF' if path.suffix.lower() in {'.tif', '.tiff'} else 'PNG'
     if progress:
-        progress("核对切割通道", 0, 1, "扫描输出 PNG 的全长切割通道")
+        progress("核对切割通道", 0, 1, f"扫描输出 {kind} 的全长切割通道")
     corridors = sorted(
         corridor_checks(check), key=lambda row: row.get("start_y_px", 0)
     )
@@ -159,7 +160,7 @@ def validate_vips_output(path, check, progress=None, guide_boxes=(), transition_
         image, corridors, guide_boxes, transition_rectangles
     ):
         path.rename(path.with_suffix(".禁止打印"))
-        raise ValueError("最终 PNG 进入切割安全通道，文件已标记为禁止打印。")
+        raise ValueError(f"最终 {kind} 进入切割安全通道，文件已标记为禁止打印。")
     mark_pixel_verified(check)
     if progress:
-        progress("核对切割通道", 1, 1, "输出 PNG 全长通道检查通过")
+        progress("核对切割通道", 1, 1, f"输出 {kind} 全长通道检查通过")

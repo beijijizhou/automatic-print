@@ -52,6 +52,10 @@ def build_developer_mode(window, footer):
         window.layout_rules_form.setRowVisible(window.membrane_gap, True)
         window.layout_rules_form.setRowVisible(window.cutter_settings.two_zone, True)
         window.cutter_settings.set_developer_mode(enabled)
+        if not enabled:
+            window.output_format.setCurrentIndex(
+                max(0, window.output_format.findData('png')))
+        window.output_parallel_form.setRowVisible(window.output_format, enabled)
         panel = window.automation_home.label_quick_panel
         window.batch_record_group.setVisible(True)
         panel.summary.gap_loss.setVisible(True)

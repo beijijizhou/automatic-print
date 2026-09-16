@@ -31,13 +31,16 @@ def production_quantity(paths, analysis=None, scope="批次"):
     return f'{orders} {pieces}件'
 
 
-def label_output_name(text, batch_name=""):
+def label_output_name(text, batch_name="", extension=".png"):
     if batch_name:
         text = f"{batch_name}_{text}"
     name = re.sub(r'[<>:"/\\|?*\x00-\x1f]', " ", text)
     name = re.sub(r"\s+", " ", name).strip(" .")
-    if name.lower().endswith(".png"):
-        name = name[:-4].rstrip(" .")
+    extension = '.' + extension.lower().lstrip('.')
+    for suffix in ('.png', '.tif', '.tiff'):
+        if name.lower().endswith(suffix):
+            name = name[:-len(suffix)].rstrip(" .")
+            break
     name = name or "排版图片"
     reserved = {"CON", "PRN", "AUX", "NUL"}
     reserved.update(f"{prefix}{i}" for prefix in ("COM", "LPT") for i in range(1, 10))
@@ -45,12 +48,12 @@ def label_output_name(text, batch_name=""):
         name = "标签_" + name
     while len(name.encode("utf-8")) > 180:
         name = name[:-1]
-    return name.rstrip(" .") + ".png"
+    return name.rstrip(" .") + extension
 
 
 def batch_directory_name(batch_name, job_id):
     """Initial directory keeps source identity, never an internal job identifier."""
-    return label_output_name(batch_name)[:-4]
+    return Path(label_output_name(batch_name)).stem
 
 
 def finish_output_files(directory, filename):
@@ -107,7 +110,7 @@ def remap_result_files(result, mapping):
 
 def batch_output_directory(base, batch_name, job_id):
     base = base/'排版日志'/'.处理中'
-    name = label_output_name(f'{batch_directory_name(batch_name, job_id)}_{job_id}')[:-4]
+    name = Path(label_output_name(f'{batch_directory_name(batch_name, job_id)}_{job_id}')).stem
     path, index = base / name, 2
     while path.exists():
         path = base / f"{name} ({index})"
@@ -119,6 +122,7 @@ def unused_output_path(directory, filename):
     path = directory / filename
     index = 2
     while path.exists() or path.with_name(path.name+'.未完成').exists():
-        path = directory / f"{filename[:-4]} ({index}).png"
+        original = Path(filename)
+        path = directory / f"{original.stem} ({index}){original.suffix}"
         index += 1
     return path

@@ -86,6 +86,12 @@ class PreferencesMixin:
         self.png_compression.setCurrentIndex(
             max(0, self.png_compression.findData(compression))
         )
+        output_format = self.preferences.value(
+            "layout/output_format", "png", str
+        )
+        self.output_format.setCurrentIndex(
+            max(0, self.output_format.findData(output_format))
+        )
         engine = self.preferences.value(
             "layout/png_engine", "pillow", str
         )
@@ -203,6 +209,7 @@ class PreferencesMixin:
             "layout/rotation_direction":
                 self.rotation_direction.currentData(),
             "layout/png_compression_level": self.png_compression.currentData(),
+            "layout/output_format": self.output_format.currentData(),
             "layout/png_engine": self.png_engine.currentData(),
             "label/text_template": label.text_template.text(),
             'label/sequence_enabled': label.sequence.isChecked(),

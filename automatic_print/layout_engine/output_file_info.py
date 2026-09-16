@@ -87,7 +87,7 @@ def file_information_text(result):
     if details:
         lines.append(details)
     if result.get('timings_seconds', {}).get('output_validation'):
-        lines.append('以上信息来自本次生成记录；输出PNG已重新解码一次，用于全长刀位像素安全复核。')
+        lines.append(f"以上信息来自本次生成记录；输出{result.get('output_format', '图片')}已重新解码一次，用于全长刀位像素安全复核。")
     else:
         lines.append('以上信息来自本次生成记录，未重新读取或解压输出大图。')
     return '\n'.join(lines)

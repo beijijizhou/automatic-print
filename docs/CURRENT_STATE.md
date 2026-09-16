@@ -42,9 +42,11 @@
   `platform_label.py`、`header_region.py`、`transparent_search.py`。开发者模式的平台文字优先放入
   原图二维码卡片的已验证空位；找不到安全空位时自动回退外置，不改变普通模式现有位置。
 - 渲染与编码：`pillow_renderer.py`、`vips_renderer.py`、`png_codecs/`、
-  `segmented_output.py`、`atomic_png.py`。活动的大图路径使用顶部有限条带测量、平衡行画布图和固定
+  `segmented_output.py`、`atomic_png.py`、`atomic_tiff.py`。活动的大图路径使用顶部有限条带测量、平衡行画布图和固定
   UP 滤波；保存计时包含 libvips 延迟合成、编码与写入，不能解释成纯磁盘耗时。多个 Python
   工作线程的 libvips 外层延迟任务由共享门禁协调，原生库内部仍保留并行，并在正常退出时完成清理。
+  开发者模式可选择并行分块 BigTIFF：画布按 Tile 有界生成，tifffile/imagecodecs 多线程压缩，
+  单一写入器登记块偏移；普通模式始终回到 PNG。
 - 输出安全：`order_validation.py`、`cut_validation.py`、
   `marked_pixel_validation.py`、`printed_guides.py`、`output_file_info.py`。
 - 膜方案与统计：`film_comparison.py` 直接复用当前实际输出行并并行计算其余方案；`film_specs.py`、`metrics.py`、

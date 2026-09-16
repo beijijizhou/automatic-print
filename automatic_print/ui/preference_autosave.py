@@ -20,6 +20,7 @@ class PreferenceAutosave(QObject):
         )]
         signals += [control.currentIndexChanged for control in (
             window.rotation_direction, window.png_compression, window.png_engine,
+            window.output_format,
             cutter.film, cutter.mode,
         )]
         signals += [window.allow_rotation.toggled, cutter.auto_knife.toggled, cutter.rotation_zone.toggled]

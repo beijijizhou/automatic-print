@@ -17,8 +17,8 @@ from .order_validation import validate_order_placements
 from .pillow_renderer import build_pillow_canvas
 from .printed_guides import collect_guides, dot_boxes, paint_guides, validate_vips_canvas
 from .planner import plan_layout
-from .atomic_png import save_png
 from .vips_renderer import available, build_vips_canvas
+from .output_encoder import encoder_plan, save_output
 from .transition_marks import marked_height, transition_rects, paint_transition_lines
 from .output_sizes import size_range_label
 from .marked_pixel_validation import validate_marked_pillow
@@ -104,7 +104,11 @@ def generate_layout(
     quantity = production_quantity(paths, analysis[-1])
     if prepared_plan is not None:
         quantity = prepared_plan.get('batch_quantity', quantity)+' '+production_quantity(paths, scope='本段')
-    output_path = unused_output_path(output_dir, label_output_name(quantity+' '+label_text+size_suffix+zone_suffix+filename_suffix, batch_name))
+    output_format = settings.output_format.lower()
+    extension = '.tif' if output_format == 'tiff' else '.png'
+    output_path = unused_output_path(output_dir, label_output_name(
+        quantity+' '+label_text+size_suffix+zone_suffix+filename_suffix,
+        batch_name, extension=extension))
     quality = dual_quality(planned, settings, analysis[-1])
     if plan_ready:
         plan_ready({"planned": planned, "labels": labels, "settings": settings, "warning": warning, "order_check": order_check, "analysis": analysis[-1], "dual_quality": quality,
@@ -119,9 +123,7 @@ def generate_layout(
     reading_seconds = perf_counter() - reading_started
     combining_started = perf_counter()
     phase('图片准备与合成')
-    streaming = settings.png_streaming and not settings.png_fast_encoding
-    use_vips = available() and (settings.png_engine == 'libvips' or
-                               (streaming and width*height*4 >= 64*1024*1024))
+    output_format, streaming, use_vips = encoder_plan(settings, width, height)
     from .vips_renderer import demand_lock
     native_validation = use_vips or (settings.png_fast_encoding and available())
     with demand_lock if native_validation else nullcontext():
@@ -146,7 +148,8 @@ def generate_layout(
         saving_started = perf_counter()
         output_validation_seconds = 0.0
         phase('保存输出图片')
-        save_details = save_png(canvas, output_path, settings, use_vips, progress)
+        save_details = save_output(
+            canvas, output_path, settings, use_vips, progress)
         saving_seconds = perf_counter() - saving_started
         if streaming:
             from .png_codecs.streaming import validate_saved_output
@@ -206,10 +209,12 @@ def generate_layout(
         ),
         "height_mm": round(height * 25.4 / settings.dpi, 1),
         "file_size_bytes": size,
-        "output_format": "PNG", "pixel_format": "RGBA",
+        "output_format": "TIFF" if output_format == 'tiff' else "PNG",
+        "pixel_format": "RGBA",
         "bits_per_channel": 8, "alpha_channel": True,
         "png_compression_level": settings.png_compression_level,
-        "png_engine": "libvips" if use_vips else "Pillow",
+        "png_engine": ("tifffile + imagecodecs" if output_format == 'tiff'
+                       else "libvips" if use_vips else "Pillow"),
         "png_save_details": save_details,
         "output_megabytes_per_second": round(
             size / 1_000_000 / max(saving_seconds, 0.001), 1
