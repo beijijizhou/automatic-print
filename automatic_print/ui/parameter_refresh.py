@@ -23,7 +23,7 @@ def defer_parameter_refresh(window):
         if preview.parameter_refresh_deferred == 0 and (
             preview.source_folder is not None or preview.batch_payload
         ):
-            message = '参数已更新；点击单批次或多批次排版后重新计算。'
+            message = '参数已更新；点击开始排版后重新计算。'
             preview.production_stage = message
             preview.loading_status.emit(message)
             preview.update()

@@ -78,7 +78,7 @@ class PairProductionPreview(ProductionPreview):
         self.planned, self.images, self.badges = [], {}, {}
         self.item, self.render_settings = None, None
         self.warning, self.overflow = "", []
-        message = "参数已修改；点击单批次排版或多批次排版后重新计算。"
+        message = "参数已修改；点击开始排版后重新计算。"
         self.detail = message
         self.production_stage = message
         self.loading_status.emit(message)

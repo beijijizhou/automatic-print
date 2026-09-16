@@ -7,7 +7,7 @@ from PySide6.QtWidgets import QHBoxLayout, QLabel, QVBoxLayout
 def show_selected_source(panel, value, mode='single', window=None):
     """Input root is distinct from the currently rendered child batch."""
     path = Path(str(value).strip()) if str(value).strip() else None
-    prefix = '已选择多批次目录' if mode == 'multiple' else '已选择'
+    prefix = '已选择排版目录' if mode in {'layout', 'multiple'} else '已选择'
     panel.selected_source.setText(f'{prefix}：{path.name}  ·  {path}' if path else '尚未选择图片文件夹')
     panel.selected_source.setStyleSheet('QLabel { background: #dbeafe; color: #1e40af; '
         'border: 1px solid #60a5fa; border-radius: 5px; padding: 7px; font-weight: bold; }'

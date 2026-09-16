@@ -17,9 +17,10 @@ def open_bulk(window):
     start_bulk(window,Path(directory))
 
 def start_bulk(window,directory):
+    directory = Path(directory)
     remember_image_directory(window, str(directory))
     from .quick_fields import show_selected_source
-    show_selected_source(window.automation_home.label_quick_panel, str(directory), 'multiple', window)
+    show_selected_source(window.automation_home.label_quick_panel, str(directory), 'layout', window)
     if not hasattr(window, 'bulk_controller'):
         window.bulk_controller = BulkWorkbench(window)
     window.bulk_controller.begin(Path(directory))

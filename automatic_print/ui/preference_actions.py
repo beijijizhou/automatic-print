@@ -7,7 +7,10 @@ class PreferenceActionsMixin:
         if self.has_active_tasks():
             return
         if self.choose_folder():
-            self.generate(preview_only=self.automation_home.preview_only.isChecked())
+            # One production entry point handles both a directory containing
+            # images and a parent directory containing one or more batches.
+            from .bulk_workbench import start_bulk
+            start_bulk(self, self.folder.text())
 
     def build_reset_button(self):
         from .settings_reset import reset_button

@@ -32,7 +32,7 @@
 | 计划和测量缓存 | `layout_engine/plan_cache.py`, `measurement_cache.py`, `measurement_session.py`, `cutter_measurements.py`, `normal_plan_cache.py`, `cached_planner.py` | 整批计划、切膜几何与单图测量分层缓存；生产方案和膜规格比较复用同一批刀码几何，不重复进入逐图测量；单图缓存不因膜宽、组批或普通软件版本变化而失效，均使用文件指纹和24小时绝对失效策略；缓存锁冲突短等待后跳过，不阻塞生产。 |
 | 仅预览报告 | `layout_engine/preview_result.py`, `output_sizes.py`, `ui/batch_summary.py` | 不渲染、不写打印图片；仍返回完整排版、刀位、单排原因和耗时报告供界面复制。 |
 | 单批次后台编排 | `ui/generation_actions.py`, `ui/workers.py` | UI线程只接收不可变结果和进度信号。 |
-| 多批次滚动编排 | `ui/bulk_workbench.py`, `bulk_generation_worker.py` | 外层线程池有空位立即补批次；合并批次复用内部图片线程。 |
+| 统一批次排版入口与滚动编排 | `ui/preference_actions.py`, `ui/bulk_workbench.py`, `bulk_generation_worker.py` | 同一入口扫描单批次或多批次目录；外层线程池有空位立即补批次，合并批次复用内部图片线程。 |
 | 主界面进度展示 | `ui/busy_spinner.py`, `operation_timing.py`, `generation_panel.py` | 未知总量用旋转指示，已知总量用真实进度条。 |
 | 错误上下文与复制 | `layout_engine/error_context.py`, `error_parameters.py`, `ui/failure_panel.py` | 所有失败复用完整订单/参数诊断，不散落拼字符串。 |
 | 参数持久化与模式可见性 | `ui/preferences.py`, `preference_actions.py`, `preference_autosave.py`, `layout_values.py`, `developer_mode.py` | 文件夹与设置窗口动作由 `preference_actions.py` 拥有；稳定生产控件对普通用户开放，新实验功能默认只在开发者模式显示并生效。 |

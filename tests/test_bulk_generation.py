@@ -57,7 +57,8 @@ def test_normal_entry_and_active_task_protection(tmp_path, monkeypatch):
     owner = window(tmp_path/'prefs.ini')
     panel = owner.automation_home.label_quick_panel
     assert not owner.developer_mode_enabled
-    assert panel.bulk_generation_button.isVisible()
+    assert panel.bulk_generation_button.isHidden()
+    assert owner.automation_home.start_layout_button.isVisible()
     folder = tmp_path/'preview-batch'
     folder.mkdir()
     paths = qr_sources(folder)
@@ -66,7 +67,8 @@ def test_normal_entry_and_active_task_protection(tmp_path, monkeypatch):
     starts = []
     monkeypatch.setattr(QFileDialog, 'getExistingDirectory', lambda *_: str(tmp_path))
     monkeypatch.setattr(BulkWorkbench, 'begin', lambda self, parent: starts.append(parent))
-    panel.bulk_generation_button.click()
+    from automatic_print.ui.bulk_workbench import start_bulk
+    start_bulk(owner, tmp_path)
     assert starts == [tmp_path]
     assert not hasattr(panel.details_dialog, 'production_bulk_dialog')
     controller = owner.bulk_controller

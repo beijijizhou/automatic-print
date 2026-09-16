@@ -40,10 +40,9 @@ def build_batch_input(owner, panel):
     row.setSpacing(14)
     owner.preview_only = QCheckBox('仅计算排版（不生成文件）')
     owner.preview_only.setChecked(owner.window().preferences.value('layout/preview_only', False, bool))
-    owner.preview_only.setToolTip('对单批次和多批次均生效；计算真实排版，不生成打印文件。')
+    owner.preview_only.setToolTip('对自动识别出的全部批次生效；计算真实排版，不生成打印文件。')
     for button, text, icon in (
-        (owner.start_layout_button, '单批次排版', 'batch_single'),
-        (panel.bulk_generation_button, '多批次排版', 'batch_multiple'),
+        (owner.start_layout_button, '开始排版…', 'batch_multiple'),
         (owner.window().stop_generation_button, '暂停批次', 'stop'),
     ):
         button.setText(text)
@@ -75,13 +74,14 @@ def build_batch_input(owner, panel):
     parameters.setColumnStretch(0, 1)
     parameters.setColumnStretch(1, 1)
     layout.addLayout(parameters)
-    owner.start_layout_button.setToolTip('选择图片文件夹后立即开始排版；取消不会启动任务。')
-    panel.bulk_generation_button.setToolTip('选择上级目录中的批次；并发参数在打印设置中修改。')
+    owner.start_layout_button.setToolTip(
+        '选择图片文件夹或上级目录；自动识别一个或多个批次，再按“合并所有子文件夹”设置排版。')
+    panel.bulk_generation_button.hide()  # Compatibility handle; the primary action now covers both modes.
     owner.window().stop_generation_button.setToolTip(
-        '停止当前单批次或多批次排版，保留已完成文件；不会关闭软件。')
+        '停止当前排版，保留已完成文件；不会关闭软件。')
     owner.start_layout_button.setProperty('importance', 'primary')
     from .layout_activity import LayoutActivity
-    owner.window().layout_activity = LayoutActivity(owner.start_layout_button, panel.bulk_generation_button, group)
+    owner.window().layout_activity = LayoutActivity(owner.start_layout_button, owner.start_layout_button, group)
     group.setStyleSheet('''
         QGroupBox#batchInput { border: none; padding-top: 24px; font-weight: bold; }
     ''')

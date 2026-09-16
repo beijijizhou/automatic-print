@@ -9,7 +9,7 @@ def make_s2b_root(root):
     return root
 
 
-def test_s2b_is_platform_but_does_not_replace_batch_actions(tmp_path,monkeypatch):
+def test_s2b_is_platform_and_uses_the_unified_layout_action(tmp_path,monkeypatch):
     owner=window(tmp_path/'prefs.ini')
     label=owner.label_settings
     assert label.platform.findText('S2B')>=0
@@ -22,20 +22,21 @@ def test_s2b_is_platform_but_does_not_replace_batch_actions(tmp_path,monkeypatch
     assert owner.cutter_settings.rotation_zone.isChecked()
     assert not owner.cutter_settings.quick_mode.isChecked()
     button=owner.automation_home.start_layout_button
-    assert button.text()=='单批次排版'
-    assert owner.automation_home.label_quick_panel.bulk_generation_button.text()=='多批次排版'
+    assert button.text()=='开始排版…'
+    assert owner.automation_home.label_quick_panel.bulk_generation_button.isHidden()
     selected=make_s2b_root(tmp_path/'S2B批次')/'L'
     owner.folder.setText(str(selected))
     monkeypatch.setattr(owner,'choose_folder',lambda:True)
     calls=[]
-    monkeypatch.setattr(owner,'generate',lambda **kw:calls.append(kw))
+    monkeypatch.setattr('automatic_print.ui.bulk_workbench.start_bulk',
+                        lambda window,path:calls.append((window,path)))
     owner.choose_and_generate()
-    assert calls==[{'preview_only':False}]
+    assert calls==[(owner,str(selected))]
     owner.save_layout_preferences(notify=False)
     owner.close()
     restored=window(tmp_path/'prefs.ini')
     assert restored.label_settings.platform.currentText()=='S2B'
-    assert restored.automation_home.start_layout_button.text()=='单批次排版'
+    assert restored.automation_home.start_layout_button.text()=='开始排版…'
     restored.close()
 
 
@@ -51,7 +52,7 @@ def test_single_folder_selection_detects_s2b_without_changing_action(tmp_path,mo
     assert owner.cutter_settings.force_small_pair.isChecked()
     assert owner.cutter_settings.two_zone.isChecked()
     assert owner.cutter_settings.rotation_zone.isChecked()
-    assert owner.automation_home.start_layout_button.text()=='单批次排版'
+    assert owner.automation_home.start_layout_button.text()=='开始排版…'
     owner.close()
 
 

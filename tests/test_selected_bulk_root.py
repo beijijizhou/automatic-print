@@ -12,20 +12,20 @@ def test_bulk_root_highlights_immediately_and_survives_cancel_and_restart(tmp_pa
     starts = []
     monkeypatch.setattr(BulkWorkbench, 'begin', lambda self, path: starts.append(path))
     monkeypatch.setattr(QFileDialog, 'getExistingDirectory', lambda *_: str(parent))
-    panel.bulk_generation_button.click()
+    owner.automation_home.start_layout_button.click()
     assert starts == [parent]
     assert str(parent) in panel.selected_source.text()
-    assert '已选择多批次目录' in panel.selected_source.text()
+    assert '已选择排版目录' in panel.selected_source.text()
     assert '#dbeafe' in panel.selected_source.styleSheet()
     monkeypatch.setattr(QFileDialog, 'getExistingDirectory', lambda *_: '')
-    panel.bulk_generation_button.click()
+    owner.automation_home.start_layout_button.click()
     assert starts == [parent]
     assert str(parent) in panel.selected_source.text()
     owner.close()
     fresh = window(prefs)
     fresh_panel = fresh.automation_home.label_quick_panel
     assert str(parent) in fresh_panel.selected_source.text()
-    assert '已选择多批次目录' in fresh_panel.selected_source.text()
+    assert '已选择排版目录' in fresh_panel.selected_source.text()
     # Selecting the same previous single source must also clear the bulk identity.
     monkeypatch.setattr(QFileDialog, 'getExistingDirectory', lambda *_: str(parent))
     fresh.folder.setText(str(parent))
@@ -33,5 +33,5 @@ def test_bulk_root_highlights_immediately_and_survives_cancel_and_restart(tmp_pa
     show_selected_source(fresh_panel, parent, 'multiple', fresh)
     assert fresh.choose_folder()
     assert '已选择：' in fresh_panel.selected_source.text()
-    assert '多批次目录' not in fresh_panel.selected_source.text()
+    assert '排版目录' not in fresh_panel.selected_source.text()
     fresh.close()

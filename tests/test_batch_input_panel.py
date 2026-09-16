@@ -2,7 +2,7 @@ from test_developer_mode import window, APP
 from PySide6.QtCore import Qt
 
 
-def test_input_cards_group_single_and_multiple_while_tools_stay_pinned(tmp_path):
+def test_input_card_has_one_layout_action_while_tools_stay_pinned(tmp_path):
     owner = window(tmp_path/'prefs.ini')
     home = owner.automation_home
     panel = home.label_quick_panel
@@ -10,16 +10,13 @@ def test_input_cards_group_single_and_multiple_while_tools_stay_pinned(tmp_path)
     inputs = home.batch_input_panel
     assert inputs.isAncestorOf(home.manual_layout_button)
     assert inputs.isAncestorOf(home.start_layout_button)
-    assert inputs.isAncestorOf(panel.bulk_generation_button)
+    assert panel.bulk_generation_button.isHidden()
     assert not home.workbench_scroll.isAncestorOf(home.batch_tools)
     assert inputs.isAncestorOf(owner.stop_generation_button)
-    assert home.start_layout_button.text() == '单批次排版'
-    assert panel.bulk_generation_button.text() == '多批次排版'
+    assert home.start_layout_button.text() == '开始排版…'
     assert inputs.isAncestorOf(home.preview_only)
     assert inputs.isAncestorOf(owner.combine_bulk_batches)
-    single = home.start_layout_button.icon().pixmap(24, 24).toImage()
-    multiple = panel.bulk_generation_button.icon().pixmap(24, 24).toImage()
-    assert single != multiple  # Verify after the global style has been applied.
+    assert not home.start_layout_button.icon().isNull()
     assert owner.stop_generation_button.text() == '暂停批次'
     assert not home.batch_tools.isVisible()
     assert not panel.history_button.isVisible()
@@ -35,18 +32,19 @@ def test_preview_uses_current_folder_or_selects_one_without_printing(tmp_path, m
     from PySide6.QtWidgets import QFileDialog
     owner = window(tmp_path/'prefs.ini')
     calls = []
-    monkeypatch.setattr(owner, 'generate', lambda **kwargs: calls.append(kwargs))
+    monkeypatch.setattr('automatic_print.ui.bulk_workbench.start_bulk',
+                        lambda window, path: calls.append((window, path)))
     owner.automation_home.preview_only.setChecked(True)
     monkeypatch.setattr(QFileDialog, 'getExistingDirectory', lambda *_: str(tmp_path))
     owner.automation_home.start_layout_button.click()
-    assert calls == [{'preview_only': True}]
+    assert calls == [(owner, str(tmp_path))]
     owner.folder.clear()
     monkeypatch.setattr(QFileDialog, 'getExistingDirectory', lambda *_: '')
     owner.automation_home.start_layout_button.click()
     assert len(calls) == 1
     monkeypatch.setattr(QFileDialog, 'getExistingDirectory', lambda *_: str(tmp_path))
     owner.automation_home.start_layout_button.click()
-    assert calls == [{'preview_only': True}, {'preview_only': True}]
+    assert calls == [(owner, str(tmp_path)), (owner, str(tmp_path))]
     owner.thread = object()
     owner.automation_home.start_layout_button.click()
     assert len(calls) == 2
@@ -87,7 +85,8 @@ def test_primary_action_selects_then_generates_and_cancel_never_reuses_old_folde
     owner = window(tmp_path/'prefs.ini')
     home = owner.automation_home
     calls = []
-    monkeypatch.setattr(owner, 'generate', lambda **_: calls.append(owner.folder.text()))
+    monkeypatch.setattr('automatic_print.ui.bulk_workbench.start_bulk',
+                        lambda _window, path: calls.append(path))
     monkeypatch.setattr(QFileDialog, 'getExistingDirectory', lambda *_: str(tmp_path))
     home.start_layout_button.click()
     assert calls == [str(tmp_path)]
