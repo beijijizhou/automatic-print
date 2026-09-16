@@ -16,6 +16,7 @@ from PySide6.QtWidgets import (
     QPushButton,
     QSizePolicy,
     QSpinBox,
+    QTabWidget,
     QVBoxLayout,
     QWidget,
 )
@@ -212,11 +213,13 @@ class MainWindow(
         footer.addWidget(self.check_update_button)
         from .developer_mode import build_developer_mode
         build_developer_mode(self, footer)
-        from .erp_download_entry import install_longfeng_erp_entry
-        install_longfeng_erp_entry(self, footer)
+        self.workspace_tabs = QTabWidget()
+        self.workspace_tabs.addTab(self.automation_home, "本地排版")
+        from .erp_download_entry import install_longfeng_erp_tab
+        install_longfeng_erp_tab(self, self.workspace_tabs)
         layout = QVBoxLayout()
         layout.addWidget(self.build_update_status())
-        layout.addWidget(self.automation_home)
+        layout.addWidget(self.workspace_tabs)
         layout.addLayout(footer)
         container = QWidget()
         container.setLayout(layout)

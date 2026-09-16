@@ -18,15 +18,17 @@ def test_longfeng_download_is_developer_only_and_preview_only(tmp_path):
     owner.show()
     APP.processEvents()
 
-    assert not owner.longfeng_erp_button.isVisible()
+    index = owner.longfeng_erp_tab_index
+    assert not owner.workspace_tabs.isTabVisible(index)
     owner.developer_mode_checkbox.setChecked(True)
     APP.processEvents()
-    assert owner.longfeng_erp_button.isVisible()
+    assert owner.workspace_tabs.isTabVisible(index)
 
-    owner.longfeng_erp_button.click()
+    owner.workspace_tabs.setCurrentIndex(index)
     APP.processEvents()
     dialog = owner.longfeng_erp_dialog
     assert dialog.isVisible()
+    assert owner.workspace_tabs.currentWidget() is dialog
     assert dialog.platform.currentData() == "隆丰"
     assert dialog.main_tabs.currentIndex() == 2
     assert not dialog.main_tabs.isTabVisible(0)
@@ -36,7 +38,9 @@ def test_longfeng_download_is_developer_only_and_preview_only(tmp_path):
     assert not dialog.test_mode.isChecked()
     assert not dialog.test_mode.isEnabled()
 
-    dialog.close()
+    owner.developer_mode_checkbox.setChecked(False)
+    assert not owner.workspace_tabs.isTabVisible(index)
+    assert owner.workspace_tabs.currentIndex() == 0
     owner.close()
 
 
