@@ -12,6 +12,60 @@ def width_failure(error):
         '当前膜宽不存在安全的自动分栏方案'))
 
 
+def header_space_failure(error):
+    return any(message in str(error) for message in (
+        '膜标签高度带内没有批次标签的透明空位',
+        '膜标签高度带内没有平台文字的透明空位',
+        '平台文字没有可复用的二维码透明空位',
+    ))
+
+
+def recover_header_space(paths, settings, error, progress, analysis_ready):
+    """Keep the batch running by reserving external label footprint."""
+    if not settings.preserve_header_gap or not header_space_failure(error):
+        raise error
+    adopted = replace(settings, preserve_header_gap=False)
+    detail = str(error)
+    source = detail.split('：', 1)[0]
+    kind = (
+        '原值：复用膜标签透明带；采用值：整批外置标签占位；'
+        '原因：原透明带不足；影响：可能增加少量排版长度'
+    )
+    action = '已继续排版并重算刀位；修改入口：打印参数 > 膜标签与刀码预览'
+
+    def analyzed(data):
+        rows = data.setdefault('image_anomalies', [])
+        if not any(row.get('kind') == kind for row in rows):
+            rows.append({
+                'source': source,
+                'path': '',
+                'kind': kind,
+                'action': action,
+            })
+        data['header_space_recovery'] = {
+            'reason': detail,
+            'original': '复用膜标签透明带',
+            'adopted': '整批外置标签占位',
+            'impact': '标签计入真实占位，可能增加少量排版长度',
+            'edit_path': '打印参数 > 膜标签与刀码预览',
+        }
+        if analysis_ready:
+            analysis_ready(data)
+
+    if progress:
+        progress(
+            '膜标签透明空位恢复', 0, 1,
+            f'{source} · 透明空位不足，改用整批外置标签占位并继续',
+        )
+    result = plan_layout(paths, adopted, progress, analyzed)
+    if progress:
+        progress(
+            '膜标签透明空位恢复', 1, 1,
+            '外置标签占位排版完成；订单、刀位和像素安全检查继续执行',
+        )
+    return paths, adopted, result
+
+
 def recover_width(paths,settings,error,progress,analysis_ready):
     if settings.cutter_mode not in {'single', 'dual'} or not settings.auto_fit_width or not width_failure(error):
         raise error
@@ -73,6 +127,14 @@ def plan_with_gap_fallback(paths, settings, records, progress=None, analysis_rea
             analysis_ready(selected_report)
         return paths, selected_settings, result
     except ValueError as error:
+        if header_space_failure(error):
+            try:
+                return recover_header_space(
+                    paths, settings, error, progress, analysis_ready
+                )
+            except ValueError as recovered_error:
+                error = recovered_error
+                settings = replace(settings, preserve_header_gap=False)
         if not width_failure(error) or not any(r.get('added_px') for r in records):
             return recover_width(paths,settings,error,progress,analysis_ready)
         reason = str(error)

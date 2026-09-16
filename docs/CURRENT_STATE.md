@@ -72,7 +72,8 @@
 - 标签与刀码：`labels.py`、`dynamic_label.py`、`marker_stack.py`、`left_marker.py`、
   `platform_label.py`、`header_region.py`、`transparent_search.py`。平台文字只放入原图二维码卡片的
   已验证透明空位，预览与输出复用同一坐标；普通标签和平台文字都在旋转后的膜标签高度带内搜索
-  图片自身的透明空位并互相避让，外置刀码紧贴图片边缘；找不到安全范围或最终坐标越界时禁止输出，
+  图片自身的透明空位并互相避让，外置刀码紧贴图片边缘；整批复用透明带失败时由`gap_fallback.py`
+  改用外置标签真实占位、重算刀位并记录完整恢复诊断。最终坐标越界等不可恢复安全冲突仍不得猜值绕过，
   不能回退到刀码与二维码之间或膜标签与图案之间。
 - 标签字体加载与线程内有界缓存由`layout_engine/text/fonts.py`唯一拥有；`labels.py`只负责标签内容、
   换行和徽标渲染。单图排版对象`LayoutItem`与`Placement`统一归`layout_engine/models.py`。

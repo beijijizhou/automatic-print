@@ -84,3 +84,53 @@ def test_selected_majority_plan_skips_redundant_rotation_overflow_pass(monkeypat
         [],
     )
     assert len(calls) == 1
+
+
+def test_missing_header_space_retries_with_external_label_footprint(monkeypatch):
+    calls = []
+    reports = []
+    progress = []
+
+    def plan(_paths, settings, _progress, ready):
+        calls.append(settings.preserve_header_gap)
+        if len(calls) == 1:
+            raise ValueError(
+                'image.png：膜标签高度带内没有批次标签的透明空位，禁止输出。'
+            )
+        data = {'image_anomalies': []}
+        ready(data)
+        reports.append(data)
+        return [], {}, 580, 200, 200
+
+    monkeypatch.setattr(gap_fallback, 'plan_layout', plan)
+    _paths, settings, _result = gap_fallback.plan_with_gap_fallback(
+        [Path('/tmp/image.png')],
+        LayoutSettings(preserve_header_gap=True, cutter_mode='dual'),
+        [],
+        lambda *args: progress.append(args),
+    )
+
+    assert calls == [True, False]
+    assert not settings.preserve_header_gap
+    assert reports[-1]['header_space_recovery']['adopted'] == '整批外置标签占位'
+    assert '原值：复用膜标签透明带' in reports[-1]['image_anomalies'][0]['kind']
+    assert progress[-1][0] == '膜标签透明空位恢复'
+
+
+def test_header_space_fallback_does_not_hide_second_safety_error(monkeypatch):
+    calls = []
+
+    def plan(*args):
+        calls.append(1)
+        if len(calls) == 1:
+            raise ValueError('image.png：膜标签高度带内没有批次标签的透明空位，禁止输出。')
+        raise ValueError('同订单拆散，禁止生产')
+
+    monkeypatch.setattr(gap_fallback, 'plan_layout', plan)
+    with pytest.raises(ValueError, match='同订单拆散'):
+        gap_fallback.plan_with_gap_fallback(
+            [Path('/tmp/image.png')],
+            LayoutSettings(preserve_header_gap=True, cutter_mode='dual'),
+            [],
+        )
+    assert len(calls) == 2

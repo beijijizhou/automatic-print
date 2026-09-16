@@ -17,7 +17,7 @@
 | 单排超宽恢复 | `layout_engine/width_fit.py`, `gap_fallback.py` | 旋转区先强制横向旋转，再按当前膜宽、刀码和安全距离的动态上限等比缩小；整批候选被个别超宽图阻断时按双面同倍率生成虚拟缩小候选并重跑完整订单贪心比较；保留恢复报告。 |
 | S–L并排宽度上限 | `layout_engine/pair_width.py` | 主界面默认开启；按270毫米上限生成尺寸覆盖，实际列数仍由膜宽和自动多列规划决定；不修改源图。 |
 | 多刀位安全事实 | `layout_engine/knife_positions.py`, `cut_validation.py` | 输出、预览、像素检查和报告复用实际刀位列表；每条安全通道独立核验。 |
-| 标签、平台文字和刀码 | `layout_engine/labels.py`, `layout_engine/text/fonts.py`, `dynamic_label.py`, `marker_stack.py`, `marker_space.py`, `platform_space.py`, `platform_label.py` | 字体加载与有界线程缓存只有一个所有者；测量、预览、输出使用同一几何结果，旋转后普通标签和平台文字只复用图片宽度内经像素验证的透明空位并互相避让；外置刀码紧贴图片边缘。 |
+| 标签、平台文字和刀码 | `layout_engine/labels.py`, `layout_engine/text/fonts.py`, `dynamic_label.py`, `marker_stack.py`, `marker_space.py`, `platform_space.py`, `platform_label.py`, `gap_fallback.py` | 字体加载与有界线程缓存只有一个所有者；测量、预览、输出使用同一几何结果，旋转后普通标签和平台文字只复用图片宽度内经像素验证的透明空位并互相避让；外置刀码紧贴图片边缘。整批复用透明带失败时由共享回退改用外置标签真实占位并继续，报告原值、采用值、影响和修改入口。 |
 | 二维码侧别与空白带 | `layout_engine/qr_corners.py`, `qr_placement.py`, `header_region.py` | 只测顶部有限条带的位置和可用空间，不做二维码解码或整图像素读取。 |
 | 透明区域搜索 | `layout_engine/transparent_search.py`, `platform_space.py`, `marker_space.py` | 像素读取结果进入测量缓存，不在每个方案重复扫描。 |
 | 轻量排版结构图 | `ui/layout_schematic.py`, `pair_preview.py` | 复用排版坐标与批次分析，不解码图片缩略图；单件显示尺码群，双面显示面别与尺码群，多件显示订单尺码群。 |
