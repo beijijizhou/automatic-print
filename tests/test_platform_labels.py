@@ -106,11 +106,13 @@ def test_batch_labels_use_global_forward_and_reverse_numbers(tmp_path):
     paths = [qr_image(tmp_path/f'输入图{i}.png') for i in range(1, 4)]
     payloads = []
     generate_layout(paths, tmp_path/'out', settings(
-        label_source_order_enabled=True), plan_ready=payloads.append)
+        label_source_order_enabled=True), plan_ready=payloads.append,
+        batch_name='609162025022')
     labels = payloads[0]['labels']
-    assert '输入图1.png · 正序 1/3 · 倒序 3/3' in labels[1]
-    assert '输入图2.png · 正序 2/3 · 倒序 2/3' in labels[2]
-    assert '输入图3.png · 正序 3/3 · 倒序 1/3' in labels[3]
+    assert '609162025022 · 正序 1/3 · 倒序 3/3' in labels[1]
+    assert '609162025022 · 正序 2/3 · 倒序 2/3' in labels[2]
+    assert '609162025022 · 正序 3/3 · 倒序 1/3' in labels[3]
+    assert all('输入图' not in label for label in labels.values())
 
 
 @pytest.mark.parametrize('engine', ['pillow', 'libvips'])

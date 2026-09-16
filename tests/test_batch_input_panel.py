@@ -63,6 +63,7 @@ def test_everyday_parameters_are_grouped_and_real_preview_is_default(tmp_path):
     assert home.batch_input_panel.isAncestorOf(owner.quick_force_small_pair)
     assert home.batch_input_panel.isAncestorOf(panel.source_order)
     assert panel.source_order.isChecked()
+    assert panel.source_order_label.text() == '批次文件夹名＋正序/倒序'
     assert panel.source_order_label.textInteractionFlags() & Qt.TextSelectableByMouse
     assert panel.preview_tabs.currentWidget() is panel.actual_preview_page
     owner.close()

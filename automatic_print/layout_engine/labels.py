@@ -132,6 +132,7 @@ def format_label(
     date_format: str,
     machine_number: str = "M1",
     total: int | None = None,
+    batch_name: str = "",
 ) -> str:
     machine_number = normalize_machine_number(machine_number)
     total = max(number, total or number)
@@ -143,6 +144,8 @@ def format_label(
         "{机器号}": "{machine}",
         "{总数}": "{total}",
         "{倒序}": "{reverse}",
+        "{批次}": "{batch}",
+        "{文件夹}": "{batch}",
     }
     for chinese, internal in aliases.items():
         template = template.replace(chinese, internal)
@@ -154,13 +157,15 @@ def format_label(
         "machine": machine_number,
         "total": str(total),
         "reverse": str(total - number + 1),
+        "batch": str(batch_name).strip() or path.parent.name,
     }
     try:
         return compact_label_text(template.format_map(values))
     except (KeyError, ValueError) as error:
         raise ValueError(
             "标签文字模板无效。可用内容："
-            "{编号}、{总数}、{倒序}、{日期}、{完整文件名}、{文件名}、{机器号}。"
+            "{编号}、{总数}、{倒序}、{日期}、{批次}、{文件夹}、"
+            "{完整文件名}、{文件名}、{机器号}。"
         ) from error
 
 

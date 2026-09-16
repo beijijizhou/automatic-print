@@ -218,6 +218,7 @@ def _label_values(
         settings.label_date_format,
         settings.machine_number,
         settings.label_sequence_total,
+        settings.label_batch_name,
     )
     labels[index] = text
     badge = source_label_badge(text, settings, path, rotation_degrees)

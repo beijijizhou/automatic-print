@@ -45,12 +45,13 @@ def test_label_preview_updates_sample_text_and_renders():
     dialog.close()
 
 
-def test_developer_source_order_has_filename_and_both_sequences_in_preview():
+def test_developer_source_order_has_batch_folder_and_both_sequences_in_preview():
     _app()
     dialog = LabelSettingsDialog()
     dialog.source_order.setChecked(True)
     text = dialog.preview.sample_text()
-    assert 'B9UV77Y-黑色-XL-NO1-1.png' in text
+    assert '609162025022' in text
+    assert 'B9UV77Y-黑色-XL-NO1-1.png' not in text
     assert '正序 12/20' in text and '倒序 9/20' in text
     dialog.close()
 
@@ -127,7 +128,7 @@ def test_main_label_edits_and_parameter_edits_share_live_preview_state():
     label, block = window.label_settings, window.color_block_settings
     panel.text.setText("{编号}－测试")
     assert label.text_template.text() == "{编号}－测试"
-    assert panel.preview.sample_text() == "1－测试"
+    assert panel.preview.sample_text() == "1－测试 M1"
     panel.font_size.setValue(15)
     assert label.font_size.value() == 15
     label.text_template.setText("主界面同步")

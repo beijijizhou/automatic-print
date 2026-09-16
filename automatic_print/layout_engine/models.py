@@ -86,6 +86,7 @@ class LayoutSettings:
     label_sequence_enabled: bool = False
     label_source_order_enabled: bool = False
     label_sequence_total: int = 0
+    label_batch_name: str = ''
     label_machine_enabled: bool = False
     platform_name: str = ''
     s2b_batch_api_enabled: bool = False

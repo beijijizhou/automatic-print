@@ -10,8 +10,11 @@ def footer_text(planned, settings, notice):
     from datetime import datetime
     folders = list(dict.fromkeys(path.parent.name for path, _ in planned))
     paths = [path for path, _ in planned]
-    label = format_label(settings.label_text_template, 1, paths[0],
-                         datetime.now().astimezone(), settings.label_date_format, settings.machine_number)
+    label = format_label(
+        settings.label_text_template, 1, paths[0], datetime.now().astimezone(),
+        settings.label_date_format, settings.machine_number,
+        batch_name=settings.label_batch_name,
+    )
     scope = '本段' if settings.batch_footer_context else '批次'
     lines = [f"{notice} · {'+'.join(folders)} · {order_quantity(paths, scope)} · {len(paths)}张",
              f"平台：{settings.platform_name or '未设置'} · 机器：{settings.machine_number} · 标签：{label}"]

@@ -43,3 +43,25 @@ def test_missing_dpi_preview_is_explicit_and_empty_folder_clears_sample(tmp_path
     assert preview.path is None
     assert preview.item is None
     preview.close()
+
+
+def test_production_preview_uses_selected_batch_folder_in_sequence_label(tmp_path):
+    QApplication.instance() or QApplication([])
+    batch = tmp_path / "609162025022"
+    size = batch / "S"
+    size.mkdir(parents=True)
+    Image.new("RGB", (100, 160), "blue").save(
+        size / "A00001-很长的图片文件名字-Black-S-NO1-1.png", dpi=(100, 100)
+    )
+    settings = LayoutSettings(
+        dpi=100,
+        label_source_order_enabled=True,
+        label_follow_qr=False,
+        allow_rotation=False,
+    )
+    preview = ProductionPreview(lambda: settings)
+    preview.use_folder(batch)
+
+    assert "609162025022" in preview.sample_text()
+    assert "很长的图片文件名字" not in preview.sample_text()
+    preview.close()

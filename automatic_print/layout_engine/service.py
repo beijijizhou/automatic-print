@@ -37,6 +37,11 @@ def generate_layout(
 ) -> dict:
     total_started = perf_counter()
     paths = list(image_paths)
+    if paths:
+        label_batch_name = str(
+            batch_name or settings.label_batch_name or paths[0].parent.name
+        ).strip()
+        settings = replace(settings, label_batch_name=label_batch_name)
     from ..automation.api.s2b.prepare import prepare_s2b_metadata
     prepare_s2b_metadata(paths, settings, progress)
     from .header_gap import prepare_paths
@@ -92,11 +97,17 @@ def generate_layout(
         if not preview_only:
             raise
         warning = f"仅供检查，禁止输出：{error}"
-    label_text = labels.get(1) or format_label(settings.label_text_template, 1, paths[0],
-                    datetime.now().astimezone(), settings.label_date_format, settings.machine_number)
+    label_text = labels.get(1) or format_label(
+        settings.label_text_template, 1, paths[0], datetime.now().astimezone(),
+        settings.label_date_format, settings.machine_number,
+        batch_name=settings.label_batch_name,
+    )
     if settings.label_machine_enabled or settings.label_sequence_enabled:
-        label_text = format_label(settings.label_text_template, 1, paths[0],
-            datetime.now().astimezone(), settings.label_date_format, settings.machine_number)
+        label_text = format_label(
+            settings.label_text_template, 1, paths[0], datetime.now().astimezone(),
+            settings.label_date_format, settings.machine_number,
+            batch_name=settings.label_batch_name,
+        )
     sizes = size_range_label([path for path, p in sorted(planned, key=lambda entry: (entry[1].row_y_px, entry[1].x_px))])
     size_suffix = f' {sizes}' if sizes else ''
     zones = {p.cut_zone for _, p in planned}

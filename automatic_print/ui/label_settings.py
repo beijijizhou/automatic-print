@@ -23,7 +23,7 @@ class LabelSettingsDialog(QDialog):
         self.enabled.setChecked(True)
         self.sequence = QCheckBox('自动添加序号（每批从 1 到最后一张，不重复添加）')
         self.sequence.setChecked(True)
-        self.source_order = QCheckBox('标注输入文件名、正序和倒序（测试中）')
+        self.source_order = QCheckBox('标注批次文件夹名、正序和倒序（测试中）')
         self.source_order.setChecked(True)
         self.platform = QComboBox()
         self.platform.setEditable(True)
@@ -51,7 +51,7 @@ class LabelSettingsDialog(QDialog):
         )
         help_label = QLabel(
             "平台名、当前机器号和序号自动显示，无需写入标签。"
-            "可选变量：{日期}、{完整文件名}、{文件名}。"
+            "可选变量：{日期}、{批次}、{完整文件名}、{文件名}。"
         )
         help_label.setWordWrap(True)
         help_label.setTextInteractionFlags(Qt.TextSelectableByMouse)
@@ -90,7 +90,7 @@ class LabelSettingsDialog(QDialog):
         for label, widget in (
             ("启用标签", self.enabled),
             ('图片序号', self.sequence),
-            ('文件顺序标注', self.source_order),
+            ('批次顺序标注', self.source_order),
             ('生产平台', self.platform),
             ('平台标记', self.platform_enabled),
             ('平台文字高度', self.platform_font_height),

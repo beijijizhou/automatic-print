@@ -36,6 +36,9 @@ class SettingPreview(QWidget):
             '{machine}': self.values().get('machine_number', 'M1').upper(),
             '{总数}': '20',
             '{倒序}': '9',
+            '{批次}': '609162025022',
+            '{文件夹}': '609162025022',
+            '{batch}': '609162025022',
         }
         for field, value in replacements.items():
             template = template.replace(field, value)

@@ -32,13 +32,15 @@ def test_chinese_label_template_fields() -> None:
     assert text == "7－2026-07-24－图片"
 
 
-def test_source_filename_forward_and_reverse_label_fields() -> None:
+def test_batch_folder_forward_and_reverse_label_fields() -> None:
     from automatic_print.layout_engine.platform_label import source_order_template
     text = _format_label(
-        source_order_template('M1'), 3, Path('输入图案.png'),
+        source_order_template('M1'), 3,
+        Path('/订单/609162025022/S/很长的图片文件名字.png'),
         datetime(2026, 9, 15), '%Y-%m-%d', 'M1', 20,
+        '609162025022',
     )
-    assert text == 'M1 输入图案.png · 正序 3/20 · 倒序 18/20'
+    assert text == 'M1 609162025022 · 正序 3/20 · 倒序 18/20'
 
 
 def test_image_discovery_includes_nested_windows_formats(tmp_path) -> None:

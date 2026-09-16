@@ -17,7 +17,7 @@
 | 单排超宽恢复 | `layout_engine/width_fit.py`, `gap_fallback.py` | 旋转区先强制横向旋转，再按当前膜宽、刀码和安全距离的动态上限等比缩小；整批候选被个别超宽图阻断时按双面同倍率生成虚拟缩小候选并重跑完整订单贪心比较；保留恢复报告。 |
 | S–L并排宽度上限 | `layout_engine/pair_width.py` | 主界面默认开启；按270毫米上限生成尺寸覆盖，实际列数仍由膜宽和自动多列规划决定；不修改源图。 |
 | 多刀位安全事实 | `layout_engine/knife_positions.py`, `cut_validation.py` | 输出、预览、像素检查和报告复用实际刀位列表；每条安全通道独立核验。 |
-| 标签、平台文字和刀码 | `layout_engine/labels.py`, `marker_stack.py`, `platform_label.py` | 测量、预览、输出使用同一几何结果；平台文字只复用二维码卡片透明空位，不得回退到外置刀码列。 |
+| 标签、平台文字和刀码 | `layout_engine/labels.py`, `marker_stack.py`, `platform_label.py` | 测量、预览、输出使用同一几何结果；批次顺序标签使用所选批次文件夹名，不使用图片文件名；平台文字只复用二维码卡片透明空位，不得回退到外置刀码列。 |
 | 二维码侧别与空白带 | `layout_engine/qr_corners.py`, `qr_placement.py`, `header_region.py` | 只测顶部有限条带的位置和可用空间，不做二维码解码或整图像素读取。 |
 | 透明区域搜索 | `layout_engine/transparent_search.py`, `platform_space.py`, `marker_space.py` | 像素读取结果进入测量缓存，不在每个方案重复扫描。 |
 | 膜规格方案比较 | `layout_engine/film_comparison.py`, `film_specs.py` | 比较方案不自动替用户选择生产膜；当前实际输出对应的方案直接复用生产坐标，只计算另外三套几何方案。 |

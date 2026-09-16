@@ -12,6 +12,7 @@ from ..layout_engine.images import print_dimensions
 from ..layout_engine.item_factory import read_items
 from ..layout_engine.labels import format_label, settings_label_badge
 from ..layout_engine.dynamic_label import source_label_badge
+from ..layout_engine.platform_label import numbered_template
 from ..layout_engine.qr_detection import detect_qr_location
 
 
@@ -22,6 +23,7 @@ class ProductionPreview(QWidget):
         super().__init__(parent)
         self.settings_getter = settings_getter
         self.path = None
+        self.batch_name = ""
         self.thumbnail = QImage()
         self.badge = QImage()
         self.item = None
@@ -35,10 +37,11 @@ class ProductionPreview(QWidget):
         folder = Path(folder)
         paths = discover_images(folder) if folder.is_dir() else []
         sample = paths[0] if paths else None
-        self.set_sample(sample)
+        self.set_sample(sample, folder.name)
 
-    def set_sample(self, path):
+    def set_sample(self, path, batch_name=""):
         path = Path(path) if path else None
+        self.batch_name = str(batch_name or (path.parent.name if path else ""))
         if path == self.path and not self.thumbnail.isNull():
             self.refresh()
             return
@@ -56,9 +59,10 @@ class ProductionPreview(QWidget):
     def sample_text(self):
         settings = self.settings_getter()
         return format_label(
-            settings.label_text_template, 1, self.path or Path("样板.png"),
+            numbered_template(settings), 1, self.path or Path("样板.png"),
             datetime.now().astimezone(), settings.label_date_format,
-            settings.machine_number,
+            settings.machine_number, 1,
+            batch_name=self.batch_name,
         )
 
     def refresh(self, *_args):
@@ -68,7 +72,10 @@ class ProductionPreview(QWidget):
             self.update()
             return
         try:
-            settings = replace(self.settings_getter(), allow_rotation=False)
+            settings = replace(
+                self.settings_getter(), allow_rotation=False,
+                label_batch_name=self.batch_name,
+            )
             choices, labels = read_items([self.path], settings, None)
             self.item = choices[0][0]
             if settings.number_images:

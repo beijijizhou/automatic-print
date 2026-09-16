@@ -107,6 +107,6 @@ def numbered_template(settings):
 
 
 def source_order_template(template):
-    if not any(token in template for token in ('{完整文件名}', '{文件名}', '{filename}', '{stem}')):
-        template = (template.strip()+' {完整文件名}').strip()
+    if not any(token in template for token in ('{批次}', '{文件夹}', '{batch}')):
+        template = (template.strip()+' {批次}').strip()
     return (template.strip()+' · 正序 {编号}/{总数} · 倒序 {倒序}/{总数}').strip()
