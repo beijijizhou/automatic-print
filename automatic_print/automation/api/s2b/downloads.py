@@ -47,39 +47,46 @@ def parse_export_rows(payload: dict) -> list[S2BExportRecord]:
     return records
 
 
-def list_s2b_exports(progress=None) -> list[S2BExportRecord]:
+def list_s2b_batches(progress=None):
+    from .production import list_s2b_production_batches
     with _authenticated_page(progress) as page:
-        return _records_from_page(page)
+        return list_s2b_production_batches(page)
 
 
 def download_s2b_exports(batch_numbers, output_root: Path, progress=None) -> list[Path]:
     if not batch_numbers:
         raise ValueError("请至少选择一个 S2B 生产图批次。")
+    batches = list(dict.fromkeys(batch_numbers))
+    saved = {
+        batch: existing
+        for batch in batches
+        if (existing := _existing_batch(output_root, batch))
+    }
+    pending = [batch for batch in batches if batch not in saved]
+    for index, batch in enumerate(batches, 1):
+        if batch in saved:
+            _report(progress, f"[{index}/{len(batches)}] 本地已有 S2B / {batch}，跳过下载")
+    if not pending:
+        return [saved[batch] for batch in batches]
     with _authenticated_page(progress) as page:
-        latest = {}
-        for record in _records_from_page(page):
-            latest.setdefault(record.batch_number, record)
-        selected = []
-        for batch in batch_numbers:
-            record = latest.get(batch)
-            if record is None:
-                raise RuntimeError(f"S2B 导出记录中没有找到批次 {batch}。")
-            if not record.ready:
-                raise RuntimeError(f"S2B 批次 {batch} 的生产图尚未生成完成。")
-            selected.append(record)
-        saved = []
+        from .production import wait_for_ready_exports
+        selected = wait_for_ready_exports(page, pending, progress)
         total = len(selected)
         for index, record in enumerate(selected, 1):
-            existing = _existing_batch(output_root, record.batch_number)
-            if existing:
-                saved.append(existing)
-                _report(progress, f"[{index}/{total}] 本地已有 S2B / {record.batch_number}，跳过下载")
-                continue
             archive = _download_archive(record, output_root, index, total, progress)
-            saved.append(_extract_archive(archive, output_root, record.batch_number))
+            saved[record.batch_number] = _extract_archive(
+                archive, output_root, record.batch_number
+            )
             _api(page, "POST", "/factory/userExportRecord/downloadRecord", {"id": record.record_id})
             _report(progress, f"[{index}/{total}] 已下载并解压 S2B / {record.batch_number}")
-        return saved
+        return [saved[batch] for batch in batches]
+
+
+def _latest_exports(page):
+    latest = {}
+    for record in _records_from_page(page):
+        latest.setdefault(record.batch_number, record)
+    return latest
 
 
 class _authenticated_page:

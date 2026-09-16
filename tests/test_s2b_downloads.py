@@ -5,6 +5,10 @@ from automatic_print.automation.api.s2b.downloads import (
     _extract_archive,
     parse_export_rows,
 )
+from automatic_print.automation.api.s2b.production import (
+    S2BProductionBatch,
+    parse_production_rows,
+)
 
 
 def payload(url="https://accelerate.s2bdiy.com/file.zip"):
@@ -27,9 +31,11 @@ def test_export_rows_keep_only_generated_production_images():
 
 
 def test_s2b_dispatch_reuses_shared_batch_record(monkeypatch):
-    record = parse_export_rows(payload())[0]
+    record = S2BProductionBatch(
+        "22UJ9KT4VCZA", 30, 40, "测试生产批次", "2026-09-17 01:44:06"
+    )
     monkeypatch.setattr(
-        "automatic_print.automation.api.s2b.downloads.list_s2b_exports",
+        "automatic_print.automation.api.s2b.downloads.list_s2b_batches",
         lambda progress=None: [record],
     )
     from automatic_print.automation.batch_browser import load_batch_records
@@ -37,6 +43,18 @@ def test_s2b_dispatch_reuses_shared_batch_record(monkeypatch):
     assert result[0].batch_number == "22UJ9KT4VCZA"
     assert result[0].piece_count == 40
     assert result[0].production_images_ready
+
+
+def test_production_rows_use_progress_counts():
+    records = parse_production_rows({"data": {"data": [{
+        "batch_number": "22UJ9KT4VCZA",
+        "name": "S2B 秋季订单",
+        "created_at": "2026-09-17 01:00:00",
+        "progress": {"total_num": 40, "total_print_num": 30},
+    }]}})
+    assert records == [S2BProductionBatch(
+        "22UJ9KT4VCZA", 30, 40, "S2B 秋季订单", "2026-09-17 01:00:00"
+    )]
 
 
 def test_s2b_archive_extracts_existing_root_without_extra_nesting(tmp_path):
@@ -87,3 +105,34 @@ def test_download_uses_list_url_then_marks_record_after_extract(tmp_path, monkey
     assert result[0].name == "AS2B_22UJ9KT4VCZA"
     assert page.calls[-1]["path"].endswith("/downloadRecord")
     assert page.calls[-1]["payload"] == {"id": 9}
+
+
+def test_missing_export_is_requested_then_polled(tmp_path, monkeypatch):
+    from automatic_print.automation.api.s2b import downloads
+    source = tmp_path / "source.zip"
+    with ZipFile(source, "w") as bundle:
+        bundle.writestr("AS2B_22UJ9KT4VCZA/S/sample.png", b"png")
+
+    class Page:
+        calls = []
+        waits = 0
+        def evaluate(self, _script, arguments):
+            self.calls.append(arguments)
+            if arguments["path"].startswith("/factory/userExportRecord?"):
+                return {"data": {"data": []}} if not self.waits else payload()
+            return {"status_code": 200, "data": [], "msg": "操作成功"}
+        def wait_for_timeout(self, _milliseconds):
+            self.waits += 1
+    page = Page()
+
+    class Session:
+        def __enter__(self): return page
+        def __exit__(self, *_args): pass
+
+    monkeypatch.setattr(downloads, "_authenticated_page", lambda _progress: Session())
+    monkeypatch.setattr(downloads, "_download_archive", lambda *_args, **_kwargs: source)
+    downloads.download_s2b_exports(["22UJ9KT4VCZA"], tmp_path / "output")
+    export_call = next(
+        call for call in page.calls if call["path"].endswith("exportProductionImage")
+    )
+    assert export_call["payload"] == {"batch_number": "22UJ9KT4VCZA", "type": 1}

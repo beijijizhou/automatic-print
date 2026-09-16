@@ -101,6 +101,7 @@ class BatchActionsMixin:
             )
         }
         ready = 0
+        is_s2b = self.platform.currentData() == "S2B"
         for row, record in enumerate(records):
             is_local = record.batch_number in local_codes
             is_ready = record.production_images_ready or is_local
@@ -116,7 +117,7 @@ class BatchActionsMixin:
                 (
                     "本地已有"
                     if is_local
-                    else "可下载"
+                    else ("可导出/下载" if is_s2b else "可下载")
                     if is_ready
                     else "生成中"
                 ),
@@ -128,7 +129,7 @@ class BatchActionsMixin:
             ready += int(is_ready)
         self.summary.setText(
             f"{self.platform.currentText()}：显示 {len(records)} 个最新批次，"
-            f"{ready} 个生产图可下载。"
+            f"{ready} 个生产图{'可导出/下载' if is_s2b else '可下载'}。"
             + (
                 f" 当前为本地缓存，读取时间：{saved_at}。"
                 if cached and saved_at

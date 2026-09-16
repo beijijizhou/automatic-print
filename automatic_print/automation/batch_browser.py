@@ -44,17 +44,17 @@ def load_platform_order_status(
         )
 def load_batch_records(platform_name: str, progress=None) -> list[BatchRecord]:
     if platform_name == "S2B":
-        from .api.s2b.downloads import list_s2b_exports
+        from .api.s2b.downloads import list_s2b_batches
         return [
             BatchRecord(
                 record.batch_number,
-                record.image_count,
-                record.image_count,
-                "S2B生产图",
+                record.item_count,
+                record.piece_count,
+                record.name,
                 record.created_at,
-                record.ready,
+                True,
             )
-            for record in list_s2b_exports(progress)
+            for record in list_s2b_batches(progress)
         ]
     from playwright.sync_api import sync_playwright
     platform = get_erp_platform(platform_name)
