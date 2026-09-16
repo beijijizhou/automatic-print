@@ -1,88 +1,22 @@
 from __future__ import annotations
-from datetime import datetime
 from pathlib import Path
-from .images import print_dimensions
-from .labels import format_label, settings_label_badge, label_layout
-from .decorations import combined_footprint, outside_position
+from .labels import format_label, label_layout
+from .decorations import combined_footprint
 from .models import LayoutItem, LayoutSettings, mm_to_px
-from .qr_detection import QrLocation, detect_qr_location
+from .qr_detection import detect_qr_location
 from .dynamic_label import source_label_badge
 from .membrane_region import detect_membrane_region
 from .platform_label import platform_geometry, numbered_template
-from .marker_space import can_embed_marker
+from .marker_space import can_embed_marker, transparent_rect
 from .rotated_marks import rotated_marks
-from .qr_placement import signed_mm as _signed_mm, rotated_qr as _rotated_qr, qr_label_layout as _qr_label_layout
-from .measurement_session import SESSION, measured_item, choice_source, resolved_name
+from .qr_placement import rotated_qr as _rotated_qr, qr_label_layout as _qr_label_layout
 from .item_block import block_position as _block_position
 def read_items(paths, settings, progress):
-    from .parallel_measurement import read_parallel
-    return read_parallel(_read_items, paths, settings, progress)
-def _read_items(paths, settings, progress):
-    if not paths:
-        raise ValueError("没有可供排版的图片。")
-    if progress:
-        progress('读取图片尺寸', 0, len(paths), '开始读取尺寸并测量标签占位')
-    labels, items = {}, []
-    created_at = SESSION.get().created_at if SESSION.get() else datetime.now().astimezone()
-    gap = mm_to_px(settings.number_gap_mm, settings.dpi)
-    offset_x = _signed_mm(settings.label_offset_x_mm, settings.dpi)
-    offset_y = _signed_mm(settings.label_offset_y_mm, settings.dpi)
-    qr_attempted = (
-        settings.number_images and settings.cutter_mode == "free" and (settings.label_detect_region or settings.label_fit_height or (
-            settings.label_follow_qr and settings.label_position != "block_below"
-        ))
+    from .item_reader import read_items as read_source_items
+
+    return read_source_items(
+        paths, settings, progress, _make_item, detect_qr_location
     )
-    qr_detected = 0
-    for index, path in enumerate(paths, start=1):
-        number = dict(settings.sequence_numbers).get(resolved_name(path), index)
-        size = print_dimensions(path, settings.dpi)
-        dimensions = dict(settings.dimension_overrides).get(
-            resolved_name(path), (size.width_mm, size.height_mm)
-        )
-        width = max(1, mm_to_px(dimensions[0], settings.dpi))
-        height = max(1, mm_to_px(dimensions[1], settings.dpi))
-        manual = dict(settings.manual_rotations).get(resolved_name(path), 0)
-        if manual % 180:
-            width, height = height, width
-        qr_location = None
-        if qr_attempted:
-            qr_location = detect_qr_location(path)
-            qr_detected += qr_location is not None
-        if progress:
-            progress('读取图片尺寸', index, len(paths),
-                     f'{path.name} · {dimensions[0]:.1f} × {dimensions[1]:.1f} 毫米')
-            progress('测量标签与刀码', index-1, len(paths), path.name)
-        # Normal and rotated measurements share one decoded source, then close it.
-        with choice_source(path, number, width, height, settings, manual):
-            choices = [
-                measured_item(
-                    _make_item, path, number, width, height, settings, labels,
-                    created_at, gap, offset_x, offset_y, manual, qr_location,
-                )
-            ]
-            if settings.allow_rotation and not manual and width != height:
-                degrees = 90 if settings.rotation_direction == "left" else -90
-                choices.append(
-                    measured_item(
-                        _make_item, path, number, height, width, settings, labels,
-                        created_at, gap, offset_x, offset_y, degrees, qr_location,
-                    )
-                )
-        items.append(choices)
-        if progress:
-            source = "图片内嵌 DPI" if size.embedded_dpi else "缺少 DPI，按输出 DPI 估算"
-            progress(
-                "测量标签与刀码", index, len(paths),
-                f"{path}\t{path.name} · {dimensions[0]:.1f} × {dimensions[1]:.1f} 毫米 · {source}",
-            )
-    if progress and qr_attempted:
-        progress(
-            "识别膜标签",
-            len(paths),
-            len(paths),
-            f"识别成功 {qr_detected} 张，未识别 {len(paths) - qr_detected} 张",
-        )
-    return items, labels
 def _make_item(
     path, index, width, height, settings, labels,
     created_at, gap, offset_x, offset_y, rotation_degrees, qr_location,
@@ -148,7 +82,6 @@ def _make_item(
         (block_x, block_y, block_width, block_height), (label_x, label_y, label_width, label_height), (px, py, pw, ph))
     if (settings.platform_reuse_qr and pw and ph and px < width and px+pw > 0
             and py < height and py+ph > 0):
-        from .marker_space import transparent_rect
         if not transparent_rect(path, width, height, rotation_degrees,
                                 (px, py, pw, ph)):
             raise ValueError(f'{path.name}：平台文字没有可复用的二维码透明空位。')
@@ -167,6 +100,23 @@ def _make_item(
         (label_x, label_y, label_width, label_height),
         (block_x, block_y, block_width, block_height),
     ]
+    for x, y, decoration_width, decoration_height in decorations:
+        overlaps = (
+            decoration_width
+            and decoration_height
+            and x < width
+            and x + decoration_width > 0
+            and y < height
+            and y + decoration_height > 0
+        )
+        if overlaps:
+            transparent_rect(
+                path,
+                width,
+                height,
+                rotation_degrees,
+                (x, y, decoration_width, decoration_height),
+            )
     image_rx, image_ry, footprint_width, footprint_height = (
         combined_footprint((width, height), decorations)
     )

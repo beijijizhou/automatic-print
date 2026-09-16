@@ -48,7 +48,8 @@
 - 公共门面：`automatic_print/layout.py`。
 - 完整生成服务：`automatic_print/layout_engine/service.py`。
 - 文件发现与元数据：`discovery.py`、`batch_discovery.py`、`source_metadata.py`、
-  `output_dpi.py`。
+  `output_dpi.py`。`item_reader.py`只负责一次读取尺寸、DPI、旋转候选和膜标签检测，
+  `item_factory.py`只把测量结果组装为单张排版对象。
 - S2B 文件夹批次号解析、中心批次查询及本地图片颜色匹配位于
   `automation/api/s2b/`；只要识别到 S2B 批次，预览和生成都会在排版前查询一次订单颜色并按本地
   路径缓存，不依赖开发者模式或手动平台选择。服务不可用或任一图片颜色未匹配时保留本地信息继续
@@ -133,7 +134,7 @@
 
 | 归属 | 遗留文件 | 后续收敛方向 |
 | --- | --- | --- |
-| 排版核心 | `layout_engine/service.py`, `planner.py`, `item_factory.py` | 服务只编排阶段；测量、候选和对象构造保留单一所有者。 |
+| 排版核心 | `layout_engine/service.py`, `planner.py` | 服务只编排阶段；测量、候选和对象构造已有独立所有者。 |
 | ERP自动化 | `automation/erp_api.py`, `rule_batches.py` | 按提供商迁入`automation/api/<provider>/`，中立批次规则留共享层；`batch_browser.py`已把响应映射迁入ERP子包并回到普通预算。 |
 
 - 部分 README 内容曾混入版本演进描述；当前规则以四份治理文档为准，README 仅保留使用和发布入口。
