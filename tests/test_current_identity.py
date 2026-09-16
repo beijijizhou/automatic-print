@@ -13,6 +13,16 @@ def test_selected_film_and_current_child_are_highlighted_without_reading(tmp_pat
     assert '60 厘米' in badge.text()
     assert '580 毫米' in badge.text()
     assert '自动多列' in badge.text()
+    badge.film.setCurrentIndex(badge.film.findData(450))
+    assert owner.cutter_settings.film.currentData() == 450
+    assert '45 厘米' in badge.text()
+    badge.mode.setCurrentIndex(badge.mode.findData('single'))
+    assert owner.cutter_settings.mode.currentData() == 'single'
+    assert '单列切膜' in badge.text()
+    badge.film.setCurrentIndex(badge.film.findData('custom'))
+    badge.custom_width.setValue(52.5)
+    assert owner.cutter_settings.width_control.value() == 525
+    assert '52.5 厘米' in badge.text()
     owner.cutter_settings.film.setCurrentIndex(0)
     assert '45 厘米' in badge.text()
     assert '430 毫米' in badge.text()

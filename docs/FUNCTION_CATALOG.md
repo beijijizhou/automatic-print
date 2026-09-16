@@ -22,6 +22,7 @@
 | 透明区域搜索 | `layout_engine/transparent_search.py`, `platform_space.py`, `marker_space.py` | 像素读取结果进入测量缓存，不在每个方案重复扫描。 |
 | 轻量排版结构图 | `ui/layout_schematic.py`, `pair_preview.py` | 复用排版坐标与批次分析，不解码图片缩略图；单件显示尺码群，双面显示面别与尺码群，多件显示订单尺码群。 |
 | 膜规格方案比较 | `layout_engine/film_comparison.py`, `film_specs.py` | 比较方案不自动替用户选择生产膜；当前实际输出对应的方案直接复用生产坐标，只计算另外三套几何方案。 |
+| 当前膜快捷编辑 | `ui/current_film.py`, `ui/cutter_settings.py` | 主界面卡片直接修改膜规格、排版模式与自定义膜宽；快捷控件和完整打印设置必须双向同步。 |
 | Pillow 渲染 | `layout_engine/pillow_renderer.py` | 与 vips 共享规划和安全契约，不复制排版业务。 |
 | libvips 分块渲染与运行时门禁 | `layout_engine/vips_renderer.py`, `engine_info.py`, `atomic_png.py`, `save_progress.py`, `png_codecs/` | `png_codecs/row_stream.py` 按最终 Y 顺序逐行解码、合成、固定 UP 滤波、压缩并写入，每个排版行只求值一次且不生成中间图片；外层任务通过共享门禁串行进入，libvips 内部仍可多线程。完整 PNG 发布后由 `png_codecs/corridor_reader.py` 一次顺序解压，同时检查全部刀位 alpha、数据块 CRC、RGBA 尺寸和像素行完整性。 |
 | 输出格式选择与并行分块 BigTIFF | `layout_engine/output_encoder.py`, `atomic_tiff.py`, `ui/output_settings.py` | 仅开发者模式可选择 TIFF；复用同一 libvips 画布，按整幅宽度的固定高度 Strip 有界生成，使用 tifffile/imagecodecs 多线程独立压缩并由单一写入器登记偏移；保留透明通道、DPI、原子发布与整批刀位复核。 |
