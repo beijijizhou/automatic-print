@@ -45,8 +45,8 @@ def _folder_candidates(path, records):
 
 
 def register_batch_records(paths, payload):
-    from ....layout_engine.order_groups import order_key, production_stem
-    from ....layout_engine.source_metadata import canonical_size, source_size
+    from .....layout_engine.order_groups import order_key, production_stem
+    from .....layout_engine.source_metadata import canonical_size, source_size
 
     by_order = defaultdict(list)
     for record in payload.get("records") or ():
@@ -94,7 +94,7 @@ def register_batch_records(paths, payload):
                 "cache": payload.get("cache") or "",
                 "matched_images": len(resolved),
             }
-    from ....layout_engine.source_metadata import source_color
+    from .....layout_engine.source_metadata import source_color
     source_color.cache_clear()
     order_key.cache_clear()
     return len(resolved)

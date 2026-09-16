@@ -35,7 +35,7 @@ def size_key(size):
 
 @lru_cache(maxsize=4096)
 def source_color(path):
-    from ..automation.api.s2b.metadata import color_for_path
+    from ..automation.api.s2b.metadata.store import color_for_path
     api_color = color_for_path(path)
     if api_color:
         return api_color

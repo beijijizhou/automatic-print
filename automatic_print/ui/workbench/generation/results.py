@@ -6,7 +6,7 @@ from PySide6.QtCore import QUrl
 from PySide6.QtGui import QDesktopServices
 from PySide6.QtWidgets import QMessageBox
 
-from ....automation.api.s2b.prepare import metadata_warning_text
+from ....automation.api.s2b.metadata.prepare import metadata_warning_text
 from ....layout_engine.metrics import saving_text
 from ....layout_engine.output_file_info import production_summary_text
 from ...busy_spinner import show_progress

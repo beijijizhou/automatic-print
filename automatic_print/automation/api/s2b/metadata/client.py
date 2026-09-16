@@ -18,7 +18,7 @@ class S2BBatchInfoError(RuntimeError):
 def gateway_config():
     packaged_key = ""
     try:
-        from .deployment import S2B_BATCH_INFO_KEY
+        from ..deployment import S2B_BATCH_INFO_KEY
         packaged_key = str(S2B_BATCH_INFO_KEY).strip()
     except ImportError:
         pass

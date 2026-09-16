@@ -1,4 +1,4 @@
-"""Parse stable S2B batch facts from the right side of a folder name."""
+"""Parse stable S2B metadata from the right side of a batch folder name."""
 from dataclasses import dataclass
 from pathlib import Path
 import re

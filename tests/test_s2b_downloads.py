@@ -1,11 +1,11 @@
 from zipfile import ZipFile
 
-from automatic_print.automation.api.s2b.downloads import (
+from automatic_print.automation.api.s2b.production.downloads import (
     S2BExportRecord,
     _extract_archive,
     parse_export_rows,
 )
-from automatic_print.automation.api.s2b.production import (
+from automatic_print.automation.api.s2b.production.batches import (
     S2BProductionBatch,
     parse_production_rows,
 )
@@ -35,7 +35,7 @@ def test_s2b_dispatch_reuses_shared_batch_record(monkeypatch):
         "22UJ9KT4VCZA", 30, 40, "测试生产批次", "2026-09-17 01:44:06"
     )
     monkeypatch.setattr(
-        "automatic_print.automation.api.s2b.downloads.list_s2b_batches",
+        "automatic_print.automation.api.s2b.production.downloads.list_s2b_batches",
         lambda progress=None: [record],
     )
     from automatic_print.automation.batch_browser import load_batch_records
@@ -78,7 +78,7 @@ def test_s2b_archive_rejects_parent_escape(tmp_path):
 
 
 def test_download_uses_list_url_then_marks_record_after_extract(tmp_path, monkeypatch):
-    from automatic_print.automation.api.s2b import downloads
+    from automatic_print.automation.api.s2b.production import downloads
     source = tmp_path / "source.zip"
     with ZipFile(source, "w") as bundle:
         bundle.writestr("AS2B_22UJ9KT4VCZA/S/sample.png", b"png")
@@ -108,7 +108,7 @@ def test_download_uses_list_url_then_marks_record_after_extract(tmp_path, monkey
 
 
 def test_missing_export_is_requested_then_polled(tmp_path, monkeypatch):
-    from automatic_print.automation.api.s2b import downloads
+    from automatic_print.automation.api.s2b.production import downloads
     source = tmp_path / "source.zip"
     with ZipFile(source, "w") as bundle:
         bundle.writestr("AS2B_22UJ9KT4VCZA/S/sample.png", b"png")

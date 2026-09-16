@@ -13,7 +13,9 @@ def test_new_domain_packages_stay_small_and_cohesive():
     for package in (
         'controllers', 'history', 'batch_ui/local', 'batch_ui/platform',
         'batch_ui/task', 'batch_ui/shell',
-        'layout_engine/text', 'automation/api/erp', 'ui/workbench',
+        'layout_engine/text', 'automation/api/erp',
+        'automation/api/s2b', 'automation/api/s2b/metadata',
+        'automation/api/s2b/production', 'ui/workbench',
         'ui/workbench/overview',
         'ui/workbench/preferences',
         'ui/workbench/generation',

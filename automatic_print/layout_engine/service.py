@@ -39,7 +39,7 @@ def generate_layout(
             batch_name or settings.label_batch_name or paths[0].parent.name
         ).strip()
         settings = replace(settings, label_batch_name=label_batch_name)
-    from ..automation.api.s2b.prepare import prepare_s2b_metadata
+    from ..automation.api.s2b.metadata.prepare import prepare_s2b_metadata
     s2b_metadata = prepare_s2b_metadata(paths, settings, progress)
     from .header_gap import prepare_paths
     if phase_ready and settings.membrane_gap_mm > 0:
@@ -102,7 +102,7 @@ def generate_layout(
     )
     quality = dual_quality(planned, settings, analysis[-1])
     if plan_ready:
-        from ..automation.api.s2b.prepare import metadata_warning_text
+        from ..automation.api.s2b.metadata.prepare import metadata_warning_text
         metadata_warning = metadata_warning_text(s2b_metadata)
         visible_warning = "\n".join(filter(None, (warning, metadata_warning)))
         plan_ready({"planned": planned, "labels": labels, "settings": settings, "order_check": order_check, "analysis": analysis[-1], "dual_quality": quality,

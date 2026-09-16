@@ -27,7 +27,7 @@ def production_stem(path):
 
 @lru_cache(maxsize=4096)
 def order_key(path):
-    from ..automation.api.s2b.metadata import order_for_path
+    from ..automation.api.s2b.metadata.store import order_for_path
     api_order = order_for_path(path)
     if api_order:
         return api_order.casefold()

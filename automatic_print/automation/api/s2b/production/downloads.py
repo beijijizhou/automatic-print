@@ -7,8 +7,8 @@ from urllib.parse import urlsplit
 from urllib.request import Request, urlopen
 from zipfile import ZipFile
 
-from ...chrome_session import connect_debug_chrome, open_authenticated_page
-from ...batch_downloads import PRODUCTION_IMAGE_EXTENSIONS
+from ....chrome_session import connect_debug_chrome, open_authenticated_page
+from ....batch_downloads import PRODUCTION_IMAGE_EXTENSIONS
 
 
 EXPORT_URL = "https://overseasfactory.s2bdiy.com/factory/exportRecord"
@@ -48,7 +48,7 @@ def parse_export_rows(payload: dict) -> list[S2BExportRecord]:
 
 
 def list_s2b_batches(progress=None):
-    from .production import list_s2b_production_batches
+    from .batches import list_s2b_production_batches
     with _authenticated_page(progress) as page:
         return list_s2b_production_batches(page)
 
@@ -69,7 +69,7 @@ def download_s2b_exports(batch_numbers, output_root: Path, progress=None) -> lis
     if not pending:
         return [saved[batch] for batch in batches]
     with _authenticated_page(progress) as page:
-        from .production import wait_for_ready_exports
+        from .batches import wait_for_ready_exports
         selected = wait_for_ready_exports(page, pending, progress)
         total = len(selected)
         for index, record in enumerate(selected, 1):

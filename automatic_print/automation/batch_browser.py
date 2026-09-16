@@ -35,7 +35,7 @@ def load_platform_order_status(
         )
 def load_batch_records(platform_name: str, progress=None) -> list[BatchRecord]:
     if platform_name == "S2B":
-        from .api.s2b.downloads import list_s2b_batches
+        from .api.s2b.production.downloads import list_s2b_batches
         return [
             BatchRecord(
                 record.batch_number,
@@ -112,7 +112,7 @@ def download_selected_batches(
     progress=None,
 ) -> list[Path]:
     if platform_name == "S2B":
-        from .api.s2b.downloads import download_s2b_exports
+        from .api.s2b.production.downloads import download_s2b_exports
         return download_s2b_exports(batch_numbers, output_root, progress)
     from playwright.sync_api import sync_playwright
     if not batch_numbers:

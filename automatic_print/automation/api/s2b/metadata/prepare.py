@@ -3,7 +3,7 @@ from collections import Counter
 
 from .batch_name import find_s2b_batch_folder
 from .client import S2BBatchInfoError, fetch_s2b_batch_info, gateway_config
-from .metadata import color_for_path, register_batch_records
+from .store import color_for_path, register_batch_records
 
 
 def prepare_s2b_metadata(paths, settings, progress=None):

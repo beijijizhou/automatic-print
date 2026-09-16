@@ -52,7 +52,7 @@ def cutting_report(result):
     review += '\n'+gap_report(result.get('analysis', {}).get('header_gap', []))
     from .gap_loss import gap_loss_text
     review += '\n'+gap_loss_text(result.get('analysis', {}).get('gap_loss'))
-    from ..automation.api.s2b.prepare import metadata_warning_text
+    from ..automation.api.s2b.metadata.prepare import metadata_warning_text
     metadata_warning = metadata_warning_text(
         result.get('analysis', {}).get('s2b_metadata', ()))
     if metadata_warning:

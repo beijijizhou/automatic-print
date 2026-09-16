@@ -3,21 +3,21 @@ from types import SimpleNamespace
 
 import pytest
 
-from automatic_print.automation.api.s2b.batch_name import (
+from automatic_print.automation.api.s2b.metadata.batch_name import (
     find_s2b_batch_folder,
     parse_s2b_batch_name,
 )
-from automatic_print.automation.api.s2b.client import (
+from automatic_print.automation.api.s2b.metadata.client import (
     DEFAULT_ENDPOINT,
     fetch_s2b_batch_info,
     gateway_config,
 )
-from automatic_print.automation.api.s2b.metadata import (
+from automatic_print.automation.api.s2b.metadata.store import (
     color_for_path,
     order_for_path,
     register_batch_records,
 )
-from automatic_print.automation.api.s2b.prepare import prepare_s2b_metadata
+from automatic_print.automation.api.s2b.metadata.prepare import prepare_s2b_metadata
 
 
 def test_batch_name_is_parsed_from_stable_right_hand_fields():
@@ -55,7 +55,7 @@ def test_gateway_client_posts_batch_and_account(monkeypatch):
         return Response()
 
     monkeypatch.setattr(
-        "automatic_print.automation.api.s2b.client.urlopen", open_request
+        "automatic_print.automation.api.s2b.metadata.client.urlopen", open_request
     )
     result = fetch_s2b_batch_info(
         "ABC123ABC123",
@@ -140,7 +140,7 @@ def test_detected_s2b_always_fetches_color_without_developer_mode(
     image.touch()
     calls = []
     monkeypatch.setattr(
-        "automatic_print.automation.api.s2b.prepare.gateway_config",
+        "automatic_print.automation.api.s2b.metadata.prepare.gateway_config",
         lambda: ("https://example.test", "key"),
     )
 
@@ -158,7 +158,7 @@ def test_detected_s2b_always_fetches_color_without_developer_mode(
         }
 
     monkeypatch.setattr(
-        "automatic_print.automation.api.s2b.prepare.fetch_s2b_batch_info", fetch
+        "automatic_print.automation.api.s2b.metadata.prepare.fetch_s2b_batch_info", fetch
     )
     result = prepare_s2b_metadata(
         [image],
@@ -177,11 +177,11 @@ def test_detected_s2b_reports_unmatched_color_and_keeps_running(
     image.parent.mkdir(parents=True)
     image.touch()
     monkeypatch.setattr(
-        "automatic_print.automation.api.s2b.prepare.gateway_config",
+        "automatic_print.automation.api.s2b.metadata.prepare.gateway_config",
         lambda: ("https://example.test", "key"),
     )
     monkeypatch.setattr(
-        "automatic_print.automation.api.s2b.prepare.fetch_s2b_batch_info",
+        "automatic_print.automation.api.s2b.metadata.prepare.fetch_s2b_batch_info",
         lambda batch_number: {
             "batch_number": batch_number,
             "records": [{
@@ -203,7 +203,7 @@ def test_non_s2b_batch_does_not_require_color_service(tmp_path, monkeypatch):
     image.parent.mkdir(parents=True)
     image.touch()
     monkeypatch.setattr(
-        "automatic_print.automation.api.s2b.prepare.gateway_config",
+        "automatic_print.automation.api.s2b.metadata.prepare.gateway_config",
         lambda: pytest.fail("non-S2B input must not access the gateway"),
     )
     assert prepare_s2b_metadata([image], SimpleNamespace()) == []
@@ -215,7 +215,7 @@ def test_missing_service_reports_choice_instead_of_stopping(tmp_path, monkeypatc
     image.parent.mkdir(parents=True)
     image.touch()
     monkeypatch.setattr(
-        "automatic_print.automation.api.s2b.prepare.gateway_config",
+        "automatic_print.automation.api.s2b.metadata.prepare.gateway_config",
         lambda: ("https://example.test", ""),
     )
     result = prepare_s2b_metadata([image], SimpleNamespace())

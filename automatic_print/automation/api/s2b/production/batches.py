@@ -1,4 +1,4 @@
-"""S2B production batches and production-image export requests."""
+"""S2B production-batch queries and production-image export requests."""
 from __future__ import annotations
 
 from dataclasses import dataclass
