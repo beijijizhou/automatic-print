@@ -43,7 +43,7 @@ def generate_layout(
         ).strip()
         settings = replace(settings, label_batch_name=label_batch_name)
     from ..automation.api.s2b.prepare import prepare_s2b_metadata
-    prepare_s2b_metadata(paths, settings, progress)
+    s2b_metadata = prepare_s2b_metadata(paths, settings, progress)
     from .header_gap import prepare_paths
     if phase_ready and settings.membrane_gap_mm > 0:
         phase_ready('补足膜标签间距')
@@ -81,6 +81,8 @@ def generate_layout(
         planned, labels, width, height, baseline_height = prepared_plan['plan']
         effective[0] = prepared_plan['settings']
         analysis[:] = [prepared_plan['analysis']]
+    if s2b_metadata:
+        analysis[-1]['s2b_metadata'] = s2b_metadata
     settings = effective[0]
     if settings.batch_end_block:
         width = mm_to_px(settings.media_width_mm,settings.dpi)
@@ -122,9 +124,13 @@ def generate_layout(
         batch_name, extension=extension))
     quality = dual_quality(planned, settings, analysis[-1])
     if plan_ready:
-        plan_ready({"planned": planned, "labels": labels, "settings": settings, "warning": warning, "order_check": order_check, "analysis": analysis[-1], "dual_quality": quality,
+        from ..automation.api.s2b.prepare import metadata_warning_text
+        metadata_warning = metadata_warning_text(s2b_metadata)
+        visible_warning = "\n".join(filter(None, (warning, metadata_warning)))
+        plan_ready({"planned": planned, "labels": labels, "settings": settings, "order_check": order_check, "analysis": analysis[-1], "dual_quality": quality,
                     "saved_meters": max(0,baseline_height-height)*25.4/settings.dpi/1000,
-                    "canvas": (width, height, baseline_height)})
+                    "canvas": (width, height, baseline_height),
+                    "warning": visible_warning})
     if preview_only:
         from .preview_result import build_preview_result
         return build_preview_result(

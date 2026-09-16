@@ -16,10 +16,16 @@ def prepare_s2b_metadata(paths, settings, progress=None):
         return []
     endpoint, key = gateway_config()
     if not endpoint or not key:
-        message = "识别到S2B批次，但订单颜色服务尚未配置，已停止排版"
+        message = (
+            "订单颜色服务尚未配置；已保留本地订单信息继续排版，"
+            "结果需要用户确认后使用"
+        )
         if progress:
             progress("S2B批次信息", 0, len(grouped), message)
-        raise S2BBatchInfoError(message)
+        return [
+            _result(batch, members, warning=f"{batch.batch_number}：{message}")
+            for batch, members in grouped.items()
+        ]
     results = []
     for index, (batch, members) in enumerate(grouped.items(), 1):
         if all(color_for_path(path) for path in members):
@@ -30,29 +36,56 @@ def prepare_s2b_metadata(paths, settings, progress=None):
             payload = fetch_s2b_batch_info(batch.batch_number)
             matched = register_batch_records(members, payload)
         except S2BBatchInfoError as error:
-            message = f"{batch.batch_number}：订单颜色读取失败，已停止排版：{error}"
-            if progress:
-                progress("S2B批次信息", index, len(grouped), message)
-            raise S2BBatchInfoError(message) from error
-        unresolved = [path for path in members if not color_for_path(path)]
-        if unresolved:
             message = (
-                f"{batch.batch_number}：订单颜色仅匹配{matched}/{len(members)}张，"
-                "已停止排版"
+                f"{batch.batch_number}：订单颜色读取失败：{error}；"
+                "已使用本地信息继续排版，结果需要用户确认后使用"
             )
             if progress:
                 progress("S2B批次信息", index, len(grouped), message)
-            raise S2BBatchInfoError(message)
+            results.append(_result(batch, members, warning=message))
+            continue
+        unresolved = [path for path in members if not color_for_path(path)]
+        if unresolved:
+            names = "、".join(path.name for path in unresolved[:5])
+            more = f"等{len(unresolved)}张" if len(unresolved) > 5 else ""
+            message = (
+                f"{batch.batch_number}：订单颜色仅匹配{matched}/{len(members)}张，"
+                f"未匹配：{names}{more}；已使用本地信息继续排版，"
+                "结果需要用户确认后使用"
+            )
+            if progress:
+                progress("S2B批次信息", index, len(grouped), message)
+            results.append(_result(
+                batch, members, payload, matched, warning=message,
+                unmatched=[path.name for path in unresolved],
+            ))
+            continue
         colors = Counter(color_for_path(path) for path in members)
-        results.append({
-            "batch_number": batch.batch_number,
-            "folder_count": batch.expected_count,
-            "local_images": len(members),
-            "api_total": payload.get("source_total"),
-            "matched_images": matched,
-            "colors": dict(sorted(colors.items())),
-        })
+        results.append(_result(batch, members, payload, matched, colors=colors))
         if progress:
             detail = "、".join(f"{color}{count}张" for color, count in sorted(colors.items()))
             progress("S2B批次信息", index, len(grouped), f"{batch.batch_number}：{detail}")
     return results
+
+
+def _result(
+    batch, members, payload=None, matched=0, *, colors=None, warning="",
+    unmatched=None,
+):
+    payload = payload or {}
+    return {
+        "batch_number": batch.batch_number,
+        "folder_count": batch.expected_count,
+        "local_images": len(members),
+        "api_total": payload.get("source_total"),
+        "matched_images": matched,
+        "colors": dict(sorted((colors or {}).items())),
+        "warning": warning,
+        "unmatched_files": list(unmatched or ()),
+    }
+
+
+def metadata_warning_text(records):
+    warnings = [str(record.get("warning") or "").strip() for record in records]
+    warnings = [warning for warning in warnings if warning]
+    return "\n".join(warnings)

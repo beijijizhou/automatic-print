@@ -10,7 +10,7 @@
 | 批次数据快照与并行测量 | `layout_engine/batch_snapshot.py`, `measurement_session.py`, `parallel_measurement.py` | 生成、仅预览和批量分析从首次读取到最终报告共享一个批次会话；保持结果原顺序，线程完成顺序不能改变生产顺序。 |
 | 订单、双面、尺码归组及批次构成 | `layout_engine/order_groups.py`, `batch_analysis.py`, `size_policy.py`, `ui/batch_distribution.py` | 排版、比较、预览、报告和安全检查使用同一身份；预览上方单件显示紧凑尺码-数量，多件显示紧凑订单号-件数。 |
 | 颜色与生产顺序 | `layout_engine/color_policy.py`, `single_order_sequence.py` | 颜色优先、尺码业务顺序集中维护。 |
-| S2B批次元数据 | `automation/api/s2b/`, `.github/workflows/windows-release.yml` | 从文件夹尾部解析批次号；识别到 S2B 后不依赖开发者模式或平台选择，排版前必须一次读取共享服务并按订单项、尺码匹配全部本地图片。文件名失效时以订单文件夹对接口订单号作唯一回退匹配。颜色缺失时停止排版；颜色排序和四种膜方案复用缓存，不重复访问接口。中心地址内置，受限客户端密钥只在 Windows 构建时注入。 |
+| S2B批次元数据 | `automation/api/s2b/`, `.github/workflows/windows-release.yml` | 从文件夹尾部解析批次号；识别到 S2B 后不依赖开发者模式或平台选择，排版前必须一次读取共享服务并按订单项、尺码匹配全部本地图片。文件名失效时以订单文件夹对接口订单号作唯一回退匹配。颜色缺失时带诊断继续排版并由用户确认是否采用；颜色排序和四种膜方案复用缓存，不重复访问接口。中心地址内置，受限客户端密钥只在 Windows 构建时注入。 |
 | 普通行和自动多列规划 | `layout_engine/planner.py`, `cutter_planner.py`, `dynamic_columns.py`, `column_solver.py` | 膜宽与真实占位决定列数；一至八列共用同一Placement入口。 |
 | 整批刀位 | `layout_engine/cutter_planner.py`, `dynamic_columns.py`, `knife_optimizer.py`, `adaptive_knife.py` | N列生成N-1条区域固定刀位；多数可并排时形成一个并排区，其余完整订单形成一个旋转区；混色订单不充当单色边界；禁止超过两个区域。 |
 | 旋转区域和整批旋转 | `layout_engine/rotation_zones.py`, `rotation_compare.py`, `whole_rotation.py` | 以完整订单或尺码块评估，不复制候选算法。 |

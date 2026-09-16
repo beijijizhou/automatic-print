@@ -44,7 +44,7 @@ class PreviewTask(QRunnable):
             if not paths:
                 raise ValueError('所选文件夹没有可读取的图片，请重新选择。')
             from ..automation.api.s2b.prepare import prepare_s2b_metadata
-            prepare_s2b_metadata(paths, self.settings,
+            s2b_metadata = prepare_s2b_metadata(paths, self.settings,
                 lambda stage, current, total, name: self.emit(
                     self.signals.progress, f'{stage} · {current}/{total} · {name}'))
             from ..layout_engine.header_gap import prepare_paths
@@ -71,6 +71,8 @@ class PreviewTask(QRunnable):
                 self.emit(self.signals.analysis, report)
 
             warning, overflow, order_check = '', [], {}
+            from ..automation.api.s2b.prepare import metadata_warning_text
+            warning = metadata_warning_text(s2b_metadata)
             try:
                 from ..layout_engine.gap_fallback import plan_with_gap_fallback
                 paths, self.settings, result = plan_with_gap_fallback(paths, self.settings, gap_records, progress, analysis)
@@ -80,7 +82,9 @@ class PreviewTask(QRunnable):
                 validate_cut_corridor(planned, effective[0],
                                      mm_to_px(self.settings.media_width_mm, self.settings.dpi))
             except ValueError as exc:
-                warning = f'仅供检查，当前参数禁止输出：{exc}'
+                warning = '\n'.join(filter(None, (
+                    warning, f'仅供检查，当前参数禁止输出：{exc}'
+                )))
                 self.emit(self.signals.progress, '参数不安全，正在准备仅供检查的图片预览…')
                 planned, labels, height, overflow = diagnostic_layout(paths, effective[0], progress)
                 baseline = height
@@ -88,6 +92,8 @@ class PreviewTask(QRunnable):
                        'warning': warning, 'overflow': overflow, 'order_check': order_check,
                        'analysis': reports[-1] if reports else {}, 'header_gap': gap_records,
                        'saved_meters': max(0, baseline-height)*25.4/self.settings.dpi/1000}
+            if reports and s2b_metadata:
+                reports[-1]['s2b_metadata'] = s2b_metadata
             self.cancel.check()
         except TaskCancelled:
             error = '预览任务已停止。'

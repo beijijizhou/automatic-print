@@ -18,7 +18,6 @@ from automatic_print.automation.api.s2b.metadata import (
     register_batch_records,
 )
 from automatic_print.automation.api.s2b.prepare import prepare_s2b_metadata
-from automatic_print.automation.api.s2b.client import S2BBatchInfoError
 
 
 def test_batch_name_is_parsed_from_stable_right_hand_fields():
@@ -170,7 +169,9 @@ def test_detected_s2b_always_fetches_color_without_developer_mode(
     assert result[0]["colors"] == {"蓝色": 1}
 
 
-def test_detected_s2b_stops_when_any_color_is_unmatched(tmp_path, monkeypatch):
+def test_detected_s2b_reports_unmatched_color_and_keeps_running(
+    tmp_path, monkeypatch
+):
     root = tmp_path / "AS2B014Mt______1_22UJ9KT4VCZA_20260917_014406_ucjfsdyh"
     image = root / "S" / "22UJ9KT4VCZA-1-1-UNKNOWN-1-1-1-1-棉-S.png"
     image.parent.mkdir(parents=True)
@@ -191,8 +192,10 @@ def test_detected_s2b_stops_when_any_color_is_unmatched(tmp_path, monkeypatch):
             }],
         },
     )
-    with pytest.raises(S2BBatchInfoError, match="订单颜色仅匹配0/1张"):
-        prepare_s2b_metadata([image], SimpleNamespace())
+    result = prepare_s2b_metadata([image], SimpleNamespace())
+    assert result[0]["matched_images"] == 0
+    assert result[0]["unmatched_files"] == [image.name]
+    assert "继续排版" in result[0]["warning"]
 
 
 def test_non_s2b_batch_does_not_require_color_service(tmp_path, monkeypatch):
@@ -204,3 +207,19 @@ def test_non_s2b_batch_does_not_require_color_service(tmp_path, monkeypatch):
         lambda: pytest.fail("non-S2B input must not access the gateway"),
     )
     assert prepare_s2b_metadata([image], SimpleNamespace()) == []
+
+
+def test_missing_service_reports_choice_instead_of_stopping(tmp_path, monkeypatch):
+    root = tmp_path / "AS2B014Mt______1_22UJ9KT4VCZA_20260917_014406_ucjfsdyh"
+    image = root / "S" / "unrecognizable.png"
+    image.parent.mkdir(parents=True)
+    image.touch()
+    monkeypatch.setattr(
+        "automatic_print.automation.api.s2b.prepare.gateway_config",
+        lambda: ("https://example.test", ""),
+    )
+    result = prepare_s2b_metadata([image], SimpleNamespace())
+    assert len(result) == 1
+    assert result[0]["matched_images"] == 0
+    assert "继续排版" in result[0]["warning"]
+    assert "用户确认" in result[0]["warning"]

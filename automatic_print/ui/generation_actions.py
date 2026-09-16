@@ -166,19 +166,40 @@ class GenerationActionsMixin:
             )
         saving = saving_text(result)
         summary = production_summary_text(result)
+        from ..automation.api.s2b.prepare import metadata_warning_text
+        metadata_warning = metadata_warning_text(
+            result.get('analysis', {}).get('s2b_metadata', ()))
         self.run_log.appendPlainText(summary)
+        if metadata_warning:
+            self.run_log.appendPlainText('S2B订单颜色提示：\n'+metadata_warning)
         self.run_log.appendPlainText(saving)
         self.status.setText(f"{self.status.text()} · {saving}")
         self.generate_button.setEnabled(True)
         self.stop_generation_button.setEnabled(False)
-        QMessageBox.information(
-            self,
-            "生成完成",
-            f"{summary}\n\n打印图片已保存到：\n{output}",
-        )
-        QDesktopServices.openUrl(
-            QUrl.fromLocalFile(str(Path(output).resolve()))
-        )
+        use_output = True
+        if metadata_warning:
+            answer = QMessageBox.question(
+                self,
+                "订单颜色信息需要确认",
+                f"{metadata_warning}\n\n文件已经生成，程序仍可继续使用。"
+                "\n是否确认使用本次排版结果？",
+                QMessageBox.Yes | QMessageBox.No,
+                QMessageBox.No,
+            )
+            use_output = answer == QMessageBox.Yes
+            decision = '用户确认使用本次结果。' if use_output else '用户选择暂不使用；文件已保留供检查。'
+            self.run_log.appendPlainText(decision)
+            self.status.setText(f"{self.status.text()} · {decision}")
+        else:
+            QMessageBox.information(
+                self,
+                "生成完成",
+                f"{summary}\n\n打印图片已保存到：\n{output}",
+            )
+        if use_output:
+            QDesktopServices.openUrl(
+                QUrl.fromLocalFile(str(Path(output).resolve()))
+            )
     @Slot(str)
     def generation_failed(self, message: str) -> None:
         self.clock.stop()

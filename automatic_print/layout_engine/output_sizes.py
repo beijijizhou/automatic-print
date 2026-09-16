@@ -52,6 +52,11 @@ def cutting_report(result):
     review += '\n'+gap_report(result.get('analysis', {}).get('header_gap', []))
     from .gap_loss import gap_loss_text
     review += '\n'+gap_loss_text(result.get('analysis', {}).get('gap_loss'))
+    from ..automation.api.s2b.prepare import metadata_warning_text
+    metadata_warning = metadata_warning_text(
+        result.get('analysis', {}).get('s2b_metadata', ()))
+    if metadata_warning:
+        review += '\nS2B订单颜色提示：\n'+metadata_warning
     from .output_file_info import result_file_report
     review += '\n'+result_file_report(result)
     comparison = result.get('analysis', {}).get('rotation_comparison')
