@@ -6,13 +6,13 @@ from PySide6.QtCore import QRectF, Qt, QTimer, Signal
 from PySide6.QtGui import QColor, QPen, QPainter
 
 from .production_preview import ProductionPreview
-from .preview_loader import PreviewLoader
+from .previews.runtime.loader import PreviewLoader
 from .cut_guide_cache import CutGuideCache
 from .cut_guide_preview import draw_cut_guides
 from ..layout_engine.order_groups import detail_members
-from .preview_snapshot import install_snapshot
+from .previews.runtime.snapshot import install_snapshot
 from .layout_schematic import draw_preview_placement
-from .preview_viewport import resize_preview
+from .previews.runtime.viewport import resize_preview
 
 
 class PairProductionPreview(ProductionPreview):

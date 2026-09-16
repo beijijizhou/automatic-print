@@ -1,4 +1,4 @@
-"""GUI-only zoom and expanded inspection of the existing production snapshot."""
+"""GUI-only zoom and expanded inspection shared by production previews."""
 from PySide6.QtCore import QEvent, Qt
 from PySide6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QPushButton, QSpinBox, QLabel, QDialog,

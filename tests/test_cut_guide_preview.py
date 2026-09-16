@@ -15,7 +15,7 @@ from automatic_print.layout_engine.cut_guide_geometry import guide_spans
 from automatic_print.layout_engine.membrane_region import MembraneRegion
 from automatic_print.layout_engine.planner import plan_layout
 from automatic_print.ui.pair_preview import PairProductionPreview
-from automatic_print.ui.preview_snapshot import install_snapshot
+from automatic_print.ui.previews.runtime.snapshot import install_snapshot
 
 
 def sample(tmp_path):

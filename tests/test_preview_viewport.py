@@ -8,7 +8,7 @@ from PySide6.QtWidgets import QApplication
 from automatic_print.layout import LayoutSettings
 from automatic_print.layout_engine.planner import plan_layout
 from automatic_print.ui.main_window import MainWindow
-from automatic_print.ui.preview_snapshot import install_snapshot
+from automatic_print.ui.previews.runtime.snapshot import install_snapshot
 
 APP = QApplication.instance() or QApplication([])
 OWNERS = []

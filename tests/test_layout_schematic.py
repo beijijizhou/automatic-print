@@ -9,7 +9,7 @@ from automatic_print.layout import LayoutSettings
 from automatic_print.layout_engine.models import Placement
 from automatic_print.ui.layout_schematic import schematic_items
 from automatic_print.ui.pair_preview import PairProductionPreview
-from automatic_print.ui.preview_snapshot import install_snapshot
+from automatic_print.ui.previews.runtime.snapshot import install_snapshot
 
 
 def test_schematic_labels_single_double_and_multi_order_groups():

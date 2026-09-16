@@ -100,7 +100,7 @@ def test_segments_share_one_resolved_output_dpi(tmp_path):
 
 def test_live_preview_uses_the_resolved_source_dpi(tmp_path):
     from test_developer_mode import APP
-    from automatic_print.ui.preview_task import PreviewTask
+    from automatic_print.ui.previews.runtime.task import PreviewTask
     source(tmp_path/'B1-1-T-Black-M-NO1-1.png',(150,150))
     task=PreviewTask(1,tmp_path,LayoutSettings(follow_source_dpi=True,
         cutter_mode='single',number_images=False,cutter_left_marker_external=True))
@@ -115,7 +115,7 @@ def test_live_preview_uses_the_resolved_source_dpi(tmp_path):
 
 def test_missing_dpi_preview_does_not_fall_back_to_guessed_grid(tmp_path):
     from test_developer_mode import APP
-    from automatic_print.ui.preview_task import PreviewTask
+    from automatic_print.ui.previews.runtime.task import PreviewTask
     with Image.new('RGBA',(180,360)) as image:
         image.save(tmp_path/'B1-1-T-Black-M-NO1-1.png')
     task=PreviewTask(1,tmp_path,LayoutSettings(follow_source_dpi=True))

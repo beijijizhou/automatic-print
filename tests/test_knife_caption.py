@@ -34,7 +34,7 @@ def test_generation_preview_handles_single_row_payload(monkeypatch):
 
 
 def test_async_preview_handles_single_row_payload(monkeypatch):
-    from automatic_print.ui import preview_loader as module
+    from automatic_print.ui.previews.runtime import loader as module
     monkeypatch.setattr(module, 'install_snapshot', lambda *a, **k: None)
     emitted = []
     preview = SimpleNamespace(overview=True, plan_loaded=SimpleNamespace(emit=emitted.append))

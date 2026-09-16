@@ -5,7 +5,7 @@ from PySide6.QtWidgets import QScrollArea
 from .bulk_film_analysis import BulkFilmAnalysisDialog
 from .bulk_generation_worker import BulkGenerationWorker
 from .pair_preview import PairProductionPreview
-from .preview_snapshot import install_snapshot
+from .previews.runtime.snapshot import install_snapshot
 
 
 class BulkGenerationDialog(BulkFilmAnalysisDialog):
@@ -35,7 +35,7 @@ class BulkGenerationDialog(BulkFilmAnalysisDialog):
         scroll.setWidgetResizable(True)
         scroll.setMinimumHeight(300)
         scroll.setWidget(self.preview)
-        from .preview_viewport import PreviewViewport
+        from .previews.runtime.viewport import PreviewViewport
         self.layout().addWidget(self.batch_distribution)
         self.layout().addWidget(PreviewViewport(self.preview, scroll))
         self.folders.currentRowChanged.connect(self.show_batch)

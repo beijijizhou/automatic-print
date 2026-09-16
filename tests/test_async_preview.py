@@ -8,7 +8,7 @@ from PySide6.QtTest import QTest
 from PySide6.QtWidgets import QApplication
 
 from automatic_print.ui.main_window import MainWindow
-from automatic_print.ui import preview_task
+from automatic_print.ui.previews.runtime import task as preview_task
 from preview_wait import wait_preview
 
 

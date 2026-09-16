@@ -1,9 +1,9 @@
 """Coalesced, cancellable preview requests with GUI-thread result delivery."""
 from PySide6.QtCore import QObject, QThreadPool, Qt, Slot
 
-from .preview_task import PreviewTask
-from .preview_snapshot import install_snapshot
-from ..layout_engine.order_groups import detail_members
+from .task import PreviewTask
+from .snapshot import install_snapshot
+from ....layout_engine.order_groups import detail_members
 
 
 class PreviewLoader(QObject):
@@ -79,7 +79,7 @@ class PreviewLoader(QObject):
                     install_snapshot(p, shown, payload['labels'], payload['settings'],
                                      payload['warning'], payload['overflow'])
                     settings = payload['settings']
-                    from .knife_caption import knife_caption
+                    from ...knife_caption import knife_caption
                     knives = knife_caption(payload['planned'], settings.dpi, ' / ')
                     p.detail = f"{'整批轻量结构图' if p.overview else '当前订单真实图片'} · 整批 {len(payload['planned'])} 张 · 节省 {payload['saved_meters']:.3f} 米 · {knives}"
                     p.plan_loaded.emit(payload)

@@ -18,7 +18,7 @@ from ...manual_rotation import ManualRotationPanel
 from ...previews.markers import MarkerExamples
 from ...operation_timing import OperationTimingPanel
 from ...pair_preview import PairProductionPreview
-from ...preview_viewport import PreviewViewport
+from ...previews.runtime.viewport import PreviewViewport
 from .bindings import bind_overview
 
 

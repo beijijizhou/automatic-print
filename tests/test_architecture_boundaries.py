@@ -19,7 +19,7 @@ def test_new_domain_packages_stay_small_and_cohesive():
         'ui/workbench/overview',
         'ui/workbench/preferences',
         'ui/workbench/generation',
-        'ui/previews', 'ui/previews/markers',
+        'ui/previews', 'ui/previews/markers', 'ui/previews/runtime',
     ):
         paths = modules(package)
         assert len(paths) <= 5, f'{package} 顶层模块超过5个，应按职责建立子包'
