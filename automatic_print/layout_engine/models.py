@@ -1,11 +1,42 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Callable
 
 
 ProgressCallback = Callable[[str, int, int, str], None]
 MAX_SAVE_PARALLELISM = 8
+
+
+@dataclass(frozen=True)
+class LayoutItem:
+    path: Path
+    index: int
+    width: int
+    height: int
+    image_rx: int
+    image_ry: int
+    label_rx: int
+    label_ry: int
+    label_width: int
+    label_height: int
+    footprint_width: int
+    footprint_height: int
+    rotation_degrees: int
+    block_rx: int
+    block_ry: int
+    block_width: int
+    block_height: int
+    platform_rx: int = 0
+    platform_ry: int = 0
+    platform_width: int = 0
+    platform_height: int = 0
+    left_marker_gap_px: int = 0
+    left_marker_lift_px: int = 0
+    preserve_header_gap: bool = False
+    platform_below_marker: bool = False
+    platform_reuse_qr: bool = False
 
 
 @dataclass(frozen=True)

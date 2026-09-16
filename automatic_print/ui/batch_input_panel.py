@@ -1,6 +1,7 @@
 """Primary production actions and the small set of everyday parameters."""
 from PySide6.QtWidgets import (
-    QCheckBox, QGridLayout, QGroupBox, QHBoxLayout, QLabel, QVBoxLayout, QWidget,
+    QCheckBox, QGridLayout, QGroupBox, QHBoxLayout, QLabel, QPushButton,
+    QVBoxLayout, QWidget,
 )
 from .action_icons import action_icon
 
@@ -49,6 +50,15 @@ def build_batch_input(owner, panel):
         button.setMinimumHeight(40)
         button.setIcon(action_icon(icon))
         row.addWidget(button, 1)
+    owner.recent_output_button = QPushButton('打开最近生成的批次')
+    owner.recent_output_button.setObjectName('recentOutputButton')
+    owner.recent_output_button.setMinimumHeight(40)
+    owner.recent_output_button.setIcon(action_icon('folder'))
+    from .recent_output import open_recent_output, refresh_recent_output_button
+    owner.recent_output_button.clicked.connect(
+        lambda: open_recent_output(owner.window()))
+    row.addWidget(owner.recent_output_button, 1)
+    refresh_recent_output_button(owner.window(), owner.recent_output_button)
     layout.addLayout(row)
     parameters = QGridLayout()
     parameters.setHorizontalSpacing(12)

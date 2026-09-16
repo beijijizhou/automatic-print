@@ -8,27 +8,18 @@ def external_left_item(item):
     gap = item.left_marker_gap_px
     if not gap or not item.block_width:
         return item
-    dx = max(0, item.block_width+gap-item.image_rx)
-    image_x = item.image_rx+dx
     if item.preserve_header_gap:
-        platform_x = item.platform_rx+dx
-        label_x = item.label_rx+dx
+        block_y = item.image_ry-item.left_marker_lift_px
         return replace(
-            item, image_rx=image_x, block_rx=0, label_rx=label_x,
-            platform_rx=platform_x,
-            block_ry=item.image_ry-item.left_marker_lift_px,
-            footprint_width=max(
-                image_x+item.width, item.block_width,
-                label_x+item.label_width if item.label_width else 0,
-                platform_x+item.platform_width if item.platform_width else 0,
-            ),
+            item,
+            block_ry=block_y,
             footprint_height=max(
-                item.image_ry+item.height,
-                item.image_ry-item.left_marker_lift_px+item.block_height,
-                item.label_ry+item.label_height if item.label_width else 0,
-                item.platform_ry+item.platform_height if item.platform_width else 0,
+                item.footprint_height,
+                block_y+item.block_height,
             ),
         )
+    dx = max(0, item.block_width+gap-item.image_rx)
+    image_x = item.image_rx+dx
     if item.platform_below_marker:
         lift = item.image_ry-item.left_marker_lift_px-item.block_ry
         label_y = item.label_ry+lift

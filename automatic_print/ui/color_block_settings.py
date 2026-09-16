@@ -8,13 +8,13 @@ from PySide6.QtWidgets import (
     QComboBox,
     QDialog,
     QDialogButtonBox,
-    QDoubleSpinBox,
     QFormLayout,
     QLabel,
     QPushButton,
     QVBoxLayout,
     QWidget,
 )
+from .spinbox_style import double_spinbox
 
 from .setting_preview import SettingPreview
 
@@ -32,8 +32,8 @@ class ColorBlockSettingsDialog(QDialog):
         self.color_button = QPushButton()
         self.color_button.clicked.connect(self.choose_color)
         self._show_color()
-        self.width = self._box(10, 1, 100)
-        self.height = self._box(10, 1, 100)
+        self.width = double_spinbox(10, 1, 100)
+        self.height = double_spinbox(10, 1, 100)
         self.position = QComboBox()
         for text, value in (
             ("左侧顶部对齐（默认）", "left_top"),
@@ -41,9 +41,9 @@ class ColorBlockSettingsDialog(QDialog):
             ("左侧底部对齐", "left_bottom"),
         ):
             self.position.addItem(text, value)
-        self.gap = self._box(5, 0, 100)
-        self.offset_x = self._box(0, -100, 100)
-        self.offset_y = self._box(0, -100, 100)
+        self.gap = double_spinbox(5, 0, 100)
+        self.offset_x = double_spinbox(0, -100, 100)
+        self.offset_y = double_spinbox(0, -100, 100)
         note = QLabel(
             "色块始终位于图片左侧并与图片处于同一高度，适配左侧识别器，且不增加材料长度。"
         )
@@ -122,11 +122,3 @@ class ColorBlockSettingsDialog(QDialog):
         if hasattr(self, "preview"):
             self.preview.update()
         self.settings_changed.emit()
-
-    @staticmethod
-    def _box(value, minimum, maximum) -> QDoubleSpinBox:
-        box = QDoubleSpinBox()
-        box.setRange(minimum, maximum)
-        box.setDecimals(1)
-        box.setValue(value)
-        return box

@@ -2,19 +2,14 @@ from pathlib import Path
 
 
 LEGACY_LIMITS = {
-    'automatic_print/automation/erp_api.py': 249,
+    'automatic_print/automation/erp_api.py': 234,
     'automatic_print/automation/rule_batches.py': 241,
-    'automatic_print/automation/batch_browser.py': 208,
-    'automatic_print/batch_ui/batch_actions.py': 233,
-    'automatic_print/layout_engine/item_factory.py': 245,
-    'automatic_print/layout_engine/planner.py': 203,
-    'automatic_print/layout_engine/service.py': 238,
-    'automatic_print/ui/generation_actions.py': 248,
-    'automatic_print/ui/label_quick_panel.py': 229,
-    'automatic_print/ui/main_window.py': 250,
-    'automatic_print/ui/pair_preview.py': 201,
-    'automatic_print/ui/preferences.py': 242,
-    'automatic_print/ui/setting_preview.py': 202,
+    'automatic_print/layout_engine/item_factory.py': 227,
+    'automatic_print/layout_engine/service.py': 220,
+    'automatic_print/ui/generation_actions.py': 206,
+    'automatic_print/ui/label_quick_panel.py': 228,
+    'automatic_print/ui/main_window.py': 237,
+    'automatic_print/ui/preferences.py': 206,
 }
 
 

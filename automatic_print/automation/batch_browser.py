@@ -1,7 +1,5 @@
 from __future__ import annotations
-import re
 from dataclasses import dataclass
-from datetime import datetime
 from pathlib import Path
 from urllib.parse import urlsplit
 from .batch_downloads import download_production_images
@@ -14,14 +12,7 @@ from .erp_api import (
     production_item_count,
 )
 from .platforms import get_erp_platform
-@dataclass(frozen=True)
-class BatchRecord:
-    batch_number: str
-    item_count: int
-    piece_count: int
-    batch_type: str
-    created_at: str
-    production_images_ready: bool
+from .api.erp import BatchRecord, records_from_rows
 @dataclass(frozen=True)
 class PlatformOrderStatus:
     accepted_count: int
@@ -81,7 +72,7 @@ def load_batch_records_between(
                 page, [str(row.get("code") or "") for row in rows]
             )
         )
-        return _records_from_rows(page, rows, ready_codes)
+        return records_from_rows(page, rows, ready_codes)
 def _search_batch_codes(page, codes: list[str]) -> set[str]:
     if not codes:
         return set()
@@ -172,44 +163,4 @@ def _batch_page(browser, url: str):
 def _parse_api_rows(page) -> list[BatchRecord]:
     rows = list_batches(page)
     ready_codes = ready_production_image_codes(page, rows)
-    return _records_from_rows(page, rows, ready_codes)
-def _records_from_rows(page, api_rows, ready_codes=None) -> list[BatchRecord]:
-    ready_codes = ready_codes or set()
-    frame = production_batch_frame(page)
-    records = []
-    visible_text = {
-        match.group(1): text
-        for text in frame.locator("tbody tr:visible").all_inner_texts()
-        if (match := re.search(r"\b(\d{12})\b", text))
-    }
-    composition_names = {
-        "1": "单项单件",
-        "2": "单项多件",
-        "3": "多项多件",
-    }
-    for row in api_rows:
-        created = row.get("created")
-        created_text = (
-            datetime.fromtimestamp(int(created) / 1000).strftime(
-                "%Y-%m-%d %H:%M:%S"
-            )
-            if created
-            else ""
-        )
-        row_text = visible_text.get(str(row.get("code") or ""), "")
-        ready = (
-            row_text.count("下载") >= 3 and "生成成功" in row_text
-        ) or str(row.get("code") or "") in ready_codes
-        records.append(
-            BatchRecord(
-                batch_number=str(row.get("code") or ""),
-                item_count=int(row.get("production_order_item_num") or 0),
-                piece_count=int(row.get("production_piece_num") or 0),
-                batch_type=composition_names.get(
-                    str(row.get("order_composition") or ""), "其他"
-                ),
-                created_at=created_text,
-                production_images_ready=ready,
-            )
-        )
-    return records
+    return records_from_rows(page, rows, ready_codes)

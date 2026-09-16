@@ -87,9 +87,11 @@ def test_added_text_stays_inside_membrane_label_height_and_never_below_it(tmp_pa
 
     assert top <= placement.number_y_px
     assert placement.number_y_px+placement.number_height_px <= bottom
-    assert placement.number_x_px >= (
-        placement.color_block_x_px+placement.color_block_width_px
+    assert placement.x_px <= placement.number_x_px
+    assert placement.number_x_px+placement.number_width_px <= (
+        placement.x_px+placement.width_px
     )
+    assert placement.color_block_x_px+placement.color_block_width_px == placement.x_px
     with pytest.raises(ValueError, match='膜标签高度范围'):
         validate_embedded_marks([
             (path, replace(placement, number_y_px=bottom+1))

@@ -1,6 +1,6 @@
 from PIL.ImageQt import ImageQt
 from PySide6.QtCore import QRectF
-from PySide6.QtGui import QImage, QFont, QColor
+from PySide6.QtGui import QImage, QFont, QColor, QPen
 
 from ..layout_engine.platform_label import platform_badge
 
@@ -26,7 +26,7 @@ def draw_platform_diagram(preview, painter, image):
     card = QRectF(image.left()+8, image.top()+8, min(150, image.width()-16), 42)
     painter.fillRect(card, QColor('white'))
     qr = QRectF(card.left()+5, card.top()+5, 32, 32)
-    preview._draw_qr(painter, qr)
+    draw_qr(painter, qr)
     painter.save()
     font = QFont()
     height_mm = preview.values().get('platform_font_height_mm', 0)
@@ -37,3 +37,14 @@ def draw_platform_diagram(preview, painter, image):
     painter.drawText(QRectF(qr.right()+6, qr.top(), card.right()-qr.right()-10, qr.height()),
                      preview.values()['platform_name'])
     painter.restore()
+
+
+def draw_qr(painter, rect):
+    painter.setPen(QPen(QColor('#111827'), 1))
+    painter.setBrush(QColor('#ffffff'))
+    painter.drawRect(rect)
+    painter.setBrush(QColor('#111827'))
+    size = rect.width() / 5
+    for column, row in ((0, 0), (3, 0), (0, 3), (2, 2), (4, 4)):
+        painter.drawRect(QRectF(rect.left() + column * size,
+                               rect.top() + row * size, size, size))

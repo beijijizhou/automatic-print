@@ -4,7 +4,6 @@ from PySide6.QtWidgets import (
     QComboBox,
     QDialog,
     QDialogButtonBox,
-    QDoubleSpinBox,
     QFormLayout,
     QLabel,
     QLineEdit,
@@ -12,6 +11,7 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 from .setting_preview import SettingPreview
+from .spinbox_style import double_spinbox
 from ..layout_engine.labels import compact_label_text
 class LabelSettingsDialog(QDialog):
     settings_changed = Signal()
@@ -31,7 +31,7 @@ class LabelSettingsDialog(QDialog):
         self.platform.addItem('S2B')
         self.platform_enabled = QCheckBox('在刀码下方打印平台名称，与标签纵向排列')
         self.platform_enabled.setChecked(True)
-        self.platform_font_height = self._box(6, 0, 50)
+        self.platform_font_height = double_spinbox(6, 0, 50)
         self.platform_font_height.setSuffix(' 毫米')
         self.platform_font_height.setSpecialValueText('自动：膜标签等高')
         self.platform_font_height.setToolTip('平台字独立大小，默认高度 6 毫米；0 为自动等高。不会改变标签或序号字号。')
@@ -74,16 +74,16 @@ class LabelSettingsDialog(QDialog):
             ("右下角（图片外）", "bottom_right"),
         ):
             self.position.addItem(text, value)
-        self.font_size = self._box(7.5 * 25.4 / 72, 0.5, 50)
+        self.font_size = double_spinbox(7.5 * 25.4 / 72, 0.5, 50)
         self.detect_region = QCheckBox("识别原图膜标签，文字区域与其等高并限制宽度")
         self.detect_region.setChecked(True)
         self.fit_height = QCheckBox("限制整段文字高度（字号不超过手动设置）")
         self.fit_height.setChecked(True)
-        self.reference_height = self._box(10, 2, 100)
+        self.reference_height = double_spinbox(10, 2, 100)
         self.reference_height.setToolTip("填写原图膜标签的实际高度；程序优先搜索顶部标签卡片，不验证二维码。")
-        self.gap = self._box(5, 0, 100)
-        self.offset_x = self._box(0, -100, 100)
-        self.offset_y = self._box(0, -100, 100)
+        self.gap = double_spinbox(5, 0, 100)
+        self.offset_x = double_spinbox(0, -100, 100)
+        self.offset_y = double_spinbox(0, -100, 100)
         self.date_format = QLineEdit("%Y-%m-%d")
         self.preview = SettingPreview("label", self._preview_values, self)
         self._connect_preview()
@@ -184,10 +184,3 @@ class LabelSettingsDialog(QDialog):
         self.follow_qr.setEnabled(not below)
         if below:
             self.follow_qr.setChecked(False)
-    @staticmethod
-    def _box(value, minimum, maximum) -> QDoubleSpinBox:
-        box = QDoubleSpinBox()
-        box.setRange(minimum, maximum)
-        box.setDecimals(1)
-        box.setValue(value)
-        return box

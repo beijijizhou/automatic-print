@@ -1,4 +1,5 @@
-from PySide6.QtWidgets import QCheckBox, QComboBox, QDoubleSpinBox, QFormLayout, QLabel, QWidget
+from PySide6.QtWidgets import QCheckBox, QComboBox, QFormLayout, QLabel, QWidget
+from .spinbox_style import double_spinbox
 from .printable_width import PrintableWidthPanel
 from .transition_settings import TransitionSettings
 
@@ -19,7 +20,7 @@ class CutterSettingsPanel(QWidget):
         from .custom_film import CustomFilmWidth
         self.custom_film = CustomFilmWidth(preferences,self)
         self.mode = QComboBox()
-        self.knife = self._box(300, 1, 599)
+        self.knife = double_spinbox(300, 1, 599)
         self.printable = PrintableWidthPanel(preferences, width, self.knife, self)
         self.auto_knife = QCheckBox("按整批图片自动计算统一刀位")
         self.auto_knife.setChecked(preferences.value("cutter/auto_knife", True, bool))
@@ -37,9 +38,9 @@ class CutterSettingsPanel(QWidget):
         self.force_small_pair.setToolTip('默认开启；不放大小图，XL 及以上不处理，刀码仍按区域统一刀位。')
         self.tail_rotation = QCheckBox('单件批次末尾 3XL 及以上：省膜时整尺码块旋转')
         self.tail_rotation.setChecked(preferences.value('cutter/tail_rotation', True, bool))
-        self.safety = self._box(3, 0.1, 30)
-        self.marker_offset = self._box(0, 0, 100)
-        self.left_marker_lift = self._box(preferences.value('cutter/left_marker_lift_mm',1.5,float),0,30)
+        self.safety = double_spinbox(3, 0.1, 30)
+        self.marker_offset = double_spinbox(0, 0, 100)
+        self.left_marker_lift = double_spinbox(preferences.value('cutter/left_marker_lift_mm',1.5,float),0,30)
         self.left_marker_lift.valueChanged.connect(lambda v: preferences.setValue('cutter/left_marker_lift_mm',v))
         self.transitions = TransitionSettings(preferences, self)
         self.compare_films = QCheckBox('比较45/60厘米：常规与旋转（不自动切换，结果存入历史）')
@@ -190,11 +191,3 @@ class CutterSettingsPanel(QWidget):
     def set_developer_mode(self, enabled):
         self.force_small_pair.setVisible(True)
         self.force_small_pair_label.setVisible(True)
-
-    @staticmethod
-    def _box(value, minimum, maximum):
-        box = QDoubleSpinBox()
-        box.setRange(minimum, maximum)
-        box.setDecimals(1)
-        box.setValue(value)
-        return box

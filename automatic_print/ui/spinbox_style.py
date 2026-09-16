@@ -1,5 +1,14 @@
 """Explicit cross-platform step controls, rather than tiny native QSS fallbacks."""
 from ..resources import asset_path
+from PySide6.QtWidgets import QDoubleSpinBox
+
+
+def double_spinbox(value, minimum, maximum, decimals=1):
+    box = QDoubleSpinBox()
+    box.setRange(minimum, maximum)
+    box.setDecimals(decimals)
+    box.setValue(value)
+    return box
 
 
 def spinbox_style():

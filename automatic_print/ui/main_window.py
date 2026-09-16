@@ -4,7 +4,6 @@ from PySide6.QtWidgets import (
     QCheckBox,
     QComboBox,
     QDialog,
-    QDoubleSpinBox,
     QFormLayout,
     QHBoxLayout,
     QLabel,
@@ -34,6 +33,8 @@ from .generation_preview import GenerationPreviewController
 from .update_actions import UpdateActionsMixin
 from .worker_bridge import MainWindowWorkerBridge
 from .busy_spinner import BusySpinner
+from .spinbox_style import double_spinbox
+from ..controllers import LayoutGenerationController
 class MainWindow(
     PreferencesMixin,
     GenerationActionsMixin,
@@ -48,6 +49,7 @@ class MainWindow(
         self.thread: QThread | None = None
         self.worker = None
         self.worker_bridge = MainWindowWorkerBridge(self)
+        self.layout_generation = LayoutGenerationController(self)
         self.update_thread: QThread | None = None
         self.update_worker = None
         self.update_is_silent = True
@@ -93,9 +95,9 @@ class MainWindow(
         folder_row = QHBoxLayout()
         folder_row.addWidget(self.folder)
         folder_row.addWidget(browse)
-        self.width = self._box(600, 50, 5000)
-        self.spacing = self._box(8, 0, 100)
-        self.margin = self._box(3, 0, 100)
+        self.width = double_spinbox(600, 50, 5000)
+        self.spacing = double_spinbox(8, 0, 100)
+        self.margin = double_spinbox(3, 0, 100)
         self.margin.setToolTip(
             "只在整张批次排版图的开头和结尾保留空间，不影响图片之间的距离。"
         )
@@ -226,17 +228,10 @@ class MainWindow(
         self.setCentralWidget(container)
     def has_active_tasks(self) -> bool:
         from .developer_mode import developer_task_active
-        return any((self.thread is not None, self.update_thread is not None,
+        return any((self.layout_generation.active, self.update_thread is not None,
                     self.automation_home.thread is not None, developer_task_active(self),
                     getattr(getattr(self, 'bulk_controller', None), 'thread', None) is not None))
     def closeEvent(self, event) -> None:
         from .immediate_exit import exit_now
         exit_now(self)
         event.accept()
-    @staticmethod
-    def _box(value, minimum, maximum) -> QDoubleSpinBox:
-        box = QDoubleSpinBox()
-        box.setRange(minimum, maximum)
-        box.setDecimals(1)
-        box.setValue(value)
-        return box

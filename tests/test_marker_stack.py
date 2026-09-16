@@ -62,7 +62,7 @@ def test_reused_qr_badge_does_not_expand_external_marker_column():
 
 @pytest.mark.parametrize('mode', ['free', 'single', 'dual'])
 @pytest.mark.parametrize('side', ['left', 'right'])
-@pytest.mark.parametrize('degrees', [0, 90])
+@pytest.mark.parametrize('degrees', [0, 90, -90, 180])
 def test_platform_and_label_stay_in_safe_header_band(tmp_path, mode, side, degrees):
     paths = sources(tmp_path)
     path = paths[0 if side == 'left' else 1]
@@ -79,16 +79,20 @@ def test_platform_and_label_stay_in_safe_header_band(tmp_path, mode, side, degre
         assert p.platform_x_px == p.number_x_px == p.color_block_x_px == 0
         assert p.platform_y_px == p.color_block_y_px+p.color_block_height_px+mm_to_px(settings.number_gap_mm, settings.dpi)
         assert p.number_y_px >= p.platform_y_px+p.platform_height_px
+        assert p.x_px > p.color_block_width_px
     else:
         band = detect_guide_band(path).rotated(degrees)
         top = p.y_px+round(band.top*p.height_px)
         bottom = p.y_px+round(band.bottom*p.height_px)
         assert top <= p.number_y_px < p.number_y_px+p.number_height_px <= bottom
         assert top <= p.platform_y_px < p.platform_y_px+p.platform_height_px <= bottom
-        assert p.color_block_x_px+p.color_block_width_px <= p.number_x_px
-        assert p.number_x_px+p.number_width_px <= p.platform_x_px
-        assert p.platform_x_px+p.platform_width_px <= p.x_px
-    assert p.x_px > p.color_block_width_px
+        assert p.x_px <= p.number_x_px
+        assert p.number_x_px+p.number_width_px <= p.x_px+p.width_px
+        assert p.x_px <= p.platform_x_px
+        assert p.platform_x_px+p.platform_width_px <= p.x_px+p.width_px
+        assert (p.number_x_px+p.number_width_px <= p.platform_x_px
+                or p.platform_x_px+p.platform_width_px <= p.number_x_px)
+        assert p.color_block_x_px+p.color_block_width_px == p.x_px
     with Image.open(tmp_path/'out'/result['filename']) as output, Image.open(path) as original:
         with original.rotate(degrees, expand=True) as source:
             pixels = np.asarray(output.crop((p.x_px, p.y_px, p.x_px+source.width, p.y_px+source.height)))
@@ -128,7 +132,9 @@ def test_segmented_double_batch_stack_and_full_saved_corridors(tmp_path, engine)
                 from automatic_print.layout_engine.models import Placement
                 p = Placement(**row)
                 validate_stack(Path(p.source), p, settings)
-                assert p.platform_x_px+p.platform_width_px <= p.x_px
+                assert p.x_px <= p.platform_x_px
+                assert p.platform_x_px+p.platform_width_px <= p.x_px+p.width_px
+                assert p.color_block_x_px+p.color_block_width_px == p.x_px
                 with Image.open(tmp_path/p.source) as source:
                     expected = np.asarray(source)
                     pixels = np.asarray(output.crop((p.x_px,p.y_px,p.x_px+source.width,p.y_px+source.height)))

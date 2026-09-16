@@ -8,28 +8,33 @@
 - 主窗口：`automatic_print/ui/main_window.py`，负责构造应用级状态和连接各控制器。
 - 主工作台：`automatic_print/automation_dialog.py` 为兼容门面；实际页面在
   `automatic_print/batch_ui/` 和 `automatic_print/ui/label_quick_panel.py`。
+- 旧ERP工作台的窗口外壳已按职责进入`batch_ui/shell/`：`view.py`只构造控件，`results.py`
+  只展示任务结果，`batch_table.py`只映射批次表格；对话框和动作Mixin保留流程编排。
 - 普通模式显示生产排版规则、45/60厘米方案、批次处理记录、膜标签间距和额外损耗。补足膜间距
   由 `ui/header_gap.py` 的独立开关控制，保存的毫米数值本身不会自动启用。开发者模式显示算法
   诊断、排版历史、批量膜分析和批次顺序标注；主界面底部的功能列表按分类展示全部开发者功能
   及当前开启状态；膜规格比较固定为45/60厘米四套方案。
 - `ui/batch_input_panel.py` 拥有主界面的批次操作和常用参数分组；批次、输出、排版和标签参数
-  使用同一层级，批次顺序标注仍受开发者模式控制。`ui/label_quick_panel.py` 进入时默认展示
+  使用同一层级，并提供持久化的“打开最近生成的批次”快捷入口；批次顺序标注仍受开发者模式控制。
+  `ui/label_quick_panel.py` 进入时默认展示
   不解码缩略图的整批订单结构图，按单件尺码群、双面尺码群和多件订单尺码群显示真实排版坐标；
   用户可切换到当前订单真实图片，刀码示意不代替真实坐标预览。
 - `ui/current_film.py` 的当前膜卡片可直接修改膜规格、排版模式和自定义膜宽，修改结果与打印参数设置使用同一数据源。
 - `ui/parameter_refresh.py` 统一抑制开发者模式和平台默认值联动期间的预览请求；参数更新后
   保留明确提示，只有用户重新启动排版才会读取批次。应用重启由 `restart_control.py` 统一拥有，
   源码更新和恢复出厂设置共用同一启动策略。
-- 单批次生成编排：`automatic_print/ui/generation_actions.py`、`workers.py`、
-  `generation_preview.py`。
+- 单批次生成控制：`automatic_print/controllers/layout_generation.py` 独立拥有工作线程、Worker信号接线、
+  取消和释放；`controllers/generation_progress.py` 提供纯进度计算。`ui/generation_actions.py` 只收集界面参数
+  并展示状态，`ui/thread_lifecycle.py` 仅保留旧调用方兼容导入。
 - 单批生成、仅预览及批量分析的每个批次均由 `layout_engine/measurement_session.py` 建立一份数据
   快照；DPI、尺寸、膜标签位置和各方向刀码占位在后续方案与报告中直接复用。
 - 生成完成弹窗由 `layout_engine/output_file_info.py` 汇总最终生产结果；膜规格表把当前膜行替换为
   同一最终计划的真实统计，输出名由 `layout_engine/output_name.py` 同时写入订单数和件数。
 - `layout_engine/output_name.py` 统一管理输出落点：生成期间写入 `排版日志/.处理中` 隔离目录，
   安全检查完成后把最终PNG扁平移入 `切膜机文件`；文本报告保存在平级 `排版日志`，不写输出JSON。
-- 多批次生成编排：`automatic_print/ui/bulk_workbench.py`、
-  `bulk_generation_worker.py`、`batch_status_board.py`。主界面以一个“开始排版”入口统一处理
+- 多批次生成控制：`automatic_print/controllers/bulk_generation.py` 管理线程、取消和释放；
+  `ui/bulk_workbench.py`、`bulk_generation_worker.py`、`batch_status_board.py`分别负责展示编排、任务执行和状态视图。
+  主界面以一个“开始排版”入口统一处理
   单批次目录和多批次上级目录，批次扫描结果决定实际队列数量。
 
 ## 排版核心
@@ -57,8 +62,11 @@
   `gap_fallback.py` 用虚拟尺寸覆盖重跑完整订单局部比较，双面同倍率且整批仍最多只有并排区和旋转区两个区域。
 - 标签与刀码：`labels.py`、`dynamic_label.py`、`marker_stack.py`、`left_marker.py`、
   `platform_label.py`、`header_region.py`、`transparent_search.py`。平台文字只放入原图二维码卡片的
-  已验证透明空位，预览与输出复用同一坐标；普通标签与外置平台文字横向排列并完整限制在膜标签高度带内，
-  找不到安全范围或最终坐标越界时禁止输出，不能回退到膜标签与图案之间。
+  已验证透明空位，预览与输出复用同一坐标；普通标签和平台文字都在旋转后的膜标签高度带内搜索
+  图片自身的透明空位并互相避让，外置刀码紧贴图片边缘；找不到安全范围或最终坐标越界时禁止输出，
+  不能回退到刀码与二维码之间或膜标签与图案之间。
+- 标签字体加载与线程内有界缓存由`layout_engine/text/fonts.py`唯一拥有；`labels.py`只负责标签内容、
+  换行和徽标渲染。单图排版对象`LayoutItem`与`Placement`统一归`layout_engine/models.py`。
 - 渲染与编码：`pillow_renderer.py`、`vips_renderer.py`、`png_codecs/`、
   `segmented_output.py`、`atomic_png.py`、`atomic_tiff.py`。超长 PNG 由 `png_codecs/row_stream.py`
   按排版行依次解码、合成、固定 UP 滤波、压缩和写入，每行只求值一次且不生成中间图片；PNG 保存后由
@@ -94,13 +102,15 @@
   完整报告数据，`ui/batch_summary.py` 显示可复制的刀位、单排原因和耗时报告。
 - 错误诊断：`ui/failure_panel.py`、`failure_dialog.py`、
   `layout_engine/error_context.py`、`error_parameters.py`。
-- 历史记录：`automatic_print/history/`；Qt 参数使用 `QSettings`。
+- 历史记录：`automatic_print/history/`；最近成功输出路径由 `history/recent_output.py` 持久化，
+  UI只负责按钮状态和打开目录；Qt 参数使用 `QSettings`。
 - 更新：`automatic_print/updates/`、`updater.py`、`restart_control.py`。
 
 ## 外部自动化
 
 - `automatic_print/automation/` 保存 ERP、浏览器、下载和旧批次流程，目前不是主工作台优先路径。
 - ERP生产批次读取兼容顶层表格与工厂外壳中的`fnsz-sale`内嵌表格；莆田从首页“生产 / 批量生产”进入后可复用同一列表、搜索和下载通路。
+- 蜂鸟ERP原始批次行到中立`BatchRecord`的转换集中在`automation/api/erp/records.py`，浏览器模块只负责页面与请求流程。
 - “生产平台下载”作为主工作台独立页签，仅随开发者模式显示；支持多选已配置平台，每个平台独立显示批次、下载进度和日志。隆丰、莆田和Haloo复用蜂鸟ERP通路；S2B复用专用浏览器登录，由`automation/api/s2b/production.py`读取生产批次并在用户选择后补发生产图导出，由`downloads.py`轮询导出记录、读取`download_url`、下载到`S2B/ARCHIVES`并安全解压到`S2B/BATCHES`。下载流程不触发排版，也不自动创建生产批次。
 - “莆田”本地排版入口由`ui/developer_mode.py`控制，仅在开发者模式加入平台选择；`ui/print_settings_navigation.py`集中应用40毫米膜标签间距默认值。
 - 该目录仍以功能和平铺平台文件混合组织，尚未达到
@@ -113,11 +123,10 @@
 
 | 归属 | 遗留文件 | 后续收敛方向 |
 | --- | --- | --- |
-| 应用编排 | `ui/main_window.py`, `ui/generation_actions.py`, `ui/preferences.py` | 主窗口只装配控制器；生成状态、参数分组继续进入现有UI子模块。 |
-| 工作台展示 | `ui/label_quick_panel.py`, `ui/setting_preview.py`, `ui/pair_preview.py` | 数据模型、绘制和控件构造各归现有预览功能目录。 |
-| 旧批次UI | `batch_ui/batch_actions.py` | 与活动单/多批次控制器核对后组合共享动作。 |
+| 应用编排 | `ui/main_window.py`, `ui/generation_actions.py`, `ui/preferences.py` | 生成线程控制已迁入`controllers/`；主窗口继续缩为控制器装配，生成展示和参数分组进入现有UI子模块。 |
+| 工作台展示 | `ui/label_quick_panel.py` | 数据模型、绘制和控件构造继续进入现有预览功能目录；`setting_preview.py`与`pair_preview.py`已回到普通预算。 |
 | 排版核心 | `layout_engine/service.py`, `planner.py`, `item_factory.py` | 服务只编排阶段；测量、候选和对象构造保留单一所有者。 |
-| ERP自动化 | `automation/erp_api.py`, `rule_batches.py`, `batch_browser.py` | 按提供商迁入`automation/api/<provider>/`，中立批次规则留共享层。 |
+| ERP自动化 | `automation/erp_api.py`, `rule_batches.py` | 按提供商迁入`automation/api/<provider>/`，中立批次规则留共享层；`batch_browser.py`已把响应映射迁入ERP子包并回到普通预算。 |
 
 - `batch_ui/` 与 `ui/` 都包含生成和批次编排，需要逐条确认活动入口，合并重复职责，不能凭文件名删除。
 - 部分 README 内容曾混入版本演进描述；当前规则以四份治理文档为准，README 仅保留使用和发布入口。

@@ -10,7 +10,9 @@ from .measurement_timing import measured
 
 
 @measured('平台透明空位搜索')
-def header_space(path, qr, width, height, badge_width, badge_height, gap, degrees):
+def header_space(
+        path, qr, width, height, badge_width, badge_height, gap, degrees,
+        reserved=()):
     top = round(qr.top*height)
     right = ceil(qr.right*width)+gap
     left = floor(qr.left*width)-gap-badge_width
@@ -21,7 +23,9 @@ def header_space(path, qr, width, height, badge_width, badge_height, gap, degree
             return None
         # Keep the exact candidate order and the source resampling padding.
         def find(options):
-            rectangles = ((x, top, badge_width, badge_height) for x in options)
+            options = tuple(x for x in options if not _overlaps_reserved(
+                (x, top, badge_width, badge_height), reserved))
+            rectangles = tuple((x, top, badge_width, badge_height) for x in options)
             clear = clear_rectangles(path, width, height, degrees, rectangles, source=source)
             return next((x for x, valid in zip(options, clear) if valid), None)
         # The known blank header usually fits the nearest position immediately.
@@ -34,6 +38,14 @@ def header_space(path, qr, width, height, badge_width, badge_height, gap, degree
         return find(_free_band_candidates(source, qr, width, height,
                                          badge_width, badge_height, degrees))
     return None
+
+
+def _overlaps_reserved(rect, reserved):
+    x, y, width, height = rect
+    return any(
+        rw and rh and x < rx+rw and x+width > rx and y < ry+rh and y+height > ry
+        for rx, ry, rw, rh in reserved
+    )
 
 
 def _free_band_candidates(source, qr, width, height, badge_width, badge_height, degrees):

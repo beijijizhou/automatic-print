@@ -1,11 +1,10 @@
 from __future__ import annotations
-from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
 from .images import print_dimensions
 from .labels import format_label, settings_label_badge, label_layout
 from .decorations import combined_footprint, outside_position
-from .models import LayoutSettings, mm_to_px
+from .models import LayoutItem, LayoutSettings, mm_to_px
 from .qr_detection import QrLocation, detect_qr_location
 from .dynamic_label import source_label_badge
 from .membrane_region import detect_membrane_region
@@ -15,34 +14,6 @@ from .rotated_marks import rotated_marks
 from .qr_placement import signed_mm as _signed_mm, rotated_qr as _rotated_qr, qr_label_layout as _qr_label_layout
 from .measurement_session import SESSION, measured_item, choice_source, resolved_name
 from .item_block import block_position as _block_position
-@dataclass(frozen=True)
-class LayoutItem:
-    path: Path
-    index: int
-    width: int
-    height: int
-    image_rx: int
-    image_ry: int
-    label_rx: int
-    label_ry: int
-    label_width: int
-    label_height: int
-    footprint_width: int
-    footprint_height: int
-    rotation_degrees: int
-    block_rx: int
-    block_ry: int
-    block_width: int
-    block_height: int
-    platform_rx: int = 0
-    platform_ry: int = 0
-    platform_width: int = 0
-    platform_height: int = 0
-    left_marker_gap_px: int = 0
-    left_marker_lift_px: int = 0
-    preserve_header_gap: bool = False
-    platform_below_marker: bool = False
-    platform_reuse_qr: bool = False
 def read_items(paths, settings, progress):
     from .parallel_measurement import read_parallel
     return read_parallel(_read_items, paths, settings, progress)

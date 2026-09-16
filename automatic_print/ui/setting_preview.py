@@ -103,7 +103,8 @@ class SettingPreview(QWidget):
             return
         if values["follow_qr"]:
             qr = QRectF(image.left() + 12, image.center().y() - 16, 32, 32)
-            self._draw_qr(painter, qr)
+            from .platform_preview import draw_qr
+            draw_qr(painter, qr)
             position = "left"
             anchor_y = qr.center().y()
         else:
@@ -176,23 +177,6 @@ class SettingPreview(QWidget):
         else:
             x = x_positions.get(position, image.center().x() - width / 2)
         return QRectF(x, y, width, height)
-
-    @staticmethod
-    def _draw_qr(painter: QPainter, rect: QRectF) -> None:
-        painter.setPen(QPen(QColor("#111827"), 1))
-        painter.setBrush(QColor("#ffffff"))
-        painter.drawRect(rect)
-        painter.setBrush(QColor("#111827"))
-        size = rect.width() / 5
-        for column, row in ((0, 0), (3, 0), (0, 3), (2, 2), (4, 4)):
-            painter.drawRect(
-                QRectF(
-                    rect.left() + column * size,
-                    rect.top() + row * size,
-                    size,
-                    size,
-                )
-            )
 
     @staticmethod
     def _disabled(painter: QPainter, image: QRectF, text: str) -> None:

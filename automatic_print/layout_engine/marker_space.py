@@ -88,18 +88,18 @@ def validate_embedded_marks(planned, settings=None):
                 if p.color_block_width_px and p.color_block_y_px != expected:
                     raise ValueError(f'{path.name}：旋转刀码未处于安全基准高度，禁止输出。')
                 outside_label = settings and (settings.preserve_header_gap or settings.platform_below_marker) and p.number_x_px+p.number_width_px <= p.x_px
-                if p.number_width_px and not outside_label and (
+                if (p.number_width_px and not settings.preserve_header_gap
+                        and not outside_label and (
                     p.number_x_px != p.x_px+round(qr.left*p.width_px)
                     or p.number_y_px < p.y_px+ceil(qr.bottom*p.height_px)
-                ):
+                )):
                     raise ValueError(f'{path.name}：旋转文字未放在二维码下方，禁止输出。')
         rectangles = [(p.color_block_x_px, p.color_block_y_px,
                        p.color_block_width_px, p.color_block_height_px),
                       (p.number_x_px, p.number_y_px,
-                       p.number_width_px, p.number_height_px)]
-        if settings and settings.platform_reuse_qr:
-            rectangles.append((p.platform_x_px, p.platform_y_px,
-                               p.platform_width_px, p.platform_height_px))
+                       p.number_width_px, p.number_height_px),
+                      (p.platform_x_px, p.platform_y_px,
+                       p.platform_width_px, p.platform_height_px)]
         for x, y, w, h in rectangles:
             if w and h and x < p.x_px+p.width_px and x+w > p.x_px and y < p.y_px+p.height_px and y+h > p.y_px:
                 if not transparent_rect(path, p.width_px, p.height_px, p.rotation_degrees,

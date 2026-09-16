@@ -2,11 +2,11 @@
 from contextlib import contextmanager
 from contextvars import ContextVar
 from datetime import datetime
-from dataclasses import replace
 from PIL import Image
 from threading import RLock
 from concurrent.futures import Future
 import sqlite3
+from .measurement_cache import item_settings
 SESSION = ContextVar('layout_measurements', default=None)
 SOURCE = ContextVar('layout_measurement_source', default=None)
 
@@ -79,24 +79,6 @@ def verify_sources():
         for path, expected in session.identities.items():
             if fresh_identity(path) != expected.result():
                 raise ValueError(f'{path.name}：源文件在排版计算期间发生变化，请重新生成。')
-
-def item_settings(settings):
-    # These fields do not affect the pixels or geometry of an individual item.
-    return replace(settings, media_width_mm=600,
-                   label_batch_name=(settings.label_batch_name
-                                     if settings.label_source_order_enabled else ''),
-                   worker_threads=1, output_parts=1,
-                   cutter_mode='free' if settings.cutter_mode == 'free' else 'dual',
-                   save_parallelism=1, save_memory_mb=512, save_memory_unlimited=False,
-                   compare_film_sizes=False, compare_reference_films=False, film_geometry_workers=4,
-                   cutter_auto_knife=False,
-                   cutter_rotation_zone=False, cutter_tail_rotation=False,
-                   cutter_majority_two_zone=False,
-                   force_small_pair_width=False, force_small_pair_width_mm=270,
-                   dimension_overrides=(), width_adjustments=(),
-                   cutter_knife_mm=300, cutter_safety_mm=3, cutter_marker_offset_mm=0,
-                   allow_rotation=False, manual_rotations=(), sequence_numbers=(),
-                   riin_left_mm=10, riin_right_mm=10)
 
 def active_source(path):
     current = SOURCE.get()

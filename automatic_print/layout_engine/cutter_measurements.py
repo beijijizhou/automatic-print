@@ -1,5 +1,6 @@
 """Batch-scoped cutter geometry reused by production and film comparisons."""
-from .measurement_session import SESSION, identity, item_settings, resolved_name
+from .measurement_session import SESSION, identity, resolved_name
+from .measurement_cache import item_settings
 
 
 def _key(paths, settings):

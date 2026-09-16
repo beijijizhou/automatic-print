@@ -54,5 +54,7 @@ def _safe_artwork_width(settings):
         )
         marker = max(marker, badge.width * 25.4 / settings.dpi)
         badge.close()
-    reserve = marker + settings.color_block_gap_mm if marker else 0
+    # The external cutter marker touches the source QR-card edge in the
+    # preserved-header production layout; do not reserve the old 5 mm gap.
+    reserve = marker
     return max(1, lane - reserve - .2)

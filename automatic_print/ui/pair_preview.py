@@ -12,6 +12,7 @@ from .cut_guide_preview import draw_cut_guides
 from ..layout_engine.order_groups import detail_members
 from .preview_snapshot import install_snapshot
 from .layout_schematic import draw_preview_placement
+from .preview_viewport import resize_preview
 
 
 class PairProductionPreview(ProductionPreview):
@@ -121,13 +122,7 @@ class PairProductionPreview(ProductionPreview):
 
     def resizeEvent(self, event):
         super().resizeEvent(event)
-        if hasattr(self, 'view_controls'):
-            self.view_controls.update_geometry()
-            return
-        if self.overview and self.item is not None:
-            height = max(440, round(self.canvas_height*(self.width()-32)/self.canvas_width)+110)
-            if self.minimumHeight() != height:
-                self.setMinimumHeight(height)
+        resize_preview(self)
 
     def refresh(self, *_args):
         if self.production_active:

@@ -35,9 +35,8 @@ def validate_cut_corridor(planned, settings, canvas_width, left_marker_px=0):
     if settings.cutter_left_marker_external and settings.cutter_mode in {'single', 'dual'}:
         for path, p in planned:
             if p.color_block_width_px and p.color_block_x_px == 0:
-                gap = max(1, mm_to_px(settings.color_block_gap_mm, settings.dpi))
-                if p.x_px < p.color_block_width_px+gap:
-                    raise ValueError(f'{path.name}：左侧刀码必须位于原图外并保留剪切间隙，禁止输出。')
+                if p.x_px < p.color_block_x_px+p.color_block_width_px:
+                    raise ValueError(f'{path.name}：左侧刀码必须完整位于原图外，禁止输出。')
                 lift = mm_to_px(settings.cutter_left_marker_lift_mm, settings.dpi)
                 if p.color_block_y_px != p.y_px-lift or p.color_block_y_px < 0:
                     raise ValueError(f'{path.name}：左图刀码抬高位置不正确或超出画布，禁止输出。')

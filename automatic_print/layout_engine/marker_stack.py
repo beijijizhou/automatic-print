@@ -23,17 +23,27 @@ def header_safe_coordinates(
     px, py, pw, ph = platform
     if lh > bottom-top:
         raise ValueError(f'{path.name}：标签文字无法完整放入膜标签高度范围，禁止输出。')
-    gap = max(1, mm_to_px(settings.number_gap_mm, settings.dpi))
-    cursor = -gap
-    if pw and ph and not settings.platform_reuse_qr:
+    # The cutter marker touches the source. All added text must reuse verified
+    # transparent pixels inside the rotated source header band, never the lane
+    # between the marker, QR card and artwork.
+    block_x = -bw if bw else 0
+    from .platform_space import header_space
+    reserved = ()
+    if pw and ph:
         if ph > bottom-top:
             raise ValueError(f'{path.name}：平台文字无法完整放入膜标签高度范围，禁止输出。')
-        px = cursor-pw
-        py = top+(bottom-top-ph)//2
-        cursor = px-gap
-    label_x = cursor-lw
-    block_x = label_x-gap-bw if bw else label_x
-    label_y = top+(bottom-top-lh)//2
+        px = header_space(path, region, image_size[0], height, pw, ph, 0, degrees)
+        if px is None:
+            raise ValueError(f'{path.name}：膜标签高度带内没有平台文字的透明空位，禁止输出。')
+        py = top
+        reserved = ((px, py, pw, ph),)
+    label_x = header_space(
+        path, region, image_size[0], height, lw, lh, 0, degrees,
+        reserved=reserved,
+    )
+    if label_x is None:
+        raise ValueError(f'{path.name}：膜标签高度带内没有批次标签的透明空位，禁止输出。')
+    label_y = top
     from .rotated_marks import marker_top
     block_y = marker_top(region, height) if bh else 0
     return (

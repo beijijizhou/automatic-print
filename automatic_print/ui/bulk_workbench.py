@@ -1,7 +1,8 @@
 """Rolling batch jobs presented by the same main workbench as single jobs."""
 from pathlib import Path
-from PySide6.QtCore import QObject, QThread, Qt, Slot
+from PySide6.QtCore import QObject, Slot
 from PySide6.QtWidgets import QFileDialog
+from ..controllers import BulkGenerationController
 from .batch_status_board import BatchStatusBoard
 from .folder_dialog_paths import image_dialog_start, remember_image_directory
 from .bulk_generation_worker import BulkGenerationWorker
@@ -31,6 +32,7 @@ class BulkWorkbench(QObject):
         self.window = window
         self.panel = window.automation_home.label_quick_panel
         self.thread = self.worker = None
+        self.task_control = BulkGenerationController(self)
         self.folders, self.inventory = [], {}
         self.selector = BatchStatusBoard()
         self.selector.setToolTip('切换当前批次，查看同一主界面的进度、耗时、预览与总结。')
@@ -61,22 +63,16 @@ class BulkWorkbench(QObject):
         self.window.status.setText('正在扫描所有子文件夹；随后合并为一个批次排版…' if merging else
                                    '正在扫描S2B尺码子文件夹；完成文件将集中保存…' if grouped else
                                    '正在后台扫描各层批次目录与图片文件名…')
-        self.worker = BulkGenerationWorker(self.folders, settings, self.window.bulk_parallelism.value(),
-                                           custom, self.window.automation_home.preview_only.isChecked(), parent,
-                                           self.window.combine_bulk_batches.isChecked())
-        self.thread = QThread(self)
-        self.worker.moveToThread(self.thread)
-        self.thread.started.connect(self.worker.run)
-        for signal, slot in ((self.worker.discovered, self.discovered),
-                             (self.worker.progress, self.progress), (self.worker.preview, self.preview),
-                             (self.worker.completed, self.completed), (self.worker.timings, self.timings),
-                             (self.worker.source_progress, self.source_progress),
-                             (self.worker.finished, self.complete)):
-            signal.connect(slot, Qt.QueuedConnection)
-        self.worker.finished.connect(self.thread.quit)
-        self.worker.finished.connect(self.worker.deleteLater)
-        self.thread.finished.connect(self.cleanup)
-        self.thread.start()
+        worker = BulkGenerationWorker(
+            self.folders, settings, self.window.bulk_parallelism.value(), custom,
+            self.window.automation_home.preview_only.isChecked(), parent,
+            self.window.combine_bulk_batches.isChecked())
+        bindings = ((worker.discovered, self.discovered),
+                    (worker.progress, self.progress), (worker.preview, self.preview),
+                    (worker.completed, self.completed), (worker.timings, self.timings),
+                    (worker.source_progress, self.source_progress),
+                    (worker.finished, self.complete))
+        self.task_control.start(worker, bindings, self.cleanup)
     @Slot(object)
     def discovered(self, scan):
         if scan.get('platform'):
@@ -156,6 +152,9 @@ class BulkWorkbench(QObject):
     @Slot(int, object)
     def completed(self, index, record):
         self.records[index] = record
+        if not record['result'].get('preview_only'):
+            from .recent_output import remember_recent_output
+            remember_recent_output(self.window, record['output'])
         quality = record['result'].get('dual_quality', {}).get('text', '')
         result = '仅预览完成' if record['result'].get('preview_only') else '生成完成'
         self.window.run_log.appendPlainText(
@@ -186,10 +185,10 @@ class BulkWorkbench(QObject):
             self.panel.summary.show_failure('\n'.join(
                 f"{e['folder']}：{e['error']}" for e in result['errors']))
     def cancel(self):
-        self.worker.cancellation.request()
+        if not self.task_control.request_cancel():
+            return
         self.window.stop_generation_button.setEnabled(False)
         self.window.status.setText('正在停止多批次排版，保留已完成文件；软件不会退出…')
     @Slot()
     def cleanup(self):
-        self.thread.deleteLater()
-        self.thread = self.worker = None
+        self.task_control.clear()

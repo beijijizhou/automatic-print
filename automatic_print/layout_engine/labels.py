@@ -3,53 +3,19 @@ from __future__ import annotations
 from datetime import datetime
 from pathlib import Path
 import re
-from threading import local
-from collections import OrderedDict
 
-from PIL import Image, ImageDraw, ImageFont
+from PIL import Image, ImageDraw
 
 from .models import mm_to_px
 from .decorations import combined_footprint, outside_position
+from .text import cached_bold_font
 
-
-_FONTS = local()
-
-
-def _font(size: int):
-    if not hasattr(_FONTS, 'cache'):
-        _FONTS.cache = OrderedDict()
-    cache = _FONTS.cache
-    if size not in cache:
-        cache[size] = _load_font(size)
-        if len(cache) > 32:
-            cache.popitem(last=False)
-    cache.move_to_end(size)
-    return cache[size]
-
-
-def _load_font(size: int):
-    candidates = (
-        "DejaVuSans-Bold.ttf",
-        "arialbd.ttf",
-        "C:/Windows/Fonts/arialbd.ttf",
-        "C:/Windows/Fonts/Arial.ttf",
-        "/System/Library/Fonts/Supplemental/Arial Bold.ttf",
-        "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf",
-    )
-    for path in candidates:
-        try:
-            return ImageFont.truetype(path, size)
-        except OSError:
-            continue
-    try:
-        return ImageFont.load_default(size=size)
-    except TypeError:
-        return ImageFont.load_default()
+_font = cached_bold_font  # Compatibility for focused cache tests and extensions.
 
 
 def label_badge(text: str, dpi: int, size_mm: float, max_width_px=None) -> Image.Image:
     size = max(1, mm_to_px(size_mm, dpi))
-    font = _font(size)
+    font = cached_bold_font(size)
     text = text or " "
     measure = ImageDraw.Draw(Image.new("L", (1, 1)))
     stroke = max(1, size // 25)

@@ -1,5 +1,5 @@
 """Persistent per-file geometry facts, independent from whole-batch plans."""
-from dataclasses import asdict
+from dataclasses import asdict, replace
 from hashlib import sha256
 import json
 from pathlib import Path
@@ -81,6 +81,26 @@ def item_key(file_identity, index, width, height, settings, degrees, created_at)
     ))
 
 
+def item_settings(settings):
+    """Keep only fields that affect one source image's cached geometry."""
+    return replace(
+        settings, media_width_mm=600,
+        label_batch_name=(settings.label_batch_name
+                          if settings.label_source_order_enabled else ''),
+        worker_threads=1, output_parts=1,
+        cutter_mode='free' if settings.cutter_mode == 'free' else 'dual',
+        save_parallelism=1, save_memory_mb=512, save_memory_unlimited=False,
+        compare_film_sizes=False, compare_reference_films=False,
+        film_geometry_workers=4, cutter_auto_knife=False,
+        cutter_rotation_zone=False, cutter_tail_rotation=False,
+        cutter_majority_two_zone=False, force_small_pair_width=False,
+        force_small_pair_width_mm=270, dimension_overrides=(),
+        width_adjustments=(), cutter_knife_mm=300, cutter_safety_mm=3,
+        cutter_marker_offset_mm=0, allow_rotation=False, manual_rotations=(),
+        sequence_numbers=(), riin_left_mm=10, riin_right_mm=10,
+    )
+
+
 def dimension_key(file_identity, fallback_dpi):
     return MeasurementCache.key(
         DIMENSION_SCHEMA, (file_identity, fallback_dpi)
@@ -94,7 +114,7 @@ def encode_item(item, text):
 
 
 def decode_item(value):
-    from .item_factory import LayoutItem
+    from .models import LayoutItem
     data = value['item']
     data['path'] = Path(data['path'])
     return LayoutItem(**data), value.get('text')

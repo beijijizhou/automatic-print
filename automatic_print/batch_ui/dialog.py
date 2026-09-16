@@ -1,23 +1,5 @@
-from pathlib import Path
-
-from PySide6.QtCore import (
-    QSettings,
-    QStandardPaths,
-    Qt,
-)
-from PySide6.QtWidgets import (
-    QComboBox,
-    QHBoxLayout,
-    QLabel,
-    QLineEdit,
-    QPlainTextEdit,
-    QProgressBar,
-    QPushButton,
-    QScrollArea,
-    QTabWidget,
-    QVBoxLayout,
-    QWidget,
-)
+from PySide6.QtCore import QSettings
+from PySide6.QtWidgets import QTabWidget, QWidget
 
 from ..automation.platforms import ERP_PLATFORMS
 from ..layout import LayoutSettings
@@ -33,6 +15,7 @@ from .pages import (
 )
 from .thread_actions import ThreadActionsMixin
 from .worker import AutomationWorker
+from .shell import build_controls, build_layout
 
 
 class AutomationDialog(
@@ -92,51 +75,7 @@ class AutomationDialog(
         bridge.cancelled.connect(self.task_cancelled)
 
     def _build_controls(self) -> None:
-        self.platform = QComboBox()
-        for name in self.platform_names:
-            self.platform.addItem(name, name)
-        self.platform.setCurrentText(self.platform_names[0])
-        default = (
-            Path(
-                QStandardPaths.writableLocation(
-                    QStandardPaths.DesktopLocation
-                )
-            )
-            / "AutomaticPrintDownloads"
-        )
-        self.output = QLineEdit(
-            self.preferences.value(
-                "automation/output_location", str(default), str
-            )
-        )
-        browse = QPushButton("选择…")
-        browse.clicked.connect(self.choose_output)
-        self.output_row = QHBoxLayout()
-        self.output_row.addWidget(self.output)
-        self.output_row.addWidget(browse)
-        self.settings_button = QPushButton("打印参数设置…")
-        self.settings_button.clicked.connect(self.open_settings)
-        self.log = QPlainTextEdit()
-        self.log.setReadOnly(True)
-        self.log.setMaximumHeight(100)
-        self.loading_panel = QWidget()
-        self.loading_panel.setStyleSheet(
-            "QWidget{background:#e8f1ff;border:1px solid #6f9ee8;"
-            "border-radius:6px;} QLabel{border:none;color:#173f73;"
-            "font-size:14px;font-weight:700;}"
-        )
-        loading = QVBoxLayout(self.loading_panel)
-        self.loading_label = QLabel("正在准备…")
-        self.loading_bar = QProgressBar()
-        self.loading_bar.setRange(0, 0)
-        self.loading_bar.setTextVisible(False)
-        self.stop_button = QPushButton("停止当前处理")
-        self.stop_button.setEnabled(False)
-        self.stop_button.clicked.connect(self.stop_current_task)
-        loading.addWidget(self.loading_label)
-        loading.addWidget(self.loading_bar)
-        loading.addWidget(self.stop_button)
-        self.loading_panel.hide()
+        build_controls(self)
 
     def _build_tabs(self) -> None:
         self.main_tabs = QTabWidget()
@@ -157,24 +96,7 @@ class AutomationDialog(
             self.main_tabs.tabBar().hide()
 
     def _build_layout(self) -> None:
-        layout = QVBoxLayout(self)
-        if not self.local_only:
-            layout.addWidget(QLabel("生产平台"))
-            layout.addWidget(self.platform)
-        layout.addWidget(self.loading_panel)
-        if hasattr(self, 'batch_tools'):
-            layout.addWidget(self.batch_tools)
-        scroll = QScrollArea()
-        self.workbench_scroll = scroll
-        scroll.setWidgetResizable(True)
-        scroll.setWidget(self.main_tabs)
-        layout.addWidget(scroll)
-        footer = QHBoxLayout()
-        footer.addStretch()
-        footer.addWidget(self.settings_button)
-        layout.addLayout(footer)
-        for label in self.findChildren(QLabel):
-            label.setTextInteractionFlags(Qt.TextSelectableByMouse)
+        build_layout(self)
 
     def platform_changed(self, name: str) -> None:
         self.pending_batch_plan = None

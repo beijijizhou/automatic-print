@@ -97,3 +97,23 @@ class PreviewViewport(QWidget):
         self.show()
         self.update_geometry()
         dialog.deleteLater()
+
+
+def resize_legacy_preview(preview) -> None:
+    """Size a preview that has not yet been wrapped by PreviewViewport."""
+    if preview.overview and preview.item is not None:
+        height = max(
+            440,
+            round(preview.canvas_height * (preview.width() - 32)
+                  / preview.canvas_width) + 110,
+        )
+        if preview.minimumHeight() != height:
+            preview.setMinimumHeight(height)
+
+
+def resize_preview(preview) -> None:
+    controls = getattr(preview, 'view_controls', None)
+    if controls is not None:
+        controls.update_geometry()
+    else:
+        resize_legacy_preview(preview)
