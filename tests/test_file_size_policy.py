@@ -2,8 +2,6 @@ from pathlib import Path
 
 
 LEGACY_LIMITS = {
-    'automatic_print/automation/erp_api.py': 234,
-    'automatic_print/automation/rule_batches.py': 241,
     'automatic_print/layout_engine/service.py': 220,
 }
 

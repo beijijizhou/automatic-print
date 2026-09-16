@@ -16,14 +16,7 @@ from .erp_api import (
     list_production_items,
     production_item_payload,
 )
-from .longfeng import (
-    _filtered_result_count,
-    _run_search,
-    _select_filter,
-    _select_received,
-    find_longfeng_page,
-    production_frame,
-)
+from .longfeng import find_longfeng_page
 from .platforms import get_erp_platform
 
 
@@ -171,71 +164,3 @@ def _generate_filtered_batch_api(
             "API 返回不确定结果。为避免重复生成，程序不会自动重试；"
             "请先刷新批次管理确认结果。"
         ) from error
-
-
-def _filtered_count(
-    page, shipping_method: str, order_composition: str, platform
-) -> int:
-    _select_received(page)
-    frame = production_frame(page)
-    _select_filter(
-        frame,
-        "物流分拣",
-        platform.shipping_filter_value(shipping_method),
-    )
-    _select_filter(frame, "订单组成", order_composition)
-    _run_search(frame)
-    if frame.locator(".ant-empty:visible").count():
-        return 0
-    return _filtered_result_count(frame)
-
-
-def _all_received_count(page) -> int:
-    _select_received(page)
-    frame = production_frame(page)
-    _select_filter(frame, "物流分拣", "全部")
-    _select_filter(frame, "订单组成", "全部")
-    _run_search(frame)
-    if frame.locator(".ant-empty:visible").count():
-        return 0
-    return _filtered_result_count(frame)
-
-
-def _generate_filtered_batch(
-    page, item: RuleBatchItem, platform, generation_rule: str
-) -> None:
-    actual_count = _filtered_count(
-        page, item.shipping_method, item.order_composition, platform
-    )
-    if actual_count != item.item_count:
-        raise RuntimeError(
-            f"{item.shipping_method} / {item.order_composition} "
-            f"确认时为 {item.item_count} 项，现在为 {actual_count} 项。"
-        )
-    frame = production_frame(page)
-    button = frame.get_by_text("按筛选生成批次", exact=True)
-    if button.count() != 1:
-        raise RuntimeError("无法唯一定位“按筛选生成批次”按钮。")
-    button.click()
-    dialog = page.locator("[role=dialog]:visible")
-    dialog.wait_for(state="visible", timeout=10_000)
-    compact_text = dialog.inner_text().replace(" ", "")
-    if f"共{item.item_count}项" not in compact_text:
-        raise RuntimeError(f"确认窗口数量不一致：{dialog.inner_text()}")
-    selector = dialog.locator(".ant-select").first
-    if selector.count() != 1:
-        raise RuntimeError("无法定位批次生成规则选择框。")
-    selector.click()
-    option = page.locator(".ant-select-item-option:visible").filter(
-        has_text=generation_rule
-    )
-    if option.count() != 1:
-        raise RuntimeError(f"无法选择“{generation_rule}”。")
-    option.click()
-    if generation_rule not in dialog.inner_text():
-        raise RuntimeError(f"批次生成规则没有成功选择为“{generation_rule}”。")
-    confirm = dialog.get_by_text("确 定", exact=True)
-    if confirm.count() != 1:
-        raise RuntimeError("无法唯一定位批次确认按钮。")
-    confirm.click()
-    dialog.wait_for(state="hidden", timeout=180_000)

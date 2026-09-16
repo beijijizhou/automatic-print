@@ -119,7 +119,9 @@
 
 ## 外部自动化
 
-- `automatic_print/automation/` 保存 ERP、浏览器、下载和旧批次流程，目前不是主工作台优先路径。
+- `automatic_print/automation/` 保存浏览器、下载和旧批次流程，目前不是主工作台优先路径；
+  蜂鸟ERP页面桥接、生产项、生产批次和响应转换分别归档在`automation/api/erp/`，
+  根目录`erp_api.py`只保留旧调用方兼容导入。
 - ERP生产批次读取兼容顶层表格与工厂外壳中的`fnsz-sale`内嵌表格；莆田从首页“生产 / 批量生产”进入后可复用同一列表、搜索和下载通路。
 - 蜂鸟ERP原始批次行到中立`BatchRecord`的转换集中在`automation/api/erp/records.py`，浏览器模块只负责页面与请求流程。
 - “生产平台下载”作为主工作台独立页签，仅随开发者模式显示；支持多选已配置平台，每个平台独立显示批次、下载进度和日志。隆丰、莆田和Haloo复用蜂鸟ERP通路；S2B复用专用浏览器登录，由`automation/api/s2b/production.py`读取生产批次并在用户选择后补发生产图导出，由`downloads.py`轮询导出记录、读取`download_url`、下载到`S2B/ARCHIVES`并安全解压到`S2B/BATCHES`。下载流程不触发排版，也不自动创建生产批次。
@@ -135,6 +137,5 @@
 | 归属 | 遗留文件 | 后续收敛方向 |
 | --- | --- | --- |
 | 排版核心 | `layout_engine/service.py`, `planner.py` | 服务只编排阶段；测量、候选和对象构造已有独立所有者。 |
-| ERP自动化 | `automation/erp_api.py`, `rule_batches.py` | 按提供商迁入`automation/api/<provider>/`，中立批次规则留共享层；`batch_browser.py`已把响应映射迁入ERP子包并回到普通预算。 |
 
 - 部分 README 内容曾混入版本演进描述；当前规则以四份治理文档为准，README 仅保留使用和发布入口。

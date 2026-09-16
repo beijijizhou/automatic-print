@@ -3,7 +3,7 @@ import re
 from dataclasses import dataclass
 from datetime import datetime
 
-from ...erp_api import production_batch_frame
+from .gateway import production_batch_frame
 
 
 @dataclass(frozen=True)
