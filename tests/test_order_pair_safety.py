@@ -104,6 +104,40 @@ def test_s2b_size_folder_uses_design_order_and_parent_size(tmp_path):
     assert source_size(path) == 'L'
 
 
+def test_s2b_two_images_with_one_label_are_recognized_as_double(tmp_path):
+    front = tmp_path/'S'/'22UJ9KT4VCZA-20-1-ISAIWO-1-2-1-36-棉-S.png'
+    back = tmp_path/'S'/'22UJ9KT4VCZA-20-2-ISAIWO-2-2-1-36-棉-S.png'
+    from automatic_print.layout_engine.order_groups import complete_orders
+    complete_orders([front, back])
+    assert pair_identity(front) == ('s2b:22uj9kt4vcza:20:isaiwo:1:s', '1')
+    assert pair_identity(back) == ('s2b:22uj9kt4vcza:20:isaiwo:1:s', '2')
+    from automatic_print.layout_engine.order_groups import is_double_pair
+    assert is_double_pair(front, back)
+
+
+def test_s2b_single_image_is_not_invented_as_double(tmp_path):
+    image = tmp_path/'S'/'22UJ9KT4VCZA-22-4-ROE6UL-1-1-1-36-棉-S.png'
+    from automatic_print.layout_engine.order_groups import complete_orders
+    complete_orders([image])
+    assert pair_identity(image) is None
+
+
+def test_s2b_same_order_different_product_lines_do_not_cross_pair(tmp_path):
+    first = tmp_path/'S'/'22UJ9KT4VCZA-20-1-ISAIWO-1-2-1-36-棉-S.png'
+    other = tmp_path/'S'/'22UJ9KT4VCZA-21-2-ISAIWO-2-2-1-36-棉-S.png'
+    from automatic_print.layout_engine.order_groups import complete_orders, is_double_pair
+    complete_orders([first, other])
+    assert not is_double_pair(first, other)
+
+
+def test_s2b_same_order_line_with_different_sizes_is_not_a_double(tmp_path):
+    first = tmp_path/'5XL'/'22UJ9KT4VCZA-6-3-Z7M97G-2-2-1-36-棉-5XL.png'
+    other = tmp_path/'XXL'/'22UJ9KT4VCZA-6-8-Z7M97G-1-2-1-36-棉-XXL.png'
+    from automatic_print.layout_engine.order_groups import complete_orders, is_double_pair
+    complete_orders([first, other])
+    assert not is_double_pair(first, other)
+
+
 def test_putian_prefix_uses_real_order_size_color_and_side(tmp_path):
     from automatic_print.layout_engine.order_groups import order_key
     from automatic_print.layout_engine.source_metadata import source_color, source_size

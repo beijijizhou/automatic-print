@@ -1,12 +1,21 @@
 """Production identity is independent of the per-image export sequence prefix."""
-from collections import OrderedDict
+from collections import defaultdict, OrderedDict
 import re
 from functools import lru_cache
+from threading import RLock
 
 PREFIX = re.compile(r"^(?:(?:[A-Z]+-)?CVC面料\d+-|A\d+-(?!\d+-))", re.I)
 S2B_PREFIX = re.compile(r"^[A-Z0-9]+-\d+-\d+-", re.I)
 SIZE_FOLDER = re.compile(r"^(?:XXS|XS|S|M|L|XL|XXL|[2-9]XL)$", re.I)
 SIDE = re.compile(r"^(?P<job>.+-NO\d+)-(?P<side>[12])$", re.I)
+S2B_SIDE = re.compile(
+    r"^(?P<batch>[A-Z0-9]{12})-(?P<item>\d+)-\d+-"
+    r"(?P<order>[A-Z0-9]+)-(?P<side>[12])-2-(?P<unit>\d+)-\d+-"
+    r".+-(?P<size>XXS|XS|S|M|L|XL|XXL|[2-9]XL)$",
+    re.I,
+)
+_S2B_PAIR_LOCK = RLock()
+_S2B_PAIRS = {}
 
 
 def production_stem(path):
@@ -29,7 +38,37 @@ def order_key(path):
 @lru_cache(maxsize=4096)
 def pair_identity(path):
     match = SIDE.fullmatch(production_stem(path))
-    return (match['job'], match['side']) if match else None
+    if match:
+        return match['job'], match['side']
+    with _S2B_PAIR_LOCK:
+        return _S2B_PAIRS.get(str(path.resolve()))
+
+
+def register_s2b_pairs(paths):
+    """Register only complete same-product, same-size 1/2 + 2/2 pairs."""
+    groups = defaultdict(list)
+    resolved_paths = [str(path.resolve()) for path in paths]
+    for path in paths:
+        match = S2B_SIDE.fullmatch(path.stem)
+        if not match:
+            continue
+        job = ":".join((
+            "s2b", match['batch'], match['item'], match['order'],
+            match['unit'], match['size'],
+        )).casefold()
+        groups[job].append((path, match['side']))
+    registered = {}
+    for job, members in groups.items():
+        if len(members) == 2 and {side for _, side in members} == {'1', '2'}:
+            registered.update(
+                (str(path.resolve()), (job, side)) for path, side in members
+            )
+    with _S2B_PAIR_LOCK:
+        for path in resolved_paths:
+            _S2B_PAIRS.pop(path, None)
+        _S2B_PAIRS.update(registered)
+    pair_identity.cache_clear()
+    return len(registered) // 2
 
 
 def is_double_pair(first, second):
@@ -38,6 +77,7 @@ def is_double_pair(first, second):
 
 
 def complete_orders(paths):
+    register_s2b_pairs(paths)
     groups = OrderedDict()
     for path in paths:
         groups.setdefault(order_key(path), []).append(path)
