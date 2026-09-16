@@ -32,7 +32,7 @@ def build_preview(panel, window, label, block):
     panel.timings.save_report_provider = lambda: panel.summary.save_report
     panel.batch_distribution = BatchDistributionLabel(panel)
 
-    group = QGroupBox("本批次排版预览 · 默认显示轻量订单结构")
+    group = QGroupBox("预览检查 · 标签刀码与批次排版相互独立")
     panel.preview_scroll = QScrollArea()
     panel.preview_scroll.setWidgetResizable(True)
     panel.preview_scroll.setWidget(panel.preview)
@@ -44,8 +44,8 @@ def build_preview(panel, window, label, block):
     panel.preview_tabs = QTabWidget()
     panel.actual_preview_page = QWidget()
     QVBoxLayout(panel.actual_preview_page).addWidget(panel.preview_viewport)
-    panel.preview_tabs.addTab(panel.actual_preview_page, "排版结构 / 真实图片")
-    panel.preview_tabs.addTab(panel.marker_examples, "刀码四种情况")
+    panel.preview_tabs.addTab(panel.marker_examples, "标签与刀码位置（默认）")
+    panel.preview_tabs.addTab(panel.actual_preview_page, "批次排版预览")
     panel.preview_tabs.setCurrentIndex(0)
     preview_layout.addWidget(panel.batch_distribution)
     preview_layout.addWidget(panel.preview_tabs)
