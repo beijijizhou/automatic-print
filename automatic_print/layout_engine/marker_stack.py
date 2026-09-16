@@ -2,11 +2,53 @@
 from .models import mm_to_px
 
 
+def header_safe_coordinates(
+    path, settings, image_size, degrees, block, label, platform,
+):
+    """Keep added text beside the cutter mark and inside the label-card height."""
+    if (not settings.preserve_header_gap or settings.cutter_mode == 'free'
+            or not label[2] or not label[3]):
+        return block, label, platform
+    from .cut_guide_geometry import detect_guide_band
+    region = detect_guide_band(path)
+    if region is None:
+        raise ValueError(
+            f'{path.name}：未能可靠识别膜标签高度范围，禁止把文字放入膜标签与图案之间。'
+        )
+    _width, height = image_size
+    region = region.rotated(degrees)
+    top, bottom = round(region.top*height), round(region.bottom*height)
+    _bx, _by, bw, bh = block
+    _lx, _ly, lw, lh = label
+    px, py, pw, ph = platform
+    if lh > bottom-top:
+        raise ValueError(f'{path.name}：标签文字无法完整放入膜标签高度范围，禁止输出。')
+    gap = max(1, mm_to_px(settings.number_gap_mm, settings.dpi))
+    cursor = -gap
+    if pw and ph and not settings.platform_reuse_qr:
+        if ph > bottom-top:
+            raise ValueError(f'{path.name}：平台文字无法完整放入膜标签高度范围，禁止输出。')
+        px = cursor-pw
+        py = top+(bottom-top-ph)//2
+        cursor = px-gap
+    label_x = cursor-lw
+    block_x = label_x-gap-bw if bw else label_x
+    label_y = top+(bottom-top-lh)//2
+    from .rotated_marks import marker_top
+    block_y = marker_top(region, height) if bh else 0
+    return (
+        (block_x, block_y, bw, bh),
+        (label_x, label_y, lw, lh),
+        (px, py, pw, ph),
+    )
+
+
 def stacked_coordinates(settings, block, label, platform):
     bx, by, bw, bh = block
     lx, ly, lw, lh = label
     px, py, pw, ph = platform
-    if not settings.platform_below_marker or not bw:
+    if ((settings.preserve_header_gap and settings.cutter_mode != 'free')
+            or not settings.platform_below_marker or not bw):
         return bx, by, lx, ly, px, py
     gap = max(1, mm_to_px(settings.color_block_gap_mm, settings.dpi))
     # A badge reused inside the source QR card is not part of the external
@@ -21,7 +63,8 @@ def stacked_coordinates(settings, block, label, platform):
 
 
 def validate_stack(path, p, settings):
-    if not settings.platform_below_marker or not p.color_block_width_px:
+    if ((settings.preserve_header_gap and settings.cutter_mode != 'free')
+            or not settings.platform_below_marker or not p.color_block_width_px):
         return
     y = p.color_block_y_px+p.color_block_height_px+mm_to_px(settings.number_gap_mm, settings.dpi)
     if p.platform_width_px and not settings.platform_reuse_qr:

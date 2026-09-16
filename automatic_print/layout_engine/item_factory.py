@@ -181,6 +181,16 @@ def _make_item(
         if not transparent_rect(path, width, height, rotation_degrees,
                                 (px, py, pw, ph)):
             raise ValueError(f'{path.name}：平台文字没有可复用的二维码透明空位。')
+    from .marker_stack import header_safe_coordinates
+    block, label, platform = header_safe_coordinates(
+        path, settings, (width, height), rotation_degrees,
+        (block_x, block_y, block_width, block_height),
+        (label_x, label_y, label_width, label_height),
+        (px, py, pw, ph),
+    )
+    block_x, block_y, block_width, block_height = block
+    label_x, label_y, label_width, label_height = label
+    px, py, pw, ph = platform
     decorations = [
         (px, py, pw, ph),
         (label_x, label_y, label_width, label_height),

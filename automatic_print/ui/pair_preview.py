@@ -3,7 +3,7 @@ from dataclasses import replace
 from pathlib import Path
 
 from PySide6.QtCore import QRectF, Qt, QTimer, Signal
-from PySide6.QtGui import QColor, QPen, QTransform, QPainter
+from PySide6.QtGui import QColor, QPen, QPainter
 
 from .production_preview import ProductionPreview
 from .preview_loader import PreviewLoader
@@ -11,8 +11,7 @@ from .cut_guide_cache import CutGuideCache
 from .cut_guide_preview import draw_cut_guides
 from ..layout_engine.order_groups import detail_members
 from .preview_snapshot import install_snapshot
-from .overview_assets import visible_assets
-from .platform_preview import draw_platform_badge
+from .layout_schematic import draw_preview_placement
 
 
 class PairProductionPreview(ProductionPreview):
@@ -32,6 +31,7 @@ class PairProductionPreview(ProductionPreview):
         self.composed_count = None
         self.source_folder = None
         self.overview, self.batch_payload, self.batch_labels = False, None, {}
+        self.analysis_report, self._schematic_report, self._schematic_items = {}, None, {}
         super().__init__(settings_getter, parent)
         self.cut_guides = CutGuideCache(self)
         self.cut_guides.changed.connect(self.update)
@@ -84,6 +84,7 @@ class PairProductionPreview(ProductionPreview):
         self.guide_status = ""
         self.refresh_timer.stop()
         self.batch_payload, self.batch_labels = None, {}
+        self.analysis_report, self._schematic_report, self._schematic_items = {}, None, {}
         self.planned, self.images, self.badges = [], {}, {}
         self.item, self.render_settings = None, None
         self.warning, self.overflow = "", []
@@ -168,7 +169,6 @@ class PairProductionPreview(ProductionPreview):
             painter.scale(scale, scale)
             painter.setPen(QPen(QColor("#64748b"), 0))
             painter.drawRect(QRectF(0, 0, self.film_width, self.canvas_height))
-            settings = self.render_settings
             count = self.composed_count
             composed = {item.sequence_number for _, item in
                         (self.batch_payload or {}).get('planned', [])[:count]} if count is not None else set()
@@ -176,22 +176,8 @@ class PairProductionPreview(ProductionPreview):
                 rect = QRectF(p.x_px, p.y_px, p.width_px, p.height_px)
                 if self.overview and not painter.clipBoundingRect().intersects(QRectF(0,p.row_y_px,self.canvas_width,p.footprint_height_px)):
                     continue
-                source = visible_assets(self, path, p) if self.overview else self.images[path]
-                image = source.transformed(QTransform().rotate(-p.rotation_degrees))
-                painter.drawImage(rect, image)
                 pending = count is not None and p.sequence_number not in composed
-                painter.setPen(QPen(QColor("#94a3b8" if pending or count is None else "#16a34a"), 0))
-                painter.drawRect(rect)
-                if pending:
-                    painter.fillRect(rect, QColor(248, 250, 252, 180))
-                if path in self.badges:
-                    painter.drawImage(QRectF(p.number_x_px, p.number_y_px,
-                                            p.number_width_px, p.number_height_px), self.badges[path])
-                draw_platform_badge(self, painter, p)
-                if p.color_block_width_px:
-                    painter.fillRect(QRectF(p.color_block_x_px, p.color_block_y_px,
-                                           p.color_block_width_px, p.color_block_height_px),
-                                     QColor(settings.color_block_color))
+                draw_preview_placement(self, painter, path, p, rect, pending, scale)
             draw_cut_guides(self, painter, scale)
             painter.setPen(QPen(QColor("#dc2626"), 0))
             for box in self.overflow:

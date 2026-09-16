@@ -44,7 +44,7 @@ def test_pixel_validation_rejects_ink_at_end_of_canvas():
     assert check["pixel_verified"]
 
 
-def test_overview_contains_whole_batch_but_loads_bounded_thumbnails(tmp_path):
+def test_overview_contains_whole_batch_without_loading_thumbnails(tmp_path):
     app = QApplication.instance() or QApplication([])
     for i in range(16):
         Image.new("RGBA", (100,150), "blue").save(tmp_path/f"{i:02}.png",dpi=(25.4,25.4))
@@ -59,6 +59,6 @@ def test_overview_contains_whole_batch_but_loads_bounded_thumbnails(tmp_path):
     canvas = QImage(preview.size(), QImage.Format_ARGB32)
     canvas.fill(0)
     preview.render(canvas)
-    assert len(preview.images) <= 12
-    assert "整批总览" in preview.detail
+    assert preview.images == {}
+    assert "整批轻量结构图" in preview.detail
     preview.close()

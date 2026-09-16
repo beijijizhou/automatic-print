@@ -6,6 +6,7 @@ def test_input_cards_group_single_and_multiple_while_tools_stay_pinned(tmp_path)
     owner = window(tmp_path/'prefs.ini')
     home = owner.automation_home
     panel = home.label_quick_panel
+    assert panel.preview.overview
     inputs = home.batch_input_panel
     assert inputs.isAncestorOf(home.manual_layout_button)
     assert inputs.isAncestorOf(home.start_layout_button)

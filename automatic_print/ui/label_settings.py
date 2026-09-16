@@ -56,7 +56,8 @@ class LabelSettingsDialog(QDialog):
         help_label.setWordWrap(True)
         help_label.setTextInteractionFlags(Qt.TextSelectableByMouse)
         qr_help = QLabel(
-            "找到膜标签时放在标签附近，避免另起一行；未找到时使用下方设置的位置。"
+            "切膜模式下文字必须完整位于膜标签高度范围，严禁放在膜标签与图案之间；"
+            "无法确认安全范围时禁止输出。"
         )
         qr_help.setWordWrap(True)
         qr_help.setTextInteractionFlags(Qt.TextSelectableByMouse)

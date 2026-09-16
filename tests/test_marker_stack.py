@@ -9,6 +9,8 @@ from PIL import Image
 from automatic_print.layout import LayoutSettings, generate_layout
 from automatic_print.layout_engine.models import mm_to_px
 from automatic_print.layout_engine.marker_stack import stacked_coordinates, validate_stack
+from automatic_print.layout_engine.marker_space import validate_embedded_marks
+from automatic_print.layout_engine.cut_guide_geometry import detect_guide_band
 from test_marker_examples import sources
 
 
@@ -61,7 +63,7 @@ def test_reused_qr_badge_does_not_expand_external_marker_column():
 @pytest.mark.parametrize('mode', ['free', 'single', 'dual'])
 @pytest.mark.parametrize('side', ['left', 'right'])
 @pytest.mark.parametrize('degrees', [0, 90])
-def test_platform_and_label_are_one_column_under_marker(tmp_path, mode, side, degrees):
+def test_platform_and_label_stay_in_safe_header_band(tmp_path, mode, side, degrees):
     paths = sources(tmp_path)
     path = paths[0 if side == 'left' else 1]
     settings = LayoutSettings(dpi=25.4, media_width_mm=580, cutter_mode=mode,
@@ -73,18 +75,34 @@ def test_platform_and_label_are_one_column_under_marker(tmp_path, mode, side, de
     result = generate_layout([path], tmp_path/'out', settings, plan_ready=payloads.append)
     p = payloads[0]['planned'][0][1]
     validate_stack(path, p, payloads[0]['settings'])
-    assert p.platform_x_px == p.number_x_px == p.color_block_x_px == 0
-    assert p.platform_y_px == p.color_block_y_px+p.color_block_height_px+mm_to_px(settings.number_gap_mm, settings.dpi)
-    assert p.number_y_px >= p.platform_y_px+p.platform_height_px
-    assert p.x_px > max(p.number_width_px, p.platform_width_px, p.color_block_width_px)
+    if mode == 'free':
+        assert p.platform_x_px == p.number_x_px == p.color_block_x_px == 0
+        assert p.platform_y_px == p.color_block_y_px+p.color_block_height_px+mm_to_px(settings.number_gap_mm, settings.dpi)
+        assert p.number_y_px >= p.platform_y_px+p.platform_height_px
+    else:
+        band = detect_guide_band(path).rotated(degrees)
+        top = p.y_px+round(band.top*p.height_px)
+        bottom = p.y_px+round(band.bottom*p.height_px)
+        assert top <= p.number_y_px < p.number_y_px+p.number_height_px <= bottom
+        assert top <= p.platform_y_px < p.platform_y_px+p.platform_height_px <= bottom
+        assert p.color_block_x_px+p.color_block_width_px <= p.number_x_px
+        assert p.number_x_px+p.number_width_px <= p.platform_x_px
+        assert p.platform_x_px+p.platform_width_px <= p.x_px
+    assert p.x_px > p.color_block_width_px
     with Image.open(tmp_path/'out'/result['filename']) as output, Image.open(path) as original:
         with original.rotate(degrees, expand=True) as source:
             pixels = np.asarray(output.crop((p.x_px, p.y_px, p.x_px+source.width, p.y_px+source.height)))
             expected = np.asarray(source)
             mask = expected[:,:,3] > 0
             assert np.array_equal(pixels[mask], expected[mask])
-    with pytest.raises(ValueError, match='平台文字未在刀码正下方'):
-        validate_stack(path, replace(p, platform_x_px=p.platform_x_px+1), settings)
+    if mode == 'free':
+        with pytest.raises(ValueError, match='平台文字未在刀码正下方'):
+            validate_stack(path, replace(p, platform_x_px=p.platform_x_px+1), settings)
+    else:
+        with pytest.raises(ValueError, match='膜标签高度范围'):
+            validate_embedded_marks([
+                (path, replace(p, number_y_px=p.y_px+p.height_px))
+            ], settings)
 
 
 @pytest.mark.parametrize('engine', ['pillow', 'libvips'])
@@ -116,6 +134,8 @@ def test_segmented_double_batch_stack_and_full_saved_corridors(tmp_path, engine)
                     pixels = np.asarray(output.crop((p.x_px,p.y_px,p.x_px+source.width,p.y_px+source.height)))
                     mask = expected[:,:,3] > 0
                     assert np.array_equal(pixels[mask], expected[mask])
-            for zone in part['cut_corridor'].get('zones', [part['cut_corridor']]):
+            for zone in part['cut_corridor'].get(
+                'zones', part['cut_corridor'].get('corridors', [])
+            ):
                 assert output.crop((zone['safe_left_px'],zone.get('start_y_px',0),
                     zone['safe_right_px'],zone.get('end_y_px',output.height))).getchannel('A').getextrema()[1] == 0

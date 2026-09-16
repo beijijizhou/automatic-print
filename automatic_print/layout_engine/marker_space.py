@@ -56,10 +56,21 @@ def validate_embedded_marks(planned, settings=None):
         if settings and settings.preserve_header_gap:
             from .cut_guide_geometry import detect_guide_band
             header = detect_guide_band(path)
+            if not header:
+                raise ValueError(
+                    f'{path.name}：未能可靠识别膜标签高度范围，禁止输出新增文字。'
+                )
+            header = header.rotated(p.rotation_degrees)
+            header_top = p.y_px+round(header.top*p.height_px)
+            header_bottom = p.y_px+round(header.bottom*p.height_px)
             for kind,x,y,w,h in (('标签',p.number_x_px,p.number_y_px,p.number_width_px,p.number_height_px),
                           ('平台',p.platform_x_px,p.platform_y_px,p.platform_width_px,p.platform_height_px)):
+                if w and h and not (y >= header_top and y+h <= header_bottom):
+                    raise ValueError(
+                        f'{path.name}：{kind}文字超出膜标签高度范围，可能进入膜标签与图案之间，禁止输出。'
+                    )
                 overlaps = w and h and x < p.x_px+p.width_px and x+w > p.x_px and y < p.y_px+p.height_px and y+h > p.y_px
-                in_header = header and not p.rotation_degrees and y >= p.y_px+round(header.top*p.height_px) and y+h <= p.y_px+round(header.bottom*p.height_px)
+                in_header = y >= header_top and y+h <= header_bottom
                 reused = (kind == '平台' and settings.platform_reuse_qr and overlaps
                           and transparent_rect(path, p.width_px, p.height_px,
                                                p.rotation_degrees,

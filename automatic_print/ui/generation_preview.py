@@ -89,7 +89,9 @@ class GenerationPreviewController(QObject):
             install_snapshot(self.preview, planned if self.preview.overview else detail_members(planned, index=start), self.payload["labels"], settings, warning=self.payload.get("warning", ""))
             from .knife_caption import knife_caption
             knives = knife_caption(planned, settings.dpi)
-            self.preview.detail = f"{knives or f'固定刀位 {settings.cutter_knife_mm:.1f} 毫米'} · 共 {len(planned)} 张 · 节省 {self.payload.get('saved_meters',0):.3f} 米"
+            mode = ('整批轻量结构图（不读取缩略图）' if self.preview.overview
+                    else '当前订单真实图片')
+            self.preview.detail = f"{mode} · {knives or f'固定刀位 {settings.cutter_knife_mm:.1f} 毫米'} · 共 {len(planned)} 张 · 节省 {self.payload.get('saved_meters',0):.3f} 米"
         except (ValueError, OSError) as error:
             self.preview.warning = f"保留上次预览：{error}"
         self.preview.update()

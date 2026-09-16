@@ -51,6 +51,23 @@ def test_default_shows_production_layout_but_hides_diagnostic_tools(tmp_path, mo
     assert not hasattr(panel.details_dialog, 'bulk_dialog')
     assert panel.summary.isVisible() and panel.preview_tabs.isVisible()
     assert owner.developer_mode_checkbox.isVisible()
+    assert owner.developer_features_button.isVisible()
+    owner.developer_features_button.click()
+    APP.processEvents()
+    feature_dialog = owner.developer_features_dialog
+    assert feature_dialog.isVisible()
+    assert '未开启' in feature_dialog.status.text()
+    features = [
+        feature_dialog.tree.topLevelItem(group).child(row).text(0)
+        for group in range(feature_dialog.tree.topLevelItemCount())
+        for row in range(feature_dialog.tree.topLevelItem(group).childCount())
+    ]
+    assert features == [
+        '排版历史', '批量分析文件夹', '算法诊断', '批次顺序标注',
+        'S2B 批次信息查询', '隆丰 ERP 下载', '莆田平台', '并行分块 TIFF',
+    ]
+    assert feature_dialog.grab().save(str(tmp_path/'developer-feature-list.png'))
+    feature_dialog.close()
     settings_button = owner.automation_home.settings_button
     assert settings_button.parentWidget() is owner.centralWidget()
     from PySide6.QtWidgets import QPushButton

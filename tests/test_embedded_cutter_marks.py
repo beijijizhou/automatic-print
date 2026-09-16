@@ -5,6 +5,7 @@ import pytest
 
 from automatic_print.layout import LayoutSettings, generate_layout
 from automatic_print.layout_engine.marker_space import validate_embedded_marks
+from automatic_print.layout_engine.cut_guide_geometry import detect_guide_band
 
 
 def make_batch(tmp_path):
@@ -56,3 +57,40 @@ def test_mixed_full_batch_embeds_without_covering_any_original_ink(tmp_path, eng
     path, p = payloads[0]['planned'][0]
     with pytest.raises(ValueError, match='覆盖原图'):
         validate_embedded_marks([(path, replace(p, color_block_y_px=p.y_px+80))])
+
+
+def test_added_text_stays_inside_membrane_label_height_and_never_below_it(tmp_path):
+    path = make_batch(tmp_path)[0]
+    config = LayoutSettings(
+        dpi=25.4,
+        media_width_mm=580,
+        margin_mm=0,
+        cutter_mode='dual',
+        cutter_auto_knife=True,
+        allow_rotation=False,
+        cutter_left_marker_external=True,
+        preserve_header_gap=True,
+        platform_below_marker=True,
+        label_text_template='609162025022 · 正序 1/1 · 倒序 1/1',
+        label_machine_enabled=False,
+        label_sequence_enabled=False,
+    )
+    payloads = []
+    generate_layout(
+        [path], tmp_path/'preview', config, preview_only=True,
+        plan_ready=payloads.append,
+    )
+    placement = payloads[0]['planned'][0][1]
+    band = detect_guide_band(path)
+    top = placement.y_px+round(band.top*placement.height_px)
+    bottom = placement.y_px+round(band.bottom*placement.height_px)
+
+    assert top <= placement.number_y_px
+    assert placement.number_y_px+placement.number_height_px <= bottom
+    assert placement.number_x_px >= (
+        placement.color_block_x_px+placement.color_block_width_px
+    )
+    with pytest.raises(ValueError, match='膜标签高度范围'):
+        validate_embedded_marks([
+            (path, replace(placement, number_y_px=bottom+1))
+        ], config)

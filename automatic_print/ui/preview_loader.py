@@ -59,6 +59,8 @@ class PreviewLoader(QObject):
     @Slot(object, object)
     def analysis(self, token, report):
         if token == self.token and not self.closed:
+            self.preview.analysis_report = report
+            self.preview._schematic_report = None
             self.preview.analysis_ready.emit(report)
 
     @Slot(object, object, str)
@@ -72,14 +74,14 @@ class PreviewLoader(QObject):
                 self.status(p.warning)
             else:
                 try:
+                    p.batch_payload = payload
                     shown = payload['planned'] if p.overview else detail_members(payload['planned'], p.path)
                     install_snapshot(p, shown, payload['labels'], payload['settings'],
                                      payload['warning'], payload['overflow'])
-                    p.batch_payload = payload
                     settings = payload['settings']
                     from .knife_caption import knife_caption
                     knives = knife_caption(payload['planned'], settings.dpi, ' / ')
-                    p.detail = f"{'整批总览' if p.overview else '双图细节'} · 整批 {len(payload['planned'])} 张 · 节省 {payload['saved_meters']:.3f} 米 · {knives}"
+                    p.detail = f"{'整批轻量结构图' if p.overview else '当前订单真实图片'} · 整批 {len(payload['planned'])} 张 · 节省 {payload['saved_meters']:.3f} 米 · {knives}"
                     p.plan_loaded.emit(payload)
                     self.status(payload['warning'] or '整批预览完成 · 尚未生成输出文件')
                 except (ValueError, OSError) as exc:

@@ -8,8 +8,31 @@ from .measurement_timing import measured
 @measured('普通标签文字测量')
 def source_label_badge(text, settings, path, degrees=0):
     if settings.cutter_mode != "free":
-        return label_badge(text, settings.dpi, settings.number_font_size_mm,
-                           mm_to_px(settings.color_block_width_mm, settings.dpi))
+        maximum = mm_to_px(settings.color_block_width_mm, settings.dpi)
+        if settings.preserve_header_gap:
+            region = detect_membrane_region(path)
+            if region is None:
+                raise ValueError(
+                    f"{path.name}：未能可靠识别膜标签高度范围，禁止把文字放入膜标签与图案之间。"
+                )
+            size = print_dimensions(path, settings.dpi)
+            width = mm_to_px(size.width_mm, settings.dpi)
+            height = mm_to_px(size.height_mm, settings.dpi)
+            if degrees % 180:
+                width, height = height, width
+            region = region.rotated(degrees)
+            maximum = max(1, round((region.right-region.left)*width))
+            available_height = max(1, round((region.bottom-region.top)*height))
+            badge = label_badge(
+                text, settings.dpi, settings.number_font_size_mm, maximum
+            )
+            if badge.height > available_height:
+                badge.close()
+                raise ValueError(
+                    f"{path.name}：标签文字无法完整放入膜标签高度范围，禁止输出。"
+                )
+            return badge
+        return label_badge(text, settings.dpi, settings.number_font_size_mm, maximum)
     if not settings.label_detect_region:
         return settings_label_badge(text, settings)
     region = detect_membrane_region(path)
