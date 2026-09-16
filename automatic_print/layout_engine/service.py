@@ -17,7 +17,7 @@ from .order_validation import validate_order_placements
 from .pillow_renderer import build_pillow_canvas
 from .printed_guides import collect_guides, dot_boxes, paint_guides, validate_vips_canvas
 from .planner import plan_layout
-from .vips_renderer import available, build_vips_canvas
+from .vips_renderer import available, build_vips_canvas, build_vips_rows
 from .output_encoder import encoder_plan, save_output
 from .transition_marks import marked_height, transition_rects, paint_transition_lines
 from .output_sizes import size_range_label
@@ -127,8 +127,13 @@ def generate_layout(
     from .vips_renderer import demand_lock
     native_validation = use_vips or (settings.png_fast_encoding and available())
     with demand_lock if native_validation else nullcontext():
-        builder = build_vips_canvas if use_vips else build_pillow_canvas
-        canvas = builder(planned, labels, (width, height), settings, progress)
+        row_streaming = streaming and use_vips
+        if row_streaming:
+            rows = build_vips_rows(planned, labels, width, settings, progress)
+            canvas = None
+        else:
+            builder = build_vips_canvas if use_vips else build_pillow_canvas
+            canvas = builder(planned, labels, (width, height), settings, progress)
         combining_seconds = perf_counter() - combining_started
         phase('合成像素安全检查')
         if not use_vips:
@@ -138,18 +143,28 @@ def generate_layout(
         phase('膜标签与辅助线处理')
         guide_spans, missing_guides = collect_guides(planned, settings, progress)
         guide_boxes = list(dot_boxes(guide_spans, settings.dpi))
-        canvas = paint_guides(canvas, guide_boxes, use_vips)
         transitions = transition_rects(planned, settings, width,
                                       (prepared_plan or {}).get('end_notice', '批次结束'))
-        canvas = paint_transition_lines(canvas, transitions, use_vips)
-        if not use_vips:
-            validate_marked_pillow(canvas, cut_check, guide_boxes, transitions, progress)
+        if not row_streaming:
+            canvas = paint_guides(canvas, guide_boxes, use_vips)
+            canvas = paint_transition_lines(canvas, transitions, use_vips)
+            if not use_vips:
+                validate_marked_pillow(
+                    canvas, cut_check, guide_boxes, transitions, progress
+                )
         filename = output_path.name
         saving_started = perf_counter()
         output_validation_seconds = 0.0
         phase('保存输出图片')
-        save_details = save_output(
-            canvas, output_path, settings, use_vips, progress)
+        if row_streaming:
+            from .png_codecs.row_stream import save as save_rows
+            save_details = save_rows(
+                rows, output_path, width, height, settings,
+                guide_boxes, transitions, progress,
+            )
+        else:
+            save_details = save_output(
+                canvas, output_path, settings, use_vips, progress)
         saving_seconds = perf_counter() - saving_started
         if streaming:
             from .png_codecs.streaming import validate_saved_output

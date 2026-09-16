@@ -43,7 +43,7 @@ def test_streaming_checks_saved_png_once_without_pre_rendering_canvas(tmp_path):
     result = generate_layout([path],tmp_path/'out',settings,phase_ready=phases.append)
     assert '最终画布刀位检查' not in phases
     assert '输出文件安全复核' in phases
-    assert '原生分块流式PNG' in result['png_save_details']['encoder']
+    assert '原生逐行流式PNG' in result['png_save_details']['encoder']
     assert result['timings_seconds']['output_validation'] >= 0
     assert any(row['name'] == '输出PNG单次解压、完整性与全长刀位核对'
                for row in result['png_save_details']['steps'])

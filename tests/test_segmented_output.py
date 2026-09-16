@@ -5,6 +5,7 @@ import pytest
 from PIL import Image
 
 from automatic_print.layout import LayoutSettings, generate_layout
+from automatic_print.layout_engine.cut_validation import corridor_checks
 from automatic_print.layout_engine.order_groups import order_key
 
 
@@ -38,9 +39,12 @@ def test_segments_preserve_full_orders_pairing_and_real_pixels(tmp_path, engine,
             membership[order_key(Path(p['source']))].add(part['filename'])
         assert part['cut_corridor']['pixel_verified']
         with Image.open(tmp_path/'out'/part['filename']) as image:
-            check = part['cut_corridor']
-            stripe = image.crop((check['safe_left_px'], 0, check['safe_right_px'], image.height))
-            assert stripe.getchannel('A').getextrema() == (0, 0)
+            for check in corridor_checks(part['cut_corridor']):
+                stripe = image.crop((
+                    check['safe_left_px'], check.get('start_y_px', 0),
+                    check['safe_right_px'], check.get('end_y_px', image.height),
+                ))
+                assert stripe.getchannel('A').getextrema() == (0, 0)
             for p in part['placements']:
                 assert image.getpixel((p['color_block_x_px'], p['color_block_y_px'])) == (255, 0, 0, 255)
     assert total_images == len(paths)

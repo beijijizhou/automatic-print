@@ -36,14 +36,13 @@ def validate(path, width, height, checks, boxes=(), rectangles=(), progress=None
         pending.extend(data)
         while len(pending) - pending_offset >= row_stride:
             filter_type = pending[pending_offset]
-            if filter_type not in (0, 2):
-                raise ValueError(f'输出PNG使用了未核验的滤波方式 {filter_type}')
+            if filter_type not in range(5):
+                raise ValueError(f'输出PNG使用了未知滤波方式 {filter_type}')
             filtered = np.frombuffer(
                 pending, dtype=np.uint8, count=row_bytes,
                 offset=pending_offset + 1,
             )[3::4].copy()
-            if filter_type == 2:
-                np.add(filtered, previous_alpha, out=filtered, casting='unsafe')
+            filtered = _unfilter_alpha(filtered, previous_alpha, filter_type)
             previous_alpha = filtered
             _check_row(row_index, filtered, checks, shapes, starts, ends, active)
             row_index += 1
@@ -98,6 +97,36 @@ def validate(path, width, height, checks, boxes=(), rectangles=(), progress=None
         raise ValueError('输出PNG像素数据不完整')
     if len(pending) != pending_offset:
         raise ValueError('输出PNG包含多余像素数据')
+
+
+def _unfilter_alpha(filtered, above, filter_type):
+    if filter_type == 0:
+        return filtered
+    if filter_type == 2:
+        np.add(filtered, above, out=filtered, casting='unsafe')
+        return filtered
+    result = np.empty_like(filtered)
+    left = upper_left = 0
+    for index, value in enumerate(filtered):
+        up = int(above[index])
+        if filter_type == 1:
+            prediction = left
+        elif filter_type == 3:
+            prediction = (left + up) // 2
+        else:
+            prediction = _paeth(left, up, upper_left)
+        left = (int(value) + prediction) & 255
+        result[index] = left
+        upper_left = up
+    return result
+
+
+def _paeth(left, above, upper_left):
+    estimate = left + above - upper_left
+    distances = abs(estimate-left), abs(estimate-above), abs(estimate-upper_left)
+    if distances[0] <= distances[1] and distances[0] <= distances[2]:
+        return left
+    return above if distances[1] <= distances[2] else upper_left
 
 
 def _allowed_shapes(boxes, rectangles):

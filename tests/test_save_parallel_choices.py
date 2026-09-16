@@ -9,6 +9,7 @@ from PySide6.QtWidgets import QApplication
 
 from automatic_print.layout import LayoutSettings, generate_layout
 from automatic_print.layout_engine import service
+from automatic_print.layout_engine.cut_validation import corridor_checks
 from automatic_print.ui.segmented_output import SegmentedOutputSettings
 
 APP = QApplication.instance() or QApplication([])
@@ -54,6 +55,9 @@ def test_selected_parallelism_really_runs_more_than_two_safe_segments(tmp_path, 
     for part in result['parts']:
         assert part['cut_corridor']['pixel_verified']
         with Image.open(tmp_path/'out'/part['filename']) as output:
-            check = part['cut_corridor']
-            stripe = output.crop((check['safe_left_px'], 0, check['safe_right_px'], output.height))
-            assert stripe.getchannel('A').getextrema() == (0, 0)
+            for check in corridor_checks(part['cut_corridor']):
+                stripe = output.crop((
+                    check['safe_left_px'], check.get('start_y_px', 0),
+                    check['safe_right_px'], check.get('end_y_px', output.height),
+                ))
+                assert stripe.getchannel('A').getextrema() == (0, 0)

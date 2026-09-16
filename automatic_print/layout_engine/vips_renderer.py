@@ -70,15 +70,13 @@ def _rgba(path: Path, width: int, height: int, rotation_degrees: int):
     return image.copy(interpretation="srgb")
 
 
-def build_vips_canvas(
+def build_vips_rows(
     planned: list[tuple[Path, Placement]],
     labels: dict[int, str],
-    canvas_size: tuple[int, int],
+    width: int,
     settings: LayoutSettings,
     progress: ProgressCallback | None,
 ):
-    width, height = canvas_size
-    top_margin = mm_to_px(settings.margin_mm, settings.dpi)
     rows = []
     completed = 0
     for row_y, items_iter in groupby(
@@ -158,6 +156,19 @@ def build_vips_canvas(
                 ),
             )
         )
+    return rows
+
+
+def build_vips_canvas(
+    planned: list[tuple[Path, Placement]],
+    labels: dict[int, str],
+    canvas_size: tuple[int, int],
+    settings: LayoutSettings,
+    progress: ProgressCallback | None,
+):
+    width, height = canvas_size
+    top_margin = mm_to_px(settings.margin_mm, settings.dpi)
+    rows = build_vips_rows(planned, labels, width, settings, progress)
     pieces = [rows[0][2]]
     previous_y, previous_height = rows[0][:2]
     for row_y, row_height, row_canvas in rows[1:]:

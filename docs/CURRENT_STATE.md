@@ -42,8 +42,9 @@
   `platform_label.py`、`header_region.py`、`transparent_search.py`。开发者模式的平台文字优先放入
   原图二维码卡片的已验证空位；找不到安全空位时自动回退外置，不改变普通模式现有位置。
 - 渲染与编码：`pillow_renderer.py`、`vips_renderer.py`、`png_codecs/`、
-  `segmented_output.py`、`atomic_png.py`、`atomic_tiff.py`。活动的大图路径使用顶部有限条带测量、平衡行画布图和固定
-  UP 滤波；PNG 保存后由独立读取器一次顺序解压，同时核对全部刀位的全长实际 alpha 像素、
+  `segmented_output.py`、`atomic_png.py`、`atomic_tiff.py`。超长 PNG 由 `png_codecs/row_stream.py`
+  按排版行依次解码、合成、固定 UP 滤波、压缩和写入，每行只求值一次且不生成中间图片；PNG 保存后由
+  独立读取器一次顺序解压，同时核对全部刀位的全长实际 alpha 像素、
   数据块 CRC、尺寸、RGBA 格式和像素行完整性；不再为每条刀位重复触发超长延迟画布合成，
   也不依赖 libvips 二次打开大图，
   避免超长PNG二次解码触发原生库崩溃。保存计时包含 libvips 延迟合成、编码与写入，不能解释成纯磁盘耗时。多个 Python
