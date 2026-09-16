@@ -132,7 +132,17 @@ def build_production_page(owner, output_row: QHBoxLayout) -> QWidget:
     owner.test_mode = QCheckBox(
         "快速测试：普通模式首批 5 张；合并模式每批 5 张"
     )
-    owner.test_mode.setChecked(True)
+    owner.test_mode.setChecked(not getattr(owner, "download_only", False))
+    owner.test_mode.setEnabled(not getattr(owner, "download_only", False))
+    owner.download_preview_only = QCheckBox(
+        "仅计算排版数据，不生成最终大图"
+    )
+    owner.download_preview_only.setChecked(
+        bool(getattr(owner, "download_only", False))
+    )
+    owner.download_preview_only.setEnabled(
+        not getattr(owner, "download_only", False)
+    )
     owner.merge_batches = QCheckBox("合并选中的批次为一个排版文件")
     if not hasattr(owner, "log"):
         owner.log = QPlainTextEdit()
@@ -145,6 +155,7 @@ def build_production_page(owner, output_row: QHBoxLayout) -> QWidget:
     layout.addLayout(range_row)
     layout.addWidget(owner.table)
     layout.addWidget(owner.test_mode)
+    layout.addWidget(owner.download_preview_only)
     layout.addWidget(owner.merge_batches)
     layout.addLayout(actions)
     if not getattr(owner, "local_only", False):

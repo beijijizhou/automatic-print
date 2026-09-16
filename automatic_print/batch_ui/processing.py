@@ -23,6 +23,7 @@ def process_local_batches(
     sample_limit: int | None,
     merge_batches: bool,
     progress,
+    preview_only: bool = False,
 ) -> dict:
     platform_root = output / platform_name
     folders = _batch_folders(platform_root, batch_numbers)
@@ -44,15 +45,21 @@ def process_local_batches(
         )
         for folder in folders
     ]
-    output_name = "TEST_SAMPLE" if sample_limit else "PROCESSED"
+    output_name = (
+        "PREVIEW"
+        if preview_only
+        else "TEST_SAMPLE"
+        if sample_limit
+        else "PROCESSED"
+    )
     destination_root = platform_root / output_name
     if merge_batches:
         completed = _render_merged(
-            prepared, destination_root, settings, progress
+            prepared, destination_root, settings, progress, preview_only
         )
     else:
         completed = _render_separately(
-            prepared, destination_root, settings, progress
+            prepared, destination_root, settings, progress, preview_only
         )
     return {
         "type": "processed",
@@ -62,6 +69,7 @@ def process_local_batches(
         if merge_batches
         else [],
         "test": bool(sample_limit),
+        "preview_only": preview_only,
         "output_folder": str(destination_root),
     }
 
@@ -104,7 +112,9 @@ def _prepare_images(folder, batch_type, sample_limit, progress):
     return images[:sample_limit] if sample_limit else images
 
 
-def _render_merged(prepared, destination_root, settings, progress):
+def _render_merged(
+    prepared, destination_root, settings, progress, preview_only=False
+):
     images = [
         image for _folder, folder_images in prepared for image in folder_images
     ]
@@ -118,11 +128,14 @@ def _render_merged(prepared, destination_root, settings, progress):
         settings,
         _layout_progress(progress, "合并批次"),
         batch_name="_".join(codes),
+        preview_only=preview_only,
     )
     return [("合并批次", result)]
 
 
-def _render_separately(prepared, destination_root, settings, progress):
+def _render_separately(
+    prepared, destination_root, settings, progress, preview_only=False
+):
     completed = []
     total = len(prepared)
     for index, (folder, images) in enumerate(prepared, start=1):
@@ -135,6 +148,7 @@ def _render_separately(prepared, destination_root, settings, progress):
             settings,
             _layout_progress(progress, folder.name),
             batch_name=folder.name,
+            preview_only=preview_only,
         )
         completed.append((folder.name, result))
     return completed

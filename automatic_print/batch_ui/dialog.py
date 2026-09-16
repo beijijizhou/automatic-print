@@ -42,10 +42,22 @@ class AutomationDialog(
     ThreadActionsMixin,
     QWidget,
 ):
-    def __init__(self, parent=None) -> None:
+    def __init__(
+        self,
+        parent=None,
+        *,
+        local_only: bool = True,
+        platform_names: tuple[str, ...] | None = None,
+        download_only: bool = False,
+    ) -> None:
         super().__init__(parent)
-        self.local_only = True
-        self.setWindowTitle("本地排版工作台")
+        self.local_only = local_only
+        self.download_only = download_only
+        self.platform_names = platform_names or tuple(ERP_PLATFORMS)
+        self.settings_host = parent
+        self.setWindowTitle(
+            "本地排版工作台" if local_only else "隆丰 ERP 批次下载"
+        )
         self.resize(940, 640)
         self.thread = None
         self.worker = None
@@ -78,9 +90,9 @@ class AutomationDialog(
 
     def _build_controls(self) -> None:
         self.platform = QComboBox()
-        for name in ERP_PLATFORMS:
+        for name in self.platform_names:
             self.platform.addItem(name, name)
-        self.platform.setCurrentText("Haloo")
+        self.platform.setCurrentText(self.platform_names[0])
         default = (
             Path(
                 QStandardPaths.writableLocation(
@@ -133,6 +145,11 @@ class AutomationDialog(
         if self.local_only:
             self.main_tabs.setTabVisible(1, False)
             self.main_tabs.setTabVisible(2, False)
+            self.main_tabs.tabBar().hide()
+        elif self.download_only:
+            self.main_tabs.setTabVisible(0, False)
+            self.main_tabs.setTabVisible(1, False)
+            self.main_tabs.setCurrentIndex(2)
             self.main_tabs.tabBar().hide()
 
     def _build_layout(self) -> None:
@@ -193,7 +210,7 @@ class AutomationDialog(
         )
 
     def _current_layout_settings(self) -> LayoutSettings:
-        window = self.window()
+        window = self.settings_host or self.window()
         if window is None or not hasattr(window, "width"):
             return LayoutSettings(png_engine="libvips")
         return settings_from_window(window)

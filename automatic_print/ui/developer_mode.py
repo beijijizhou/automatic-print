@@ -28,7 +28,12 @@ def developer_task_active(window):
     details = window.automation_home.label_quick_panel.details_dialog
     dialog = getattr(details, 'bulk_dialog', None)
     production = getattr(details, 'production_bulk_dialog', None)
-    return bool((dialog and dialog.thread is not None) or (production and production.thread is not None))
+    erp = getattr(window, 'longfeng_erp_dialog', None)
+    return bool(
+        (dialog and dialog.thread is not None)
+        or (production and production.thread is not None)
+        or (erp and erp.thread is not None)
+    )
 
 
 def build_developer_mode(window, footer):

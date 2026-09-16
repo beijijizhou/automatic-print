@@ -105,7 +105,13 @@ class ThreadActionsMixin:
             self.batch_rule_summary.setText(text)
             QMessageBox.information(self, "批次生成完成", text)
             return
-        mode = "测试小样" if result["test"] else "生产批次"
+        mode = (
+            "排版预览"
+            if result.get("preview_only")
+            else "测试小样"
+            if result["test"]
+            else "生产批次"
+        )
         merged_codes = result.get("merged_batches") or []
         merged_text = (
             f"已将 {len(merged_codes)} 个批次合并为一个排版文件。"
@@ -126,7 +132,7 @@ class ThreadActionsMixin:
             text = (
                 f"{result['platform']}：已下载并解压 "
                 f"{len(result['files'])} 个文件，已完成 "
-                f"{len(result['batches'])} 个{mode}排版。"
+                f"{len(result['batches'])} 个{mode}。"
                 f"{merged_text}\n{saving}"
             )
             self.refresh_local_batches()

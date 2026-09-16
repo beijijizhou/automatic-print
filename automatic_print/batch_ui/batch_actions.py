@@ -191,6 +191,7 @@ class BatchActionsMixin:
                 sample_limit=5 if self.test_mode.isChecked() else None,
                 batch_types=batch_types,
                 merge_batches=self.merge_batches.isChecked(),
+                preview_only=self.download_preview_only.isChecked(),
             )
         )
 
@@ -224,6 +225,7 @@ class BatchActionsMixin:
                     for record in self.records
                 },
                 merge_batches=self.merge_batches.isChecked(),
+                preview_only=self.download_preview_only.isChecked(),
             )
         )
 

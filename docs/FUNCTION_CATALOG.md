@@ -38,6 +38,7 @@
 | 应用重启 | `restart_control.py` | 源码更新和恢复出厂设置共用同一安全重启入口；开发环境使用重载请求，安装环境启动新进程。 |
 | 批次及膜历史 | `history/store.py`, `history/batch_queue.py`, `history/bulk_analysis.py` | 历史格式由存储模块维护，UI不直接写日志文件。 |
 | ERP生产批次读取与下载 | `automation/batch_browser.py`, `automation/batch_downloads.py`, `automation/erp_api.py` | 外层工厂页面与内嵌生产模块共用一个批次内容定位入口；列表、搜索、就绪状态和下载不得各自假设表格位于顶层页面。 |
+| 隆丰 ERP 开发者入口 | `ui/erp_download_entry.py`, `batch_ui/dialog.py`, `batch_ui/worker.py` | 仅开放已生成批次下载、解压与排版预览；不得从该入口创建生产批次或生成最终大图。 |
 | 源码更新 | `updates/`, `updater.py` | 检查、应用、重启为一个状态机，不要求点击两次。 |
 | 协作取消 | `cancellation.py`, `ui/stop_actions.py`, `thread_lifecycle.py` | 长循环定期检查；停止不关闭应用，关闭可立即退出。 |
 

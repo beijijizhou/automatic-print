@@ -44,6 +44,7 @@ class AutomationWorker(QObject):
         range_end: str = "",
         batch_types: dict[str, str] | None = None,
         merge_batches: bool = False,
+        preview_only: bool = False,
     ) -> None:
         super().__init__()
         self.action = action
@@ -58,6 +59,7 @@ class AutomationWorker(QObject):
         self.range_end = range_end
         self.batch_types = batch_types or {}
         self.merge_batches = merge_batches
+        self.preview_only = preview_only
         self.cancellation = Cancellation()
 
     def request_cancel(self) -> None:
@@ -171,6 +173,7 @@ class AutomationWorker(QObject):
             self.sample_limit,
             self.merge_batches,
             self._report,
+            preview_only=self.preview_only,
         )
 
     def _save_batch_types(self) -> None:

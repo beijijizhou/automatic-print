@@ -212,6 +212,8 @@ class MainWindow(
         footer.addWidget(self.check_update_button)
         from .developer_mode import build_developer_mode
         build_developer_mode(self, footer)
+        from .erp_download_entry import install_longfeng_erp_entry
+        install_longfeng_erp_entry(self, footer)
         layout = QVBoxLayout()
         layout.addWidget(self.build_update_status())
         layout.addWidget(self.automation_home)
