@@ -9,7 +9,8 @@
   界面上可见的工作台首页、任务状态和打印参数分别映射到`automatic_print/ui/workbench/home.py`、
   `activity.py`和`settings.py`，不再把控件树堆在主窗口入口。
 - 主工作台：`automatic_print/automation_dialog.py` 为兼容门面；实际页面在
-  `automatic_print/batch_ui/` 和 `automatic_print/ui/label_quick_panel.py`。
+  `automatic_print/batch_ui/` 和 `automatic_print/ui/workbench/overview/`；旧的
+  `ui/label_quick_panel.py`仅保留稳定兼容导入。
 - 旧ERP工作台的窗口外壳已按职责进入`batch_ui/shell/`：`view.py`只构造控件，`results.py`
   只展示任务结果，`batch_table.py`只映射批次表格；对话框和动作Mixin保留流程编排。
 - 普通模式显示生产排版规则、45/60厘米方案、批次处理记录、膜标签间距和额外损耗。补足膜间距
@@ -18,7 +19,7 @@
   及当前开启状态；膜规格比较固定为45/60厘米四套方案。
 - `ui/batch_input_panel.py` 拥有主界面的批次操作和常用参数分组；批次、输出、排版和标签参数
   使用同一层级，并提供持久化的“打开最近生成的批次”快捷入口；批次顺序标注仍受开发者模式控制。
-  `ui/label_quick_panel.py` 进入时默认展示
+  `ui/workbench/overview/`按界面区域分别拥有快捷标签、批次数据、预览和信号联动；进入时默认展示
   不解码缩略图的整批订单结构图，按单件尺码群、双面尺码群和多件订单尺码群显示真实排版坐标；
   用户可切换到当前订单真实图片，刀码示意不代替真实坐标预览。
 - `ui/current_film.py` 的当前膜卡片可直接修改膜规格、排版模式和自定义膜宽，修改结果与打印参数设置使用同一数据源。
@@ -26,8 +27,9 @@
   保留明确提示，只有用户重新启动排版才会读取批次。应用重启由 `restart_control.py` 统一拥有，
   源码更新和恢复出厂设置共用同一启动策略。
 - 单批次生成控制：`automatic_print/controllers/layout_generation.py` 独立拥有工作线程、Worker信号接线、
-  取消和释放；`controllers/generation_progress.py` 提供纯进度计算。`ui/generation_actions.py` 只收集界面参数
-  并展示状态，`ui/thread_lifecycle.py` 仅保留旧调用方兼容导入。
+  取消和释放；`controllers/generation_progress.py` 提供纯进度计算。界面启动、实时进度和最终结果分别位于
+  `ui/workbench/generation/start.py`、`progress.py`和`results.py`；`ui/generation_actions.py`与
+  `ui/thread_lifecycle.py`仅保留旧调用方兼容导入。
 - 单批生成、仅预览及批量分析的每个批次均由 `layout_engine/measurement_session.py` 建立一份数据
   快照；DPI、尺寸、膜标签位置和各方向刀码占位在后续方案与报告中直接复用。
 - 生成完成弹窗由 `layout_engine/output_file_info.py` 汇总最终生产结果；膜规格表把当前膜行替换为
@@ -92,7 +94,9 @@
 
 ## UI 与本地数据
 
-- 设置和持久化：`ui/preferences.py`、`preference_autosave.py`、`layout_values.py`。
+- 设置界面的读取、保存与用户动作分别位于`ui/workbench/preferences/load.py`、`save.py`和
+  `actions.py`；根目录`preferences.py`、`preference_actions.py`仅保留兼容导入，自动保存仍由
+  `preference_autosave.py`节流，排版参数快照由`layout_values.py`生成。
 - 批次构成：`ui/batch_distribution.py` 在单批和多批真实预览上方显示当前批次的紧凑尺码群或订单群；
   膜规格比较表不再承载该信息。
 - 进度、停止和线程生命周期：`ui/busy_spinner.py`、`layout_activity.py`、
@@ -127,8 +131,6 @@
 
 | 归属 | 遗留文件 | 后续收敛方向 |
 | --- | --- | --- |
-| 应用编排 | `ui/generation_actions.py`, `ui/preferences.py` | 主窗口已缩为控制器与`ui/workbench/`可见页面装配；生成展示和参数持久化继续迁入对应UI功能目录。 |
-| 工作台展示 | `ui/label_quick_panel.py` | 数据模型、绘制和控件构造继续进入现有预览功能目录；`setting_preview.py`与`pair_preview.py`已回到普通预算。 |
 | 排版核心 | `layout_engine/service.py`, `planner.py`, `item_factory.py` | 服务只编排阶段；测量、候选和对象构造保留单一所有者。 |
 | ERP自动化 | `automation/erp_api.py`, `rule_batches.py` | 按提供商迁入`automation/api/<provider>/`，中立批次规则留共享层；`batch_browser.py`已把响应映射迁入ERP子包并回到普通预算。 |
 

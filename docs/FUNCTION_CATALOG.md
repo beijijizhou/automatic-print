@@ -28,16 +28,17 @@
 | libvips 分块渲染与运行时门禁 | `layout_engine/vips_renderer.py`, `engine_info.py`, `atomic_png.py`, `save_progress.py`, `png_codecs/` | `png_codecs/row_stream.py` 按最终 Y 顺序逐行解码、合成、固定 UP 滤波、压缩并写入，每个排版行只求值一次且不生成中间图片；外层任务通过共享门禁串行进入，libvips 内部仍可多线程。完整 PNG 发布后由 `png_codecs/corridor_reader.py` 一次顺序解压，同时检查全部刀位 alpha、数据块 CRC、RGBA 尺寸和像素行完整性。 |
 | 输出格式选择与并行分块 BigTIFF | `layout_engine/output_encoder.py`, `atomic_tiff.py`, `ui/output_settings.py` | 仅开发者模式可选择 TIFF；复用同一 libvips 画布，按整幅宽度的固定高度 Strip 有界生成，使用 tifffile/imagecodecs 多线程独立压缩并由单一写入器登记偏移；保留透明通道、DPI、原子发布与整批刀位复核。 |
 | 分段输出 | `layout_engine/segmented_output.py`, `atomic_png.py` | 按完整行/订单切分，失败文件不可冒充可打印结果。 |
-| 输出命名与完成总结 | `layout_engine/output_name.py`, `output_sizes.py`, `output_file_info.py`, `generation_result.py` | `generation_result.py` 统一构造生产输出事实；单批、多批、分段统一订单/件数命名和报告字段。 |
+| 输出命名与完成总结 | `layout_engine/output_name.py`, `output_sizes.py`, `output_file_info.py`, `generation_result.py` | `output_name.py`从已确定计划统一生成批次、订单、件数、尺码和区域文件名；`generation_result.py`统一构造生产输出事实，单批、多批、分段不得自行拼接命名和报告字段。 |
 | 订单与刀位安全 | `layout_engine/order_validation.py`, `cut_validation.py`, `marked_pixel_validation.py` | 规划后和真实像素阶段分别核验，不能由 UI 绕过。 |
 | 计划和测量缓存 | `layout_engine/plan_cache.py`, `measurement_cache.py`, `measurement_session.py`, `cutter_measurements.py`, `normal_plan_cache.py`, `cached_planner.py` | 整批计划、切膜几何与单图测量分层缓存；生产方案和膜规格比较复用同一批刀码几何，不重复进入逐图测量；单图缓存不因膜宽、组批或普通软件版本变化而失效，均使用文件指纹和24小时绝对失效策略；缓存锁冲突短等待后跳过，不阻塞生产。 |
 | 仅预览报告 | `layout_engine/preview_result.py`, `output_sizes.py`, `ui/batch_summary.py` | 不渲染、不写打印图片；仍返回完整排版、刀位、单排原因和耗时报告供界面复制。 |
-| 单批次后台编排 | `controllers/layout_generation.py`, `controllers/generation_progress.py`, `ui/generation_actions.py`, `ui/workers.py` | 控制器唯一拥有工作线程生命周期和纯进度计算；UI只收集参数、构造Worker并展示不可变结果。 |
+| 单批次后台编排 | `controllers/layout_generation.py`, `controllers/generation_progress.py`, `ui/workbench/generation/`, `ui/workers.py` | 控制器唯一拥有工作线程生命周期和纯进度计算；UI按启动、实时进度、结果展示分离，只收集参数、构造Worker并展示不可变结果。 |
 | 统一批次排版入口与滚动编排 | `ui/preference_actions.py`, `controllers/bulk_generation.py`, `ui/bulk_workbench.py`, `bulk_generation_worker.py` | 同一入口扫描单批次或多批次目录；控制器拥有任务线程和取消，UI展示状态；外层线程池有空位立即补批次，合并批次复用内部图片线程。 |
 | 主界面进度展示 | `ui/busy_spinner.py`, `operation_timing.py`, `generation_panel.py` | 未知总量用旋转指示，已知总量用真实进度条。 |
 | 主窗口可见页面装配 | `ui/main_window.py`, `ui/workbench/home.py`, `activity.py`, `settings.py` | 主窗口只连接应用状态和控制器；首页、任务状态与打印参数按实际UI区域各自拥有控件树，新增可见区域不得重新堆回主窗口。 |
+| 主工作台批次总览 | `ui/workbench/overview/panel.py`, `label_controls.py`, `preview.py`, `bindings.py` | 目录直接对应快捷标签、批次数据、真实预览和参数联动；根目录兼容模块不拥有控件或业务逻辑。 |
 | 错误上下文与复制 | `layout_engine/error_context.py`, `error_parameters.py`, `ui/failure_panel.py` | 所有失败复用完整订单/参数诊断，不散落拼字符串。 |
-| 参数持久化与模式可见性 | `ui/preferences.py`, `preference_actions.py`, `preference_autosave.py`, `layout_values.py`, `developer_mode.py` | 文件夹与设置窗口动作由 `preference_actions.py` 拥有；稳定生产控件对普通用户开放，新实验功能默认只在开发者模式显示并生效。 |
+| 参数持久化与模式可见性 | `ui/workbench/preferences/`, `ui/preference_autosave.py`, `layout_values.py`, `developer_mode.py` | 读取、保存和文件夹/设置窗口动作按状态方向分离；稳定生产控件对普通用户开放，新实验功能默认只在开发者模式显示并生效。 |
 | 通用数值参数控件 | `ui/spinbox_style.py` | 所有毫米、尺寸和偏移浮点输入复用`double_spinbox`，不在页面内复制范围、精度和初始值构造代码。 |
 | 参数联动刷新门禁 | `ui/parameter_refresh.py` | 平台和模式一次更新多个控件时取消旧预览并抑制新批次读取；不用多个信号重复触发排版。 |
 | 应用重启 | `restart_control.py` | 源码更新和恢复出厂设置共用同一安全重启入口；开发环境使用重载请求，安装环境启动新进程。 |

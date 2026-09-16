@@ -153,6 +153,7 @@ class BulkWorkbench(QObject):
     def completed(self, index, record):
         self.records[index] = record
         if not record['result'].get('preview_only'):
+            self.window.job_path.setText(record['output'])
             from .recent_output import remember_recent_output
             remember_recent_output(self.window, record['output'])
         quality = record['result'].get('dual_quality', {}).get('text', '')

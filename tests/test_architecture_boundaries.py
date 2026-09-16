@@ -13,6 +13,9 @@ def test_new_domain_packages_stay_small_and_cohesive():
     for package in (
         'controllers', 'history', 'batch_ui/shell',
         'layout_engine/text', 'automation/api/erp', 'ui/workbench',
+        'ui/workbench/overview',
+        'ui/workbench/preferences',
+        'ui/workbench/generation',
     ):
         paths = modules(package)
         assert len(paths) <= 5, f'{package} 顶层模块超过5个，应按职责建立子包'
@@ -36,6 +39,29 @@ def test_main_window_only_composes_visible_surfaces():
     assert 'build_home(self)' in text
     assert 'QFormLayout' not in text
     assert 'QTabWidget' not in text
+
+
+def test_batch_overview_matches_visible_ui_regions():
+    facade = ROOT/'automatic_print/ui/label_quick_panel.py'
+    assert len(facade.read_text(encoding='utf-8').splitlines()) <= 10
+    package = ROOT/'automatic_print/ui/workbench/overview'
+    assert {path.name for path in package.glob('*.py')} == {
+        '__init__.py', 'panel.py', 'label_controls.py', 'preview.py', 'bindings.py'
+    }
+
+
+def test_print_preferences_separate_state_directions_and_actions():
+    package = ROOT/'automatic_print/ui/workbench/preferences'
+    assert {path.name for path in package.glob('*.py')} == {
+        '__init__.py', 'mixin.py', 'load.py', 'save.py', 'actions.py'
+    }
+
+
+def test_generation_ui_separates_start_progress_and_results():
+    package = ROOT/'automatic_print/ui/workbench/generation'
+    assert {path.name for path in package.glob('*.py')} == {
+        '__init__.py', 'mixin.py', 'start.py', 'progress.py', 'results.py'
+    }
 
 
 def test_core_layers_do_not_import_ui():

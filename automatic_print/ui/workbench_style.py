@@ -80,5 +80,9 @@ def apply_workbench_style(window):
     for label in window.findChildren(QLabel):
         if label.text() == '本地图片排版':
             label.setProperty('heading', True)
-            label.style().unpolish(label)
-            label.style().polish(label)
+            style = label.style()
+            # The global style sheet already carries this property rule.
+            # Repolish only when the backend returns a real QStyle object.
+            if hasattr(style, 'unpolish') and hasattr(style, 'polish'):
+                style.unpolish(label)
+                style.polish(label)

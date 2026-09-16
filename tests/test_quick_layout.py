@@ -9,8 +9,8 @@ from PySide6.QtCore import QSettings
 from PySide6.QtWidgets import QApplication, QMessageBox
 
 from automatic_print.ui.main_window import MainWindow
-from automatic_print.ui import workers, generation_actions
-from automatic_print.layout_engine import rotation_zones
+from automatic_print.ui import generation_actions
+from automatic_print.layout_engine import batch_discovery
 
 APP = QApplication.instance() or QApplication([])
 WINDOWS = []
@@ -54,12 +54,12 @@ def test_one_background_scan_no_automatic_preview(tmp_path, monkeypatch):
     window.startup_update_timer.stop()
     window.show()
     scans, threads, errors = [], [], []
-    original = workers.discover_images
-    def scan(folder):
+    original = batch_discovery.scan_batches
+    def scan(folder, *args, **kwargs):
         scans.append(folder)
         threads.append(get_ident())
-        return original(folder)
-    monkeypatch.setattr(workers, 'discover_images', scan)
+        return original(folder, *args, **kwargs)
+    monkeypatch.setattr(batch_discovery, 'scan_batches', scan)
     # Whole-batch rotation comparisons are now allowed; folder loading stays explicit.
     from automatic_print.ui import failure_dialog
     monkeypatch.setattr(failure_dialog, 'show_failure_dialog', lambda *args: errors.append(args[-1]))
@@ -75,14 +75,15 @@ def test_one_background_scan_no_automatic_preview(tmp_path, monkeypatch):
     monkeypatch.setattr(QFileDialog, 'getExistingDirectory', lambda *args: str(source))
     window.automation_home.start_layout_button.click()
     deadline = monotonic()+5
-    while window.thread is not None:
+    while (not hasattr(window, 'bulk_controller')
+           or window.bulk_controller.thread is not None):
         assert monotonic() < deadline
         APP.processEvents()
         sleep(0.01)
     assert not errors
     assert scans == [source]
     assert threads[0] != get_ident()
-    assert window.worker is None
+    assert window.bulk_controller.worker is None
     assert len(preview.planned) == 2
     assert window.generation_preview.payload['order_check']['double_pairs'] == 1
     assert list(Path(window.job_path.text()).glob('*.png'))

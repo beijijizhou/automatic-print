@@ -1,5 +1,6 @@
 """Portable output names derived from rendered label text."""
 import re
+from datetime import datetime
 from pathlib import Path
 
 
@@ -126,3 +127,64 @@ def unused_output_path(directory, filename):
         path = directory / f"{original.stem} ({index}){original.suffix}"
         index += 1
     return path
+
+
+def planned_output_path(
+    output_dir,
+    paths,
+    planned,
+    labels,
+    settings,
+    analysis,
+    batch_name="",
+    prepared_plan=None,
+    filename_suffix="",
+):
+    """Return the collision-safe path and size label for one completed plan."""
+    from .labels import format_label
+    from .output_sizes import size_range_label
+
+    label_text = labels.get(1) or format_label(
+        settings.label_text_template,
+        1,
+        paths[0],
+        datetime.now().astimezone(),
+        settings.label_date_format,
+        settings.machine_number,
+        batch_name=settings.label_batch_name,
+    )
+    if settings.label_machine_enabled or settings.label_sequence_enabled:
+        label_text = format_label(
+            settings.label_text_template,
+            1,
+            paths[0],
+            datetime.now().astimezone(),
+            settings.label_date_format,
+            settings.machine_number,
+            batch_name=settings.label_batch_name,
+        )
+    ordered = sorted(planned, key=lambda entry: (entry[1].row_y_px, entry[1].x_px))
+    sizes = size_range_label([path for path, _placement in ordered])
+    size_suffix = f" {sizes}" if sizes else ""
+    zones = {placement.cut_zone for _path, placement in planned}
+    zone_suffix = (
+        " 旋转区"
+        if zones == {"旋转区"}
+        else " 常规+旋转区"
+        if "旋转区" in zones
+        else ""
+    )
+    quantity = production_quantity(paths, analysis)
+    if prepared_plan is not None:
+        quantity = (
+            prepared_plan.get("batch_quantity", quantity)
+            + " "
+            + production_quantity(paths, scope="本段")
+        )
+    extension = ".tif" if settings.output_format.lower() == "tiff" else ".png"
+    filename = label_output_name(
+        quantity + " " + label_text + size_suffix + zone_suffix + filename_suffix,
+        batch_name,
+        extension=extension,
+    )
+    return unused_output_path(output_dir, filename), sizes

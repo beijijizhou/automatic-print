@@ -50,6 +50,8 @@ def test_worker_analysis_reaches_gui_and_image_selection_matches_rotation_contro
         paths.append(path)
     prefs=QSettings(str(tmp_path/'prefs.ini'),QSettings.IniFormat)
     prefs.setValue('cutter/quick_mode', False)
+    prefs.setValue('cutter/mode', 'free')  # This test covers analysis, not cutter-label safety.
+    prefs.setValue('label/enabled', False)
     prefs.setValue('label/platform_enabled', False)  # Analysis fixture has no QR.
     window=MainWindow(preferences=prefs)
     window.folder.setText(str(folder))

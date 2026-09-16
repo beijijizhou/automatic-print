@@ -1,13 +1,11 @@
 from __future__ import annotations
 from contextlib import nullcontext
 from dataclasses import replace
-from datetime import datetime
 from pathlib import Path
 from time import perf_counter
 from typing import Iterable
 from .models import LayoutSettings, ProgressCallback, mm_to_px
-from .labels import format_label
-from .output_name import label_output_name, unused_output_path, production_quantity
+from .output_name import planned_output_path
 from .dual_quality import dual_quality
 from .marker_space import validate_embedded_marks
 from .cut_validation import validate_cut_corridor, validate_canvas_pixels, validate_vips_output
@@ -18,7 +16,6 @@ from .planner import plan_layout
 from .vips_renderer import available, build_vips_canvas, build_vips_rows
 from .output_encoder import encoder_plan, save_output
 from .transition_marks import marked_height, transition_rects, paint_transition_lines
-from .output_sizes import size_range_label
 from .marked_pixel_validation import validate_marked_pillow
 from .batch_snapshot import batch_measurements
 @batch_measurements
@@ -99,29 +96,10 @@ def generate_layout(
         if not preview_only:
             raise
         warning = f"仅供检查，禁止输出：{error}"
-    label_text = labels.get(1) or format_label(
-        settings.label_text_template, 1, paths[0], datetime.now().astimezone(),
-        settings.label_date_format, settings.machine_number,
-        batch_name=settings.label_batch_name,
+    output_path, sizes = planned_output_path(
+        output_dir, paths, planned, labels, settings, analysis[-1], batch_name,
+        prepared_plan, filename_suffix,
     )
-    if settings.label_machine_enabled or settings.label_sequence_enabled:
-        label_text = format_label(
-            settings.label_text_template, 1, paths[0], datetime.now().astimezone(),
-            settings.label_date_format, settings.machine_number,
-            batch_name=settings.label_batch_name,
-        )
-    sizes = size_range_label([path for path, p in sorted(planned, key=lambda entry: (entry[1].row_y_px, entry[1].x_px))])
-    size_suffix = f' {sizes}' if sizes else ''
-    zones = {p.cut_zone for _, p in planned}
-    zone_suffix = ' 旋转区' if zones == {'旋转区'} else ' 常规+旋转区' if '旋转区' in zones else ''
-    quantity = production_quantity(paths, analysis[-1])
-    if prepared_plan is not None:
-        quantity = prepared_plan.get('batch_quantity', quantity)+' '+production_quantity(paths, scope='本段')
-    output_format = settings.output_format.lower()
-    extension = '.tif' if output_format == 'tiff' else '.png'
-    output_path = unused_output_path(output_dir, label_output_name(
-        quantity+' '+label_text+size_suffix+zone_suffix+filename_suffix,
-        batch_name, extension=extension))
     quality = dual_quality(planned, settings, analysis[-1])
     if plan_ready:
         from ..automation.api.s2b.prepare import metadata_warning_text

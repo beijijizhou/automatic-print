@@ -53,7 +53,11 @@ def validate_embedded_marks(planned, settings=None):
         if settings:
             from .marker_stack import validate_stack
             validate_stack(path, p, settings)
-        if settings and settings.preserve_header_gap:
+        has_added_text = bool(
+            (p.number_width_px and p.number_height_px)
+            or (p.platform_width_px and p.platform_height_px)
+        )
+        if settings and settings.preserve_header_gap and has_added_text:
             from .cut_guide_geometry import detect_guide_band
             header = detect_guide_band(path)
             if not header:

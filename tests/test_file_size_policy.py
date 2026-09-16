@@ -6,9 +6,6 @@ LEGACY_LIMITS = {
     'automatic_print/automation/rule_batches.py': 241,
     'automatic_print/layout_engine/item_factory.py': 227,
     'automatic_print/layout_engine/service.py': 220,
-    'automatic_print/ui/generation_actions.py': 206,
-    'automatic_print/ui/label_quick_panel.py': 228,
-    'automatic_print/ui/preferences.py': 206,
 }
 
 
