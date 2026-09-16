@@ -33,7 +33,7 @@ def lane_fits(item, lane):
 
 def horizontal_savings(a, b, lanes, fits=None):
     """Numeric feasibility equivalent to _horizontal, without placement objects."""
-    if len(lanes) != 2 or a.rotation_degrees or b.rotation_degrees:
+    if len(lanes) != 2:
         return None
     af = fits[a.path] if fits is not None else tuple(lane_fits(a, lane) for lane in lanes)
     bf = fits[b.path] if fits is not None else tuple(lane_fits(b, lane) for lane in lanes)

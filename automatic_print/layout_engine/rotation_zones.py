@@ -6,8 +6,6 @@ from .cutter_planner import plan_cutter_layout, read_cutter_items
 from .item_factory import read_items
 from .models import mm_to_px
 from .order_groups import complete_orders, ordered_paths
-from .planner import _place_choice
-from .units import UnitChoice, UnitMember
 from .zone_optimizer import select_zones
 from .batch_analysis import attach_rotation_options
 from .size_policy import ordered_single_blocks
@@ -74,19 +72,29 @@ def _rotated(paths, settings, prepared=None):
     items, labels = prepared if prepared is not None else rotation_items(paths, settings)
     if any(p not in items for p in paths):
         return None
-    safety = ceil(settings.cutter_safety_mm*settings.dpi/25.4)
-    knife = max(items[p].footprint_width for p in paths)+safety
-    spacing = mm_to_px(settings.spacing_mm, settings.dpi)
-    from .left_marker import head_margin
-    margin = head_margin(settings)
-    planned, y = [], margin
-    for path in paths:
-        item = items[path]
-        row = UnitChoice(item.footprint_width, item.footprint_height,
-                         (UnitMember(item, 0, 0),), 1)
-        planned.extend(_place_choice(row, 0, y))
-        y += item.footprint_height+spacing
-    return planned, labels, y-spacing+margin, knife
+    # Rotation changes the real footprint. Feed those measured footprints back
+    # through the one shared automatic-column planner so film width decides
+    # whether the result is one, two or more columns. Production order remains
+    # fixed and complete orders are still indivisible.
+    rotated_settings = replace(
+        settings, cutter_auto_knife=settings.cutter_mode == 'dual',
+        allow_rotation=False, manual_rotations=(),
+        # This flag partitions the outer normal/rotation zones. Once inside
+        # the rotation zone, same-colour/same-size singles must be free to find
+        # the best fixed-lane companions.
+        cutter_majority_two_zone=False,
+    )
+    plan = plan_cutter_layout(
+        paths, rotated_settings, None,
+        prepared=([[items[path]] for path in paths], labels),
+        preserve_sequence=False,
+    )
+    planned = [(path, replace(placement, cut_zone='旋转区'))
+               for path, placement in plan[0]]
+    knives = next((p.cut_knife_xs_px for _path, p in planned
+                   if p.cut_knife_xs_px), ())
+    primary = knives[0] if knives else 0
+    return planned, labels, plan[3], primary
 
 
 def plan_rotation_zones(paths, settings, progress, analysis=None, analysis_ready=None, prepared=None,
@@ -146,8 +154,16 @@ def plan_rotation_zones(paths, settings, progress, analysis=None, analysis_ready
     planned.extend((path, replace(p, y_px=p.y_px+boundary, row_y_px=p.row_y_px+boundary,
                        number_y_px=p.number_y_px+boundary, color_block_y_px=p.color_block_y_px+boundary,
                        platform_y_px=p.platform_y_px+boundary,
-                       cut_zone='旋转区', cut_knife_x_px=rotated[3],
-                       cut_knife_xs_px=(rotated[3],), cut_column_count=2)) for path, p in rotated[0])
+                       cut_zone='旋转区')) for path, p in rotated[0])
+    # The old zone optimizer estimates rotated work as one image per row. Its
+    # mixed candidate remains useful, but a whole rotated batch may become
+    # shorter only after the shared multi-column solver sees all neighbours.
+    # Always compare that exact candidate before selecting the production plan.
+    whole = _rotated(paths, base_settings, (rotated_items, rotated_labels))
+    if whole is not None and whole[2] < new_height:
+        planned, labels, new_height = whole[0], whole[1], whole[2]
+        normal_result, normal_paths, rotated_paths = None, [], list(paths)
+        knife = whole[3]
     baseline_height = baseline[3] if baseline else new_height
     from .color_policy import validate_color_order
     try:

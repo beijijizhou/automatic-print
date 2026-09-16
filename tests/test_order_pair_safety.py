@@ -48,9 +48,10 @@ def test_two_orders_can_rotate_together_when_neither_single_move_saves(tmp_path)
         remaining = [p for p in paths if p != path]
         assert _normal(remaining, normal_settings)[0][3] + normal_settings.spacing_mm + _rotated([path], normal_settings)[2] > baseline[3]
     planned, _, _, height, _ = plan_layout(paths, settings(), None)
-    assert height == 200 + normal_settings.spacing_mm
+    assert height == 100
     assert height < baseline[3]
     assert all(p.cut_zone == '旋转区' for _, p in planned)
+    assert len({p.row_y_px for _, p in planned}) == 1
 
 
 def test_assignment_matches_exhaustive_whole_order_comparison(tmp_path):

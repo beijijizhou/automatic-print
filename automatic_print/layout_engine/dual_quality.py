@@ -16,10 +16,13 @@ def dual_quality(planned, settings, analysis=None):
         embedded += sum(bool(p['color_block_width_px'] and p['x_px'] <= p['color_block_x_px']
             and p['color_block_x_px']+p['color_block_width_px'] <= p['x_px']+p['width_px']) for p in members)
     for (zone, _), members in rows.items():
+        columns = len({p['x_px'] for p in members})
         if zone == '旋转区' or any(p['rotation_degrees'] for p in members):
             rotated += len(members)
-        elif len(members) >= 2:
-            column_rows[len(members)] += 1
+            if columns >= 2:
+                column_rows[columns] += 1
+        elif columns >= 2:
+            column_rows[columns] += 1
         else:
             for p in members:
                 external = bool(p['platform_width_px'] and
@@ -33,7 +36,7 @@ def dual_quality(planned, settings, analysis=None):
                         '当前相邻订单、尺码及固定刀位条件下没有安全搭档')})
     parallel = '、'.join(f'{columns}排 {count} 行' for columns, count
                         in sorted(column_rows.items())) or '无并排'
-    text = f'{parallel} · 常规单排 {len(singles)} 张 · 旋转单排 {rotated} 张'
+    text = f'{parallel} · 常规单排 {len(singles)} 张 · 旋转区 {rotated} 张'
     text += f' · 刀码内置 {embedded} 张（复用透明空位）'
     if singles:
         text += ' · 未达到全双排预期，请核对单排明细；不通过缩图或跨刀位强行双排'

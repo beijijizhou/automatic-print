@@ -53,8 +53,7 @@ def row(members):
 
 
 def horizontal(group, lanes):
-    if len(group) > len(lanes) or len(group) < 2 or any(
-            item.rotation_degrees for item in group):
+    if len(group) > len(lanes) or len(group) < 2:
         return None
     members = None
     for assigned in permutations(lanes[:len(group)]):

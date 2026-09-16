@@ -6,7 +6,7 @@ import pytest
 from automatic_print.layout import LayoutSettings, generate_layout
 from automatic_print.layout_engine.planner import plan_layout
 from automatic_print.layout_engine.rotation_zones import complete_orders
-from automatic_print.layout_engine.cut_validation import validate_cut_corridor
+from automatic_print.layout_engine.rotation_zones import _rotated
 
 
 def _sources(tmp_path):
@@ -37,12 +37,14 @@ def test_saving_rotation_zone_moves_complete_double_order_and_uses_own_knife(tmp
     assert [z["name"] for z in regions] == ["常规区","旋转区"]
     assert result["cut_corridor"]["knife_changes"] == 1
     assert all(z["pixel_verified"] for z in regions)
-    assert regions[0]["knife_x_px"] != regions[1]["knife_x_px"]
+    assert regions[0]["corridors"]
+    assert regions[1]["corridors"] == []  # One rotated column needs no internal knife.
     rotated = [p for p in result["placements"] if p["cut_zone"] == "旋转区"]
     assert len(rotated) == 2
     assert all(p["source"].startswith("BORDER1-") for p in rotated)
     assert all(p["rotation_degrees"] == 90 for p in rotated)
-    assert len({p["row_y_px"] for p in rotated}) == 2
+    assert len({p["y_px"] for p in rotated}) == 2
+    assert {p["cut_column_count"] for p in rotated} == {1}
     assert set(p["sequence_number"] for p in rotated) == {1,2}
     normal = [p for p in result["placements"] if p["cut_zone"] == "常规区"]
     assert all(p["rotation_degrees"] == 0 for p in normal)
@@ -68,12 +70,32 @@ def test_order_grouping_includes_all_pieces_and_production_prefixes(tmp_path):
     assert groups[0] == [paths[0],paths[1],paths[3]]
 
 
-def test_rotated_zone_cannot_have_two_images_on_one_row(tmp_path):
-    paths = _sources(tmp_path)
-    planned,_,width,_,_ = plan_layout(paths,_settings(),None)
-    rotated_rows = [i for i,(_,p) in enumerate(planned) if p.cut_zone == "旋转区"]
-    a,b = rotated_rows
-    path,p = planned[b]
-    planned[b] = path,replace(p,row_y_px=planned[a][1].row_y_px)
-    with pytest.raises(ValueError,match="每一行只有一张"):
-        validate_cut_corridor(planned,_settings(),width)
+@pytest.mark.parametrize('engine', ['pillow', 'libvips'])
+def test_rotated_zone_can_reuse_fixed_multi_column_knives(tmp_path, engine):
+    paths = []
+    for index in range(4):
+        path = tmp_path/f'B{index}-1-T-Black-M-NO1-1.png'
+        Image.new('RGBA', (100, 250), 'blue').save(path, dpi=(25.4, 25.4))
+        paths.append(path)
+    result = generate_layout(paths, tmp_path/'rotated-columns', _settings(
+        cutter_compare_whole_rotation=True, png_engine=engine))
+    rotated = [p for p in result['placements'] if p['cut_zone'] == '旋转区']
+    assert len(rotated) == 4
+    assert len({p['row_y_px'] for p in rotated}) == 2
+    assert {p['cut_column_count'] for p in rotated} == {2}
+    assert {tuple(p['cut_knife_xs_px']) for p in rotated} == {(300,)}
+    zones = result['cut_corridor']['zones']
+    assert len(zones) == 1 and len(zones[0]['corridors']) == 1
+    assert zones[0]['pixel_verified']
+
+
+def test_rotated_zone_does_not_cut_wide_members_to_pair_narrow_members(tmp_path):
+    paths = []
+    for index, height in enumerate((250, 400, 250, 400)):
+        path = tmp_path/f'B{index}-1-T-Black-M-NO1-1.png'
+        Image.new('RGBA', (100, height), 'blue').save(path, dpi=(25.4, 25.4))
+        paths.append(path)
+    planned, _labels, _height, _knife = _rotated(paths, _settings())
+    assert len({p.row_y_px for _path, p in planned}) == 4
+    assert {p.cut_column_count for _path, p in planned} == {1}
+    assert all(not p.cut_knife_xs_px for _path, p in planned)

@@ -53,18 +53,21 @@ def plan_single_rotation(baseline, targets, rotated_items, rotated_labels, setti
     for size in size_order:
         prefix[size] = bottom+margin if bottom else 0
         bottom = max(bottom, bottoms[size])
-    best, accumulated, count, valid = None, 0, 0, True
-    for step, (size, paths) in enumerate(reversed(list(blocks.items())), 1):
+    best, suffix, valid = None, [], True
+    ordered_blocks = list(blocks.items())
+    for step, (size, paths) in enumerate(reversed(ordered_blocks), 1):
         valid = valid and all(path in rotated_items for path in paths)
-        count += len(paths)
+        suffix[:0] = paths
         if valid:
-            accumulated += sum(rotated_items[path].footprint_height+spacing for path in paths)
+            # Score the real multi-column rotated geometry, not the obsolete
+            # sum of individual single-row heights.
+            rotated = _rotated(suffix, settings, (rotated_items, rotated_labels))
             normal_height = prefix[size]
             boundary = normal_height+spacing if normal_height else 0
-            height = boundary+accumulated-spacing+2*margin
-            score = height, count
+            height = boundary+rotated[2]
+            score = height, len(suffix)
             if height < baseline[3] and (best is None or score < best[0]):
-                best = score, size
+                best = score, size, rotated
         if progress:
             progress('单件旋转筛选', step, len(blocks), f'{size}：只比较完整单排尺码后缀，不搜索旋转刀位组合')
     if best is None:
@@ -78,12 +81,11 @@ def plan_single_rotation(baseline, targets, rotated_items, rotated_labels, setti
     normal_knife = mm_to_px(settings.cutter_knife_mm, settings.dpi)
     normal = [(path, replace(p, cut_zone='常规区', cut_knife_x_px=normal_knife))
               for path, p in baseline[0] if path not in selected]
-    rotated = _rotated(chosen, settings, (rotated_items, rotated_labels))
+    rotated = best[2]
     boundary = prefix[best[1]]+spacing if normal else 0
     planned = normal+[(path, replace(p, y_px=p.y_px+boundary, row_y_px=p.row_y_px+boundary,
         number_y_px=p.number_y_px+boundary, color_block_y_px=p.color_block_y_px+boundary,
-        platform_y_px=p.platform_y_px+boundary, cut_zone='旋转区', cut_knife_x_px=rotated[3],
-        cut_knife_xs_px=(rotated[3],), cut_column_count=2))
+        platform_y_px=p.platform_y_px+boundary, cut_zone='旋转区'))
         for path, p in rotated[0]]
     height = marked_height(planned, settings, width, boundary+rotated[2])
     if height >= original_height:

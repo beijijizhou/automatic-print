@@ -7,6 +7,7 @@ import pytest
 
 from automatic_print.layout import LayoutSettings, generate_layout
 from automatic_print.layout_engine import rotation_compare
+from automatic_print.layout_engine.cut_validation import corridor_checks
 from automatic_print.layout_engine.planner import plan_layout
 
 
@@ -47,8 +48,9 @@ def test_real_parallel_complete_orders_and_true_normal_baseline(tmp_path, monkey
     for part in result.get('parts', [result]):
         assert part['order_check']
         with Image.open(tmp_path/'out'/part['filename']) as output:
-            for zone in part['cut_corridor'].get('zones', [part['cut_corridor']]):
-                assert zone['pixel_verified']
+            assert all(zone['pixel_verified'] for zone in
+                       part['cut_corridor'].get('zones', [part['cut_corridor']]))
+            for zone in corridor_checks(part['cut_corridor']):
                 stripe = output.crop((zone['safe_left_px'], zone.get('start_y_px', 0),
                                       zone['safe_right_px'], zone.get('end_y_px', output.height)))
                 # Printed exact end notices may occupy the otherwise clear corridor.

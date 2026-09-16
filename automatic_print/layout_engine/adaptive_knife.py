@@ -83,7 +83,7 @@ def plan_adaptive_knife_zones(paths, settings, progress, prepared=None):
     normal_knife = mm_to_px(effective[0].cutter_knife_mm, base.dpi)
     planned = [(path, replace(p, cut_zone='并排区', cut_knife_x_px=normal_knife))
                for path, p in normal[0]]
-    planned.extend(_shift(path, placement, boundary, rotated[3])
+    planned.extend(_shift(path, placement, boundary)
                    for path, placement in rotated[0])
     height = boundary+rotated[2]
     width = cutter_output_width(
@@ -129,13 +129,12 @@ def _pairable(order, items, lanes, spacing):
                for count, row in solution[1])
 
 
-def _shift(path, placement, offset, knife):
+def _shift(path, placement, offset):
     return path, replace(
         placement, y_px=placement.y_px+offset,
         row_y_px=placement.row_y_px+offset,
         number_y_px=placement.number_y_px+offset,
         color_block_y_px=placement.color_block_y_px+offset,
         platform_y_px=placement.platform_y_px+offset,
-        cut_zone='旋转区', cut_knife_x_px=knife,
-        cut_knife_xs_px=(knife,), cut_column_count=2,
+        cut_zone='旋转区',
     )

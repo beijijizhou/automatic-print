@@ -32,7 +32,7 @@ def validate_order_placements(paths, planned):
         (a, first, _), (b, second, _) = entries
         if b != a+1:
             raise ValueError(f'双面 {key} 不相邻，禁止输出。')
-        if first.y_px == second.y_px and first.cut_zone != '旋转区':
+        if first.y_px == second.y_px:
             horizontal += 1
         else:
             if not (first.y_px+first.height_px <= second.y_px or

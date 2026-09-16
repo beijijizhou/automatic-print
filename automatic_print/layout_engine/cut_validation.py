@@ -57,8 +57,6 @@ def validate_cut_corridor(planned, settings, canvas_width, left_marker_px=0):
             if len(knife_sets) != 1:
                 raise ValueError("同一区域的刀位不统一，禁止输出。")
             knives = next(iter(knife_sets))
-            if name == "旋转区" and len({p.row_y_px for _,p in members}) != len(members):
-                raise ValueError("旋转区必须每一行只有一张图片。")
             checked = _validate_fixed_knives(members, settings, canvas_width,
                                              knives, 0)
             checked.update(name=name,start_y_px=min(p.row_y_px for _,p in members),
