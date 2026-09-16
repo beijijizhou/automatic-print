@@ -12,7 +12,7 @@
 | 颜色与生产顺序 | `layout_engine/color_policy.py`, `single_order_sequence.py` | 颜色优先、尺码业务顺序集中维护。 |
 | S2B批次元数据 | `automation/api/s2b/`, `.github/workflows/windows-release.yml` | 从文件夹尾部解析批次号，一次读取共享服务并按订单项、尺码匹配本地图片；不得在颜色排序或四种膜方案中重复访问接口。中心地址内置，受限客户端密钥只在 Windows 构建时注入。 |
 | 普通行和自动多列规划 | `layout_engine/planner.py`, `cutter_planner.py`, `dynamic_columns.py`, `column_solver.py` | 膜宽与真实占位决定列数；一至八列共用同一Placement入口。 |
-| 整批刀位 | `layout_engine/cutter_planner.py`, `dynamic_columns.py`, `knife_optimizer.py`, `adaptive_knife.py` | N列生成N-1条区域固定刀位；多数可并排时形成一个并排区，其余完整订单形成一个旋转区；禁止超过两个区域。 |
+| 整批刀位 | `layout_engine/cutter_planner.py`, `dynamic_columns.py`, `knife_optimizer.py`, `adaptive_knife.py` | N列生成N-1条区域固定刀位；多数可并排时形成一个并排区，其余完整订单形成一个旋转区；混色订单不充当单色边界；禁止超过两个区域。 |
 | 旋转区域和整批旋转 | `layout_engine/rotation_zones.py`, `rotation_compare.py`, `whole_rotation.py` | 以完整订单或尺码块评估，不复制候选算法。 |
 | 单排超宽恢复 | `layout_engine/width_fit.py`, `gap_fallback.py` | 旋转区先强制横向旋转，再按当前膜宽、刀码和安全距离的动态上限等比缩小；整批候选被个别超宽图阻断时按双面同倍率生成虚拟缩小候选并重跑完整订单贪心比较；保留恢复报告。 |
 | S–L并排宽度上限 | `layout_engine/pair_width.py` | 主界面默认开启；按270毫米上限生成尺寸覆盖，实际列数仍由膜宽和自动多列规划决定；不修改源图。 |

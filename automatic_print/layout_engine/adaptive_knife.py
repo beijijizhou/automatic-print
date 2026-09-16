@@ -9,7 +9,7 @@ from .models import mm_to_px
 from .order_groups import complete_orders, ordered_paths
 from .single_order_sequence import lane_fits
 from .units import build_units
-from .color_policy import order_color_key
+from .color_policy import order_color, order_color_key
 
 
 def plan_adaptive_knife_zones(paths, settings, progress, prepared=None):
@@ -102,10 +102,12 @@ def _partition(orders, items, lanes, spacing):
     # The physical output is double zone followed by rotation zone. Once one
     # colour reaches the second zone, later colours must also stay there so the
     # output never returns to an earlier colour after the zone boundary.
-    if leftovers:
-        boundary = min(map(order_color_key, leftovers))
-        moved = [order for order in double if order_color_key(order) > boundary]
-        double = [order for order in double if order_color_key(order) <= boundary]
+    recognized = [order for order in leftovers if order_color(order) is not None]
+    if recognized:
+        boundary = min(map(order_color_key, recognized))
+        moved = [order for order in double
+                 if order_color(order) is not None and order_color_key(order) > boundary]
+        double = [order for order in double if order not in moved]
         leftovers = sorted(leftovers + moved, key=order_color_key)
     return double, leftovers
 

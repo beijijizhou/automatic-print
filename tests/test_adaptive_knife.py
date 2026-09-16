@@ -53,6 +53,33 @@ def test_batch_end_block_is_the_only_reason_to_restore_full_film_width(tmp_path)
     assert full['width_px'] == 580
 
 
+def test_mixed_color_leftover_does_not_discard_pairable_majority(tmp_path):
+    paths = []
+    for name, width in (
+        ('B0-1-T-Black-M-NO1-1.png', 350),
+        ('B0-2-T-White-M-NO1-1.png', 250),
+        ('B1-1-T-Black-M-NO1-1.png', 250),
+        ('B2-1-T-Black-M-NO1-1.png', 250),
+        ('B3-1-T-Black-M-NO1-1.png', 250),
+        ('B4-1-T-Black-M-NO1-1.png', 250),
+    ):
+        path = tmp_path / name
+        Image.new('RGBA', (width, 400), 'blue').save(path, dpi=(25.4, 25.4))
+        paths.append(path)
+    result = generate_layout(paths, tmp_path/'mixed', LayoutSettings(
+        dpi=25.4, media_width_mm=580, margin_mm=0, spacing_mm=8,
+        cutter_mode='dual', cutter_auto_knife=True,
+        cutter_majority_two_zone=True, cutter_left_marker_external=True,
+        number_images=False,
+    ))
+    assert result['analysis']['rotation_comparison']['selected_strategy'] == (
+        '多数并排区 + 剩余旋转区'
+    )
+    assert sum(p['rotation_degrees'] != 0 for p in result['placements']) == 2
+    assert len({p['row_y_px'] for p in result['placements']
+                if p['cut_zone'] == '并排区'}) == 2
+
+
 def test_only_oversized_rotated_leftover_is_scaled(tmp_path, monkeypatch):
     from automatic_print.layout_engine import width_fit
     monkeypatch.setattr(width_fit, 'cache_root', lambda: tmp_path/'cache')
