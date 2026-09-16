@@ -72,7 +72,8 @@ def settings_from_window(window) -> LayoutSettings:
                                     and label.source_order.isChecked()),
         label_machine_enabled=True,
         platform_name=platform if label.enabled.isChecked() and label.platform_enabled.isChecked() else '',
-        s2b_batch_api_enabled=getattr(window, 'developer_mode_enabled', False),
+        # S2B is detected from its batch folder; order/color lookup is mandatory.
+        s2b_batch_api_enabled=True,
         platform_font_height_mm=label.platform_font_height.value(),
         label_position='top_left' if not cutting and label.position.currentData()=='block_below' else label.position.currentData(),
         label_offset_x_mm=label.offset_x.value(),

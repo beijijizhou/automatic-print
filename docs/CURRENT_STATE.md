@@ -44,8 +44,9 @@
 - 文件发现与元数据：`discovery.py`、`batch_discovery.py`、`source_metadata.py`、
   `output_dpi.py`。
 - S2B 文件夹批次号解析、中心批次查询及本地图片颜色匹配位于
-  `automation/api/s2b/`；该调用目前仅由开发者模式参数启用，中心服务未配置或不可用时不会阻断
-  本地排版。中心地址随应用提供，正式 Windows 构建从 GitHub Secret
+  `automation/api/s2b/`；只要识别到 S2B 批次，预览和生成都会在排版前查询一次订单颜色并按本地
+  路径缓存，不依赖开发者模式或手动平台选择。服务不可用或任一图片颜色未匹配时阻止排版并给出
+  批次诊断。中心地址随应用提供，正式 Windows 构建从 GitHub Secret
   `AUTOMATIC_PRINT_S2B_BATCH_INFO_KEY` 注入受限客户端密钥；源码树只保留空占位，
   Supabase service-role 和 S2B 登录凭据都不下发到生产电脑。
 - 订单、双面、颜色与尺码：`order_groups.py`、`batch_analysis.py`、

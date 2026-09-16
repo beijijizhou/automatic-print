@@ -1,4 +1,7 @@
 import json
+from types import SimpleNamespace
+
+import pytest
 
 from automatic_print.automation.api.s2b.batch_name import (
     find_s2b_batch_folder,
@@ -13,6 +16,8 @@ from automatic_print.automation.api.s2b.metadata import (
     color_for_path,
     register_batch_records,
 )
+from automatic_print.automation.api.s2b.prepare import prepare_s2b_metadata
+from automatic_print.automation.api.s2b.client import S2BBatchInfoError
 
 
 def test_batch_name_is_parsed_from_stable_right_hand_fields():
@@ -86,3 +91,77 @@ def test_api_color_matches_s2b_order_item_and_size(tmp_path):
     })
     assert count == 1
     assert color_for_path(image) == "黑色"
+
+
+def test_detected_s2b_always_fetches_color_without_developer_mode(
+    tmp_path, monkeypatch
+):
+    root = tmp_path / "AS2B014Mt______1_22UJ9KT4VCZA_20260917_014406_ucjfsdyh"
+    image = root / "S" / "22UJ9KT4VCZA-1-1-ORDER7-1-1-1-1-棉-S.png"
+    image.parent.mkdir(parents=True)
+    image.touch()
+    calls = []
+    monkeypatch.setattr(
+        "automatic_print.automation.api.s2b.prepare.gateway_config",
+        lambda: ("https://example.test", "key"),
+    )
+
+    def fetch(batch_number):
+        calls.append(batch_number)
+        return {
+            "batch_number": batch_number,
+            "source_total": 1,
+            "records": [{
+                "order_code": "ORDER7",
+                "order_item_code": "ORDER7-1",
+                "color": "蓝色",
+                "size": "S",
+            }],
+        }
+
+    monkeypatch.setattr(
+        "automatic_print.automation.api.s2b.prepare.fetch_s2b_batch_info", fetch
+    )
+    result = prepare_s2b_metadata(
+        [image],
+        SimpleNamespace(s2b_batch_api_enabled=False, platform_name=""),
+    )
+    prepare_s2b_metadata([image], SimpleNamespace())
+    assert calls == ["22UJ9KT4VCZA"]
+    assert result[0]["colors"] == {"蓝色": 1}
+
+
+def test_detected_s2b_stops_when_any_color_is_unmatched(tmp_path, monkeypatch):
+    root = tmp_path / "AS2B014Mt______1_22UJ9KT4VCZA_20260917_014406_ucjfsdyh"
+    image = root / "S" / "22UJ9KT4VCZA-1-1-UNKNOWN-1-1-1-1-棉-S.png"
+    image.parent.mkdir(parents=True)
+    image.touch()
+    monkeypatch.setattr(
+        "automatic_print.automation.api.s2b.prepare.gateway_config",
+        lambda: ("https://example.test", "key"),
+    )
+    monkeypatch.setattr(
+        "automatic_print.automation.api.s2b.prepare.fetch_s2b_batch_info",
+        lambda batch_number: {
+            "batch_number": batch_number,
+            "records": [{
+                "order_code": "OTHER",
+                "order_item_code": "OTHER-1",
+                "color": "黑色",
+                "size": "S",
+            }],
+        },
+    )
+    with pytest.raises(S2BBatchInfoError, match="订单颜色仅匹配0/1张"):
+        prepare_s2b_metadata([image], SimpleNamespace())
+
+
+def test_non_s2b_batch_does_not_require_color_service(tmp_path, monkeypatch):
+    image = tmp_path / "ordinary" / "S" / "ORDER-1.png"
+    image.parent.mkdir(parents=True)
+    image.touch()
+    monkeypatch.setattr(
+        "automatic_print.automation.api.s2b.prepare.gateway_config",
+        lambda: pytest.fail("non-S2B input must not access the gateway"),
+    )
+    assert prepare_s2b_metadata([image], SimpleNamespace()) == []
