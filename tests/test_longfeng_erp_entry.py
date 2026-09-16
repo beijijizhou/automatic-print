@@ -7,6 +7,7 @@ from PySide6.QtWidgets import QApplication
 
 from automatic_print.ui.main_window import MainWindow
 from automatic_print.batch_ui.processing import process_local_batches
+from automatic_print.batch_ui.worker import AutomationWorker
 
 
 APP = QApplication.instance() or QApplication([])
@@ -35,6 +36,10 @@ def test_platform_download_is_multi_select_and_preview_only(tmp_path):
     assert longfeng.platform.currentData() == "隆丰"
     assert longfeng.download_preview_only.isChecked()
     assert not longfeng.download_preview_only.isEnabled()
+    assert longfeng.download_button.text() == "下载并解压"
+    assert longfeng.process_button.isHidden()
+    assert longfeng.test_mode.isHidden()
+    assert longfeng.download_preview_only.isHidden()
 
     page.platform_checks["莆田"].setChecked(True)
     APP.processEvents()
@@ -78,3 +83,36 @@ def test_downloaded_batch_preview_does_not_render_output(tmp_path, monkeypatch):
     assert result["preview_only"] is True
     assert calls[0][2]["preview_only"] is True
     assert not (tmp_path / "隆丰" / "PREVIEW").exists()
+
+
+def test_platform_download_never_starts_layout(tmp_path, monkeypatch):
+    downloaded = tmp_path / "batch.zip"
+    monkeypatch.setattr(
+        "automatic_print.batch_ui.worker.download_selected_batches",
+        lambda *_args, **_kwargs: [downloaded],
+    )
+    worker = AutomationWorker(
+        "download",
+        "隆丰",
+        output=tmp_path,
+        batch_numbers=["609162027027"],
+    )
+    monkeypatch.setattr(worker, "_save_batch_types", lambda: None)
+    monkeypatch.setattr(
+        worker,
+        "_process_batches",
+        lambda: (_ for _ in ()).throw(AssertionError("排版不应启动")),
+    )
+    results = []
+    worker.completed.connect(results.append)
+
+    worker._run_action()
+
+    assert results == [
+        {
+            "type": "downloaded",
+            "platform": "隆丰",
+            "files": [downloaded],
+            "output_folder": str(tmp_path / "隆丰"),
+        }
+    ]

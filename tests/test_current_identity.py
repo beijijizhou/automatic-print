@@ -16,6 +16,8 @@ def test_selected_film_and_current_child_are_highlighted_without_reading(tmp_pat
     badge.film.setCurrentIndex(badge.film.findData(450))
     assert owner.cutter_settings.film.currentData() == 450
     assert '45 厘米' in badge.text()
+    assert not panel.preview.refresh_timer.isActive()
+    assert '点击单批次排版或多批次排版' in panel.preview.detail
     badge.mode.setCurrentIndex(badge.mode.findData('single'))
     assert owner.cutter_settings.mode.currentData() == 'single'
     assert '单列切膜' in badge.text()

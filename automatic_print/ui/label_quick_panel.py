@@ -113,10 +113,10 @@ class LabelQuickPanel(QWidget):
         self.preview.analysis_started.connect(self.batch_distribution.reset)
         self.preview.analysis_started.connect(lambda: self.summary.start(window.folder.text()))
         self.analysis.source_selected.connect(self._select_analysis_source)
-        label.settings_changed.connect(self.preview.schedule_refresh)
+        label.settings_changed.connect(self.preview.invalidate_parameters)
         def refresh_platform_font(*_args):
             if self.preview.batch_payload and not self.preview.production_active:
-                self.preview.refresh_timer.start()
+                self.preview.invalidate_parameters()
         label.platform_font_height.valueChanged.connect(refresh_platform_font)
         window.cutter_settings.left_marker_lift.valueChanged.connect(refresh_platform_font)
         transitions = window.cutter_settings.transitions
@@ -124,7 +124,7 @@ class LabelQuickPanel(QWidget):
                        transitions.gap.valueChanged, transitions.thickness.valueChanged,
                        transitions.footer_font.valueChanged):
             signal.connect(refresh_platform_font)
-        block.settings_changed.connect(self.preview.schedule_refresh)
+        block.settings_changed.connect(self.preview.invalidate_parameters)
         def folder_changed(folder):
             if window.cutter_settings.quick_mode.isChecked():
                 self.summary.start(folder)
@@ -137,11 +137,11 @@ class LabelQuickPanel(QWidget):
             if not getattr(self.preview, 'parameter_refresh_deferred', 0): folder_changed(window.folder.text())
         window.cutter_settings.quick_mode.toggled.connect(mode_changed)
         self.preview.auto_refresh_enabled = not window.cutter_settings.quick_mode.isChecked()
-        window.dpi.valueChanged.connect(self.preview.schedule_refresh)
-        window.follow_source_dpi.toggled.connect(self.preview.schedule_refresh)
-        window.membrane_gap_enabled.toggled.connect(self.preview.schedule_refresh)
-        window.membrane_gap.valueChanged.connect(self.preview.schedule_refresh)
-        window.auto_fit_width.toggled.connect(self.preview.schedule_refresh)
+        window.dpi.valueChanged.connect(self.preview.invalidate_parameters)
+        window.follow_source_dpi.toggled.connect(self.preview.invalidate_parameters)
+        window.membrane_gap_enabled.toggled.connect(self.preview.invalidate_parameters)
+        window.membrane_gap.valueChanged.connect(self.preview.invalidate_parameters)
+        window.auto_fit_width.toggled.connect(self.preview.invalidate_parameters)
         cutter = window.cutter_settings
         for signal in (cutter.film.currentIndexChanged, cutter.mode.currentIndexChanged,
                        cutter.auto_knife.toggled,
@@ -150,9 +150,9 @@ class LabelQuickPanel(QWidget):
                        cutter.knife.valueChanged, cutter.safety.valueChanged,
                        cutter.marker_offset.valueChanged, cutter.left_marker_lift.valueChanged,
                        window.spacing.valueChanged):
-            signal.connect(self.preview.schedule_refresh)
+            signal.connect(self.preview.invalidate_parameters)
         for control in (cutter.printable.left, cutter.printable.right):
-            control.valueChanged.connect(self.preview.schedule_refresh)
+            control.valueChanged.connect(self.preview.invalidate_parameters)
         group = QGroupBox("本批次排版预览 · 默认显示轻量订单结构")
         self.preview_scroll = QScrollArea()
         self.preview_scroll.setWidgetResizable(True)

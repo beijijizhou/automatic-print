@@ -168,7 +168,11 @@ class BatchActionsMixin:
                 self, "请选择批次", "请至少选择一个可下载批次。"
             )
             return
-        if self.merge_batches.isChecked() and len(selected) < 2:
+        if (
+            not self.download_only
+            and self.merge_batches.isChecked()
+            and len(selected) < 2
+        ):
             QMessageBox.warning(
                 self, "请选择多个批次", "合并排版请至少选择两个批次。"
             )
@@ -181,17 +185,21 @@ class BatchActionsMixin:
             for record in self.records
             if record.batch_number in selected
         }
-        self._start_worker(
-            AutomationWorker(
-                "download",
-                self.platform.currentData(),
-                output=Path(self.output.text().strip()),
-                batch_numbers=selected,
+        options = {
+            "output": Path(self.output.text().strip()),
+            "batch_numbers": selected,
+            "batch_types": batch_types,
+        }
+        if not self.download_only:
+            options.update(
                 settings=self._current_layout_settings(),
                 sample_limit=5 if self.test_mode.isChecked() else None,
-                batch_types=batch_types,
                 merge_batches=self.merge_batches.isChecked(),
                 preview_only=self.download_preview_only.isChecked(),
+            )
+        self._start_worker(
+            AutomationWorker(
+                "download", self.platform.currentData(), **options
             )
         )
 

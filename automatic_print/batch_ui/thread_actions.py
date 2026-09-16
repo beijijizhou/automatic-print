@@ -105,6 +105,15 @@ class ThreadActionsMixin:
             self.batch_rule_summary.setText(text)
             QMessageBox.information(self, "批次生成完成", text)
             return
+        if result["type"] == "downloaded":
+            text = (
+                f"{result['platform']}：已下载并解压 "
+                f"{len(result['files'])} 个文件。未启动排版；"
+                "请回到本地排版页，点击单批次排版或多批次排版。"
+            )
+            self.summary.setText(text)
+            QMessageBox.information(self, "下载完成", text)
+            return
         mode = (
             "排版预览"
             if result.get("preview_only")

@@ -140,13 +140,13 @@ class AutomationWorker(QObject):
                 }
             )
         elif self.action == "download":
-            self._download_and_process()
+            self._download()
         elif self.action == "process":
             self._deliver(self.completed, self._process_batches())
         else:
             raise RuntimeError(f"未知操作：{self.action}")
 
-    def _download_and_process(self) -> None:
+    def _download(self) -> None:
         if self.output is None:
             raise RuntimeError("请选择下载保存位置。")
         files = download_selected_batches(
@@ -156,10 +156,16 @@ class AutomationWorker(QObject):
             self._report,
         )
         self._save_batch_types()
-        self._report("下载与解压完成，正在自动排版…")
-        result = self._process_batches()
-        result.update(type="downloaded_and_processed", files=files)
-        self._deliver(self.completed, result)
+        self._report("下载与解压完成；未启动排版。")
+        self._deliver(
+            self.completed,
+            {
+                "type": "downloaded",
+                "platform": self.platform_name,
+                "files": files,
+                "output_folder": str(self.output / self.platform_name),
+            },
+        )
 
     def _process_batches(self) -> dict:
         if self.output is None or self.settings is None:

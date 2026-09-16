@@ -117,7 +117,7 @@ def build_production_page(owner, output_row: QHBoxLayout) -> QWidget:
     owner.refresh_button.clicked.connect(owner.refresh_batches)
     owner.select_button = QPushButton("全选可下载批次")
     owner.select_button.clicked.connect(owner.select_all_ready)
-    owner.download_button = QPushButton("一键下载并自动排版")
+    owner.download_button = QPushButton("下载并解压")
     owner.download_button.clicked.connect(owner.download_selected)
     owner.process_button = QPushButton("重新排版已下载批次")
     owner.process_button.clicked.connect(owner.process_batches)
@@ -144,6 +144,14 @@ def build_production_page(owner, output_row: QHBoxLayout) -> QWidget:
         not getattr(owner, "download_only", False)
     )
     owner.merge_batches = QCheckBox("合并选中的批次为一个排版文件")
+    if getattr(owner, "download_only", False):
+        for control in (
+            owner.process_button,
+            owner.test_mode,
+            owner.download_preview_only,
+            owner.merge_batches,
+        ):
+            control.hide()
     if not hasattr(owner, "log"):
         owner.log = QPlainTextEdit()
         owner.log.setReadOnly(True)

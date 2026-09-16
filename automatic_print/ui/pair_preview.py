@@ -58,7 +58,7 @@ class PairProductionPreview(ProductionPreview):
         if self.batch_payload and self.path is not None:
             self.set_overview(self.overview)
         elif not self.production_active:
-            self.schedule_refresh()
+            self.invalidate_parameters()
 
     def schedule_refresh(self, *_args):
         if not self.auto_refresh_enabled or getattr(self, 'parameter_refresh_deferred', 0):
@@ -66,6 +66,23 @@ class PairProductionPreview(ProductionPreview):
         if self.source_folder is None and self.path is None:
             return
         self.refresh_timer.start()
+
+    def invalidate_parameters(self, *_args):
+        """Parameter edits never start analysis; only production buttons do."""
+        self.refresh_timer.stop()
+        self.loader.invalidate()
+        self.cut_guides.clear()
+        self.batch_payload, self.batch_labels = None, {}
+        self.analysis_report = {}
+        self._schematic_report, self._schematic_items = None, {}
+        self.planned, self.images, self.badges = [], {}, {}
+        self.item, self.render_settings = None, None
+        self.warning, self.overflow = "", []
+        message = "参数已修改；点击单批次排版或多批次排版后重新计算。"
+        self.detail = message
+        self.production_stage = message
+        self.loading_status.emit(message)
+        self.update()
 
     def stage_folder(self, folder):
         self.source_folder, self.path = None, None
@@ -100,7 +117,7 @@ class PairProductionPreview(ProductionPreview):
             install_snapshot(self, shown, data["labels"], data["settings"], data.get("warning", ""))
             self.update()
         else:
-            self.refresh()
+            self.update()
 
     def resizeEvent(self, event):
         super().resizeEvent(event)

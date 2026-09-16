@@ -48,4 +48,4 @@ class ManualRotationPanel(QWidget):
             rotations[path] = -90
         preferences.setValue("layout/manual_rotations", json.dumps(rotations))
         preferences.sync()
-        self.preview.refresh_timer.start()  # Explicit edit: user-requested safety preview.
+        self.preview.invalidate_parameters()
