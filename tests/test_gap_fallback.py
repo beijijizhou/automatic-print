@@ -62,3 +62,25 @@ def test_uniform_dual_knife_failure_retries_original_paths(monkeypatch):
     paths,settings,result=gap_fallback.plan_with_gap_fallback([Path('/tmp/copy.png')],
         LayoutSettings(membrane_gap_mm=40),rows)
     assert len(calls)==2 and rows[0]['rollback_added_mm']==32
+
+
+def test_selected_majority_plan_skips_redundant_rotation_overflow_pass(monkeypatch):
+    from automatic_print.layout_engine import width_fit
+    calls = []
+    def plan(_paths, _settings, _progress, analysis):
+        calls.append(1)
+        analysis({'rotation_comparison': {
+            'selected_strategy': '多数并排区 + 剩余旋转区',
+        }})
+        return [], {}, 580, 200, 200
+    monkeypatch.setattr(gap_fallback, 'plan_layout', plan)
+    monkeypatch.setattr(
+        width_fit, 'fit_rotation_overflow',
+        lambda *_args: pytest.fail('多数并排方案已经成立，不应重跑旋转超宽候选'),
+    )
+    gap_fallback.plan_with_gap_fallback(
+        [Path('/tmp/a.png')],
+        LayoutSettings(auto_fit_width=True, cutter_compare_whole_rotation=True),
+        [],
+    )
+    assert len(calls) == 1

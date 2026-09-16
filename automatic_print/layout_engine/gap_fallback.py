@@ -36,7 +36,13 @@ def plan_with_gap_fallback(paths, settings, records, progress=None, analysis_rea
         result = plan_layout(paths, settings, progress, reports.append)
         selected_settings, selected_report = settings, reports[-1] if reports else None
         original_height = result[3]
+        comparison = (selected_report or {}).get('rotation_comparison')
+        majority_selected = bool(
+            comparison
+            and comparison.get('selected_strategy') == '多数并排区 + 剩余旋转区'
+        )
         if (settings.auto_fit_width and settings.cutter_compare_whole_rotation
+                and not majority_selected
                 and not any(degrees % 360 for _, degrees in settings.manual_rotations)):
             from .width_fit import fit_rotation_overflow
             candidate_settings = fit_rotation_overflow(paths, settings, progress)

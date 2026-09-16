@@ -11,6 +11,7 @@ from .models import Placement
 
 SCHEMA = 1
 TTL_SECONDS = 24 * 60 * 60
+CACHE_LOCK_TIMEOUT_SECONDS = .25
 
 
 def cache_directory():
@@ -22,7 +23,10 @@ def cache_key(paths, settings, created_at, progress=None):
     from .. import __version__
     template = settings.label_text_template
     date = created_at.strftime(settings.label_date_format) if ('{日期}' in template or '{date' in template) else ''
-    settings = replace(settings, worker_threads=1, output_parts=1, save_parallelism=1,
+    settings = replace(settings,
+                       label_batch_name=(settings.label_batch_name
+                                         if settings.label_source_order_enabled else ''),
+                       worker_threads=1, output_parts=1, save_parallelism=1,
                        save_memory_mb=512, save_memory_unlimited=False, png_engine='pillow',
                        png_compression_level=1, png_fast_encoding=False, png_streaming=False, film_geometry_workers=1)
     files = []
@@ -38,8 +42,13 @@ def cache_key(paths, settings, created_at, progress=None):
 def connect():
     directory = cache_directory()
     directory.mkdir(parents=True, exist_ok=True)
-    connection = sqlite3.connect(directory/'排版缓存.sqlite3', timeout=15)
+    connection = sqlite3.connect(
+        directory/'排版缓存.sqlite3', timeout=CACHE_LOCK_TIMEOUT_SECONDS,
+    )
     try:
+        connection.execute(
+            f'PRAGMA busy_timeout={round(CACHE_LOCK_TIMEOUT_SECONDS * 1000)}'
+        )
         connection.execute('PRAGMA journal_mode=WAL')
         connection.execute('CREATE TABLE IF NOT EXISTS plans '
                            '(key TEXT PRIMARY KEY, payload TEXT NOT NULL, digest TEXT NOT NULL, updated REAL NOT NULL)')
@@ -76,7 +85,7 @@ def save(key, result, analysis, knife_mm):
     planned, labels, width, height, baseline = result
     data = {'placements': [(str(path), asdict(p)) for path, p in planned], 'labels': labels,
             'width': width, 'height': height, 'baseline': baseline, 'analysis': analysis, 'knife_mm': knife_mm}
-    payload = json.dumps(data, ensure_ascii=False)
+    payload = json.dumps(data, ensure_ascii=False, separators=(',', ':'))
     connection = connect()
     try:
         with connection:

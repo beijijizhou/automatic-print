@@ -82,7 +82,10 @@ def verify_sources():
 
 def item_settings(settings):
     # These fields do not affect the pixels or geometry of an individual item.
-    return replace(settings, media_width_mm=600, worker_threads=1, output_parts=1,
+    return replace(settings, media_width_mm=600,
+                   label_batch_name=(settings.label_batch_name
+                                     if settings.label_source_order_enabled else ''),
+                   worker_threads=1, output_parts=1,
                    cutter_mode='free' if settings.cutter_mode == 'free' else 'dual',
                    save_parallelism=1, save_memory_mb=512, save_memory_unlimited=False,
                    compare_film_sizes=False, compare_reference_films=False, film_geometry_workers=4,

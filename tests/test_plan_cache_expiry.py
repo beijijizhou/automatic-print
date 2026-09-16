@@ -32,3 +32,9 @@ def test_next_access_cleans_all_expired_entries_but_not_other_files(tmp_path, mo
         assert db.execute('SELECT count(*) FROM plans').fetchone()[0] == 0
     assert source.read_bytes() == b'source must remain'
     assert history.read_text() == 'history must remain'
+
+
+def test_cache_lock_wait_is_bounded():
+    with plan_cache.connect() as db:
+        timeout = db.execute('PRAGMA busy_timeout').fetchone()[0]
+    assert timeout <= 250
