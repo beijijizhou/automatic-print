@@ -11,13 +11,13 @@ from PySide6.QtWidgets import (
     QVBoxLayout,
 )
 
-from ..automation.platforms import get_erp_platform
-from ..automation.batch_classification import (
+from ...automation.platforms import get_erp_platform
+from ...automation.batch_classification import (
     DOUBLE_FACE,
     detailed_compositions,
 )
-from ..automation.rule_batches import RuleBatchPlan
-from .worker import AutomationWorker
+from ...automation.rule_batches import RuleBatchPlan
+from ..task.worker import AutomationWorker
 
 
 class GenerationActionsMixin:

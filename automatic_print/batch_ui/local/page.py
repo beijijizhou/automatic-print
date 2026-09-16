@@ -8,8 +8,8 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
-from .pages import _table
-from ..ui.label_quick_panel import LabelQuickPanel
+from ..platform.pages import table_widget
+from ...ui.label_quick_panel import LabelQuickPanel
 
 
 def build_local_page(owner) -> QWidget:
@@ -23,7 +23,7 @@ def build_local_page(owner) -> QWidget:
     owner.start_layout_button.clicked.connect(lambda: owner.window().choose_and_generate())
     owner.manual_layout_button = owner.start_layout_button  # Compatibility: one primary action.
     owner.local_summary = QLabel("尚未读取本地生产批次。")
-    owner.local_table = _table(
+    owner.local_table = table_widget(
         ["选择", "来源", "批次号", "图片数", "本地更新时间", "文件夹"],
         5,
     )
@@ -65,7 +65,7 @@ def build_local_page(owner) -> QWidget:
     filename_actions = QHBoxLayout()
     filename_actions.addWidget(owner.filename_search)
     filename_actions.addWidget(owner.copy_filenames_button)
-    owner.filename_table = _table(
+    owner.filename_table = table_widget(
         ["序号", "图片文件名（包含尺码信息）", "相对位置"], 1
     )
     layout.addWidget(QLabel("本地图片排版"))
@@ -75,7 +75,7 @@ def build_local_page(owner) -> QWidget:
         owner.label_quick_panel = LabelQuickPanel(
             window.label_settings, window.color_block_settings, page, window=window
         )
-        from ..ui.batch_input_panel import build_batch_input, build_batch_tools
+        from ...ui.batch_input_panel import build_batch_input, build_batch_tools
         owner.batch_input_panel = build_batch_input(owner, owner.label_quick_panel)
         layout.addWidget(owner.batch_input_panel)
         owner.batch_tools = build_batch_tools(owner.label_quick_panel)

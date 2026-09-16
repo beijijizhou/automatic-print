@@ -9,14 +9,14 @@ from PySide6.QtWidgets import (
     QTableWidgetItem,
 )
 
-from ..automation.local_batches import discover_local_batches
-from ..automation.batch_naming import (
+from ...automation.local_batches import discover_local_batches
+from ...automation.batch_naming import (
     MULTI_PIECE_TYPES,
     load_batch_type,
     sort_multi_piece_images,
 )
-from ..layout import discover_images
-from .worker import AutomationWorker
+from ...layout import discover_images
+from ..task.worker import AutomationWorker
 
 
 def image_name_rows(folder: Path) -> list[tuple[str, str]]:

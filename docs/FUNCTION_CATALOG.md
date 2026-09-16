@@ -44,8 +44,8 @@
 | 应用重启 | `restart_control.py` | 源码更新和恢复出厂设置共用同一安全重启入口；开发环境使用重载请求，安装环境启动新进程。 |
 | 批次及膜历史 | `history/store.py`, `history/batch_queue.py`, `history/bulk_analysis.py` | 历史格式由存储模块维护，UI不直接写日志文件。 |
 | ERP生产批次读取与下载 | `automation/batch_browser.py`, `automation/api/erp/records.py`, `automation/batch_downloads.py`, `automation/erp_api.py` | 浏览器流程与响应映射分离；外层工厂页面与内嵌生产模块共用一个批次内容定位入口，列表、搜索、就绪状态和下载不得各自假设表格位于顶层页面。 |
-| 生产平台下载入口 | `ui/erp_download_entry.py`, `batch_ui/dialog.py`, `batch_ui/worker.py` | 多选平台后分别显示独立工作区；仅下载、解压已生成批次，绝不自动启动排版。 |
-| ERP工作台壳层 | `batch_ui/shell/view.py`, `results.py`, `batch_table.py` | 控件构造、结果展示和批次表映射各有唯一所有者；对话框与动作Mixin只编排流程，不复制展示代码。 |
+| 生产平台下载入口 | `ui/erp_download_entry.py`, `batch_ui/dialog.py`, `batch_ui/platform/`, `batch_ui/task/` | 多选平台后分别显示独立工作区；平台页面与后台任务分层，仅下载、解压已生成批次，绝不自动启动排版。 |
+| ERP工作台壳层 | `batch_ui/local/`, `platform/`, `task/`, `shell/` | 目录直接对应本地排版、平台批次、任务执行和公共窗口外壳；根对话框只装配，控件构造、结果展示和批次表映射各有唯一所有者。 |
 | S2B生产图下载 | `automation/api/s2b/production.py`, `downloads.py`, `automation/batch_browser.py` | 从已登录S2B页面读取生产批次；用户选择后按实际件数补发缺失的生产图导出，轮询导出记录并读取真实下载地址，校验ZIP路径与完整性后解压；下载标记接口不承担文件传输。 |
 | 源码更新 | `updates/`, `updater.py` | 检查、应用、重启为一个状态机，不要求点击两次。 |
 | 协作取消 | `cancellation.py`, `controllers/thread_lifecycle.py`, `ui/stop_actions.py` | 控制器拥有线程释放，UI只路由用户停止意图；长循环定期检查，停止不关闭应用，关闭可立即退出。 |

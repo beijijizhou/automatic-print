@@ -6,9 +6,9 @@ from PySide6.QtWidgets import (
     QMessageBox,
 )
 
-from ..automation.batch_browser import BatchRecord
-from .batch_cache import load_batch_cache, save_batch_cache
-from .worker import AutomationWorker
+from ...automation.batch_browser import BatchRecord
+from .cache import load_batch_cache, save_batch_cache
+from ..task.worker import AutomationWorker
 
 
 class BatchActionsMixin:
@@ -89,7 +89,7 @@ class BatchActionsMixin:
         cached: bool = False,
         select_ready: bool = False,
     ) -> None:
-        from .shell.batch_table import display_batch_records
+        from ..shell.batch_table import display_batch_records
         display_batch_records(self, records, saved_at, cached, select_ready)
 
     def select_all_ready(self) -> None:

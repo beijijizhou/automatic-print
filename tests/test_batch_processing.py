@@ -1,4 +1,4 @@
-from automatic_print.batch_ui.processing import process_local_batches
+from automatic_print.batch_ui.local.processing import process_local_batches
 from automatic_print.layout import LayoutSettings
 
 
@@ -21,7 +21,7 @@ def test_selected_batches_are_merged_in_selection_order(
         return {"file": "print.png"}
 
     monkeypatch.setattr(
-        "automatic_print.batch_ui.processing.generate_layout", generate
+        "automatic_print.batch_ui.local.processing.generate_layout", generate
     )
     messages = []
 

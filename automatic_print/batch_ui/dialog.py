@@ -5,16 +5,16 @@ from ..automation.platforms import ERP_PLATFORMS
 from ..layout import LayoutSettings
 from ..ui.worker_bridge import BatchWorkerBridge
 from ..ui.layout_values import settings_from_window
-from .batch_actions import BatchActionsMixin
-from .generation_actions import GenerationActionsMixin
-from .local_actions import LocalActionsMixin
-from .local_page import build_local_page
-from .pages import (
+from .platform.actions import BatchActionsMixin
+from .platform.generation import GenerationActionsMixin
+from .local.actions import LocalActionsMixin
+from .local.page import build_local_page
+from .platform.pages import (
     build_accepted_page,
     build_production_page,
 )
-from .thread_actions import ThreadActionsMixin
-from .worker import AutomationWorker
+from .task.actions import ThreadActionsMixin
+from .task.worker import AutomationWorker
 from .shell import build_controls, build_layout
 
 

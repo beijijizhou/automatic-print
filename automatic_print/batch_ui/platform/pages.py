@@ -12,7 +12,7 @@ from PySide6.QtWidgets import (
 )
 
 
-def _table(headers: list[str], stretch: int | None = None):
+def table_widget(headers: list[str], stretch: int | None = None):
     table = QTableWidget(0, len(headers))
     table.setHorizontalHeaderLabels(headers)
     table.horizontalHeader().setSectionResizeMode(
@@ -39,7 +39,7 @@ def build_generation_page(owner) -> QWidget:
         "padding:8px;background:#eef4ff;border:1px solid #9bbcff;"
         "font-weight:600;"
     )
-    owner.generation_table = _table(
+    owner.generation_table = table_widget(
         ["物流分类", "项目", "件数", "订单组成", "操作状态"]
     )
     owner.preview_rules_button = QPushButton("读取分类数量")
@@ -78,7 +78,7 @@ def build_accepted_page(owner) -> QWidget:
     )
     intro.setWordWrap(True)
     owner.accepted_summary = QLabel("尚未读取待生产订单数量。")
-    owner.accepted_table = _table(
+    owner.accepted_table = table_widget(
         ["订单号", "物流", "项目", "件数", "接单时间", "操作"]
     )
     layout.addWidget(intro)
@@ -112,7 +112,7 @@ def build_production_page(owner, output_row: QHBoxLayout) -> QWidget:
     range_row.addWidget(owner.range_separator)
     range_row.addWidget(owner.range_end)
     range_row.addWidget(owner.range_button)
-    owner.table = _table(
+    owner.table = table_widget(
         ["选择", "批次号", "项目", "件数", "类型", "创建时间", "生产图"],
         5,
     )

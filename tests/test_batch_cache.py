@@ -1,5 +1,5 @@
 from automatic_print.automation.batch_browser import BatchRecord
-from automatic_print.batch_ui.batch_cache import (
+from automatic_print.batch_ui.platform.cache import (
     load_batch_cache,
     save_batch_cache,
 )

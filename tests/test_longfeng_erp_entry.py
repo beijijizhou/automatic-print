@@ -6,8 +6,8 @@ from PySide6.QtCore import QSettings
 from PySide6.QtWidgets import QApplication
 
 from automatic_print.ui.main_window import MainWindow
-from automatic_print.batch_ui.processing import process_local_batches
-from automatic_print.batch_ui.worker import AutomationWorker
+from automatic_print.batch_ui.local.processing import process_local_batches
+from automatic_print.batch_ui.task.worker import AutomationWorker
 
 
 APP = QApplication.instance() or QApplication([])
@@ -78,7 +78,7 @@ def test_downloaded_batch_preview_does_not_render_output(tmp_path, monkeypatch):
         return {"preview_only": True, "saved_length_m": 0}
 
     monkeypatch.setattr(
-        "automatic_print.batch_ui.processing.generate_layout", fake_generate
+        "automatic_print.batch_ui.local.processing.generate_layout", fake_generate
     )
     result = process_local_batches(
         tmp_path,
@@ -100,7 +100,7 @@ def test_downloaded_batch_preview_does_not_render_output(tmp_path, monkeypatch):
 def test_platform_download_never_starts_layout(tmp_path, monkeypatch):
     downloaded = tmp_path / "batch.zip"
     monkeypatch.setattr(
-        "automatic_print.batch_ui.worker.download_selected_batches",
+        "automatic_print.batch_ui.task.worker.download_selected_batches",
         lambda *_args, **_kwargs: [downloaded],
     )
     worker = AutomationWorker(

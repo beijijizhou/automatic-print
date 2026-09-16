@@ -11,8 +11,10 @@
 - 主工作台：`automatic_print/automation_dialog.py` 为兼容门面；实际页面在
   `automatic_print/batch_ui/` 和 `automatic_print/ui/workbench/overview/`；旧的
   `ui/label_quick_panel.py`仅保留稳定兼容导入。
-- 旧ERP工作台的窗口外壳已按职责进入`batch_ui/shell/`：`view.py`只构造控件，`results.py`
-  只展示任务结果，`batch_table.py`只映射批次表格；对话框和动作Mixin保留流程编排。
+- 生产批次工作台目录直接对应界面和执行层级：`batch_ui/local/`拥有本地排版页，
+  `platform/`拥有已接单与生产批次页，`task/`拥有后台任务生命周期，`shell/`拥有窗口外壳；
+  根目录`dialog.py`只装配这些区域。`shell/view.py`只构造公共控件，`results.py`只展示任务结果，
+  `batch_table.py`只映射批次表格。
 - 普通模式显示生产排版规则、45/60厘米方案、批次处理记录、膜标签间距和额外损耗。补足膜间距
   由 `ui/header_gap.py` 的独立开关控制，保存的毫米数值本身不会自动启用。开发者模式显示算法
   诊断、排版历史、批量膜分析和批次顺序标注；主界面底部的功能列表按分类展示全部开发者功能
@@ -134,5 +136,4 @@
 | 排版核心 | `layout_engine/service.py`, `planner.py`, `item_factory.py` | 服务只编排阶段；测量、候选和对象构造保留单一所有者。 |
 | ERP自动化 | `automation/erp_api.py`, `rule_batches.py` | 按提供商迁入`automation/api/<provider>/`，中立批次规则留共享层；`batch_browser.py`已把响应映射迁入ERP子包并回到普通预算。 |
 
-- `batch_ui/` 与 `ui/` 都包含生成和批次编排，需要逐条确认活动入口，合并重复职责，不能凭文件名删除。
 - 部分 README 内容曾混入版本演进描述；当前规则以四份治理文档为准，README 仅保留使用和发布入口。

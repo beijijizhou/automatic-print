@@ -1,4 +1,4 @@
-from automatic_print.batch_ui.local_actions import image_name_rows
+from automatic_print.batch_ui.local.actions import image_name_rows
 
 
 def test_image_names_are_listed_before_processing(tmp_path) -> None:

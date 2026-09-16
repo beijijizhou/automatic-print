@@ -11,7 +11,8 @@ def modules(package):
 
 def test_new_domain_packages_stay_small_and_cohesive():
     for package in (
-        'controllers', 'history', 'batch_ui/shell',
+        'controllers', 'history', 'batch_ui/local', 'batch_ui/platform',
+        'batch_ui/task', 'batch_ui/shell',
         'layout_engine/text', 'automation/api/erp', 'ui/workbench',
         'ui/workbench/overview',
         'ui/workbench/preferences',
@@ -61,6 +62,22 @@ def test_generation_ui_separates_start_progress_and_results():
     package = ROOT/'automatic_print/ui/workbench/generation'
     assert {path.name for path in package.glob('*.py')} == {
         '__init__.py', 'mixin.py', 'start.py', 'progress.py', 'results.py'
+    }
+
+
+def test_batch_workbench_matches_navigation_and_task_boundaries():
+    package = ROOT/'automatic_print/batch_ui'
+    assert {path.name for path in package.glob('*.py')} == {
+        '__init__.py', 'dialog.py'
+    }
+    assert {path.name for path in (package/'local').glob('*.py')} == {
+        '__init__.py', 'actions.py', 'page.py', 'processing.py'
+    }
+    assert {path.name for path in (package/'platform').glob('*.py')} == {
+        '__init__.py', 'actions.py', 'cache.py', 'generation.py', 'pages.py'
+    }
+    assert {path.name for path in (package/'task').glob('*.py')} == {
+        '__init__.py', 'actions.py', 'worker.py'
     }
 
 

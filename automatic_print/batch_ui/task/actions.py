@@ -3,7 +3,7 @@ from PySide6.QtCore import QThread, Qt, Slot
 from PySide6.QtWidgets import QMessageBox
 
 from .worker import AutomationWorker
-from ..ui.thread_lifecycle import (
+from ...ui.thread_lifecycle import (
     defer_finished_thread_cleanup,
     discard_stopped_thread,
 )
@@ -91,7 +91,7 @@ class ThreadActionsMixin:
 
     @Slot(object)
     def action_finished(self, result: dict) -> None:
-        from .shell.results import present_action_result
+        from ..shell.results import present_action_result
         present_action_result(self, result)
 
     @Slot(str)
