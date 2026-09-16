@@ -32,7 +32,40 @@ def recover_width(paths,settings,error,progress,analysis_ready):
 
 def plan_with_gap_fallback(paths, settings, records, progress=None, analysis_ready=None):
     try:
-        return paths, settings, plan_layout(paths, settings, progress, analysis_ready)
+        reports = []
+        result = plan_layout(paths, settings, progress, reports.append)
+        selected_settings, selected_report = settings, reports[-1] if reports else None
+        original_height = result[3]
+        if (settings.auto_fit_width and settings.cutter_compare_whole_rotation
+                and not any(degrees % 360 for _, degrees in settings.manual_rotations)):
+            from .width_fit import fit_rotation_overflow
+            candidate_settings = fit_rotation_overflow(paths, settings, progress)
+            if candidate_settings.dimension_overrides != settings.dimension_overrides:
+                candidate_reports = []
+                try:
+                    candidate = plan_layout(
+                        paths, candidate_settings, progress, candidate_reports.append)
+                except ValueError:
+                    candidate = None
+                if candidate is not None and candidate[3] < result[3]:
+                    result, selected_settings = candidate, candidate_settings
+                    selected_report = candidate_reports[-1] if candidate_reports else selected_report
+                    comparison = (selected_report or {}).get('rotation_comparison')
+                    if comparison is not None:
+                        scale = 25.4 / selected_settings.dpi / 1000
+                        comparison.update(
+                            normal_m=original_height * scale,
+                            rotation_m=result[3] * scale,
+                            saved_m=(original_height - result[3]) * scale,
+                            selected_strategy='完整订单局部贪心',
+                        )
+                    if progress:
+                        saved = (original_height - result[3]) * 25.4 / selected_settings.dpi / 1000
+                        progress('贪心旋转比较', len(paths), len(paths),
+                                 f'已选择完整订单局部最优组合；节省 {max(0, saved):.3f} 米')
+        if analysis_ready and selected_report:
+            analysis_ready(selected_report)
+        return paths, selected_settings, result
     except ValueError as error:
         if not width_failure(error) or not any(r.get('added_px') for r in records):
             return recover_width(paths,settings,error,progress,analysis_ready)
