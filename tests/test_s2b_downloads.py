@@ -1,0 +1,89 @@
+from zipfile import ZipFile
+
+from automatic_print.automation.api.s2b.downloads import (
+    S2BExportRecord,
+    _extract_archive,
+    parse_export_rows,
+)
+
+
+def payload(url="https://accelerate.s2bdiy.com/file.zip"):
+    return {"data": {"data": [
+        {"id": 9, "type": 4, "status": 2, "created_at": "2026-09-17 01:44:06",
+         "export_num": 40, "export_success_num": 40, "download_url": url,
+         "params": {"批次号": "22UJ9KT4VCZA"},
+         "oss_file": {"origin_name": "AS2B_22UJ9KT4VCZA.zip"}},
+        {"id": 8, "type": 2, "status": 2, "download_url": url,
+         "params": {"批次号": "IGNORED"}},
+    ]}}
+
+
+def test_export_rows_keep_only_generated_production_images():
+    records = parse_export_rows(payload())
+    assert records == [S2BExportRecord(
+        9, "22UJ9KT4VCZA", 40, "2026-09-17 01:44:06", True,
+        "https://accelerate.s2bdiy.com/file.zip", "AS2B_22UJ9KT4VCZA.zip",
+    )]
+
+
+def test_s2b_dispatch_reuses_shared_batch_record(monkeypatch):
+    record = parse_export_rows(payload())[0]
+    monkeypatch.setattr(
+        "automatic_print.automation.api.s2b.downloads.list_s2b_exports",
+        lambda progress=None: [record],
+    )
+    from automatic_print.automation.batch_browser import load_batch_records
+    result = load_batch_records("S2B")
+    assert result[0].batch_number == "22UJ9KT4VCZA"
+    assert result[0].piece_count == 40
+    assert result[0].production_images_ready
+
+
+def test_s2b_archive_extracts_existing_root_without_extra_nesting(tmp_path):
+    archive = tmp_path / "source.zip"
+    with ZipFile(archive, "w") as bundle:
+        bundle.writestr("AS2B_22UJ9KT4VCZA/S/sample.png", b"png")
+        bundle.writestr("AS2B_22UJ9KT4VCZA/M/sample.png", b"png")
+    folder = _extract_archive(archive, tmp_path, "22UJ9KT4VCZA")
+    assert folder == tmp_path / "S2B" / "BATCHES" / "AS2B_22UJ9KT4VCZA"
+    assert (folder / "S" / "sample.png").read_bytes() == b"png"
+
+
+def test_s2b_archive_rejects_parent_escape(tmp_path):
+    import pytest
+    archive = tmp_path / "unsafe.zip"
+    with ZipFile(archive, "w") as bundle:
+        bundle.writestr("../outside.png", b"bad")
+    with pytest.raises(RuntimeError, match="不安全路径"):
+        _extract_archive(archive, tmp_path, "22UJ9KT4VCZA")
+    assert not (tmp_path / "outside.png").exists()
+
+
+def test_download_uses_list_url_then_marks_record_after_extract(tmp_path, monkeypatch):
+    from automatic_print.automation.api.s2b import downloads
+    source = tmp_path / "source.zip"
+    with ZipFile(source, "w") as bundle:
+        bundle.writestr("AS2B_22UJ9KT4VCZA/S/sample.png", b"png")
+
+    class Page:
+        calls = []
+        def evaluate(self, _script, arguments):
+            self.calls.append(arguments)
+            return payload() if arguments["method"] == "GET" else {
+                "status_code": 200, "data": [], "msg": "操作成功"
+            }
+    page = Page()
+
+    class Session:
+        def __enter__(self): return page
+        def __exit__(self, *_args): pass
+
+    monkeypatch.setattr(downloads, "_authenticated_page", lambda _progress: Session())
+    monkeypatch.setattr(downloads, "_download_archive",
+                        lambda *_args, **_kwargs: source)
+    result = downloads.download_s2b_exports(
+        ["22UJ9KT4VCZA"], tmp_path / "output"
+    )
+    assert result[0].name == "AS2B_22UJ9KT4VCZA"
+    assert page.calls[-1]["path"].endswith("/downloadRecord")
+    assert page.calls[-1]["payload"] == {"id": 9}

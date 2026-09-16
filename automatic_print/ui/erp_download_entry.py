@@ -14,7 +14,7 @@ from ..automation.platforms import ERP_PLATFORMS
 from ..automation_dialog import AutomationDialog
 
 
-PLATFORM_ORDER = ("隆丰", "莆田", "Haloo")
+PLATFORM_ORDER = ("隆丰", "莆田", "S2B", "Haloo")
 
 
 class ProductionPlatformDownloadPage(QWidget):
@@ -30,7 +30,7 @@ class ProductionPlatformDownloadPage(QWidget):
         choices = QGroupBox("生产平台（可多选）")
         choice_row = QHBoxLayout(choices)
         for name in PLATFORM_ORDER:
-            if name not in ERP_PLATFORMS:
+            if name not in ERP_PLATFORMS and name != "S2B":
                 continue
             checkbox = QCheckBox(name)
             checkbox.toggled.connect(
@@ -44,7 +44,7 @@ class ProductionPlatformDownloadPage(QWidget):
 
         intro = QLabel(
             "每个平台独立保存登录、批次列表、下载进度和日志。"
-            "当前只下载已生成批次，并仅计算排版数据。"
+            "当前只下载并解压已生成批次，不会自动启动排版。"
         )
         intro.setWordWrap(True)
         layout = QVBoxLayout(self)

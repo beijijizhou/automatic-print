@@ -41,6 +41,7 @@
 | 批次及膜历史 | `history/store.py`, `history/batch_queue.py`, `history/bulk_analysis.py` | 历史格式由存储模块维护，UI不直接写日志文件。 |
 | ERP生产批次读取与下载 | `automation/batch_browser.py`, `automation/batch_downloads.py`, `automation/erp_api.py` | 外层工厂页面与内嵌生产模块共用一个批次内容定位入口；列表、搜索、就绪状态和下载不得各自假设表格位于顶层页面。 |
 | 生产平台下载入口 | `ui/erp_download_entry.py`, `batch_ui/dialog.py`, `batch_ui/worker.py` | 多选平台后分别显示独立工作区；仅下载、解压已生成批次，绝不自动启动排版。 |
+| S2B生产图下载 | `automation/api/s2b/downloads.py`, `automation/batch_browser.py` | 从已登录S2B页面读取导出记录及真实下载地址，校验ZIP路径与完整性后解压；下载标记接口不承担文件传输。 |
 | 源码更新 | `updates/`, `updater.py` | 检查、应用、重启为一个状态机，不要求点击两次。 |
 | 协作取消 | `cancellation.py`, `ui/stop_actions.py`, `thread_lifecycle.py` | 长循环定期检查；停止不关闭应用，关闭可立即退出。 |
 

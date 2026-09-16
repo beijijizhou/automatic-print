@@ -89,7 +89,7 @@ class AutomationWorker(QObject):
             )
             self._deliver(
                 self.batches_loaded,
-                load_batch_records(self.platform_name)
+                load_batch_records(self.platform_name, self._report)
             )
         elif self.action == "list_range":
             self._report("正在读取指定范围内的生产批次…")
@@ -114,7 +114,7 @@ class AutomationWorker(QObject):
             if self.action == "status_and_list":
                 self._deliver(
                     self.batches_loaded,
-                    load_batch_records(self.platform_name)
+                    load_batch_records(self.platform_name, self._report)
                 )
         elif self.action == "preview_rules":
             self._deliver(

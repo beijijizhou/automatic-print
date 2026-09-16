@@ -31,6 +31,7 @@ def test_platform_download_is_multi_select_and_preview_only(tmp_path):
     assert owner.workspace_tabs.currentWidget() is page
     assert page.platform_checks["隆丰"].isChecked()
     assert not page.platform_checks["莆田"].isChecked()
+    assert not page.platform_checks["S2B"].isChecked()
     assert page.platform_tabs.count() == 1
     longfeng = page.workbenches["隆丰"]
     assert longfeng.platform.currentData() == "隆丰"
@@ -48,6 +49,17 @@ def test_platform_download_is_multi_select_and_preview_only(tmp_path):
     page.platform_checks["隆丰"].setChecked(False)
     assert page.platform_tabs.count() == 1
     assert page.platform_tabs.tabText(0) == "莆田"
+
+    page.platform_checks["S2B"].setChecked(True)
+    APP.processEvents()
+    s2b = page.workbenches["S2B"]
+    assert s2b.platform.currentData() == "S2B"
+    assert s2b.range_start.isHidden()
+    assert s2b.range_end.isHidden()
+    assert s2b.range_button.isHidden()
+    assert "不会自动启动排版" in s2b.main_tabs.currentWidget().findChildren(
+        type(s2b.summary)
+    )[0].text()
 
     owner.developer_mode_checkbox.setChecked(False)
     assert not owner.workspace_tabs.isTabVisible(index)

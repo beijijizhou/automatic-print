@@ -42,7 +42,20 @@ def load_platform_order_status(
         return PlatformOrderStatus(
             accepted_count=production_item_count(page, "1"),
         )
-def load_batch_records(platform_name: str) -> list[BatchRecord]:
+def load_batch_records(platform_name: str, progress=None) -> list[BatchRecord]:
+    if platform_name == "S2B":
+        from .api.s2b.downloads import list_s2b_exports
+        return [
+            BatchRecord(
+                record.batch_number,
+                record.image_count,
+                record.image_count,
+                "S2B生产图",
+                record.created_at,
+                record.ready,
+            )
+            for record in list_s2b_exports(progress)
+        ]
     from playwright.sync_api import sync_playwright
     platform = get_erp_platform(platform_name)
     with sync_playwright() as playwright:
@@ -107,6 +120,9 @@ def download_selected_batches(
     output_root: Path,
     progress=None,
 ) -> list[Path]:
+    if platform_name == "S2B":
+        from .api.s2b.downloads import download_s2b_exports
+        return download_s2b_exports(batch_numbers, output_root, progress)
     from playwright.sync_api import sync_playwright
     if not batch_numbers:
         raise ValueError("请至少选择一个生产批次。")
