@@ -54,6 +54,79 @@ def paint_guides(canvas, boxes, use_vips=False):
 
 def vips_corridor_is_clear(image, check, boxes=(), rectangles=()):
     """Allow exactly our circle alpha mask, never a whole band or arbitrary red ink."""
+    excess = _vips_corridor_excess(image, check, boxes, rectangles)
+    from .vips_renderer import demand_lock
+    with demand_lock:
+        return excess.max() == 0
+
+
+def vips_corridors_are_clear(image, checks, boxes=(), rectangles=()):
+    """Evaluate every physical corridor in one native demand pass."""
+    checks = list(checks)
+    if not checks:
+        return True
+    import pyvips
+    left = min(check['safe_left_px'] for check in checks)
+    right = max(check['safe_right_px'] for check in checks)
+    top = min(check.get('start_y_px', 0) for check in checks)
+    bottom = max(check.get('end_y_px', image.height) for check in checks)
+    width, height = right-left, bottom-top
+    alpha = image.crop(left, top, width, height)[3]
+    targets = pyvips.Image.black(width, height)
+    for check in checks:
+        x0, x1 = check['safe_left_px']-left, check['safe_right_px']-left
+        y0 = check.get('start_y_px', 0)-top
+        y1 = check.get('end_y_px', image.height)-top
+        targets = targets.insert(
+            pyvips.Image.black(x1-x0, y1-y0).new_from_image(255), x0, y0
+        )
+    allowed = _vips_allowed_mask(width, height, left, top, boxes, rectangles)
+    from .vips_renderer import demand_lock
+    with demand_lock:
+        return (((alpha > allowed) & (targets > 0)).max() == 0)
+
+
+def _vips_allowed_mask(width, height, left, top, boxes, rectangles):
+    import pyvips
+    right, bottom = left+width, top+height
+    mask = pyvips.Image.black(width, height)
+    for x, y, diameter in boxes:
+        if x >= right or x+diameter <= left or y >= bottom or y+diameter <= top:
+            continue
+        sprite = dot_sprite(diameter)
+        try:
+            dot = pyvips.Image.new_from_memory(sprite.getchannel('A').tobytes(),
+                                               diameter, diameter, 1, 'uchar')
+            x0, y0 = max(left, x), max(top, y)
+            x1, y1 = min(right, x+diameter), min(bottom, y+diameter)
+            mask = mask.insert(dot.crop(x0-x, y0-y, x1-x0, y1-y0),
+                               x0-left, y0-top)
+        finally:
+            sprite.close()
+    for rectangle in rectangles:
+        x0, y0 = max(left, rectangle['x']), max(top, rectangle['y'])
+        x1 = min(right, rectangle['x']+rectangle['width'])
+        y1 = min(bottom, rectangle['y']+rectangle['height'])
+        if x1 <= x0 or y1 <= y0:
+            continue
+        if 'text' in rectangle:
+            from .batch_footer import footer_sprite
+            with footer_sprite(rectangle) as sprite:
+                with sprite.getchannel('A') as glyph:
+                    ink = pyvips.Image.new_from_memory(
+                        glyph.tobytes(), rectangle['width'], rectangle['height'],
+                        1, 'uchar'
+                    )
+                    permitted = (ink.crop(
+                        x0-rectangle['x'], y0-rectangle['y'], x1-x0, y1-y0
+                    ) > 0).ifthenelse(255, 0)
+        else:
+            permitted = pyvips.Image.black(x1-x0, y1-y0).new_from_image(255)
+        mask = mask.insert(permitted, x0-left, y0-top)
+    return mask
+
+
+def _vips_corridor_excess(image, check, boxes=(), rectangles=()):
     import pyvips
     left, right = check['safe_left_px'], check['safe_right_px']
     top, bottom = check.get('start_y_px', 0), check.get('end_y_px', image.height)
@@ -84,9 +157,7 @@ def vips_corridor_is_clear(image, check, boxes=(), rectangles=()):
             else:
                 allowed = pyvips.Image.black(x1-x0, y1-y0).new_from_image(255)
             mask = mask.insert(allowed, x0-left, y0-top)
-    from .vips_renderer import demand_lock
-    with demand_lock:
-        return (alpha > mask).max() == 0
+    return alpha > mask
 
 
 def validate_vips_canvas(canvas, check):

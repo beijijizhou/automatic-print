@@ -47,6 +47,24 @@ def test_vips_allowlist_does_not_hide_artwork_or_extra_red_ink():
         printed_guides.validate_vips_canvas(marked, check)
 
 
+def test_vips_multi_zone_corridors_share_one_safe_scan():
+    pyvips = pytest.importorskip('pyvips')
+    blank = pyvips.Image.black(100, 100, bands=4).copy(interpretation='srgb')
+    checks = [
+        {'safe_left_px': 20, 'safe_right_px': 24,
+         'start_y_px': 0, 'end_y_px': 60},
+        {'safe_left_px': 70, 'safe_right_px': 74,
+         'start_y_px': 60, 'end_y_px': 100},
+    ]
+    assert printed_guides.vips_corridors_are_clear(blank, checks)
+    outside = blank.draw_rect([1, 2, 3, 255], 50, 50, 1, 1, fill=True)
+    assert printed_guides.vips_corridors_are_clear(outside, checks)
+    first_zone = outside.draw_rect([1, 2, 3, 255], 22, 20, 1, 1, fill=True)
+    assert not printed_guides.vips_corridors_are_clear(first_zone, checks)
+    second_zone = outside.draw_rect([1, 2, 3, 255], 72, 80, 1, 1, fill=True)
+    assert not printed_guides.vips_corridors_are_clear(second_zone, checks)
+
+
 def test_missing_qr_is_reported_without_fallback(tmp_path, monkeypatch):
     monkeypatch.setattr(printed_guides, 'detect_guide_band', lambda path: None)
     path = tmp_path/'missing.png'

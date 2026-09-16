@@ -96,7 +96,7 @@ def timing_text(data):
         text.append('计时口径：'+data['timing_note'])
     text.extend(f"{row['name']}：{row['seconds']:.3f} 秒" for row in data.get('steps', []))
     observed = data.get('observed_bytes')
-    observed_seconds = sum(
+    observed_seconds = data.get('production_seconds') or sum(
         row.get('seconds', 0) for row in data.get('steps', ())
         if row.get('name') != '未完成文件原子发布'
     )

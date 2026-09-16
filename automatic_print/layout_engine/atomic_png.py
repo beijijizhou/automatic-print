@@ -65,6 +65,9 @@ def save_png(canvas, target, settings, use_vips, progress):
         details['observed_bytes'] = observation.bytes_written
     publish_started = perf_counter()
     pending.rename(target)
+    details['production_seconds'] = sum(
+        row.get('seconds', 0) for row in details.get('steps', ())
+    )
     details.setdefault('steps', []).append({
         'name': '未完成文件原子发布',
         'seconds': perf_counter() - publish_started,

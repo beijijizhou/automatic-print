@@ -32,11 +32,14 @@ def test_header_checks_dimensions_crc_and_complete_file(tmp_path):
         assert path.with_suffix('.禁止打印').exists()
 
 
-def test_streaming_never_reopens_png_for_pixel_decode(tmp_path, monkeypatch):
-    from automatic_print.layout_engine import service
-    def forbidden(*a, **k):
-        raise AssertionError('must not decode saved PNG')
-    monkeypatch.setattr(service, 'validate_vips_output', forbidden)
+def test_streaming_reopens_completed_png_for_independent_pixel_check(tmp_path, monkeypatch):
+    from automatic_print.layout_engine import cut_validation
+    original = cut_validation.validate_vips_output
+    checked = []
+    def observed(*args, **kwargs):
+        checked.append(args[0])
+        return original(*args, **kwargs)
+    monkeypatch.setattr(cut_validation, 'validate_vips_output', observed)
     path = tmp_path/'B1-1-T-Black-M-NO1-1.png'
     with Image.new('RGBA', (100,200)) as image:
         image.paste('blue',(0,50,100,200))
@@ -45,9 +48,13 @@ def test_streaming_never_reopens_png_for_pixel_decode(tmp_path, monkeypatch):
     settings = LayoutSettings(dpi=25.4,media_width_mm=500,cutter_mode='dual',
         cutter_auto_knife=True,png_engine='libvips',png_streaming=True)
     result = generate_layout([path],tmp_path/'out',settings,phase_ready=phases.append)
-    assert '输出文件安全复核' not in phases
-    assert '最终画布刀位检查' in phases
+    assert '输出PNG刀位像素复核' in phases
+    assert '最终画布刀位检查' not in phases
+    assert checked == [tmp_path/'out'/result['filename']]
     assert '原生分块流式PNG' in result['png_save_details']['encoder']
+    assert result['timings_seconds']['output_validation'] >= 0
+    assert any(row['name'] == '输出PNG全长刀位像素复核'
+               for row in result['png_save_details']['steps'])
     assert result['cut_corridor']['pixel_verified']
 
 

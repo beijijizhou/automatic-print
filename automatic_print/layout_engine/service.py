@@ -142,19 +142,18 @@ def generate_layout(
         canvas = paint_transition_lines(canvas, transitions, use_vips)
         if not use_vips:
             validate_marked_pillow(canvas, cut_check, guide_boxes, transitions, progress)
-        elif streaming:
-            from .png_codecs.streaming import validate_final_canvas
-            phase('最终画布刀位检查')
-            validate_final_canvas(canvas, cut_check, guide_boxes, transitions, progress)
         filename = output_path.name
         saving_started = perf_counter()
+        output_validation_seconds = 0.0
         phase('保存输出图片')
         save_details = save_png(canvas, output_path, settings, use_vips, progress)
         saving_seconds = perf_counter() - saving_started
         if streaming:
-            from .png_codecs.streaming import validate_header
-            phase('输出尺寸核对')
-            validate_header(output_path, width, height)
+            from .png_codecs.streaming import validate_saved_output
+            output_validation_seconds = validate_saved_output(
+                output_path, width, height, cut_check, guide_boxes,
+                transitions, progress, phase, save_details,
+            )
         elif native_validation:
             phase('输出文件安全复核')
             validate_vips_output(output_path, cut_check, progress, guide_boxes, transitions)
@@ -225,6 +224,7 @@ def generate_layout(
             "reading": round(reading_seconds, 3),
             "combining": round(combining_seconds, 3),
             "saving_png": round(saving_seconds, 3),
+            "output_validation": round(output_validation_seconds, 3),
             "total": round(perf_counter() - total_started, 3),
         },
     }

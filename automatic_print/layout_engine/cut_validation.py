@@ -149,14 +149,17 @@ def validate_vips_output(path, check, progress=None, guide_boxes=(), transition_
     import pyvips
     if progress:
         progress("核对切割通道", 0, 1, "扫描输出 PNG 的全长切割通道")
-    corridors = corridor_checks(check)
+    corridors = sorted(
+        corridor_checks(check), key=lambda row: row.get("start_y_px", 0)
+    )
     image = pyvips.Image.new_from_file(
-        str(path), access="random" if len(corridors) > 1 else "sequential")
-    from .printed_guides import vips_corridor_is_clear
-    for corridor in corridors:
-        if not vips_corridor_is_clear(image, corridor, guide_boxes, transition_rectangles):
-            path.rename(path.with_suffix(".禁止打印"))
-            raise ValueError("最终 PNG 进入切割安全通道，文件已标记为禁止打印。")
+        str(path), access="sequential")
+    from .printed_guides import vips_corridors_are_clear
+    if not vips_corridors_are_clear(
+        image, corridors, guide_boxes, transition_rectangles
+    ):
+        path.rename(path.with_suffix(".禁止打印"))
+        raise ValueError("最终 PNG 进入切割安全通道，文件已标记为禁止打印。")
     mark_pixel_verified(check)
     if progress:
         progress("核对切割通道", 1, 1, "输出 PNG 全长通道检查通过")
