@@ -1,4 +1,4 @@
-"""Source-following mode and persistent manual DPI in one output control."""
+"""Source-following mode and persistent manual DPI for output settings."""
 from PySide6.QtWidgets import QWidget, QHBoxLayout, QCheckBox
 
 

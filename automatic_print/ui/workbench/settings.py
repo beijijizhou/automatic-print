@@ -20,11 +20,13 @@ from ..color_block_settings import ColorBlockSettingsDialog
 from ..cutter_settings import CutterSettingsPanel
 from ..header_gap import build_header_gap
 from ..label_settings import LabelSettingsDialog
-from ..output_dpi import build_output_dpi
-from ..output_location import build_output_location
-from ..output_settings import build_output_settings
+from ..settings.output import (
+    SegmentedOutputSettings,
+    build_output_dpi,
+    build_output_location,
+    build_output_settings,
+)
 from ..print_settings_navigation import build_settings_navigation
-from ..segmented_output import SegmentedOutputSettings
 from ..spacing_settings import bind_spacing_description
 from ..spinbox_style import double_spinbox
 

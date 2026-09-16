@@ -10,7 +10,7 @@ from PySide6.QtWidgets import QApplication
 from automatic_print.layout import LayoutSettings, generate_layout
 from automatic_print.layout_engine import service
 from automatic_print.layout_engine.cut_validation import corridor_checks
-from automatic_print.ui.segmented_output import SegmentedOutputSettings
+from automatic_print.ui.settings.output import SegmentedOutputSettings
 
 APP = QApplication.instance() or QApplication([])
 

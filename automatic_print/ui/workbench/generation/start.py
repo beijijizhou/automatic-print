@@ -8,7 +8,7 @@ from PySide6.QtWidgets import QMessageBox
 
 from ....layout_engine.output_name import batch_output_directory
 from ...busy_spinner import show_busy
-from ...output_location import output_base
+from ...settings.output import output_base
 from ...workers import GenerateWorker
 
 

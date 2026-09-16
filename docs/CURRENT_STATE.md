@@ -99,7 +99,8 @@
 
 - 设置界面的读取、保存与用户动作分别位于`ui/workbench/preferences/load.py`、`save.py`和
   `actions.py`；根目录`preferences.py`、`preference_actions.py`仅保留兼容导入，自动保存仍由
-  `preference_autosave.py`节流，排版参数快照由`layout_values.py`生成。
+  `preference_autosave.py`节流，排版参数快照由`layout_values.py`生成。设置页“输出”区域的
+  分辨率、保存位置、格式和分段保存集中在`ui/settings/output/`。
 - 批次构成：`ui/batch_distribution.py` 在单批和多批真实预览上方显示当前批次的紧凑尺码群或订单群；
   膜规格比较表不再承载该信息。
 - 进度、停止和线程生命周期：`ui/busy_spinner.py`、`layout_activity.py`、

@@ -1,5 +1,5 @@
 from PySide6.QtWidgets import QCheckBox, QFormLayout, QGroupBox, QLabel, QSpinBox
-from ..layout_engine.models import MAX_SAVE_PARALLELISM
+from ....layout_engine.models import MAX_SAVE_PARALLELISM
 
 
 class SegmentedOutputSettings(QGroupBox):

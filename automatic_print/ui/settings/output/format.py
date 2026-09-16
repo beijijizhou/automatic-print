@@ -1,7 +1,7 @@
 """Build the canonical output format and encoder controls."""
 from PySide6.QtWidgets import QComboBox
 
-from ..layout import png_engine_name
+from ....layout import png_engine_name
 
 
 def build_output_settings(window):

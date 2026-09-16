@@ -42,6 +42,7 @@
 | 真实排版预览运行时 | `ui/previews/runtime/task.py`, `loader.py`, `snapshot.py`, `viewport.py` | 后台计算、结果加载、轻量快照和视口交互分离；耗时计算不进入GUI线程。 |
 | 错误上下文与复制 | `layout_engine/error_context.py`, `error_parameters.py`, `ui/failure_panel.py` | 所有失败复用完整订单/参数诊断，不散落拼字符串。 |
 | 参数持久化与模式可见性 | `ui/workbench/preferences/`, `ui/preference_autosave.py`, `layout_values.py`, `developer_mode.py` | 读取、保存和文件夹/设置窗口动作按状态方向分离；稳定生产控件对普通用户开放，新实验功能默认只在开发者模式显示并生效。 |
+| 输出参数界面 | `ui/settings/output/dpi.py`, `location.py`, `format.py`, `segmentation.py` | 设置页输出区域按用户可见参数分离，统一向工作台和生成入口提供控件与保存位置解析。 |
 | 通用数值参数控件 | `ui/spinbox_style.py` | 所有毫米、尺寸和偏移浮点输入复用`double_spinbox`，不在页面内复制范围、精度和初始值构造代码。 |
 | 参数联动刷新门禁 | `ui/parameter_refresh.py` | 平台和模式一次更新多个控件时取消旧预览并抑制新批次读取；不用多个信号重复触发排版。 |
 | 应用重启 | `restart_control.py` | 源码更新和恢复出厂设置共用同一安全重启入口；开发环境使用重载请求，安装环境启动新进程。 |

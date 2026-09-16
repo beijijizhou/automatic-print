@@ -1,4 +1,4 @@
-"""Source-following output defaults with a persistent manual override."""
+"""Source-following output location with a persistent manual override."""
 from pathlib import Path
 from PySide6.QtWidgets import QCheckBox, QLineEdit, QPushButton, QVBoxLayout, QHBoxLayout
 
