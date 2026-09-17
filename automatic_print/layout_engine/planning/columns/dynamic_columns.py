@@ -43,8 +43,7 @@ def select_columns(groups, settings, spacing, progress=None):
             from .cutter_planner import _lanes
             asymmetric = select_batch_knife(groups, settings, spacing)
             lanes = _lanes(asymmetric, width)
-            result = solve_groups(groups, lanes, spacing,
-                                  settings.cutter_majority_two_zone)
+            result = _solve_candidate(groups, lanes, spacing, settings)
             if result is not None:
                 knife = mm_to_px(asymmetric.cutter_knife_mm, settings.dpi)
                 used = _used_columns(result)
@@ -55,8 +54,7 @@ def select_columns(groups, settings, spacing, progress=None):
         knives = equal_knives(width, columns)
         try:
             lanes = lanes_for_knives(settings, width, knives)
-            result = (solve_groups(groups, lanes, spacing,
-                                   settings.cutter_majority_two_zone)
+            result = (_solve_candidate(groups, lanes, spacing, settings)
                       if columns == 1 or _can_fill_columns(groups, lanes)
                       else None)
         except ValueError:
@@ -75,6 +73,29 @@ def select_columns(groups, settings, spacing, progress=None):
                        cutter_knife_mm=(knives[0] * 25.4 / settings.dpi
                                         if knives else settings.cutter_knife_mm))
     return selected, lanes, knives
+
+
+def _solve_candidate(groups, lanes, spacing, settings):
+    """Evaluate each column candidate after its lane-specific safe ordering."""
+    from .cutter_planner import solve_groups
+
+    if (settings.cutter_majority_two_zone
+            and settings.developer_compact_cutter_layout):
+        from automatic_print.layout_engine.orders.single_order_sequence import arrange_groups_within_orders
+        ordered = arrange_groups_within_orders(groups, lanes)
+    elif settings.cutter_majority_two_zone:
+        ordered = groups
+    else:
+        from automatic_print.layout_engine.orders.single_order_sequence import arrange_groups
+        ordered = arrange_groups(groups, lanes, settings)
+    if settings.developer_compact_cutter_layout:
+        return solve_groups(
+            ordered, lanes, spacing, settings.cutter_majority_two_zone,
+            allow_order_boundary=True,
+        )
+    return solve_groups(
+        ordered, lanes, spacing, settings.cutter_majority_two_zone,
+    )
 
 
 def _can_fill_columns(groups, lanes):

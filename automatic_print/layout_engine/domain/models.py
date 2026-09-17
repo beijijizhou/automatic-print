@@ -49,6 +49,7 @@ class LayoutSettings:
     output_dpi_origin: str = 'manual'
     output_dpi_notice: str = ''
     developer_gap_loss: bool = False
+    developer_compact_cutter_layout: bool = False
     auto_fit_width: bool = False
     force_small_pair_width: bool = False
     force_small_pair_width_mm: float = 270

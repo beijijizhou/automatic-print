@@ -2,6 +2,7 @@ from PIL import Image
 import pytest
 
 from automatic_print.layout_engine import LayoutSettings, generate_layout
+from automatic_print.layout_engine.planning.base.planner import plan_layout
 
 
 def _sources(root):
@@ -38,6 +39,25 @@ def test_pairable_majority_precedes_one_rotated_leftover_zone(tmp_path, engine):
     )
     assert result['width_px'] < 580
     assert result['cut_corridor']['pixel_verified']
+
+
+def test_developer_choice_zone_reports_full_placement_height(tmp_path):
+    paths = _sources(tmp_path)
+    planned, _labels, _width, height, _baseline = plan_layout(
+        paths,
+        LayoutSettings(
+            dpi=25.4, media_width_mm=580, margin_mm=0, spacing_mm=8,
+            cutter_mode='dual', cutter_auto_knife=True,
+            cutter_rotation_zone=True, cutter_majority_two_zone=True,
+            cutter_left_marker_external=True, number_images=False,
+            developer_compact_cutter_layout=True,
+        ),
+        None,
+    )
+    assert height >= max(
+        placement.row_y_px+placement.footprint_height_px
+        for _path, placement in planned
+    )
 
 
 def test_batch_end_block_is_the_only_reason_to_restore_full_film_width(tmp_path):

@@ -4,10 +4,13 @@ from copy import deepcopy
 
 from automatic_print.layout_engine.intake.metadata.images import print_dimensions
 from automatic_print.layout_engine.orders.order_groups import complete_orders, order_key, pair_identity, ordered_paths
-from automatic_print.layout_engine.intake.metadata.source_metadata import shape_hints, size_key, source_size
+from automatic_print.layout_engine.intake.metadata.source_metadata import (
+    color_key, shape_hints, size_key, source_color, source_size,
+)
 
 
-def analyze_batch(paths, settings, progress=None, ready=None):
+def batch_inventory(paths):
+    """Build batch, size, and locally-known color facts without decoding images."""
     orders, total_sizes = [], Counter()
     for group in complete_orders(ordered_paths(paths)):
         pieces = OrderedDict()
@@ -34,14 +37,24 @@ def analyze_batch(paths, settings, progress=None, ready=None):
                        'decision': '待测量', 'reason': '完整订单参与比较，不拆开正反面或多件商品'})
     kinds = Counter(order['kind'] for order in orders)
     batch_type = next(iter(kinds))+'批次' if len(kinds) == 1 else '混合批次'
+    colors = Counter(source_color(path) for path in paths)
+    unknown_colors = colors.pop('未识别颜色', 0)
     report = {'stage': '文件名分析', 'batch_type': batch_type, 'image_count': len(paths),
               'order_count': len(orders), 'kinds': dict(kinds), 'orders': orders,
               'piece_count': sum(o['pieces'] or 0 for o in orders),
               'double_pairs': sum(o['double_pairs'] for o in orders),
               'sizes': dict(sorted(total_sizes.items(), key=lambda entry: size_key(entry[0]))),
+              'colors': dict(sorted(colors.items(), key=lambda entry: color_key(entry[0]))),
+              'unrecognized_color_count': unknown_colors,
               'single_sizes': dict(Counter(size for o in orders if o['kind']=='单件单面'
                                            for size in o['sizes']))}
     report['group_distribution'] = group_distribution(report)
+    return report
+
+
+def analyze_batch(paths, settings, progress=None, ready=None):
+    report = batch_inventory(paths)
+    orders = report['orders']
     if ready:
         ready(deepcopy(report))
     count = 0

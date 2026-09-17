@@ -1,6 +1,7 @@
 import os
 os.environ.setdefault('QT_QPA_PLATFORM', 'offscreen')
 from PySide6.QtCore import Qt
+from PySide6.QtTest import QTest
 from test_developer_mode import window, APP
 
 
@@ -51,4 +52,29 @@ def test_selected_film_and_current_child_are_highlighted_without_reading(tmp_pat
     owner.cutter_settings.printable.right.setValue(450)
     assert '禁止生成' in badge.text()
     assert '#ef4444' in badge.styleSheet()
+    owner.close()
+
+
+def test_quick_mode_reads_batch_identity_before_layout(tmp_path):
+    root = tmp_path / '测试批次'
+    for order, size in (('B1', 'S'), ('B2', 'M')):
+        folder = root / size
+        folder.mkdir(parents=True, exist_ok=True)
+        (folder / f'{order}-1-T-Black-{size}-NO1-1.png').write_bytes(b'filename inventory only')
+    owner = window(tmp_path / 'quick-prefs.ini')
+    owner.cutter_settings.quick_mode.setChecked(True)
+    owner.folder.setText(str(root))
+    panel = owner.automation_home.label_quick_panel
+    for _ in range(100):
+        APP.processEvents()
+        if '颜色：黑色2张' in panel.selected_source.text():
+            break
+        QTest.qWait(10)
+    text = panel.selected_source.text()
+    assert '尺码群：S 1件 · M 1件' in text
+    assert '颜色：黑色2张' in text
+    assert panel.preview.batch_payload is None
+    owner.show()
+    APP.processEvents()
+    assert owner.grab().save(str(tmp_path/'automatic-print-early-batch-card.png'))
     owner.close()

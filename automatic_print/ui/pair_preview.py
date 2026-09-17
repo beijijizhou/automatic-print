@@ -7,6 +7,7 @@ from PySide6.QtGui import QColor, QPen, QPainter
 
 from .production_preview import ProductionPreview
 from .previews.runtime.loader import PreviewLoader
+from .previews.runtime.inventory import InventoryLoader
 from .cut_guide_cache import CutGuideCache
 from .cut_guide_preview import draw_cut_guides
 from ..layout_engine.orders.order_groups import detail_members
@@ -38,6 +39,7 @@ class PairProductionPreview(ProductionPreview):
         self.cut_guides.changed.connect(self.update)
         self.guide_status = ""
         self.loader = PreviewLoader(self)
+        self.inventory_loader = InventoryLoader(self)
         self.refresh_timer = QTimer(self)
         self.refresh_timer.setSingleShot(True)
         self.refresh_timer.setInterval(120)
@@ -86,18 +88,16 @@ class PairProductionPreview(ProductionPreview):
         self.update()
 
     def stage_folder(self, folder):
-        self.source_folder, self.path = None, None
-        self.clear_for_generation()
-        self.detail = '已选择图片文件夹；点击开始排版，将统一读取、排版和保存。'
-        self.production_stage = self.detail
-        self.loading_status.emit(self.detail)
+        self.inventory_loader.stage(folder)
 
     def stop_loading(self):
         self.refresh_timer.stop()
         self.loader.stop()
+        self.inventory_loader.invalidate()
 
     def clear_for_generation(self):
         self.loader.invalidate()
+        self.inventory_loader.invalidate()
         self.cut_guides.clear()
         self.guide_status = ""
         self.refresh_timer.stop()
@@ -147,6 +147,7 @@ class PairProductionPreview(ProductionPreview):
     def closeEvent(self, event):
         self.refresh_timer.stop()
         self.loader.shutdown()
+        self.inventory_loader.shutdown()
         super().closeEvent(event)
 
     def paintEvent(self, _event):

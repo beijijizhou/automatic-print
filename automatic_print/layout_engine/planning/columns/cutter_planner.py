@@ -7,7 +7,9 @@ from automatic_print.layout_engine.orders.order_groups import ordered_paths
 from automatic_print.layout_engine.intake.preparation.item_factory import read_items
 from automatic_print.layout_engine.domain.models import mm_to_px
 from automatic_print.layout_engine.planning.packing.units import build_units
-from automatic_print.layout_engine.orders.single_order_sequence import arrange_groups
+from automatic_print.layout_engine.orders.single_order_sequence import (
+    arrange_groups, arrange_groups_within_orders,
+)
 from automatic_print.layout_engine.measurement.measurement_session import resolved_name
 from automatic_print.layout_engine.planning.columns.column_solver import solve_groups, horizontal as _horizontal, group_rows as _group_rows
 
@@ -35,13 +37,18 @@ def plan_cutter_layout(paths, settings, progress, prepared=None, preserve_sequen
         lanes = _lanes(settings, width)
         if settings.cutter_mode == 'dual':
             knives = (mm_to_px(settings.cutter_knife_mm, settings.dpi),)
-    if not preserve_sequence:
-        groups = arrange_groups(groups, lanes, settings)
+    groups = (arrange_groups_within_orders(groups, lanes)
+              if preserve_sequence and settings.developer_compact_cutter_layout
+              else groups if preserve_sequence
+              else arrange_groups(groups, lanes, settings))
     if progress:
         knife_text = '、'.join(f'{knife*25.4/settings.dpi:.2f}' for knife in knives)
         progress("批次刀位已确定", knives[0] if knives else 0,
                  settings.dpi, f"自动 {len(lanes)} 列；固定刀位 {knife_text or '无'} 毫米")
-    solution = solve_groups(groups, lanes, spacing, settings.cutter_majority_two_zone)
+    solution = solve_groups(
+        groups, lanes, spacing, settings.cutter_majority_two_zone,
+        settings.developer_compact_cutter_layout,
+    )
     if solution is None:
         from automatic_print.layout_engine.diagnostics.error_parameters import groups_failure
         raise ValueError("图片无法安全放入固定分区；单排必须靠左，请启用自动刀位、增大左分区或改用单列。\n"+groups_failure(groups,settings))

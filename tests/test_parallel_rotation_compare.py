@@ -44,6 +44,11 @@ def test_real_parallel_complete_orders_and_true_normal_baseline(tmp_path, monkey
     assert report['normal_m'] == pytest.approx(baseline[3]/1000)
     assert report['saved_m'] == pytest.approx(report['normal_m']-report['rotation_m'])
     assert report['rotation_m'] == pytest.approx(previews[0]['canvas'][1]/1000)
+    assert report['riin_sequence_m'] > 0
+    assert report['riin_goal_met'] == (report['rotation_m'] <= report['riin_sequence_m'])
+    assert report['candidate_lengths_m'][report['selected_strategy']] == pytest.approx(
+        report['rotation_m']
+    )
     assert previews[0]['order_check']
     for part in result.get('parts', [result]):
         assert part['order_check']

@@ -48,3 +48,17 @@ def test_selected_batch_card_shows_compact_analysis_and_gap_counts(tmp_path):
     assert '颜色：白色21张、黑色42张' in text
     assert str(folder) in text
     assert '单件批次尺码群分布' in panel.selected_source.toolTip()
+
+
+def test_selected_batch_card_prioritizes_size_and_pending_color(tmp_path):
+    panel = Panel()
+    folder = tmp_path / 'AS2B014Mt'
+    report = {
+        'batch_type': '单件单面批次', 'order_count': 2, 'piece_count': 2,
+        'image_count': 2, 'double_pairs': 0, 'sizes': {'S': 1, 'M': 1},
+        'orders': [], 's2b_metadata_pending': True,
+    }
+    show_selected_batch_summary(panel, folder, report)
+    lines = panel.selected_source.text().splitlines()
+    assert lines[1] == '尺码群：S 1件 · M 1件'
+    assert lines[2] == '颜色：正在读取 S2B 订单信息…'

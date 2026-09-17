@@ -47,6 +47,22 @@ def test_rotated_whole_batch_qr_label_and_fixed_marker(tmp_path, engine, parts, 
     with pytest.raises(ValueError, match='未放在二维码下方'):
         validate_embedded_marks([(path, replace(placement,
             number_x_px=placement.number_x_px+1))])
+    # A right-lane fixed marker is also external to its source image. Its X is
+    # the vertical knife rather than zero, but it follows the same lift rule.
+    shifted_x = 100
+    external = replace(
+        settings, cutter_left_marker_external=True,
+        cutter_left_marker_lift_mm=2,
+    )
+    right_lane = replace(
+        placement,
+        x_px=placement.x_px+shifted_x,
+        number_x_px=placement.number_x_px+shifted_x,
+        platform_x_px=placement.platform_x_px+shifted_x,
+        color_block_x_px=placement.x_px+shifted_x-placement.color_block_width_px,
+        color_block_y_px=placement.y_px-2,
+    )
+    validate_embedded_marks([(path, right_lane)], external)
     for part in result.get('parts', [result]):
         with Image.open(tmp_path/'out'/part['filename']) as output:
             for p in part['placements']:

@@ -60,6 +60,7 @@ def settings_from_window(window) -> LayoutSettings:
         auto_fit_width=window.auto_fit_width.isChecked(),
         force_small_pair_width=window.cutter_settings.force_small_pair.isChecked(),
         developer_gap_loss=True,
+        developer_compact_cutter_layout=getattr(window, 'developer_mode_enabled', False),
         platform_below_marker=True,
         # Platform text belongs to the source label/QR card, never the cutter mark.
         # Preview and final output therefore always share the same embedded geometry.

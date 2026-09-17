@@ -1,14 +1,21 @@
 """Ordered dynamic programming for one or more cutter lanes."""
 from collections import Counter
 from dataclasses import replace
+from itertools import product
 
 from automatic_print.layout_engine.orders.order_groups import order_key
 from automatic_print.layout_engine.orders.size_policy import same_single_size
 from automatic_print.layout_engine.planning.packing.units import UnitChoice, UnitMember
 
 
-def solve_groups(groups, lanes, spacing, pair_adjacent=False):
+def solve_groups(
+    groups, lanes, spacing, pair_adjacent=False, allow_order_boundary=False,
+):
     counts = Counter(order_key(item.path) for group in groups for item in group)
+    group_keys = [order_key(group[0].path) for group in groups]
+    first_group = {key: group_keys.index(key) for key in dict.fromkeys(group_keys)}
+    last_group = {key: len(group_keys)-1-group_keys[::-1].index(key)
+                  for key in dict.fromkeys(group_keys)}
     costs, plans = [float('inf')] * (len(groups) + 1), [None] * len(groups)
     costs[-1] = 0
     for index in range(len(groups) - 1, -1, -1):
@@ -22,13 +29,68 @@ def solve_groups(groups, lanes, spacing, pair_adjacent=False):
                 compatible = (len({source_color(item.path) for item in combined}) == 1
                               if pair_adjacent else all(same_single_size(
                                   combined[0].path, item.path) for item in combined[1:]))
+                boundary_share = all(
+                    keys[offset] == keys[offset+1]
+                    or (index+offset == last_group[keys[offset]]
+                        and index+offset+1 == first_group[keys[offset+1]])
+                    for offset in range(len(keys)-1)
+                )
                 share = len(set(keys)) == 1 or (
-                    all(counts[key] == 1 for key in keys) and compatible)
+                    compatible and (all(counts[key] == 1 for key in keys)
+                                    or allow_order_boundary and boundary_share))
                 candidate = horizontal(combined, lanes) if share else None
                 if candidate:
                     candidates.insert(0, (count, candidate))
         for count, candidate in candidates:
             cost = candidate.height + spacing + costs[index + count]
+            if cost < costs[index]:
+                costs[index], plans[index] = cost, (count, candidate)
+        if plans[index] is None:
+            return None
+    return costs[0], plans
+
+
+def solve_group_choices(
+    groups, lanes, spacing, pair_adjacent=False, allow_order_boundary=False,
+    allow_any_adjacent=False,
+):
+    """Solve ordered groups while choosing each group's safe orientation."""
+    representative = [choices[0] for choices in groups]
+    counts = Counter(order_key(item.path) for group in representative for item in group)
+    group_keys = [order_key(group[0].path) for group in representative]
+    first_group = {key: group_keys.index(key) for key in dict.fromkeys(group_keys)}
+    last_group = {key: len(group_keys)-1-group_keys[::-1].index(key)
+                  for key in dict.fromkeys(group_keys)}
+    costs, plans = [float('inf')] * (len(groups)+1), [None] * len(groups)
+    costs[-1] = 0
+    for index in range(len(groups)-1, -1, -1):
+        candidates = [(1, row) for choice in groups[index]
+                      for row in group_rows(choice, lanes, spacing)]
+        for count in range(min(len(lanes), len(groups)-index), 1, -1):
+            for selected in product(*groups[index:index+count]):
+                if not all(len(group) == 1 for group in selected):
+                    continue
+                combined = [group[0] for group in selected]
+                keys = [order_key(item.path) for item in combined]
+                from automatic_print.layout_engine.intake.metadata.source_metadata import source_color
+                compatible = (True if allow_any_adjacent else
+                              len({source_color(item.path) for item in combined}) == 1
+                              if pair_adjacent else all(same_single_size(
+                                  combined[0].path, item.path) for item in combined[1:]))
+                boundary_share = all(
+                    keys[offset] == keys[offset+1]
+                    or (index+offset == last_group[keys[offset]]
+                        and index+offset+1 == first_group[keys[offset+1]])
+                    for offset in range(len(keys)-1)
+                )
+                share = allow_any_adjacent or len(set(keys)) == 1 or (
+                    compatible and (all(counts[key] == 1 for key in keys)
+                                    or allow_order_boundary and boundary_share))
+                candidate = horizontal(combined, lanes) if share else None
+                if candidate:
+                    candidates.append((count, candidate))
+        for count, candidate in candidates:
+            cost = candidate.height + spacing + costs[index+count]
             if cost < costs[index]:
                 costs[index], plans[index] = cost, (count, candidate)
         if plans[index] is None:

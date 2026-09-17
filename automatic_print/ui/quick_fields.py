@@ -46,6 +46,15 @@ def show_selected_batch_summary(panel, folder, report=None):
                 f" · {report.get('piece_count', 0)} 件 / {report.get('image_count', 0)} 张图"
                 f" · {report.get('double_pairs', 0)} 组双面")
     lines = [identity, f'{group_name}：{compact_distribution_text(report, limit=8)}']
+    colors = report.get('colors') or {}
+    unknown_colors = report.get('unrecognized_color_count', 0)
+    color_text = '、'.join(f'{color}{count}张' for color, count in colors.items())
+    if unknown_colors:
+        color_text = '、'.join(filter(None, (color_text, f'待识别{unknown_colors}张')))
+    if color_text:
+        lines.append(f'颜色：{color_text}')
+    elif report.get('s2b_metadata_pending'):
+        lines.append('颜色：正在读取 S2B 订单信息…')
     from ..automation.api.s2b.metadata.prepare import metadata_summary_text
     metadata = metadata_summary_text(report.get('s2b_metadata', ()))
     if metadata:

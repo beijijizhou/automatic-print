@@ -64,4 +64,88 @@ def prepare_groups(groups):
 def arrange_groups(groups, lanes, settings, prepared=None):
     orders, items, by_order, order_sequence = prepared or prepare_groups(groups)
     sequence = arrange_orders(orders, items, lanes, settings, order_sequence)
-    return [group for index in sequence for group in by_order[order_key(orders[index][0])]]
+    return [group for index in sequence
+            for group in by_order[order_key(orders[index][0])]]
+
+
+def arrange_groups_within_orders(groups, lanes):
+    """Keep order sequence fixed while improving rows inside each order."""
+    result, current, current_key = [], [], None
+    for group in groups:
+        key = order_key(group[0].path)
+        if current and key != current_key:
+            result.extend(arrange_order_groups(current, lanes))
+            current = []
+        current.append(group)
+        current_key = key
+    if current:
+        result.extend(arrange_order_groups(current, lanes))
+    return result
+
+
+def arrange_order_groups(groups, lanes):
+    """Pair compatible pieces inside one still-contiguous order."""
+    singles = [(index, group[0]) for index, group in enumerate(groups)
+               if len(group) == 1]
+    savings = {}
+    for offset, (first_index, first) in enumerate(singles):
+        for second_index, second in singles[offset + 1:]:
+            saved = horizontal_savings(first, second, lanes)
+            if saved is not None and saved > 0:
+                savings[first_index, second_index] = saved
+    partners = (_exact_partners([index for index, _item in singles], savings)
+                if len(singles) <= 16 else _greedy_partners(savings))
+    result, emitted = [], set()
+    for index, group in enumerate(groups):
+        if index in emitted:
+            continue
+        result.append(group)
+        partner = partners.get(index)
+        if partner is not None:
+            result.append(groups[partner])
+            emitted.add(partner)
+        emitted.add(index)
+    return result
+
+
+def _greedy_partners(savings):
+    partners, used = {}, set()
+    for (first, second), saved in sorted(
+        savings.items(), key=lambda entry: (-entry[1], entry[0][1]-entry[0][0]),
+    ):
+        if first in used or second in used:
+            continue
+        partners[first], partners[second] = second, first
+        used.update((first, second))
+    return partners
+
+
+def _exact_partners(indexes, savings):
+    """Maximum-saving matching; bounded because production orders are small."""
+    from functools import lru_cache
+
+    @lru_cache(maxsize=None)
+    def solve(remaining):
+        if not remaining:
+            return 0, 0, ()
+        first, rest = remaining[0], remaining[1:]
+        best = solve(rest)
+        for position, second in enumerate(rest):
+            saved = savings.get((min(first, second), max(first, second)))
+            if saved is None:
+                continue
+            tail = rest[:position]+rest[position+1:]
+            total, distance, pairs = solve(tail)
+            candidate = (
+                total+saved,
+                distance-abs(second-first),
+                ((first, second),)+pairs,
+            )
+            if candidate[:2] > best[:2]:
+                best = candidate
+        return best
+
+    partners = {}
+    for first, second in solve(tuple(indexes))[2]:
+        partners[first], partners[second] = second, first
+    return partners

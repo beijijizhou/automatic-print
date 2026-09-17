@@ -57,7 +57,7 @@ def plan_adaptive_knife_zones(paths, settings, progress, prepared=None):
                      f'全部{len(paths)}张进入并排区；没有剩余旋转区；共1个区域')
         return planned, normal[1], normal[2], normal[3], normal[4]
 
-    from automatic_print.layout_engine.planning.rotation.rotation_zones import _rotated, rotation_items
+    from automatic_print.layout_engine.planning.rotation.rotation_zones import rotation_items
     from automatic_print.layout_engine.cutting.geometry.transition_marks import rotation_marker_item
     if prepared_rotated_items is None:
         rotated_items, rotated_labels = rotation_items(rotated_paths, base, progress)
@@ -78,14 +78,26 @@ def plan_adaptive_knife_zones(paths, settings, progress, prepared=None):
     missing = [path.name for path in rotated_paths if path not in rotated_items]
     if missing:
         raise ValueError('剩余图片旋转后仍超宽，需要进入等比缩小恢复：'+'、'.join(missing))
-    rotated = _rotated(rotated_paths, base, (rotated_items, rotated_labels))
+    if base.developer_compact_cutter_layout:
+        from .choice_cutter import plan_choice_cutter_layout
+        choice_items = [[items[path], *(
+            [rotated_items[path]] if path in rotated_items else [])]
+            for path in rotated_paths]
+        rotated = plan_choice_cutter_layout(
+            rotated_paths, base, choice_items, labels | rotated_labels, spacing,
+        )
+        rotated_height = rotated[3]
+    else:
+        from automatic_print.layout_engine.planning.rotation.rotation_zones import _rotated
+        rotated = _rotated(rotated_paths, base, (rotated_items, rotated_labels))
+        rotated_height = rotated[2]
     boundary = normal[3]+spacing
     normal_knife = mm_to_px(effective[0].cutter_knife_mm, base.dpi)
     planned = [(path, replace(p, cut_zone='并排区', cut_knife_x_px=normal_knife))
                for path, p in normal[0]]
     planned.extend(_shift(path, placement, boundary)
                    for path, placement in rotated[0])
-    height = boundary+rotated[2]
+    height = boundary+rotated_height
     width = cutter_output_width(
         planned, base, mm_to_px(base.media_width_mm, base.dpi)
     )

@@ -11,6 +11,7 @@ from ....layout_engine.cutting.validation.order_validation import validate_order
 from ....layout_engine.cutting.validation.cut_validation import validate_cut_corridor
 from ...preview_diagnostics import diagnostic_layout
 from ....layout_engine.intake.preparation.batch_snapshot import batch_measurements
+from ....layout_engine.orders.batch_analysis import batch_inventory
 
 
 class PreviewSignals(QObject):
@@ -43,10 +44,22 @@ class PreviewTask(QRunnable):
             self.emit(self.signals.sources, paths)
             if not paths:
                 raise ValueError('所选文件夹没有可读取的图片，请重新选择。')
+            inventory = batch_inventory(paths)
+            from ....automation.api.s2b.metadata.batch_name import find_s2b_batch_folder
+            has_s2b = any(find_s2b_batch_folder(path) for path in paths)
+            if has_s2b:
+                inventory['s2b_metadata_pending'] = True
+            self.emit(self.signals.analysis, inventory)
             from ....automation.api.s2b.metadata.prepare import prepare_s2b_metadata
             s2b_metadata = prepare_s2b_metadata(paths, self.settings,
                 lambda stage, current, total, name: self.emit(
                     self.signals.progress, f'{stage} · {current}/{total} · {name}'))
+            if s2b_metadata:
+                inventory = batch_inventory(paths)
+            inventory.pop('s2b_metadata_pending', None)
+            if s2b_metadata:
+                inventory['s2b_metadata'] = s2b_metadata
+            self.emit(self.signals.analysis, inventory)
             from ....layout_engine.labeling.base.header_gap import prepare_paths
             paths, self.settings, gap_records = prepare_paths(paths, self.settings,
                 lambda stage, current, total, name: self.emit(self.signals.progress,

@@ -4,7 +4,9 @@ from pathlib import Path
 from PIL import Image
 
 from automatic_print.layout_engine import LayoutSettings, generate_layout
-from automatic_print.layout_engine.orders.batch_analysis import analyze_batch, compact_distribution_text
+from automatic_print.layout_engine.orders.batch_analysis import (
+    analyze_batch, batch_inventory, compact_distribution_text,
+)
 from automatic_print.layout_engine.planning.base.planner import plan_layout
 from automatic_print.layout_engine.orders.order_groups import order_key
 from automatic_print.layout_engine.intake.metadata.source_metadata import source_size
@@ -40,6 +42,18 @@ def test_batch_counts_garments_not_images_and_normalizes_xxl(tmp_path):
     assert stages[0]['stage']=='文件名分析'
     assert 'width_mm' not in stages[0]['orders'][0]['items'][0]['images'][0]
     assert 'width_mm' in stages[-1]['orders'][0]['items'][0]['images'][0]
+
+
+def test_filename_inventory_exposes_sizes_and_colors_before_image_measurement(tmp_path, monkeypatch):
+    paths = [source(tmp_path, 'B1', 'S'), source(tmp_path, 'B2', 'M')]
+    monkeypatch.setattr(
+        'automatic_print.layout_engine.orders.batch_analysis.print_dimensions',
+        lambda *_args: (_ for _ in ()).throw(AssertionError('inventory decoded an image')),
+    )
+    report = batch_inventory(paths)
+    assert report['sizes'] == {'S': 1, 'M': 1}
+    assert report['colors'] == {'黑色': 2}
+    assert report['unrecognized_color_count'] == 0
 
 
 def test_single_single_sizes_stay_together_with_aliases(tmp_path):

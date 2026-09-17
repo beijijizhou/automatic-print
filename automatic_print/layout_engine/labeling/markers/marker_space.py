@@ -117,7 +117,12 @@ def validate_embedded_marks(planned, settings=None):
             if qr:
                 qr = qr.rotated(p.rotation_degrees)
                 from automatic_print.layout_engine.cutting.geometry.rotated_marks import marker_top
-                external = settings and settings.cutter_left_marker_external and p.color_block_x_px == 0
+                external = bool(
+                    settings and settings.cutter_left_marker_external
+                    and p.color_block_width_px
+                    and (p.color_block_x_px+p.color_block_width_px <= p.x_px
+                         or p.color_block_x_px >= p.x_px+p.width_px)
+                )
                 expected = p.y_px-round(settings.cutter_left_marker_lift_mm*settings.dpi/25.4) if external else p.y_px+marker_top(qr,p.height_px)
                 if p.color_block_width_px and p.color_block_y_px != expected:
                     raise ValueError(f'{path.name}：旋转刀码未处于安全基准高度，禁止输出。')

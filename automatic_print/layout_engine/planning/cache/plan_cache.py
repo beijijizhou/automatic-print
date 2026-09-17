@@ -13,7 +13,7 @@ from automatic_print.layout_engine.domain.models import Placement
 
 SCHEMA = 1
 LAYOUT_ALGORITHM_REVISION = 4
-DEVELOPER_LAYOUT_ALGORITHM_REVISION = 6
+DEVELOPER_LAYOUT_ALGORITHM_REVISION = 14
 TTL_SECONDS = 24 * 60 * 60
 CACHE_LOCK_TIMEOUT_SECONDS = .25
 
@@ -47,13 +47,17 @@ def cache_key(paths, settings, created_at, progress=None):
     settings_data = asdict(settings)
     settings_data.pop('header_gap_overrides', None)
     developer_knife_gap = settings.cutter_knife_change_gap_mm > 0
+    developer_compact = settings.developer_compact_cutter_layout
     # This feature is strictly isolated from production mode.  In particular,
     # the added field must not perturb the legacy production cache key merely
     # because a newer binary contains it.
     if not developer_knife_gap:
         settings_data.pop('cutter_knife_change_gap_mm', None)
+    if not developer_compact:
+        settings_data.pop('developer_compact_cutter_layout', None)
     algorithm_revision = (DEVELOPER_LAYOUT_ALGORITHM_REVISION
-                          if developer_knife_gap else LAYOUT_ALGORITHM_REVISION)
+                          if developer_knife_gap or developer_compact
+                          else LAYOUT_ALGORITHM_REVISION)
     data = {'schema': SCHEMA, 'algorithm': algorithm_revision, 'files': files,
             'settings': settings_data, 'date': date}
     return sha256(json.dumps(data, sort_keys=True, ensure_ascii=False).encode()).hexdigest()
