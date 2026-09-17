@@ -102,7 +102,8 @@
   `layout_engine/measurement/measurement_cache.py` 持久化，并由 `layout_engine/measurement/measurement_session.py` 在任务内共享连接；
   `layout_engine/measurement/cutter_measurements.py` 保存本批正常/旋转刀码几何；后续方案即使改变路径顺序，也按文件身份重组并复用，生产方案、整批旋转和膜规格比较不再重复逐图测量。
   内置刀码和文字的透明矩形像素结论也按文件身份、方向和精确矩形持久化；单图缓存24小时，
-  重新组批、膜宽变化和普通版本更新不触发源图重新测量。
+  重新组批、膜宽变化和普通版本更新不触发源图重新测量。整批排版缓存使用独立排版算法版本而非
+  软件发布版本；缓存键一次并发读取全部文件状态并写入当前测量会话，未命中后立即切换到实际测量阶段计时。
 
 ## UI 与本地数据
 

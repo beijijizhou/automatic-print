@@ -1,5 +1,7 @@
 """Persistent JSON-only geometry cache; source/output safety remains independent."""
 from dataclasses import asdict, replace
+from concurrent.futures import ThreadPoolExecutor
+from contextvars import copy_context
 from hashlib import sha256
 import json
 from pathlib import Path
@@ -10,6 +12,7 @@ from automatic_print.layout_engine.measurement.measurement_session import identi
 from automatic_print.layout_engine.domain.models import Placement
 
 SCHEMA = 1
+LAYOUT_ALGORITHM_REVISION = 1
 TTL_SECONDS = 24 * 60 * 60
 CACHE_LOCK_TIMEOUT_SECONDS = .25
 
@@ -20,21 +23,25 @@ def cache_directory():
 
 
 def cache_key(paths, settings, created_at, progress=None):
-    from automatic_print import __version__
     template = settings.label_text_template
     date = created_at.strftime(settings.label_date_format) if ('{日期}' in template or '{date' in template) else ''
+    identity_workers = max(1, min(8, int(settings.worker_threads), len(paths)))
     settings = replace(settings,
                        label_batch_name=(settings.label_batch_name
                                          if settings.label_source_order_enabled else ''),
                        worker_threads=1, output_parts=1, save_parallelism=1,
                        save_memory_mb=512, save_memory_unlimited=False, png_engine='pillow',
                        png_compression_level=1, png_fast_encoding=False, png_streaming=False, film_geometry_workers=1)
-    files = []
-    for index, path in enumerate(paths, 1):
-        files.append(identity(path))
-        if progress:
-            progress('读取排版缓存', index, len(paths), '检查文件信息：'+path.name)
-    data = {'schema': SCHEMA, 'algorithm': __version__, 'files': files,
+    if identity_workers == 1:
+        files = [identity(path) for path in paths]
+    else:
+        with ThreadPoolExecutor(max_workers=identity_workers, thread_name_prefix='cache-identity') as pool:
+            futures = [pool.submit(copy_context().run, identity, path) for path in paths]
+            files = [future.result() for future in futures]
+    if progress:
+        progress('读取排版缓存', len(paths), len(paths),
+                 f'已一次读取{len(paths)}个文件状态（{identity_workers}路并行）')
+    data = {'schema': SCHEMA, 'algorithm': LAYOUT_ALGORITHM_REVISION, 'files': files,
             'settings': asdict(settings), 'date': date}
     return sha256(json.dumps(data, sort_keys=True, ensure_ascii=False).encode()).hexdigest()
 

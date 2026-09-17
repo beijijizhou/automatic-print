@@ -34,7 +34,8 @@ def plan_with_cache(make, paths, settings, progress, analysis_ready, session):
             analysis_ready(plan_cache.cached_analysis(analysis))
         verify_sources()
         return result
-    report('读取排版缓存', 0, 0, '未命中缓存，执行正常测量与排版')
+    report('读取排版缓存', len(paths), len(paths), '未命中缓存，执行正常测量与排版')
+    report('读取图片尺寸', 0, len(paths), '缓存未命中，开始建立本批共享尺寸、标签与刀码数据')
     final_analysis, effective = [], [settings.cutter_knife_mm]
 
     def capture(stage, current, total, detail):

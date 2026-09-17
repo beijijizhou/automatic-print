@@ -21,8 +21,12 @@ def config(**updates):
 
 def test_second_plan_from_disk_skips_measurement_and_all_geometry(tmp_path, monkeypatch):
     paths = qr_sources(tmp_path)
-    reports = []
-    first = planner.plan_layout(paths, config(), None, reports.append)
+    reports, first_progress = [], []
+    first = planner.plan_layout(
+        paths, config(), lambda *args: first_progress.append(args), reports.append,
+    )
+    miss = next(index for index, row in enumerate(first_progress) if '未命中缓存' in row[3])
+    assert first_progress[miss + 1][0] == '读取图片尺寸'
     monkeypatch.setattr(planner, '_measured_plan', lambda *a: pytest.fail('Recomputed cached batch'))
     monkeypatch.setattr(Image, 'open', lambda *a, **kw: pytest.fail('Opened source pixels during cached planning'))
     progress, cached = [], []
@@ -35,7 +39,7 @@ def test_second_plan_from_disk_skips_measurement_and_all_geometry(tmp_path, monk
     assert (plan_cache.cache_directory()/'排版缓存.sqlite3').is_file()
 
 
-def test_file_parameters_date_and_version_invalidate_cache_key(tmp_path, monkeypatch):
+def test_file_parameters_date_and_algorithm_revision_invalidate_cache_key(tmp_path, monkeypatch):
     path = tmp_path/'B1-1-T-Black-M-NO1-1.png'
     path.write_bytes(b'original')
     now = datetime(2026, 9, 14)
@@ -54,7 +58,31 @@ def test_file_parameters_date_and_version_invalidate_cache_key(tmp_path, monkeyp
     import automatic_print
     before = key()
     monkeypatch.setattr(automatic_print, '__version__', 'next-algorithm')
+    assert key() == before
+    monkeypatch.setattr(plan_cache, 'LAYOUT_ALGORITHM_REVISION', 2)
     assert key() != before
+
+
+def test_cache_key_reads_file_identities_once_and_in_parallel(tmp_path, monkeypatch):
+    from threading import Barrier
+    from automatic_print.layout_engine.measurement import measurement_session as measurements
+    paths = [tmp_path/f'{index}.png' for index in range(4)]
+    for path in paths:
+        path.write_bytes(b'source')
+    original, barrier, calls = measurements.fresh_identity, Barrier(4), []
+
+    def synchronized(path):
+        calls.append(path)
+        barrier.wait(timeout=3)
+        return original(path)
+
+    monkeypatch.setattr(measurements, 'fresh_identity', synchronized)
+    with measurement_session():
+        plan_cache.cache_key(paths, config(worker_threads=4), datetime(2026, 9, 14))
+        assert len(calls) == 4
+        for path in paths:
+            measurements.identity(path)
+        assert len(calls) == 4
 
 
 def test_corrupt_and_geometrically_invalid_cache_recompute_instead_of_blocking(tmp_path, monkeypatch):
