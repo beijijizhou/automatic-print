@@ -1,10 +1,10 @@
 from pathlib import Path
 from dataclasses import replace
 
-from automatic_print.layout import LayoutSettings
-from automatic_print.layout_engine.models import Placement
-from automatic_print.layout_engine.batch_analysis import finish_analysis
-from automatic_print.layout_engine.order_groups import order_key
+from automatic_print.layout_engine import LayoutSettings
+from automatic_print.layout_engine.domain.models import Placement
+from automatic_print.layout_engine.orders.batch_analysis import finish_analysis
+from automatic_print.layout_engine.orders.order_groups import order_key
 
 
 class CountedPlan(list):

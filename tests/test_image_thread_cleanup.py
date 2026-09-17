@@ -3,8 +3,11 @@ from dataclasses import replace
 import pytest
 from PIL import Image
 from PySide6.QtCore import QObject, Slot, Qt
-from automatic_print.layout_engine import image_pipeline, pillow_renderer, film_comparison, rotation_compare
-from automatic_print.layout_engine.save_progress import monitor_save
+from automatic_print.layout_engine.intake.preparation import image_pipeline
+from automatic_print.layout_engine.rendering.engines import pillow_renderer
+from automatic_print.layout_engine.planning.film import film_comparison
+from automatic_print.layout_engine.planning.rotation import rotation_compare
+from automatic_print.layout_engine.rendering.storage.save_progress import monitor_save
 from automatic_print.ui.workers import GenerateWorker
 from test_parallel_film_geometry import qr_sources, settings
 
@@ -42,7 +45,7 @@ def test_canvas_and_prepared_images_are_closed_on_progress_failure(tmp_path, mon
         return image
     monkeypatch.setattr(pillow_renderer.Image, 'new', create)
     # Obtain real validated placements instead of fabricating planner fields.
-    from automatic_print.layout import generate_layout, LayoutSettings
+    from automatic_print.layout_engine import generate_layout, LayoutSettings
     payloads = []
     config = LayoutSettings(dpi=25.4, number_images=False, color_block_enabled=False, worker_threads=2)
     generate_layout([path, second], tmp_path/'unused', config, preview_only=True, plan_ready=payloads.append)
@@ -75,7 +78,7 @@ def test_single_geometry_budget_does_not_spawn_comparison_pools(tmp_path, monkey
     config = replace(settings(), film_geometry_workers=1, compare_reference_films=False)
     result = film_comparison.compare_films(paths, config)
     assert len(result['rows']) == 4 and result['parallelism'] == 1
-    from automatic_print.layout_engine.batch_analysis import analyze_batch
+    from automatic_print.layout_engine.orders.batch_analysis import analyze_batch
     analysis = analyze_batch(paths, config)
     rotation_compare.compare_rotation(paths, config, None, analysis, None)
     assert analysis['rotation_comparison']['parallelism'] == 1

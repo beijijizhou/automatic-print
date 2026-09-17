@@ -7,8 +7,8 @@ from PySide6.QtCore import QSettings
 from PySide6.QtWidgets import QApplication
 
 from automatic_print import __version__, __version_display__
-from automatic_print.versioning import release_display
-from automatic_print import updater
+from automatic_print.updates.versioning import release_display
+from automatic_print.updates import release as updater
 from automatic_print.updates.source import SourceUpdateInfo
 from automatic_print.ui.main_window import MainWindow
 
@@ -17,7 +17,7 @@ OWNERS = []
 
 
 def test_version_is_date_and_fixed_daily_iteration(tmp_path):
-    assert __version_display__ == '2026-09-16 · 第56次更新'
+    assert __version_display__ == '2026-09-16 · 第59次更新'
     prefs = QSettings(str(tmp_path/'version.ini'), QSettings.IniFormat)
     for _ in range(2):
         window = MainWindow(prefs)

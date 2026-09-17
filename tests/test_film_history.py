@@ -6,8 +6,8 @@ os.environ.setdefault('QT_QPA_PLATFORM', 'offscreen')
 from PySide6.QtWidgets import QApplication
 from PIL import Image
 from automatic_print.history.store import save_run, load_runs, export_csv
-from automatic_print.layout import LayoutSettings
-from automatic_print.layout_engine.film_comparison import compare_films
+from automatic_print.layout_engine import LayoutSettings
+from automatic_print.layout_engine.planning.film.film_comparison import compare_films
 from automatic_print.ui.film_history import FilmHistoryPage
 from automatic_print.ui.workers import GenerateWorker
 from tests.test_film_comparison import sources
@@ -67,7 +67,7 @@ def test_history_failures_do_not_block_finished_production(tmp_path, monkeypatch
         return {'analysis': {}, 'filename': filename}
     monkeypatch.setattr(workers, 'generate_layout', generated)
     monkeypatch.setattr(workers, 'cutting_report', lambda *_a: 'report')
-    from automatic_print.layout_engine.output_name import batch_output_directory
+    from automatic_print.layout_engine.output.output_name import batch_output_directory
     worker = GenerateWorker([], tmp_path, batch_output_directory(tmp_path, tmp_path.name, 'job'),
                             'job', LayoutSettings())
     finished, failed = [], []
@@ -97,7 +97,7 @@ def test_successful_worker_appends_one_record_and_stopped_task_does_not(tmp_path
         return result
     monkeypatch.setattr(workers, 'generate_layout', generated)
     monkeypatch.setattr(workers, 'cutting_report', lambda *_a: 'report')
-    from automatic_print.layout_engine.output_name import batch_output_directory
+    from automatic_print.layout_engine.output.output_name import batch_output_directory
     worker = GenerateWorker([], tmp_path, batch_output_directory(tmp_path, tmp_path.name, 'completed'),
                             'completed', settings)
     worker.run()

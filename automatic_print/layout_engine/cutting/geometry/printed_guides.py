@@ -1,0 +1,190 @@
+"""Physical-size QR-band knife dots, shared by preview and lossless output."""
+from PIL import Image, ImageDraw
+
+from automatic_print.layout_engine.cutting.geometry.cut_guide_geometry import detect_guide_band, guide_spans
+from automatic_print.layout_engine.domain.models import mm_to_px
+
+
+CORRIDOR_SCAN_ROWS = 4096
+
+
+def dot_boxes(spans, dpi):
+    diameter = max(1, mm_to_px(.6, dpi))
+    step = max(diameter + 1, mm_to_px(1.4, dpi))
+    for span in spans:
+        for top in range(span.top, span.bottom - diameter + 1, step):
+            yield (span.knife_x - diameter // 2, top, diameter)
+
+
+def collect_guides(planned, settings, progress=None):
+    if settings.cutter_mode != 'dual' or not settings.cutter_knife_dots:
+        return [], []
+    paths = list(dict.fromkeys(path for path, _ in planned))
+    bands = {}
+    for index, path in enumerate(paths, 1):
+        bands[path] = detect_guide_band(path)
+        if progress:
+            progress('搜索标签辅助线', index, len(paths), path.name)
+    return guide_spans(planned, settings, bands), [p.name for p in paths if bands[p] is None]
+
+
+def dot_sprite(diameter):
+    sprite = Image.new('RGBA', (diameter, diameter))
+    if diameter == 1:
+        sprite.putpixel((0, 0), (255, 0, 0, 255))
+    else:
+        ImageDraw.Draw(sprite).ellipse((0, 0, diameter-1, diameter-1), fill=(255, 0, 0, 255))
+    return sprite
+
+
+def paint_guides(canvas, boxes, use_vips=False):
+    if not boxes:
+        return canvas
+    sprite = dot_sprite(boxes[0][2])
+    try:
+        if not use_vips:
+            for x, y, _ in boxes:
+                canvas.alpha_composite(sprite, (x, y))
+            return canvas
+        import pyvips
+        dot = pyvips.Image.new_from_memory(sprite.tobytes(), sprite.width, sprite.height,
+                                         4, 'uchar').copy(interpretation='srgb')
+        return canvas.composite([dot]*len(boxes), ['over']*len(boxes),
+                                x=[b[0] for b in boxes], y=[b[1] for b in boxes])
+    finally:
+        sprite.close()
+
+
+def vips_corridor_is_clear(image, check, boxes=(), rectangles=()):
+    """Allow exactly our circle alpha mask, never a whole band or arbitrary red ink."""
+    if check['safe_right_px'] <= check['safe_left_px']:
+        return True
+    excess = _vips_corridor_excess(image, check, boxes, rectangles)
+    from automatic_print.layout_engine.rendering.engines.vips_renderer import demand_lock
+    with demand_lock:
+        return excess.max() == 0
+
+
+def vips_corridors_are_clear(image, checks, boxes=(), rectangles=()):
+    """Evaluate corridors top-to-bottom with a bounded native pixel window."""
+    checks = [check for check in checks
+              if check['safe_right_px'] > check['safe_left_px']]
+    if not checks:
+        return True
+    top = min(check.get('start_y_px', 0) for check in checks)
+    bottom = max(check.get('end_y_px', image.height) for check in checks)
+    from automatic_print.layout_engine.rendering.engines.vips_renderer import demand_lock
+    with demand_lock:
+        for band_top in range(top, bottom, CORRIDOR_SCAN_ROWS):
+            band_bottom = min(bottom, band_top + CORRIDOR_SCAN_ROWS)
+            active = [check for check in checks
+                      if check.get('start_y_px', 0) < band_bottom
+                      and check.get('end_y_px', image.height) > band_top]
+            if active and not _vips_corridor_band_is_clear(
+                image, active, band_top, band_bottom, boxes, rectangles
+            ):
+                return False
+    return True
+
+
+def _vips_corridor_band_is_clear(
+    image, checks, top, bottom, boxes, rectangles,
+):
+    import pyvips
+    left = min(check['safe_left_px'] for check in checks)
+    right = max(check['safe_right_px'] for check in checks)
+    width, height = right-left, bottom-top
+    alpha = image.crop(left, top, width, height)[3]
+    targets = pyvips.Image.black(width, height)
+    for check in checks:
+        x0, x1 = check['safe_left_px']-left, check['safe_right_px']-left
+        y0 = max(top, check.get('start_y_px', 0))-top
+        y1 = min(bottom, check.get('end_y_px', image.height))-top
+        targets = targets.insert(
+            pyvips.Image.black(x1-x0, y1-y0).new_from_image(255), x0, y0
+        )
+    allowed = _vips_allowed_mask(width, height, left, top, boxes, rectangles)
+    return (((alpha > allowed) & (targets > 0)).max() == 0)
+
+
+def _vips_allowed_mask(width, height, left, top, boxes, rectangles):
+    import pyvips
+    right, bottom = left+width, top+height
+    mask = pyvips.Image.black(width, height)
+    for x, y, diameter in boxes:
+        if x >= right or x+diameter <= left or y >= bottom or y+diameter <= top:
+            continue
+        sprite = dot_sprite(diameter)
+        try:
+            dot = pyvips.Image.new_from_memory(sprite.getchannel('A').tobytes(),
+                                               diameter, diameter, 1, 'uchar')
+            x0, y0 = max(left, x), max(top, y)
+            x1, y1 = min(right, x+diameter), min(bottom, y+diameter)
+            mask = mask.insert(dot.crop(x0-x, y0-y, x1-x0, y1-y0),
+                               x0-left, y0-top)
+        finally:
+            sprite.close()
+    for rectangle in rectangles:
+        x0, y0 = max(left, rectangle['x']), max(top, rectangle['y'])
+        x1 = min(right, rectangle['x']+rectangle['width'])
+        y1 = min(bottom, rectangle['y']+rectangle['height'])
+        if x1 <= x0 or y1 <= y0:
+            continue
+        if 'text' in rectangle:
+            from automatic_print.layout_engine.output.batch_footer import footer_sprite
+            with footer_sprite(rectangle) as sprite:
+                with sprite.getchannel('A') as glyph:
+                    ink = pyvips.Image.new_from_memory(
+                        glyph.tobytes(), rectangle['width'], rectangle['height'],
+                        1, 'uchar'
+                    )
+                    permitted = (ink.crop(
+                        x0-rectangle['x'], y0-rectangle['y'], x1-x0, y1-y0
+                    ) > 0).ifthenelse(255, 0)
+        else:
+            permitted = pyvips.Image.black(x1-x0, y1-y0).new_from_image(255)
+        mask = mask.insert(permitted, x0-left, y0-top)
+    return mask
+
+
+def _vips_corridor_excess(image, check, boxes=(), rectangles=()):
+    import pyvips
+    left, right = check['safe_left_px'], check['safe_right_px']
+    top, bottom = check.get('start_y_px', 0), check.get('end_y_px', image.height)
+    alpha = image.crop(left, top, right-left, bottom-top)[3]
+    mask = pyvips.Image.black(right-left, bottom-top)
+    for x, y, diameter in boxes:
+        if x >= right or x+diameter <= left or y >= bottom or y+diameter <= top:
+            continue
+        sprite = dot_sprite(diameter)
+        try:
+            dot = pyvips.Image.new_from_memory(sprite.getchannel('A').tobytes(),
+                                               diameter, diameter, 1, 'uchar')
+            x0, y0 = max(left, x), max(top, y)
+            x1, y1 = min(right, x+diameter), min(bottom, y+diameter)
+            mask = mask.insert(dot.crop(x0-x, y0-y, x1-x0, y1-y0), x0-left, y0-top)
+        finally:
+            sprite.close()
+    for r in rectangles:
+        x0, y0 = max(left, r['x']), max(top, r['y'])
+        x1, y1 = min(right, r['x']+r['width']), min(bottom, r['y']+r['height'])
+        if x1 > x0 and y1 > y0:
+            if 'text' in r:
+                from automatic_print.layout_engine.output.batch_footer import footer_sprite
+                with footer_sprite(r) as sprite:
+                    with sprite.getchannel('A') as glyph:
+                        ink = pyvips.Image.new_from_memory(glyph.tobytes(), r['width'], r['height'], 1, 'uchar')
+                        allowed = (ink.crop(x0-r['x'], y0-r['y'], x1-x0, y1-y0) > 0).ifthenelse(255, 0)
+            else:
+                allowed = pyvips.Image.black(x1-x0, y1-y0).new_from_image(255)
+            mask = mask.insert(allowed, x0-left, y0-top)
+    return alpha > mask
+
+
+def validate_vips_canvas(canvas, check):
+    if check is None:
+        return
+    from automatic_print.layout_engine.cutting.validation.cut_validation import corridor_checks
+    for zone in corridor_checks(check):
+        if not vips_corridor_is_clear(canvas, zone):
+            raise ValueError('合成图片进入整批切割安全通道，已禁止保存打印文件。')

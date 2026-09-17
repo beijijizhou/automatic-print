@@ -2,7 +2,7 @@
 
 from PySide6.QtWidgets import QCheckBox, QComboBox, QDoubleSpinBox, QLineEdit, QPushButton
 
-from ....layout_engine.labels import compact_label_text
+from ....layout_engine.labeling.base.labels import compact_label_text
 from ...quick_fields import quick_fields
 
 

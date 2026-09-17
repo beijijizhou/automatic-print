@@ -1,9 +1,9 @@
-from automatic_print.layout import LayoutSettings
-from automatic_print.layout_engine.gap_loss import compare_gap_loss, gap_loss_text
+from automatic_print.layout_engine import LayoutSettings
+from automatic_print.layout_engine.planning.zones.gap_loss import compare_gap_loss, gap_loss_text
 
 
 def test_gap_loss_uses_source_paths_same_policy_and_full_film_area(monkeypatch):
-    from automatic_print.layout_engine import planner
+    from automatic_print.layout_engine.planning.base import planner
     seen = []
     def plan(paths, settings, progress):
         assert str(paths[0]) == '/tmp/original.png'
@@ -26,13 +26,13 @@ def test_gap_loss_uses_source_paths_same_policy_and_full_film_area(monkeypatch):
 
 
 def test_no_added_gap_has_zero_cost_and_no_replan(monkeypatch):
-    from automatic_print.layout_engine import planner
+    from automatic_print.layout_engine.planning.base import planner
     monkeypatch.setattr(planner,'plan_layout',lambda *a: (_ for _ in ()).throw(AssertionError()))
     assert compare_gap_loss([],LayoutSettings(),2)['extra_m'] == 0
 
 
 def test_reference_failure_is_nonblocking(monkeypatch):
-    from automatic_print.layout_engine import planner
+    from automatic_print.layout_engine.planning.base import planner
     def fail(*args):
         raise ValueError('参考宽度不足')
     monkeypatch.setattr(planner,'plan_layout',fail)
@@ -42,8 +42,8 @@ def test_reference_failure_is_nonblocking(monkeypatch):
 
 def test_actual_preview_compares_added_rows_without_output(tmp_path, monkeypatch):
     from test_header_gap import sample
-    from automatic_print.layout_engine import header_gap
-    from automatic_print.layout import generate_layout
+    from automatic_print.layout_engine.labeling.base import header_gap
+    from automatic_print.layout_engine import generate_layout
     monkeypatch.setattr(header_gap,'cache_root',lambda:tmp_path/'cache')
     path=sample(tmp_path/'B1-1-T-Black-M-NO1-1.png')
     settings=LayoutSettings(dpi=25.4,media_width_mm=580,cutter_mode='single',

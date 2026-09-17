@@ -9,13 +9,13 @@ from PIL import Image
 import pytest
 from PySide6.QtWidgets import QApplication
 
-from automatic_print.layout import LayoutSettings, generate_layout
-from automatic_print.layout_engine.image_anomalies import anomaly_text
-from automatic_print.layout_engine.output_sizes import cutting_report
-from automatic_print.layout_engine.models import Placement
-from automatic_print.layout_engine.printed_guides import collect_guides, dot_boxes
-from automatic_print.layout_engine.marked_pixel_validation import validate_marked_pillow
-from automatic_print.layout_engine.cut_validation import corridor_checks
+from automatic_print.layout_engine import LayoutSettings, generate_layout
+from automatic_print.layout_engine.intake.metadata.image_anomalies import anomaly_text
+from automatic_print.layout_engine.output.output_sizes import cutting_report
+from automatic_print.layout_engine.domain.models import Placement
+from automatic_print.layout_engine.cutting.geometry.printed_guides import collect_guides, dot_boxes
+from automatic_print.layout_engine.cutting.validation.marked_pixel_validation import validate_marked_pillow
+from automatic_print.layout_engine.cutting.validation.cut_validation import corridor_checks
 from automatic_print.ui.batch_summary import BatchSummaryPanel
 from tests.test_platform_labels import qr_image
 

@@ -1,7 +1,7 @@
 from PIL import Image
 import pytest
 
-from automatic_print.layout import LayoutSettings, generate_layout
+from automatic_print.layout_engine import LayoutSettings, generate_layout
 
 
 def _sources(root):
@@ -81,7 +81,7 @@ def test_mixed_color_leftover_does_not_discard_pairable_majority(tmp_path):
 
 
 def test_only_oversized_rotated_leftover_is_scaled(tmp_path, monkeypatch):
-    from automatic_print.layout_engine import width_fit
+    from automatic_print.layout_engine.planning.zones import width_fit
     monkeypatch.setattr(width_fit, 'cache_root', lambda: tmp_path/'cache')
     paths = _sources(tmp_path)[:4]
     oversized = tmp_path/'B9-1-T-Black-M-NO1-1.png'
@@ -100,7 +100,7 @@ def test_only_oversized_rotated_leftover_is_scaled(tmp_path, monkeypatch):
 
 
 def test_portrait_leftover_rotates_then_scales_without_third_zone(tmp_path, monkeypatch):
-    from automatic_print.layout_engine import width_fit
+    from automatic_print.layout_engine.planning.zones import width_fit
     monkeypatch.setattr(width_fit, 'cache_root', lambda: tmp_path/'cache')
     paths = _sources(tmp_path)[:4]
     portrait = tmp_path/'B9-1-T-Black-M-NO1-1.png'
@@ -120,7 +120,7 @@ def test_portrait_leftover_rotates_then_scales_without_third_zone(tmp_path, monk
 
 
 def test_two_sided_leftover_keeps_both_faces_together_and_same_direction(tmp_path, monkeypatch):
-    from automatic_print.layout_engine import width_fit
+    from automatic_print.layout_engine.planning.zones import width_fit
     monkeypatch.setattr(width_fit, 'cache_root', lambda: tmp_path/'cache')
     paths = _sources(tmp_path)[:4]
     faces = []

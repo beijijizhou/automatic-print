@@ -5,7 +5,7 @@ from PIL import Image
 from PySide6.QtCore import QSettings
 from PySide6.QtWidgets import QApplication, QFileDialog
 
-from automatic_print.layout import LayoutSettings, generate_layout
+from automatic_print.layout_engine import LayoutSettings, generate_layout
 from automatic_print.ui.main_window import MainWindow
 
 APP = QApplication.instance() or QApplication([])

@@ -87,7 +87,7 @@ def test_main_page_examples_start_after_show_and_refresh_on_parameters(tmp_path,
     window.color_block_settings.width.setValue(12)
     wait_for(lambda: examples.results[0]['item'].block_width != old and examples.worker is None)
     window.cutter_settings.left_marker_lift.setValue(2.5)
-    from automatic_print.layout_engine.models import mm_to_px
+    from automatic_print.layout_engine.domain.models import mm_to_px
     wait_for(lambda: examples.results[0]['item'].left_marker_lift_px ==
              mm_to_px(2.5, examples.results[0]['dpi']) and examples.worker is None)
     assert all('当前批次生产图' in caption.text() for _, caption in examples.cards)
@@ -135,7 +135,7 @@ def test_annotation_is_preview_only_and_keeps_raw_pixels(tmp_path):
 @pytest.mark.parametrize('degrees',[0,90])
 @pytest.mark.parametrize('stack',[False,True])
 def test_example_text_offsets_match_actual_output_plan(tmp_path,mode,side,degrees,stack):
-    from automatic_print.layout import generate_layout
+    from automatic_print.layout_engine import generate_layout
     paths=sources(tmp_path)
     path=paths[0 if side=='left' else 1]
     config=replace(settings(),cutter_mode=mode,cutter_left_marker_external=True,

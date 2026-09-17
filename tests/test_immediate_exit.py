@@ -40,7 +40,7 @@ from threading import Thread, Event
 from types import SimpleNamespace
 from PySide6.QtCore import QCoreApplication
 from automatic_print.ui import workers
-from automatic_print.layout_engine.atomic_png import save_png
+from automatic_print.layout_engine.rendering.storage.atomic_png import save_png
 from automatic_print.ui.immediate_exit import exit_now
 app = QCoreApplication([])
 root = Path(sys.argv[1])
@@ -76,8 +76,8 @@ exit_now(fake)
 
 
 def test_failed_encoding_keeps_pending_file_and_does_not_overwrite_it(tmp_path):
-    from automatic_print.layout_engine.atomic_png import save_png
-    from automatic_print.layout_engine.output_name import unused_output_path
+    from automatic_print.layout_engine.rendering.storage.atomic_png import save_png
+    from automatic_print.layout_engine.output.output_name import unused_output_path
     import pytest
     target = tmp_path/'batch.png'
     class Canvas:

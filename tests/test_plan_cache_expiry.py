@@ -1,5 +1,5 @@
 """Cache retention is absolute and only expires disposable geometry records."""
-from automatic_print.layout_engine import plan_cache
+from automatic_print.layout_engine.planning.cache import plan_cache
 
 
 def test_cache_expires_at_24_hours_and_hits_do_not_extend_it(monkeypatch):

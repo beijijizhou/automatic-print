@@ -3,8 +3,8 @@ from pathlib import Path
 
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import QGroupBox, QLabel, QPlainTextEdit, QVBoxLayout, QPushButton
-from ..layout_engine.output_sizes import cutting_report
-from ..layout_engine.image_anomalies import anomaly_text
+from ..layout_engine.output.output_sizes import cutting_report
+from ..layout_engine.intake.metadata.image_anomalies import anomaly_text
 
 
 class BatchSummaryPanel(QGroupBox):
@@ -76,7 +76,7 @@ class BatchSummaryPanel(QGroupBox):
     def show_analysis(self, report):
         if not report:
             return
-        from ..layout_engine.gap_loss import gap_loss_text
+        from ..layout_engine.planning.zones.gap_loss import gap_loss_text
         self.gap_loss.setText(gap_loss_text(report.get('gap_loss')))
         folder = self.info.text().split('\n')[0]
         self.info.setText(f"{folder}\n{report['batch_type']} · {report['order_count']} 个订单组"
@@ -140,8 +140,8 @@ class BatchSummaryPanel(QGroupBox):
             self.cutting.show()
         self._show_quality(result.get('dual_quality', {}))
         self._show_comparison(result.get('analysis', {}))
-        from ..layout_engine.png_codecs.fast import timing_text
-        from ..layout_engine.output_file_info import result_file_report
+        from ..layout_engine.rendering.png.fast import timing_text
+        from ..layout_engine.output.output_file_info import result_file_report
         self.save_report = result_file_report(result)
         self.metrics.setText(self.metrics.text()+'\n'+timing_text(result.get('png_save_details')))
 

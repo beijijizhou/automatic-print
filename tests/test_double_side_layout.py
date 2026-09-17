@@ -1,6 +1,6 @@
 from PIL import Image
 
-from automatic_print.layout import LayoutSettings, generate_layout
+from automatic_print.layout_engine import LayoutSettings, generate_layout
 
 
 def _double_side_images(folder):

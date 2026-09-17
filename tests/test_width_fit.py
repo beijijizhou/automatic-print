@@ -3,10 +3,11 @@ os.environ.setdefault('QT_QPA_PLATFORM','offscreen')
 from dataclasses import replace
 from PIL import Image
 import pytest
-from automatic_print.layout import LayoutSettings,generate_layout
-from automatic_print.layout_engine import gap_fallback,width_fit
-from automatic_print.layout_engine.images import print_dimensions
-from automatic_print.layout_engine.order_groups import pair_identity
+from automatic_print.layout_engine import LayoutSettings,generate_layout
+from automatic_print.layout_engine.planning.zones import gap_fallback
+from automatic_print.layout_engine.planning.zones import width_fit
+from automatic_print.layout_engine.intake.metadata.images import print_dimensions
+from automatic_print.layout_engine.orders.order_groups import pair_identity
 
 
 def source(path,size):
@@ -101,7 +102,7 @@ def test_double_batch_greedy_rotation_scales_blocked_pair_together(tmp_path):
         dpi=25.4, media_width_mm=580, spacing_mm=12,
         cutter_mode='dual', cutter_auto_knife=True,
         cutter_left_marker_external=True, cutter_compare_whole_rotation=True,
-        cutter_single_row_rotation=True, preserve_header_gap=True,
+        cutter_single_row_rotation=True, preserve_header_gap=False,
         auto_fit_width=True, force_small_pair_width=True,
         platform_below_marker=True, platform_reuse_qr=True,
         allow_rotation=False, cutter_majority_two_zone=True,

@@ -2,9 +2,9 @@ import numpy as np
 import pytest
 from PIL import Image, ImageFile
 
-from automatic_print.layout_engine.marker_space import transparent_rect
-from automatic_print.layout_engine.measurement_session import measuring_source
-from automatic_print.layout_engine.transparent_search import clear_rectangles
+from automatic_print.layout_engine.labeling.markers.marker_space import transparent_rect
+from automatic_print.layout_engine.measurement.measurement_session import measuring_source
+from automatic_print.layout_engine.labeling.platform.transparent_search import clear_rectangles
 
 
 @pytest.mark.parametrize('degrees', [0, 90, -90, 180])
@@ -50,9 +50,9 @@ def test_non_alpha_sources_remain_unsafe(tmp_path):
 
 
 def test_normal_rotation_decode_once_and_cached_comparison_opens_nothing(tmp_path, monkeypatch):
-    from automatic_print.layout_engine.item_factory import read_items
-    from automatic_print.layout_engine.models import LayoutSettings
-    from automatic_print.layout_engine.measurement_session import measurement_session
+    from automatic_print.layout_engine.intake.preparation.item_factory import read_items
+    from automatic_print.layout_engine.domain.models import LayoutSettings
+    from automatic_print.layout_engine.measurement.measurement_session import measurement_session
 
     path = tmp_path / 'source.png'
     Image.new('RGBA', (200, 300), 'blue').save(path, dpi=(25.4, 25.4))

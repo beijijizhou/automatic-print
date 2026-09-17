@@ -5,10 +5,10 @@ import pytest
 from PIL import Image
 import numpy as np
 
-from automatic_print.layout import LayoutSettings, generate_layout
-from automatic_print.layout_engine.batch_footer import footer_sprite
-from automatic_print.layout_engine.marked_pixel_validation import validate_marked_pillow
-from automatic_print.layout_engine.printed_guides import vips_corridor_is_clear
+from automatic_print.layout_engine import LayoutSettings, generate_layout
+from automatic_print.layout_engine.output.batch_footer import footer_sprite
+from automatic_print.layout_engine.cutting.validation.marked_pixel_validation import validate_marked_pillow
+from automatic_print.layout_engine.cutting.geometry.printed_guides import vips_corridor_is_clear
 
 
 def sources(root):
@@ -103,8 +103,8 @@ def test_footer_preferences_migrate_once_and_remember_custom_gap(tmp_path):
 
 
 def test_footer_can_be_enabled_without_red_line(tmp_path):
-    from automatic_print.layout_engine.transition_marks import transition_rects
-    from automatic_print.layout_engine.models import Placement
+    from automatic_print.layout_engine.cutting.geometry.transition_marks import transition_rects
+    from automatic_print.layout_engine.domain.models import Placement
     p = Placement('a.png', 1, 0, 0, 100, 80, 0, 0, 0, 0, 0, 100, 80)
     rects = transition_rects([(tmp_path/'a.png', p)],
         LayoutSettings(dpi=25.4, transition_lines=False, batch_footer_enabled=True), 200)

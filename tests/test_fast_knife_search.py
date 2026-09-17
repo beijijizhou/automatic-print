@@ -2,11 +2,11 @@ from dataclasses import replace
 from pathlib import Path
 from random import Random
 
-from automatic_print.layout import LayoutSettings
-from automatic_print.layout_engine.item_factory import LayoutItem
-from automatic_print.layout_engine.cutter_planner import _horizontal, _lanes, solve_groups
-from automatic_print.layout_engine.single_order_sequence import arrange_groups, horizontal_savings
-from automatic_print.layout_engine.knife_optimizer import select_batch_knife, knife_candidates, distinct_knife_candidates
+from automatic_print.layout_engine import LayoutSettings
+from automatic_print.layout_engine.intake.preparation.item_factory import LayoutItem
+from automatic_print.layout_engine.planning.columns.cutter_planner import _horizontal, _lanes, solve_groups
+from automatic_print.layout_engine.orders.single_order_sequence import arrange_groups, horizontal_savings
+from automatic_print.layout_engine.planning.columns.knife_optimizer import select_batch_knife, knife_candidates, distinct_knife_candidates
 
 
 def item(i, width, height, offset=0):
@@ -41,7 +41,7 @@ def test_deduplicated_search_preserves_exhaustive_best_height_and_knife():
 
 
 def test_range_event_states_match_full_lane_checks_with_marker_offsets():
-    from automatic_print.layout_engine.single_order_sequence import lane_fits
+    from automatic_print.layout_engine.orders.single_order_sequence import lane_fits
     rng = Random(17)
     for _ in range(20):
         groups = [[replace(item(i, rng.randrange(50, 500), 200),

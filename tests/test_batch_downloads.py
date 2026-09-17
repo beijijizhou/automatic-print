@@ -1,7 +1,7 @@
 from pathlib import Path
 from zipfile import ZipFile
 
-from automatic_print.automation.batch_downloads import (
+from automatic_print.automation.transfer.downloads import (
     RemoteBatch,
     _start_parallel_downloads,
     download_production_images,

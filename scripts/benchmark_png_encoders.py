@@ -8,9 +8,9 @@ from PIL import Image
 import sys
 from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-from automatic_print.layout_engine.png_codecs.fast import encode_pixels, chunk
-from automatic_print.layout_engine.atomic_png import save_png
-from automatic_print.layout_engine.models import LayoutSettings
+from automatic_print.layout_engine.rendering.png.fast import encode_pixels, chunk
+from automatic_print.layout_engine.rendering.storage.atomic_png import save_png
+from automatic_print.layout_engine.domain.models import LayoutSettings
 from tempfile import TemporaryDirectory
 import struct
 

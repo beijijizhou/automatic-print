@@ -7,7 +7,7 @@ from datetime import datetime
 from pathlib import Path
 
 from .. import __version__, __version_display__
-from ..crash_logging import log_folder
+from ..runtime.crash_logging import log_folder
 
 
 def history_path():

@@ -4,7 +4,7 @@ from PySide6.QtCore import QSettings
 from PySide6.QtWidgets import QApplication
 from PIL import Image
 from automatic_print.ui.main_window import MainWindow
-from automatic_print.layout import generate_layout
+from automatic_print.layout_engine import generate_layout
 
 
 def test_normal_mode_has_no_markers_or_inserted_gap(tmp_path):

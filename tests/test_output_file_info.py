@@ -1,5 +1,5 @@
 from pathlib import Path
-from automatic_print.layout_engine.output_file_info import file_information_text, result_file_report
+from automatic_print.layout_engine.output.output_file_info import file_information_text, result_file_report
 
 
 def record(name='批次.png', size=600_000_000):

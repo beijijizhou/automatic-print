@@ -6,14 +6,32 @@ ROOT = Path(__file__).parents[1]
 
 
 def modules(package):
-    return sorted((ROOT/'automatic_print'/package).glob('*.py'))
+    return sorted(path for path in (ROOT/'automatic_print'/package).glob('*.py')
+                  if path.name != '__init__.py')
 
 
 def test_new_domain_packages_stay_small_and_cohesive():
     for package in (
         'controllers', 'history', 'batch_ui/local', 'batch_ui/platform',
         'batch_ui/task', 'batch_ui/shell',
-        'layout_engine/text', 'automation/api/erp',
+        'layout_engine/cutting/geometry',
+        'layout_engine/cutting/validation', 'layout_engine/diagnostics',
+        'layout_engine/intake/discovery', 'layout_engine/intake/metadata',
+        'layout_engine/intake/preparation', 'layout_engine/labeling/base',
+        'layout_engine/labeling/markers', 'layout_engine/labeling/platform',
+        'layout_engine/labeling/text', 'layout_engine/measurement',
+        'layout_engine/orders', 'layout_engine/output',
+        'layout_engine/pipeline', 'layout_engine/domain',
+        'layout_engine/planning/base', 'layout_engine/planning/cache',
+        'layout_engine/planning/columns', 'layout_engine/planning/film',
+        'layout_engine/planning/packing',
+        'layout_engine/planning/rotation', 'layout_engine/planning/zones',
+        'layout_engine/rendering', 'layout_engine/rendering/engines',
+        'layout_engine/rendering/png',
+        'layout_engine/rendering/storage', 'layout_engine/reporting',
+        'automation/batches', 'automation/browser', 'automation/providers',
+        'automation/transfer', 'automation/workflows', 'automation/api/erp',
+        'runtime', 'updates',
         'automation/api/s2b', 'automation/api/s2b/metadata',
         'automation/api/s2b/production', 'ui/workbench',
         'ui/workbench/overview',
@@ -27,6 +45,18 @@ def test_new_domain_packages_stay_small_and_cohesive():
         oversized = [path.name for path in paths
                      if len(path.read_text(encoding='utf-8').splitlines()) > 200]
         assert not oversized, f'{package} 中存在超过200行的模块：{oversized}'
+
+
+def test_layout_engine_root_is_only_a_small_facade():
+    assert not modules('layout_engine')
+
+
+def test_application_root_contains_only_startup_entry_points():
+    assert {path.name for path in modules('')} == {'__main__.py', 'app.py'}
+
+
+def test_automation_root_is_only_a_public_facade():
+    assert not modules('automation')
 
 
 def test_controllers_do_not_import_widgets():

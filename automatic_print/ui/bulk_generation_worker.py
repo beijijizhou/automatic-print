@@ -4,9 +4,9 @@ from datetime import datetime
 from time import monotonic
 from uuid import uuid4
 from PySide6.QtCore import QObject, Signal, Slot, Qt
-from ..cancellation import Cancellation, TaskCancelled
+from ..runtime.cancellation import Cancellation, TaskCancelled
 from ..history.batch_queue import run_queue
-from ..layout_engine.output_name import batch_output_directory
+from ..layout_engine.output.output_name import batch_output_directory
 from .workers import GenerateWorker
 
 
@@ -58,7 +58,7 @@ class BulkGenerationWorker(QObject):
             token,separator,detail=filename.partition('\t')
             display=stage
             if self.combine_batches and total and stage in {'读取图片尺寸','测量标签与刀码'}:
-                from ..layout_engine.parallel_measurement import measurement_workers
+                from ..layout_engine.measurement.parallel_measurement import measurement_workers
                 display=f'{stage} · {measurement_workers(self.settings.worker_threads,total)}线程并行'
             elif self.combine_batches and total and stage=='合成图片':
                 display=f'{stage} · {min(self.settings.worker_threads,total)}路图片准备'
@@ -98,7 +98,7 @@ class BulkGenerationWorker(QObject):
         try:
             scan_errors = []
             if self.source_root is not None:
-                from ..layout_engine.batch_discovery import scan_batches
+                from ..layout_engine.intake.discovery.batch_discovery import scan_batches
                 scan = scan_batches(self.source_root, lambda *a: self.progress.emit(-1, str(self.source_root), *a),
                                     self.cancellation)
                 self.inventory = {b['folder']: b for b in scan['batches']}

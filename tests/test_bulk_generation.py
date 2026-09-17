@@ -75,7 +75,7 @@ def test_normal_entry_and_active_task_protection(tmp_path, monkeypatch):
     controller.folders = [folder]
     controller.payloads, controller.records, controller.stages, controller.timing_data = {}, {}, {}, {}
     controller.selector.reset([folder])
-    from automatic_print.layout import generate_layout
+    from automatic_print.layout_engine import generate_layout
     payloads = []
     generate_layout(paths, tmp_path/'unused', replace(settings(), compare_reference_films=False),
                     preview_only=True, plan_ready=payloads.append)

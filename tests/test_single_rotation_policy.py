@@ -4,10 +4,10 @@ import numpy as np
 import pytest
 from PIL import Image
 
-from automatic_print.layout import LayoutSettings, generate_layout
-from automatic_print.layout_engine import rotation_zones
-from automatic_print.layout_engine.single_rotation import eligible_tail
-from automatic_print.layout_engine.planner import plan_layout
+from automatic_print.layout_engine import LayoutSettings, generate_layout
+from automatic_print.layout_engine.planning.rotation import rotation_zones
+from automatic_print.layout_engine.planning.rotation.single_rotation import eligible_tail
+from automatic_print.layout_engine.planning.base.planner import plan_layout
 from test_linear_batch_summary import data
 
 

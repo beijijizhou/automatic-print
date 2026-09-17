@@ -2,9 +2,9 @@
 from PySide6.QtCore import QRectF, Qt
 from PySide6.QtGui import QColor, QPen
 
-from ..layout_engine.cut_guide_geometry import guide_spans
-from ..layout_engine.printed_guides import dot_boxes
-from ..layout_engine.transition_marks import transition_rects
+from ..layout_engine.cutting.geometry.cut_guide_geometry import guide_spans
+from ..layout_engine.cutting.geometry.printed_guides import dot_boxes
+from ..layout_engine.cutting.geometry.transition_marks import transition_rects
 
 
 def draw_cut_guides(preview, painter, scale):
@@ -55,7 +55,7 @@ def _transition_lines(preview, painter):
             if 'text' in r:
                 from PIL.ImageQt import ImageQt
                 from PySide6.QtGui import QImage
-                from ..layout_engine.batch_footer import footer_sprite
+                from ..layout_engine.output.batch_footer import footer_sprite
                 with footer_sprite(r) as sprite:
                     image = QImage(ImageQt(sprite)).copy()
                 painter.drawImage(QRectF(r['x'], r['y']-offset, r['width'], r['height']), image)

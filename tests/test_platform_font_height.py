@@ -1,6 +1,6 @@
 import pytest
 from PIL import Image
-from automatic_print.layout import generate_layout
+from automatic_print.layout_engine import generate_layout
 from test_platform_labels import qr_image, settings
 
 

@@ -3,7 +3,7 @@ from pathlib import Path
 
 from PySide6.QtWidgets import QCheckBox, QTableWidgetItem
 
-from ...automation.local_batches import discover_local_batches
+from ...automation.batches.local import discover_local_batches
 
 
 def display_batch_records(owner, records, saved_at='', cached=False,

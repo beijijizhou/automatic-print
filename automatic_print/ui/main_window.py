@@ -1,7 +1,7 @@
 from __future__ import annotations
 from PySide6.QtCore import QSettings, QThread, QTimer, Qt
 from PySide6.QtWidgets import QLabel, QMainWindow
-from ..branding import application_icon
+from ..runtime.branding import application_icon
 from .generation_actions import GenerationActionsMixin
 from .preferences import PreferencesMixin
 from .preference_autosave import PreferenceAutosave

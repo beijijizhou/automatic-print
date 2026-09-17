@@ -2,7 +2,7 @@ from PIL.ImageQt import ImageQt
 from PySide6.QtCore import QSize, Qt
 from PySide6.QtGui import QImage, QImageReader
 
-from ..layout_engine.dynamic_label import source_label_badge
+from ..layout_engine.labeling.base.dynamic_label import source_label_badge
 
 
 def visible_assets(preview, path, placement):

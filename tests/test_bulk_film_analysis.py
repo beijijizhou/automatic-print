@@ -6,8 +6,8 @@ from threading import get_ident, Event, Barrier, Lock
 from PIL import Image
 from PySide6.QtWidgets import QApplication, QWidget
 from PySide6.QtTest import QTest
-from automatic_print.layout import LayoutSettings
-from automatic_print.cancellation import Cancellation
+from automatic_print.layout_engine import LayoutSettings
+from automatic_print.runtime.cancellation import Cancellation
 from automatic_print.history.bulk_analysis import analyze_folders, summary_text
 from automatic_print.history.store import load_runs
 from automatic_print.ui.bulk_film_analysis import BulkFilmAnalysisDialog

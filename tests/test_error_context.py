@@ -1,5 +1,5 @@
 from pathlib import Path
-from automatic_print.layout_engine.error_context import error_context
+from automatic_print.layout_engine.diagnostics.error_context import error_context
 
 
 def test_named_file_identifies_whole_order_and_both_faces():
@@ -38,7 +38,7 @@ def test_dialog_copy_is_complete_and_does_not_close(monkeypatch):
 
 def test_error_contains_header_pixels_dpi_and_limits(tmp_path):
     from PIL import Image
-    from automatic_print.layout import LayoutSettings
+    from automatic_print.layout_engine import LayoutSettings
     path=tmp_path/'B123-1-T-Black-M-NO1-1.png'
     with Image.new('RGBA',(1000,500)) as image:
         image.save(path,dpi=(100,100))
@@ -50,7 +50,7 @@ def test_error_contains_header_pixels_dpi_and_limits(tmp_path):
 
 def test_actual_choice_width_failure_is_quantified(tmp_path):
     from PIL import Image
-    from automatic_print.layout import LayoutSettings,generate_layout
+    from automatic_print.layout_engine import LayoutSettings,generate_layout
     import pytest
     path=tmp_path/'B123-1-T-Black-M-NO1-1.png'
     # Both orientations exceed the film; a merely wide image now recovers by rotation.

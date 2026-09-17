@@ -1,4 +1,4 @@
-from ..restart_control import request_application_restart
+from ..runtime.restart import request_application_restart
 
 
 def restart_updated_app(window):

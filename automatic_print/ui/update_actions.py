@@ -4,7 +4,7 @@ from PySide6.QtGui import QDesktopServices
 from PySide6.QtWidgets import QMessageBox, QLabel, QProgressBar, QWidget, QVBoxLayout
 
 from .. import __version__, __version_display__
-from ..updater import version_tuple
+from ..updates.release import version_tuple
 from ..updates.source import source_install, SourceUpdateInfo
 from ..updates.worker import SourceUpdateWorker
 from .workers import UpdateWorker

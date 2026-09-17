@@ -3,7 +3,7 @@ from collections import OrderedDict, deque
 
 from PySide6.QtCore import QObject, QRunnable, QThreadPool, Qt, Signal, Slot
 
-from ..layout_engine.cut_guide_geometry import detect_guide_band
+from ..layout_engine.cutting.geometry.cut_guide_geometry import detect_guide_band
 
 
 class ResultSignal(QObject):

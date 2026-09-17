@@ -1,8 +1,8 @@
 from PIL import Image
 import pytest
 
-from automatic_print.layout import LayoutSettings, generate_layout
-from automatic_print.layout_engine.images import print_dimensions, target_size
+from automatic_print.layout_engine import LayoutSettings, generate_layout
+from automatic_print.layout_engine.intake.metadata.images import print_dimensions, target_size
 
 
 def _image(path, width=280, height=350, dpi=True):

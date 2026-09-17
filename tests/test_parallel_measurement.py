@@ -1,8 +1,8 @@
 from dataclasses import replace
 from threading import Barrier, get_ident, enumerate as threads
 import pytest
-from automatic_print.layout_engine.item_factory import read_items
-from automatic_print.layout_engine.parallel_measurement import read_parallel
+from automatic_print.layout_engine.intake.preparation.item_factory import read_items
+from automatic_print.layout_engine.measurement.parallel_measurement import read_parallel
 from test_parallel_film_geometry import qr_sources, settings
 
 

@@ -2,9 +2,9 @@ from PIL import Image
 from types import SimpleNamespace
 import pytest
 
-from automatic_print.layout import LayoutSettings, generate_layout
-from automatic_print.layout_engine import printed_guides
-from automatic_print.layout_engine.membrane_region import MembraneRegion
+from automatic_print.layout_engine import LayoutSettings, generate_layout
+from automatic_print.layout_engine.cutting.geometry import printed_guides
+from automatic_print.layout_engine.labeling.platform.membrane_region import MembraneRegion
 
 
 @pytest.mark.parametrize('engine', ['pillow', 'libvips'])

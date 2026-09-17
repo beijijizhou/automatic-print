@@ -5,11 +5,11 @@ import numpy as np
 import pytest
 from PIL import Image
 
-from automatic_print.layout import LayoutSettings, generate_layout
-from automatic_print.layout_engine.cut_validation import validate_cut_corridor
-from automatic_print.layout_engine.item_factory import read_items
-from automatic_print.layout_engine.left_marker import external_left_item
-from automatic_print.layout_engine.models import mm_to_px
+from automatic_print.layout_engine import LayoutSettings, generate_layout
+from automatic_print.layout_engine.cutting.validation.cut_validation import validate_cut_corridor
+from automatic_print.layout_engine.intake.preparation.item_factory import read_items
+from automatic_print.layout_engine.labeling.markers.left_marker import external_left_item
+from automatic_print.layout_engine.domain.models import mm_to_px
 
 
 def sources(root):
@@ -67,8 +67,8 @@ def test_full_batch_left_external_right_unchanged_and_pixels_safe(tmp_path, engi
 
 
 def test_external_item_is_idempotent_and_validation_rejects_embedded_left(tmp_path):
-    from automatic_print.layout_engine.planner import _place_choice
-    from automatic_print.layout_engine.units import UnitChoice, UnitMember
+    from automatic_print.layout_engine.planning.base.planner import _place_choice
+    from automatic_print.layout_engine.planning.packing.units import UnitChoice, UnitMember
     paths = sources(tmp_path)
     settings = LayoutSettings(dpi=25.4, cutter_mode='single', allow_rotation=False,
                               cutter_left_marker_external=True)
@@ -87,8 +87,8 @@ def test_lift_reuses_row_spacing_and_is_persistent(tmp_path):
     from PySide6.QtCore import QSettings
     from PySide6.QtWidgets import QApplication, QDoubleSpinBox, QCheckBox, QComboBox
     from automatic_print.ui.cutter_settings import CutterSettingsPanel
-    from automatic_print.layout_engine.cutter_planner import plan_cutter_layout
-    from automatic_print.layout_engine.left_marker import head_margin
+    from automatic_print.layout_engine.planning.columns.cutter_planner import plan_cutter_layout
+    from automatic_print.layout_engine.labeling.markers.left_marker import head_margin
     app = QApplication.instance() or QApplication([])
     paths = sources(tmp_path)[:6]
     base = LayoutSettings(dpi=25.4,media_width_mm=580,cutter_mode='dual',

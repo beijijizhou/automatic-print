@@ -1,6 +1,6 @@
 """Bounded rolling scheduling shared by analysis and production queues."""
 from concurrent.futures import ThreadPoolExecutor, wait, FIRST_COMPLETED
-from ..cancellation import TaskCancelled
+from ..runtime.cancellation import TaskCancelled
 
 
 def run_queue(folders, calculate, workers, cancellation=None, failed=None):

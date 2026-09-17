@@ -1,4 +1,4 @@
-from automatic_print.crash_logging import (
+from automatic_print.runtime.crash_logging import (
     latest_log_path,
     run_with_crash_logging,
 )

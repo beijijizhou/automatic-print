@@ -3,14 +3,14 @@ from dataclasses import replace
 
 from PySide6.QtCore import QObject, QRunnable, Signal
 
-from ....cancellation import Cancellation, TaskCancelled
-from ....layout import discover_images
-from ....layout_engine.planner import plan_layout
-from ....layout_engine.models import mm_to_px
-from ....layout_engine.order_validation import validate_order_placements
-from ....layout_engine.cut_validation import validate_cut_corridor
+from ....runtime.cancellation import Cancellation, TaskCancelled
+from ....layout_engine import discover_images
+from ....layout_engine.planning.base.planner import plan_layout
+from ....layout_engine.domain.models import mm_to_px
+from ....layout_engine.cutting.validation.order_validation import validate_order_placements
+from ....layout_engine.cutting.validation.cut_validation import validate_cut_corridor
 from ...preview_diagnostics import diagnostic_layout
-from ....layout_engine.batch_snapshot import batch_measurements
+from ....layout_engine.intake.preparation.batch_snapshot import batch_measurements
 
 
 class PreviewSignals(QObject):
@@ -47,11 +47,11 @@ class PreviewTask(QRunnable):
             s2b_metadata = prepare_s2b_metadata(paths, self.settings,
                 lambda stage, current, total, name: self.emit(
                     self.signals.progress, f'{stage} · {current}/{total} · {name}'))
-            from ....layout_engine.header_gap import prepare_paths
+            from ....layout_engine.labeling.base.header_gap import prepare_paths
             paths, self.settings, gap_records = prepare_paths(paths, self.settings,
                 lambda stage, current, total, name: self.emit(self.signals.progress,
                     f'{stage} · {current}/{total} · {name}'))
-            from ....layout_engine.output_dpi import resolve_output_dpi
+            from ....layout_engine.intake.metadata.output_dpi import resolve_output_dpi
             self.settings = resolve_output_dpi(paths, self.settings,
                 lambda stage, current, total, name: self.emit(self.signals.progress,
                     f'{stage} · {current}/{total} · {name}'))
@@ -63,7 +63,7 @@ class PreviewTask(QRunnable):
                 self.emit(self.signals.progress, f'{stage} · {current}/{total} · {filename}')
 
             def analysis(report):
-                from ....layout_engine.header_gap import annotate_analysis
+                from ....layout_engine.labeling.base.header_gap import annotate_analysis
                 annotate_analysis(report, gap_records, self.settings,
                     lambda stage, current, total, name: self.emit(self.signals.progress,
                         f'{stage} · {current}/{total} · {name}'))
@@ -74,7 +74,7 @@ class PreviewTask(QRunnable):
             from ....automation.api.s2b.metadata.prepare import metadata_warning_text
             warning = metadata_warning_text(s2b_metadata)
             try:
-                from ....layout_engine.gap_fallback import plan_with_gap_fallback
+                from ....layout_engine.planning.zones.gap_fallback import plan_with_gap_fallback
                 paths, self.settings, result = plan_with_gap_fallback(paths, self.settings, gap_records, progress, analysis)
                 planned, labels, _, height, baseline = result
                 effective[0] = replace(self.settings, cutter_knife_mm=effective[0].cutter_knife_mm)
@@ -98,7 +98,7 @@ class PreviewTask(QRunnable):
         except TaskCancelled:
             error = '预览任务已停止。'
         except Exception as exc:
-            from ....layout_engine.error_context import error_context
+            from ....layout_engine.diagnostics.error_context import error_context
             error = error_context(exc, locals().get('paths', []), self.folder, settings=self.settings)
         try:
             self.signals.finished.emit(self.token, payload, error)

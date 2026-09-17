@@ -58,7 +58,7 @@ def test_old_erp_selection_is_corrected_and_new_manual_label_starts_empty(tmp_pa
 
 def test_real_preview_includes_platform_beside_qr(tmp_path):
     from test_platform_labels import qr_image, settings
-    from automatic_print.layout import generate_layout
+    from automatic_print.layout_engine import generate_layout
     path = qr_image(tmp_path/'B1-1-T-Black-M-NO1-1.png')
     payloads = []
     generate_layout([path], tmp_path/'out', settings(), plan_ready=payloads.append)
@@ -74,7 +74,9 @@ def test_real_preview_includes_platform_beside_qr(tmp_path):
     preview.grab()
     p = preview.planned[0][1]
     assert p.platform_height_px > 0
-    assert ('隆丰', p.platform_height_px) in preview.platform_badges
-    assert not preview.platform_badges[('隆丰', p.platform_height_px)].isNull()
+    key = ('隆丰 · M', p.platform_width_px, p.platform_height_px,
+           p.rotation_degrees)
+    assert key in preview.platform_badges
+    assert not preview.platform_badges[key].isNull()
     controller.end()
     window.close()

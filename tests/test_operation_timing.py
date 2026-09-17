@@ -5,8 +5,8 @@ from pathlib import Path
 from PIL import Image
 from PySide6.QtWidgets import QApplication
 
-from automatic_print.layout import LayoutSettings
-from automatic_print.layout_engine.operation_timing import OperationTiming
+from automatic_print.layout_engine import LayoutSettings
+from automatic_print.layout_engine.reporting.operation_timing import OperationTiming
 from automatic_print.ui.workers import GenerateWorker
 from automatic_print.ui.worker_bridge import MainWindowWorkerBridge
 from automatic_print.ui.operation_timing import OperationTimingPanel
@@ -124,7 +124,7 @@ def test_running_phase_is_highlighted_first_without_changing_measurements():
 
 def test_copy_timing_includes_output_file_metadata():
     from test_output_file_info import record
-    from automatic_print.layout_engine.output_file_info import result_file_report
+    from automatic_print.layout_engine.output.output_file_info import result_file_report
     bridge = MainWindowWorkerBridge()
     panel = OperationTimingPanel(bridge)
     OWNERS.extend((bridge, panel))

@@ -3,15 +3,15 @@ from __future__ import annotations
 from datetime import datetime
 from pathlib import Path
 
-from ...automation.batch_naming import (
+from ...automation.batches.naming import (
     MULTI_PIECE_TYPES,
     has_source_prefix,
     load_batch_type,
     prepare_multi_piece_names,
     sort_multi_piece_images,
 )
-from ...layout import discover_images, generate_layout
-from ...layout_engine.output_name import batch_directory_name
+from ...layout_engine import discover_images, generate_layout
+from ...layout_engine.output.output_name import batch_directory_name
 
 
 def process_local_batches(

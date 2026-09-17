@@ -5,8 +5,8 @@ import pytest
 from PySide6.QtCore import QSettings
 from PySide6.QtWidgets import QApplication
 
-from automatic_print.layout import LayoutSettings
-from automatic_print.layout_engine.planner import plan_layout
+from automatic_print.layout_engine import LayoutSettings
+from automatic_print.layout_engine.planning.base.planner import plan_layout
 from automatic_print.ui.main_window import MainWindow
 from automatic_print.ui.previews.runtime.snapshot import install_snapshot
 
@@ -27,7 +27,7 @@ def test_zoom_expansion_reuses_real_snapshot_and_restores(tmp_path):
     OWNERS.append(window)
     window.startup_update_timer.stop()
     panel = window.automation_home.label_quick_panel
-    panel.preview_tabs.setCurrentIndex(0)
+    panel.preview_tabs.setCurrentIndex(1)
     preview = panel.preview
     preview.overview = True
     install_snapshot(preview, planned, labels, settings)

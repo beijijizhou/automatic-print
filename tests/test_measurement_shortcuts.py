@@ -1,7 +1,8 @@
 from threading import Barrier, Thread
 from PIL import Image
-from automatic_print.layout_engine import labels, platform_space
-from automatic_print.layout_engine.membrane_region import MembraneRegion
+from automatic_print.layout_engine.labeling.base import labels
+from automatic_print.layout_engine.labeling.platform import platform_space
+from automatic_print.layout_engine.labeling.platform.membrane_region import MembraneRegion
 
 
 def test_nearby_clear_space_skips_full_header_search(tmp_path, monkeypatch):
@@ -29,8 +30,8 @@ def test_blank_header_checks_only_nearest_candidate(tmp_path, monkeypatch):
 
 
 def test_blank_rotated_header_does_not_scan_remaining_image(tmp_path, monkeypatch):
-    from automatic_print.layout_engine import rotated_marks
-    from automatic_print.layout import LayoutSettings
+    from automatic_print.layout_engine.cutting.geometry import rotated_marks
+    from automatic_print.layout_engine import LayoutSettings
     path = tmp_path/'source.png'
     Image.new('RGBA', (300, 600)).save(path)
     # After left rotation this card lies at the upper left of the output.

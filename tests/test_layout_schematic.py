@@ -5,8 +5,8 @@ from PIL import Image
 from PySide6.QtGui import QImage
 from PySide6.QtWidgets import QApplication
 
-from automatic_print.layout import LayoutSettings
-from automatic_print.layout_engine.models import Placement
+from automatic_print.layout_engine import LayoutSettings
+from automatic_print.layout_engine.domain.models import Placement
 from automatic_print.ui.layout_schematic import schematic_items
 from automatic_print.ui.pair_preview import PairProductionPreview
 from automatic_print.ui.previews.runtime.snapshot import install_snapshot

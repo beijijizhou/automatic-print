@@ -1,4 +1,4 @@
-from automatic_print.automation.erp_api import (
+from automatic_print.automation.api.erp import (
     batch_page_payload,
     production_item_payload,
 )

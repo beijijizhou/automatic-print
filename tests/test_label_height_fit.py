@@ -2,9 +2,9 @@ from dataclasses import replace
 
 from PIL import Image
 
-from automatic_print.layout_engine.item_factory import read_items
-from automatic_print.layout_engine.labels import settings_label_badge
-from automatic_print.layout_engine.models import LayoutSettings, mm_to_px
+from automatic_print.layout_engine.intake.preparation.item_factory import read_items
+from automatic_print.layout_engine.labeling.base.labels import settings_label_badge
+from automatic_print.layout_engine.domain.models import LayoutSettings, mm_to_px
 
 
 def test_entire_text_including_newlines_fits_reference_height():

@@ -52,7 +52,7 @@ def test_preview_uses_current_folder_or_selects_one_without_printing(tmp_path, m
     owner.close()
 
 
-def test_everyday_parameters_are_grouped_and_real_preview_is_default(tmp_path):
+def test_everyday_parameters_are_grouped_and_marker_preview_is_default(tmp_path):
     owner = window(tmp_path/'grouped.ini')
     home = owner.automation_home
     panel = home.label_quick_panel
@@ -64,7 +64,7 @@ def test_everyday_parameters_are_grouped_and_real_preview_is_default(tmp_path):
     assert panel.source_order.isChecked()
     assert panel.source_order_label.text() == '批次文件夹名＋正序/倒序'
     assert panel.source_order_label.textInteractionFlags() & Qt.TextSelectableByMouse
-    assert panel.preview_tabs.currentWidget() is panel.actual_preview_page
+    assert panel.preview_tabs.currentWidget() is panel.marker_examples
     owner.close()
 
 

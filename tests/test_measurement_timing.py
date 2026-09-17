@@ -2,10 +2,10 @@ import os
 from dataclasses import replace
 os.environ.setdefault('QT_QPA_PLATFORM', 'offscreen')
 
-from automatic_print.layout_engine import measurement_timing as timing
-from automatic_print.layout_engine.measurement_session import measurement_session
-from automatic_print.layout_engine.images import print_dimensions
-from automatic_print.layout_engine import planner
+from automatic_print.layout_engine.measurement import measurement_timing as timing
+from automatic_print.layout_engine.measurement.measurement_session import measurement_session
+from automatic_print.layout_engine.intake.metadata.images import print_dimensions
+from automatic_print.layout_engine.planning.base import planner
 from test_persistent_plan_cache import config
 from test_parallel_film_geometry import qr_sources
 
@@ -69,7 +69,7 @@ def test_per_image_measurement_cache_survives_batch_geometry_change(tmp_path, mo
     paths = qr_sources(tmp_path)[:2]
     initial = replace(config(), compare_film_sizes=False)
     planner.plan_layout(paths, initial, None)
-    from automatic_print.layout_engine import item_factory
+    from automatic_print.layout_engine.intake.preparation import item_factory
     monkeypatch.setattr(
         item_factory, '_make_item',
         lambda *_a, **_k: (_ for _ in ()).throw(AssertionError('remeasured source')),
@@ -87,7 +87,7 @@ def test_per_image_measurement_cache_survives_batch_geometry_change(tmp_path, mo
 def test_measurement_text_stays_internal_to_diagnostics(tmp_path):
     from PySide6.QtWidgets import QApplication
     from automatic_print.ui.batch_summary import BatchSummaryPanel
-    from automatic_print.layout_engine.output_sizes import cutting_report
+    from automatic_print.layout_engine.output.output_sizes import cutting_report
     app = QApplication.instance() or QApplication([])
     paths, reports = qr_sources(tmp_path), []
     planner.plan_layout(paths, config(), None, reports.append)

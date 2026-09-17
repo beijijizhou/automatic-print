@@ -2,7 +2,7 @@ from PySide6.QtCore import Qt
 from PySide6.QtGui import QPixmap
 from PySide6.QtWidgets import QApplication, QSplashScreen
 
-from .branding import configure_windows_identity, configure_application, application_icon
+from .runtime.branding import configure_windows_identity, configure_application, application_icon
 
 __all__ = ["run"]
 
@@ -24,7 +24,7 @@ def run() -> int:
     splash.show()
     application.processEvents()
     from .ui.main_window import MainWindow
-    from .restart_control import install_restart_monitor
+    from .runtime.restart import install_restart_monitor
 
     window = MainWindow()
     application.automatic_print_window = window

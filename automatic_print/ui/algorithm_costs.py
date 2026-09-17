@@ -3,8 +3,8 @@ from time import perf_counter
 from PySide6.QtCore import Qt, QTimer
 from PySide6.QtWidgets import (QWidget, QVBoxLayout, QLabel, QTableWidget,
     QTableWidgetItem, QAbstractItemView, QPushButton, QPlainTextEdit, QApplication, QTabWidget)
-from ..layout_engine.algorithm_costs import VARIABLES, STEPS
-from ..layout_engine.operation_timing import timing_report
+from ..layout_engine.reporting.algorithm_costs import VARIABLES, STEPS
+from ..layout_engine.reporting.operation_timing import timing_report
 
 
 class AlgorithmCostsPage(QWidget):
@@ -43,7 +43,7 @@ class AlgorithmCostsPage(QWidget):
         records = QTabWidget()
         self.records = records
         records.addTab(self.actual, '当前批次耗时')
-        from ..layout_engine.benchmark_reference import reference_text
+        from ..layout_engine.reporting.benchmark_reference import reference_text
         self.reference = QPlainTextEdit(reference_text())
         self.reference.setReadOnly(True)
         records.addTab(self.reference, '58张实图基准')

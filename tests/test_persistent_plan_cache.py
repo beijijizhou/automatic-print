@@ -8,9 +8,10 @@ import numpy as np
 from PIL import Image
 import pytest
 
-from automatic_print.layout import generate_layout
-from automatic_print.layout_engine import planner, plan_cache
-from automatic_print.layout_engine.measurement_session import measurement_session
+from automatic_print.layout_engine import generate_layout
+from automatic_print.layout_engine.planning.base import planner
+from automatic_print.layout_engine.planning.cache import plan_cache
+from automatic_print.layout_engine.measurement.measurement_session import measurement_session
 from test_parallel_film_geometry import qr_sources, settings
 
 
@@ -127,7 +128,8 @@ import sys, json
 from pathlib import Path
 sys.path.insert(0, 'tests')
 from test_persistent_plan_cache import config
-from automatic_print.layout_engine import planner, plan_cache
+from automatic_print.layout_engine.planning.base import planner
+from automatic_print.layout_engine.planning.cache import plan_cache
 plan_cache.cache_directory = lambda: Path(sys.argv[1])
 def forbidden(*a):
     raise RuntimeError('process recomputed plan')

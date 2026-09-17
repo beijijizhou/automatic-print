@@ -3,14 +3,14 @@ from dataclasses import replace
 from PIL import Image
 import pytest
 
-from automatic_print.layout import LayoutSettings, generate_layout
-from automatic_print.layout_engine.cut_guide_geometry import detect_guide_band
-from automatic_print.layout_engine.item_factory import read_items
-from automatic_print.layout_engine.platform_label import (
+from automatic_print.layout_engine import LayoutSettings, generate_layout
+from automatic_print.layout_engine.cutting.geometry.cut_guide_geometry import detect_guide_band
+from automatic_print.layout_engine.intake.preparation.item_factory import read_items
+from automatic_print.layout_engine.labeling.platform.platform_label import (
     numbered_template, placement_badge, platform_badge, platform_text,
 )
-from automatic_print.layout_engine.segmented_output import shift_part
-from automatic_print.layout_engine.cut_validation import validate_cut_corridor
+from automatic_print.layout_engine.rendering.storage.segmented_output import shift_part
+from automatic_print.layout_engine.cutting.validation.cut_validation import validate_cut_corridor
 
 
 def qr_image(path):
@@ -178,7 +178,7 @@ def test_source_size_badge_is_rendered_in_qr_card_for_each_engine(
 
 
 def test_qr_reuse_never_falls_back_to_cutter_lane(tmp_path, monkeypatch):
-    from automatic_print.layout_engine import platform_label
+    from automatic_print.layout_engine.labeling.platform import platform_label
     path = qr_image(tmp_path/'B1-1-T-Black-M-NO1-1.png')
     monkeypatch.setattr(platform_label, 'header_space', lambda *_a, **_k: None)
     assert platform_label.platform_geometry(
@@ -213,5 +213,5 @@ def test_parallel_segments_keep_global_numbers_and_platform_coordinates(tmp_path
         with Image.open(tmp_path/'out'/part['filename']) as output:
                 for p in part['placements']:
                     box = (p['platform_x_px'], p['platform_y_px'],
-                    p['platform_x_px']+p['platform_width_px'], p['platform_y_px']+p['platform_height_px'])
-                assert output.crop(box).getchannel('A').getbbox() is not None
+                        p['platform_x_px']+p['platform_width_px'], p['platform_y_px']+p['platform_height_px'])
+                    assert output.crop(box).getchannel('A').getbbox() is not None

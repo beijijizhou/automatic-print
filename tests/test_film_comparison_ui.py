@@ -4,9 +4,9 @@ os.environ.setdefault('QT_QPA_PLATFORM', 'offscreen')
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import QApplication
 
-from automatic_print.layout import LayoutSettings
-from automatic_print.layout_engine.planner import plan_layout
-from automatic_print.layout_engine.dual_quality import dual_quality
+from automatic_print.layout_engine import LayoutSettings
+from automatic_print.layout_engine.planning.base.planner import plan_layout
+from automatic_print.layout_engine.diagnostics.dual_quality import dual_quality
 from automatic_print.ui.batch_summary import BatchSummaryPanel
 from test_film_comparison import sources
 

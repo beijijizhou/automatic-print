@@ -95,8 +95,8 @@ class BulkGenerationDialog(BulkFilmAnalysisDialog):
         lines = []
         for record in result['records']:
             data = record['result']
-            from ..layout_engine.operation_timing import timing_report
-            from ..layout_engine.output_sizes import cutting_report
+            from ..layout_engine.reporting.operation_timing import timing_report
+            from ..layout_engine.output.output_sizes import cutting_report
             lines.append(f"{Path(record['folder']).name}：{data.get('filename', '')}\n"
                          f"输出：{record['output']}\n节省：{data.get('saved_meters', 0):.3f}米")
             lines.append(timing_report(data['operation_timings']))

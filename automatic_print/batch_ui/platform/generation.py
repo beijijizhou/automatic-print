@@ -11,12 +11,12 @@ from PySide6.QtWidgets import (
     QVBoxLayout,
 )
 
-from ...automation.platforms import get_erp_platform
-from ...automation.batch_classification import (
+from ...automation.providers.registry import get_erp_platform
+from ...automation.batches.classification import (
     DOUBLE_FACE,
     detailed_compositions,
 )
-from ...automation.rule_batches import RuleBatchPlan
+from ...automation.batches.rules import RuleBatchPlan
 from ..task.worker import AutomationWorker
 
 

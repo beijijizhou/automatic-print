@@ -193,7 +193,8 @@ def test_preferences_autosave_and_restore_on_restart(tmp_path):
     assert restored.cutter_settings.film.currentData() == 600
     assert restored.cutter_settings.mode.currentData() == "free"
     assert restored.cutter_settings.knife.value() == 310
-    assert restored.cutter_settings.safety.value() == 4
+    # Knife safety is physically fixed at zero: the knife is the column edge.
+    assert restored.cutter_settings.safety.value() == 0
     assert restored.spacing.value() == 6
     assert restored.label_settings.text_template.text() == "客户标签 {机器号}"
     assert restored.label_settings.machine.currentData() == "M11"

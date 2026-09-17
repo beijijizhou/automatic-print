@@ -4,11 +4,11 @@ from concurrent.futures import ThreadPoolExecutor
 
 import pytest
 
-from automatic_print.layout import LayoutSettings
-from automatic_print.layout_engine import single_order_sequence as sequence
-from automatic_print.layout_engine import measurement_session as measurements
-from automatic_print.layout_engine.cutter_planner import _lanes
-from automatic_print.layout_engine.normal_plan_cache import NormalPlans
+from automatic_print.layout_engine import LayoutSettings
+from automatic_print.layout_engine.orders import single_order_sequence as sequence
+from automatic_print.layout_engine.measurement import measurement_session as measurements
+from automatic_print.layout_engine.planning.columns.cutter_planner import _lanes
+from automatic_print.layout_engine.planning.cache.normal_plan_cache import NormalPlans
 from test_fast_knife_search import item
 
 
@@ -139,7 +139,7 @@ def test_invalid_normal_and_unexpected_failure_reach_all_followers():
 
 
 def test_batch_label_bands_survive_global_cache_eviction(tmp_path, monkeypatch):
-    from automatic_print.layout_engine import cut_guide_geometry as guides
+    from automatic_print.layout_engine.cutting.geometry import cut_guide_geometry as guides
     calls = []
     def cached(path, mtime, size):
         calls.append(path)
@@ -155,7 +155,7 @@ def test_batch_label_bands_survive_global_cache_eviction(tmp_path, monkeypatch):
 
 
 def test_cutter_batch_measurements_reuse_same_files_after_planner_reorders(tmp_path):
-    from automatic_print.layout_engine.cutter_measurements import (
+    from automatic_print.layout_engine.measurement.cutter_measurements import (
         load_cutter_measurements,
         store_cutter_measurements,
     )

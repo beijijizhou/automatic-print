@@ -1,5 +1,5 @@
 """Explicit cross-platform step controls, rather than tiny native QSS fallbacks."""
-from ..resources import asset_path
+from ..runtime.resources import asset_path
 from PySide6.QtWidgets import QDoubleSpinBox
 
 

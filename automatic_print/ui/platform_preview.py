@@ -2,7 +2,7 @@ from PIL.ImageQt import ImageQt
 from PySide6.QtCore import QRectF
 from PySide6.QtGui import QImage, QFont, QColor, QPen
 
-from ..layout_engine.platform_label import placement_badge, platform_text
+from ..layout_engine.labeling.platform.platform_label import placement_badge, platform_text
 
 
 def draw_platform_badge(preview, painter, placement, path):

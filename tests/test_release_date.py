@@ -3,7 +3,7 @@ from io import BytesIO
 import json
 
 from automatic_print import __version__, __release_date__, __version_display__
-from automatic_print import updater
+from automatic_print.updates import release as updater
 
 
 def test_local_release_date_is_fixed_and_separate_from_version():

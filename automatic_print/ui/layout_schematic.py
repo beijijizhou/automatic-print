@@ -51,8 +51,8 @@ def schematic_items(report):
 
 
 def fallback_item(path):
-    from ..layout_engine.order_groups import order_key, pair_identity
-    from ..layout_engine.source_metadata import source_size
+    from ..layout_engine.orders.order_groups import order_key, pair_identity
+    from ..layout_engine.intake.metadata.source_metadata import source_size
     size = source_size(path)
     pair = pair_identity(path)
     order = order_key(path).upper()

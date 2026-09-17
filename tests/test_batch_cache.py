@@ -1,4 +1,4 @@
-from automatic_print.automation.batch_browser import BatchRecord
+from automatic_print.automation.browser.batches import BatchRecord
 from automatic_print.batch_ui.platform.cache import (
     load_batch_cache,
     save_batch_cache,

@@ -4,8 +4,8 @@ from dataclasses import replace
 import numpy as np
 import pytest
 from PIL import Image
-from automatic_print.layout import LayoutSettings, generate_layout
-from automatic_print.layout_engine.planner import plan_layout
+from automatic_print.layout_engine import LayoutSettings, generate_layout
+from automatic_print.layout_engine.planning.base.planner import plan_layout
 
 
 def sources(root, double=False):
@@ -42,7 +42,7 @@ def test_fast_path_keeps_more_efficient_automatic_columns(tmp_path):
 
 
 def test_gap_validator_rejects_text_moved_inside_rotated_source(tmp_path):
-    from automatic_print.layout_engine.marker_space import validate_embedded_marks
+    from automatic_print.layout_engine.labeling.markers.marker_space import validate_embedded_marks
     paths=sources(tmp_path)
     settings=config()
     plan=plan_layout(paths,settings,None)
@@ -53,7 +53,7 @@ def test_gap_validator_rejects_text_moved_inside_rotated_source(tmp_path):
 
 
 def test_film_comparison_includes_whole_rotation_not_only_tail(tmp_path):
-    from automatic_print.layout_engine.film_comparison import compare_films
+    from automatic_print.layout_engine.planning.film.film_comparison import compare_films
     report=compare_films(sources(tmp_path),config())
     rows=report['rows']
     normal=next(r for r in rows if r['film_mm']==600 and not r['rotation_allowed'])

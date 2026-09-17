@@ -3,7 +3,7 @@ os.environ.setdefault('QT_QPA_PLATFORM', 'offscreen')
 
 from PySide6.QtCore import QSettings
 from PySide6.QtWidgets import QApplication, QLabel
-from automatic_print.layout import LayoutSettings
+from automatic_print.layout_engine import LayoutSettings
 from automatic_print.ui.main_window import MainWindow
 
 APP = QApplication.instance() or QApplication([])

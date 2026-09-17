@@ -1,15 +1,17 @@
 from PIL import Image
 
-from automatic_print.layout import (
+from automatic_print.layout_engine import (
     LayoutSettings,
-    _format_label,
     discover_images,
     generate_layout,
     mm_to_px,
 )
+from automatic_print.layout_engine.labeling.base.labels import (
+    format_label as _format_label,
+)
 from datetime import datetime
 from pathlib import Path
-from automatic_print.updater import version_tuple
+from automatic_print.updates.release import version_tuple
 
 
 def test_mm_to_px_at_254_dpi() -> None:
@@ -33,7 +35,7 @@ def test_chinese_label_template_fields() -> None:
 
 
 def test_batch_folder_forward_and_reverse_label_fields() -> None:
-    from automatic_print.layout_engine.platform_label import source_order_template
+    from automatic_print.layout_engine.labeling.platform.platform_label import source_order_template
     text = _format_label(
         source_order_template('M1'), 3,
         Path('/订单/609162025022/S/很长的图片文件名字.png'),

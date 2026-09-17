@@ -10,7 +10,7 @@ from PySide6.QtWidgets import QApplication, QMessageBox
 
 from automatic_print.ui.main_window import MainWindow
 from automatic_print.ui import generation_actions
-from automatic_print.layout_engine import batch_discovery
+from automatic_print.layout_engine.intake.discovery import batch_discovery
 
 APP = QApplication.instance() or QApplication([])
 WINDOWS = []

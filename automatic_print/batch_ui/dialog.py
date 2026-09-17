@@ -1,8 +1,8 @@
 from PySide6.QtCore import QSettings
 from PySide6.QtWidgets import QTabWidget, QWidget
 
-from ..automation.platforms import ERP_PLATFORMS
-from ..layout import LayoutSettings
+from ..automation.providers.registry import ERP_PLATFORMS
+from ..layout_engine import LayoutSettings
 from ..ui.worker_bridge import BatchWorkerBridge
 from ..ui.layout_values import settings_from_window
 from .platform.actions import BatchActionsMixin

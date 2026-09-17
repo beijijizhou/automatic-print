@@ -11,9 +11,9 @@ import numpy as np
 from PIL import Image
 import pyvips
 from automatic_print import __version__
-from automatic_print.layout import LayoutSettings, generate_layout
-from automatic_print.layout_engine import header_gap
-from automatic_print.layout_engine.printed_guides import vips_corridor_is_clear
+from automatic_print.layout_engine import LayoutSettings, generate_layout
+from automatic_print.layout_engine.labeling.base import header_gap
+from automatic_print.layout_engine.cutting.geometry.printed_guides import vips_corridor_is_clear
 
 
 def verify_copies(records):

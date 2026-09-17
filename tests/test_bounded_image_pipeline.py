@@ -1,5 +1,5 @@
 from threading import Lock
-from automatic_print.layout_engine.image_pipeline import prepared_images
+from automatic_print.layout_engine.intake.preparation.image_pipeline import prepared_images
 
 
 def test_preparation_buffers_are_bounded_and_closed_on_stop():

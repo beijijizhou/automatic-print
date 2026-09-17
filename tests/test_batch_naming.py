@@ -2,7 +2,7 @@ from pathlib import Path
 
 import pytest
 
-from automatic_print.automation.batch_naming import (
+from automatic_print.automation.batches.naming import (
     has_source_prefix,
     load_batch_type,
     prepare_multi_piece_names,

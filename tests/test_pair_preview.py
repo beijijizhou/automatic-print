@@ -5,11 +5,11 @@ from PIL import Image
 from PySide6.QtGui import QImage
 from PySide6.QtWidgets import QApplication
 
-from automatic_print.layout import LayoutSettings
+from automatic_print.layout_engine import LayoutSettings
 from automatic_print.ui.pair_preview import PairProductionPreview
 from dataclasses import replace
 from preview_wait import wait_preview
-from automatic_print.layout_engine.planner import plan_layout
+from automatic_print.layout_engine.planning.base.planner import plan_layout
 
 
 def test_two_image_preview_uses_fixed_partition_marker_groups(tmp_path):

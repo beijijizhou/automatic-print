@@ -3,8 +3,8 @@ os.environ.setdefault('QT_QPA_PLATFORM', 'offscreen')
 from pathlib import Path
 import pytest
 from PIL import Image
-from automatic_print.layout import LayoutSettings, generate_layout
-from automatic_print.layout_engine.output_dpi import resolve_output_dpi
+from automatic_print.layout_engine import LayoutSettings, generate_layout
+from automatic_print.layout_engine.intake.metadata.output_dpi import resolve_output_dpi
 
 
 def source(path, dpi=(180,180)):

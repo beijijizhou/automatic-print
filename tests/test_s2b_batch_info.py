@@ -115,7 +115,7 @@ def test_api_order_and_color_fall_back_to_unique_order_folder(tmp_path):
             "size": "S",
         }],
     })
-    from automatic_print.layout_engine.order_groups import order_key
+    from automatic_print.layout_engine.orders.order_groups import order_key
     assert count == 1
     assert color_for_path(image) == "蓝色"
     assert order_for_path(image) == "ORDER7"

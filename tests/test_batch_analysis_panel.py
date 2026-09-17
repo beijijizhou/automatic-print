@@ -6,8 +6,8 @@ from PIL import Image
 from PySide6.QtCore import QSettings
 from PySide6.QtWidgets import QApplication
 
-from automatic_print.layout import LayoutSettings
-from automatic_print.layout_engine.batch_analysis import analyze_batch
+from automatic_print.layout_engine import LayoutSettings
+from automatic_print.layout_engine.orders.batch_analysis import analyze_batch
 from automatic_print.ui.batch_analysis_panel import BatchAnalysisPanel
 from automatic_print.ui.main_window import MainWindow
 

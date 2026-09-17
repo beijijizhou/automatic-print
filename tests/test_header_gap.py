@@ -7,8 +7,8 @@ import numpy as np
 import pytest
 from PIL import Image, ImageDraw
 
-from automatic_print.layout import LayoutSettings, generate_layout
-from automatic_print.layout_engine import header_gap
+from automatic_print.layout_engine import LayoutSettings, generate_layout
+from automatic_print.layout_engine.labeling.base import header_gap
 
 
 def sample(path, gap=8, side='right'):
@@ -148,8 +148,10 @@ def test_complete_double_orders_segmented_with_safe_corridors(tmp_path, mode, en
                     crop = output.crop((p['x_px'], p['y_px'], p['x_px']+rotated.width, p['y_px']+rotated.height))
                     expected = np.asarray(rotated)
                     actual = np.asarray(crop)
-                    assert np.array_equal(actual[:,:,3], expected[:,:,3])
-                    assert np.abs(actual.astype(int)-expected.astype(int)).max() <= 1
+                    # Added labels may occupy verified transparent header-card
+                    # pixels, but original printed pixels must remain exact.
+                    opaque = expected[:, :, 3] == 255
+                    assert np.array_equal(actual[opaque], expected[opaque])
             if mode == 'dual':
                 for zone in part['cut_corridor'].get('zones', [part['cut_corridor']]):
                     assert output.crop((zone['safe_left_px'], zone.get('start_y_px', 0),

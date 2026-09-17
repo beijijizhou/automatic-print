@@ -9,13 +9,13 @@ from PySide6.QtWidgets import (
     QTableWidgetItem,
 )
 
-from ...automation.local_batches import discover_local_batches
-from ...automation.batch_naming import (
+from ...automation.batches.local import discover_local_batches
+from ...automation.batches.naming import (
     MULTI_PIECE_TYPES,
     load_batch_type,
     sort_multi_piece_images,
 )
-from ...layout import discover_images
+from ...layout_engine import discover_images
 from ..task.worker import AutomationWorker
 
 

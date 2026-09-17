@@ -2,9 +2,9 @@ from dataclasses import replace
 from itertools import groupby
 from PIL import Image
 import pytest
-from automatic_print.layout import LayoutSettings, generate_layout
-from automatic_print.layout_engine.size_policy import validate_single_size_blocks
-from automatic_print.layout_engine.source_metadata import source_size
+from automatic_print.layout_engine import LayoutSettings, generate_layout
+from automatic_print.layout_engine.orders.size_policy import validate_single_size_blocks
+from automatic_print.layout_engine.intake.metadata.source_metadata import source_size
 
 
 @pytest.mark.parametrize('engine', ['pillow', 'libvips'])

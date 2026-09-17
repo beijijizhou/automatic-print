@@ -4,9 +4,9 @@ from pathlib import Path
 from PIL import Image
 import pytest
 
-from automatic_print.layout import LayoutSettings, generate_layout
-from automatic_print.layout_engine.item_factory import read_items
-from automatic_print.layout_engine.labels import format_label, settings_label_badge
+from automatic_print.layout_engine import LayoutSettings, generate_layout
+from automatic_print.layout_engine.intake.preparation.item_factory import read_items
+from automatic_print.layout_engine.labeling.base.labels import format_label, settings_label_badge
 
 
 def test_label_cleanup_and_machine_variable():

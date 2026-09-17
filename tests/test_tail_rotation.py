@@ -2,8 +2,8 @@ from dataclasses import replace
 from PIL import Image
 import pytest
 
-from automatic_print.layout import LayoutSettings, generate_layout
-from automatic_print.layout_engine.planner import plan_layout
+from automatic_print.layout_engine import LayoutSettings, generate_layout
+from automatic_print.layout_engine.planning.base.planner import plan_layout
 
 
 def make_sources(tmp_path, rows):
@@ -37,11 +37,15 @@ def test_fast_tail_rotation_keeps_full_sizes_double_faces_and_real_cut_channels(
     assert len(rotated) == 4
     assert all(p['rotation_degrees'] == 90 and p['color_block_x_px'] == 0 for p in rotated)
     assert rotated[0]['source'].endswith('NO1-1.png') and rotated[1]['source'].endswith('NO1-2.png')
-    assert rotated[1]['row_y_px'] == (rotated[0]['row_y_px']+
-                                      rotated[0]['footprint_height_px']+
-                                      settings.spacing_mm)
+    # The shared column solver may place both faces in one row.  They remain
+    # adjacent, same-orientation and in the same production zone.
+    assert rotated[1]['row_y_px'] == rotated[0]['row_y_px']
+    assert rotated[1]['y_px'] == (rotated[0]['y_px']+
+                                  rotated[0]['height_px']+
+                                  settings.spacing_mm)
     with Image.open(tmp_path/'out'/result['filename']) as image:
-        for zone in result['cut_corridor']['zones']:
+        from automatic_print.layout_engine.cutting.validation.cut_validation import corridor_checks
+        for zone in corridor_checks(result['cut_corridor']):
             stripe = image.crop((zone['safe_left_px'], zone['start_y_px'], zone['safe_right_px'], zone['end_y_px']))
             assert stripe.getchannel('A').getextrema() == (0, 0)
             assert zone['pixel_verified']

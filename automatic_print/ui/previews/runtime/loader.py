@@ -3,7 +3,7 @@ from PySide6.QtCore import QObject, QThreadPool, Qt, Slot
 
 from .task import PreviewTask
 from .snapshot import install_snapshot
-from ....layout_engine.order_groups import detail_members
+from ....layout_engine.orders.order_groups import detail_members
 
 
 class PreviewLoader(QObject):

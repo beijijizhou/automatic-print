@@ -1,5 +1,5 @@
 from .app import run
-from .crash_logging import run_with_crash_logging
+from .runtime.crash_logging import run_with_crash_logging
 
 
 if __name__ == "__main__":

@@ -2,7 +2,7 @@
 
 from PySide6.QtCore import Slot
 
-from ....layout import LayoutSettings
+from ....layout_engine import LayoutSettings
 from ...layout_values import settings_from_window
 from .progress import refresh_timing, saving_detail, update_progress
 from .results import generation_cancelled, generation_failed, generation_finished

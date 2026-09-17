@@ -1,9 +1,9 @@
 from PIL import Image
 
-from automatic_print.layout import LayoutSettings
-from automatic_print.layout_engine import service
-from automatic_print.layout_engine.planner import plan_layout
-from automatic_print.layout_engine.output_sizes import cutting_report
+from automatic_print.layout_engine import LayoutSettings
+from automatic_print.layout_engine.pipeline import service
+from automatic_print.layout_engine.planning.base.planner import plan_layout
+from automatic_print.layout_engine.output.output_sizes import cutting_report
 
 
 def test_preview_does_not_build_canvas_or_create_output(tmp_path, monkeypatch):

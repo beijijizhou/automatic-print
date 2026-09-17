@@ -1,10 +1,10 @@
 from PIL import Image
 import pytest
-from automatic_print.layout import generate_layout
-from automatic_print.layout_engine.cut_guide_geometry import detect_guide_band
+from automatic_print.layout_engine import generate_layout
+from automatic_print.layout_engine.cutting.geometry.cut_guide_geometry import detect_guide_band
 from test_platform_labels import settings, qr_image
-from automatic_print.layout_engine.output_sizes import cutting_report
-from automatic_print.layout_engine.cut_validation import corridor_checks
+from automatic_print.layout_engine.output.output_sizes import cutting_report
+from automatic_print.layout_engine.cutting.validation.cut_validation import corridor_checks
 
 
 @pytest.mark.parametrize('engine', ['pillow', 'libvips'])

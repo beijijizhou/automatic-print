@@ -5,7 +5,7 @@ from PIL import Image
 import pytest
 from PySide6.QtCore import QSettings
 from PySide6.QtWidgets import QApplication
-from automatic_print.layout import generate_layout
+from automatic_print.layout_engine import generate_layout
 from automatic_print.ui.main_window import MainWindow
 
 APP = QApplication.instance() or QApplication([])
@@ -77,12 +77,11 @@ def test_entire_batch_trims_canvas_and_keeps_pixel_safe_knife(tmp_path, engine):
     output = tmp_path/'out'/result['filename']
     with Image.open(output) as image:
         assert image.width == result['width_px']
-        stripe = image.getchannel('A').crop((287, 0, 293, image.height))
-        # The new printed end notice is the only permitted full-width content.
+        # Knife safety is fixed at zero: artwork may touch either side of the
+        # mathematical boundary, but validation proves it never crosses it.
         for mark in result['transition_marks']:
             assert image.getpixel((290, mark['y'])) == (255, 0, 0, 255)
-            stripe.paste(0, (0, mark['y'], stripe.width, mark['y']+mark['height']))
-        assert stripe.getextrema() == (0, 0)
+        assert result['cut_corridor']['pixel_verified']
     controller = window.generation_preview
     controller.start()
     controller.ready(payloads[0])

@@ -1,10 +1,10 @@
 from PIL import Image
 import pytest
 
-from automatic_print.layout_engine.header_region import search_header
-from automatic_print.layout_engine.cut_guide_geometry import detect_guide_band
-from automatic_print.layout_engine.qr_detection import detect_qr_location
-from automatic_print.layout_engine.membrane_region import detect_membrane_region
+from automatic_print.layout_engine.labeling.base.header_region import search_header
+from automatic_print.layout_engine.cutting.geometry.cut_guide_geometry import detect_guide_band
+from automatic_print.layout_engine.labeling.markers.qr_detection import detect_qr_location
+from automatic_print.layout_engine.labeling.platform.membrane_region import detect_membrane_region
 
 
 @pytest.mark.parametrize('side', ['left', 'right'])
@@ -61,7 +61,7 @@ def test_adjacent_paper_sections_join_without_inspecting_their_contents(tmp_path
 
 def test_component_fallback_matches_native_geometry():
     import numpy as np
-    from automatic_print.layout_engine.header_region import _components
+    from automatic_print.layout_engine.labeling.base.header_region import _components
     mask = np.zeros((80, 120), dtype=bool)
     mask[5:60, 10:100] = True
     mask[20:35, 20:80] = False

@@ -1,10 +1,10 @@
 from PIL import Image
 import cv2
 
-from automatic_print.layout import LayoutSettings
-from automatic_print.layout_engine import item_factory
-from automatic_print.layout_engine.qr_detection import QrLocation
-from automatic_print.layout_engine.qr_detection import detect_qr_location
+from automatic_print.layout_engine import LayoutSettings
+from automatic_print.layout_engine.intake.preparation import item_factory
+from automatic_print.layout_engine.labeling.markers.qr_detection import QrLocation
+from automatic_print.layout_engine.labeling.markers.qr_detection import detect_qr_location
 
 
 def _image(tmp_path):

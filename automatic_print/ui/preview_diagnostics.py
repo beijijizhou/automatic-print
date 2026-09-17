@@ -2,10 +2,10 @@
 from dataclasses import replace
 from math import ceil
 
-from ..layout_engine.item_factory import read_items
-from ..layout_engine.models import mm_to_px
-from ..layout_engine.planner import _place_choice
-from ..layout_engine.units import UnitChoice, UnitMember
+from ..layout_engine.intake.preparation.item_factory import read_items
+from ..layout_engine.domain.models import mm_to_px
+from ..layout_engine.planning.base.planner import _place_choice
+from ..layout_engine.planning.packing.units import UnitChoice, UnitMember
 
 
 def diagnostic_layout(paths, settings, progress=None):

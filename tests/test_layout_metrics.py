@@ -1,4 +1,4 @@
-from automatic_print.layout_engine.metrics import (
+from automatic_print.layout_engine.reporting.metrics import (
     basic_ordered_height,
     saving_metrics,
     saving_text,
@@ -29,7 +29,7 @@ def test_saving_text_reports_rotations_without_false_saving() -> None:
 
 
 def test_completed_output_summary_uses_actual_batch_result():
-    from automatic_print.layout_engine.output_file_info import production_summary_text
+    from automatic_print.layout_engine.output.output_file_info import production_summary_text
     text = production_summary_text({
         'analysis': {'batch_type': '单件单面批次', 'order_count': 60,
                      'piece_count': 60, 'image_count': 60, 'double_pairs': 0},

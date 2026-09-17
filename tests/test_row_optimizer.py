@@ -1,4 +1,4 @@
-from automatic_print.layout_engine.row_optimizer import (
+from automatic_print.layout_engine.planning.base.row_optimizer import (
     optimal_ordered_layout,
     optimal_ordered_rows,
 )

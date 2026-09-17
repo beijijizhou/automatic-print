@@ -8,11 +8,11 @@ from PIL import Image
 from PySide6.QtGui import QImage, QPainter
 import pytest
 
-from automatic_print.layout import LayoutSettings
-from automatic_print.layout_engine.models import Placement
+from automatic_print.layout_engine import LayoutSettings
+from automatic_print.layout_engine.domain.models import Placement
 from automatic_print.ui.cut_guide_preview import _transition_lines
-from automatic_print.layout_engine.marked_pixel_validation import validate_marked_pillow
-from automatic_print.layout_engine.printed_guides import vips_corridor_is_clear
+from automatic_print.layout_engine.cutting.validation.marked_pixel_validation import validate_marked_pillow
+from automatic_print.layout_engine.cutting.geometry.printed_guides import vips_corridor_is_clear
 
 
 def test_preview_uses_real_batch_not_selected_picture_end():
@@ -56,7 +56,7 @@ def test_exact_horizontal_mask_does_not_allow_extra_pixels():
 
 def test_preview_prints_footer_and_keeps_end_line_after_it():
     from PySide6.QtWidgets import QApplication
-    from automatic_print.layout_engine.transition_marks import transition_rects, marked_height
+    from automatic_print.layout_engine.cutting.geometry.transition_marks import transition_rects, marked_height
     app = QApplication.instance() or QApplication([])
     p = Placement('B1-1-T-Black-M-NO1-1.png', 1, 0, 0, 100, 80,
                   0, 0, 0, 0, 0, 100, 80)

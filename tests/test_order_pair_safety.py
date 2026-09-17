@@ -4,11 +4,11 @@ from itertools import product
 from PIL import Image
 import pytest
 
-from automatic_print.layout import LayoutSettings, generate_layout
-from automatic_print.layout_engine.order_groups import ordered_paths, pair_identity
-from automatic_print.layout_engine.order_validation import validate_order_placements
-from automatic_print.layout_engine.planner import plan_layout
-from automatic_print.layout_engine.rotation_zones import _normal, _rotated, complete_orders
+from automatic_print.layout_engine import LayoutSettings, generate_layout
+from automatic_print.layout_engine.orders.order_groups import ordered_paths, pair_identity
+from automatic_print.layout_engine.cutting.validation.order_validation import validate_order_placements
+from automatic_print.layout_engine.planning.base.planner import plan_layout
+from automatic_print.layout_engine.planning.rotation.rotation_zones import _normal, _rotated, complete_orders
 
 
 def source(tmp_path, name, width=100, height=220):
@@ -92,14 +92,14 @@ def test_unknown_identity_is_kept_as_a_conservative_group(tmp_path):
 
 
 def test_already_normalized_order_code_is_not_stripped_again(tmp_path):
-    from automatic_print.layout_engine.order_groups import order_key
+    from automatic_print.layout_engine.orders.order_groups import order_key
     assert order_key(tmp_path/'A0000007-1-T-White-L-NO1-1.png') == 'a0000007'
     assert order_key(tmp_path/'A0000001-BORDER-1-T-White-L-NO1-1.png') == 'border'
 
 
 def test_s2b_size_folder_uses_design_order_and_parent_size(tmp_path):
-    from automatic_print.layout_engine.order_groups import order_key
-    from automatic_print.layout_engine.source_metadata import source_size
+    from automatic_print.layout_engine.orders.order_groups import order_key
+    from automatic_print.layout_engine.intake.metadata.source_metadata import source_size
     path = tmp_path/'L'/'26OP3LGLUEUV-179-2-V4TEDS-1-1-1-222-棉-L.png'
     assert order_key(path) == 'v4teds'
     assert source_size(path) == 'L'
@@ -108,17 +108,17 @@ def test_s2b_size_folder_uses_design_order_and_parent_size(tmp_path):
 def test_s2b_two_images_with_one_label_are_recognized_as_double(tmp_path):
     front = tmp_path/'S'/'22UJ9KT4VCZA-20-1-ISAIWO-1-2-1-36-棉-S.png'
     back = tmp_path/'S'/'22UJ9KT4VCZA-20-2-ISAIWO-2-2-1-36-棉-S.png'
-    from automatic_print.layout_engine.order_groups import complete_orders
+    from automatic_print.layout_engine.orders.order_groups import complete_orders
     complete_orders([front, back])
     assert pair_identity(front) == ('s2b:22uj9kt4vcza:20:isaiwo:1:s', '1')
     assert pair_identity(back) == ('s2b:22uj9kt4vcza:20:isaiwo:1:s', '2')
-    from automatic_print.layout_engine.order_groups import is_double_pair
+    from automatic_print.layout_engine.orders.order_groups import is_double_pair
     assert is_double_pair(front, back)
 
 
 def test_s2b_single_image_is_not_invented_as_double(tmp_path):
     image = tmp_path/'S'/'22UJ9KT4VCZA-22-4-ROE6UL-1-1-1-36-棉-S.png'
-    from automatic_print.layout_engine.order_groups import complete_orders
+    from automatic_print.layout_engine.orders.order_groups import complete_orders
     complete_orders([image])
     assert pair_identity(image) is None
 
@@ -126,7 +126,7 @@ def test_s2b_single_image_is_not_invented_as_double(tmp_path):
 def test_s2b_same_order_different_product_lines_do_not_cross_pair(tmp_path):
     first = tmp_path/'S'/'22UJ9KT4VCZA-20-1-ISAIWO-1-2-1-36-棉-S.png'
     other = tmp_path/'S'/'22UJ9KT4VCZA-21-2-ISAIWO-2-2-1-36-棉-S.png'
-    from automatic_print.layout_engine.order_groups import complete_orders, is_double_pair
+    from automatic_print.layout_engine.orders.order_groups import complete_orders, is_double_pair
     complete_orders([first, other])
     assert not is_double_pair(first, other)
 
@@ -134,14 +134,14 @@ def test_s2b_same_order_different_product_lines_do_not_cross_pair(tmp_path):
 def test_s2b_same_order_line_with_different_sizes_is_not_a_double(tmp_path):
     first = tmp_path/'5XL'/'22UJ9KT4VCZA-6-3-Z7M97G-2-2-1-36-棉-5XL.png'
     other = tmp_path/'XXL'/'22UJ9KT4VCZA-6-8-Z7M97G-1-2-1-36-棉-XXL.png'
-    from automatic_print.layout_engine.order_groups import complete_orders, is_double_pair
+    from automatic_print.layout_engine.orders.order_groups import complete_orders, is_double_pair
     complete_orders([first, other])
     assert not is_double_pair(first, other)
 
 
 def test_putian_prefix_uses_real_order_size_color_and_side(tmp_path):
-    from automatic_print.layout_engine.order_groups import order_key
-    from automatic_print.layout_engine.source_metadata import source_color, source_size
+    from automatic_print.layout_engine.orders.order_groups import order_key
+    from automatic_print.layout_engine.intake.metadata.source_metadata import source_color, source_size
     path = tmp_path/'PT-CVC面料00006-BOBXY4T-1-CVC-NY1--黑色-XL-NO1-1.png'
     assert order_key(path) == 'bobxy4t'
     assert source_size(path) == 'XL'

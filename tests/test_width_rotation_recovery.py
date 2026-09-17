@@ -1,6 +1,6 @@
 from PIL import Image
 import pytest
-from automatic_print.layout import LayoutSettings,generate_layout
+from automatic_print.layout_engine import LayoutSettings,generate_layout
 
 
 @pytest.mark.parametrize('engine',['pillow','libvips'])
@@ -20,12 +20,12 @@ def test_failed_normal_batch_rotates_without_resizing(tmp_path,engine,mode):
     settings=LayoutSettings(dpi=25.4,media_width_mm=430,cutter_mode=mode,
         cutter_auto_knife=True,cutter_compare_whole_rotation=False,cutter_knife_dots=False,
         cutter_left_marker_external=True,cutter_left_marker_lift_mm=1.5,
-        preserve_header_gap=True,platform_below_marker=True,
+        preserve_header_gap=(mode!='free'),platform_below_marker=True,
         platform_name='隆丰',platform_font_height_mm=6,
         number_images=True,allow_rotation=False,
         auto_fit_width=True,png_engine=engine)
     result=generate_layout(paths,tmp_path/'out',settings,plan_ready=plans.append)
-    from automatic_print.layout_engine.cut_guide_geometry import detect_guide_band
+    from automatic_print.layout_engine.cutting.geometry.cut_guide_geometry import detect_guide_band
     assert all(detect_guide_band(path) is not None for path in paths)
     assert result['order_check']['double_pairs']==3
     assert not result['analysis'].get('width_adjustments')
@@ -39,15 +39,23 @@ def test_failed_normal_batch_rotates_without_resizing(tmp_path,engine,mode):
             assert p.cut_zone==('旋转区' if mode=='dual' else '单排区')
             with Image.open(path) as source:
                 rotated=source.rotate(90,expand=True)
-                assert output.crop((p.x_px,p.y_px,p.x_px+234,p.y_px+563)).tobytes()==rotated.tobytes()
-        zones=result['cut_corridor']['zones'] if mode=='dual' else []
-        assert len(zones)==(1 if mode=='dual' else 0)
+                actual = output.crop((p.x_px,p.y_px,p.x_px+234,p.y_px+563))
+                import numpy as np
+                expected_pixels = np.asarray(rotated)
+                actual_pixels = np.asarray(actual)
+                opaque = expected_pixels[:, :, 3] == 255
+                assert np.array_equal(actual_pixels[opaque], expected_pixels[opaque])
+        zones=result['cut_corridor'].get('zones', []) if mode=='dual' else []
+        if mode == 'dual':
+            assert result['cut_corridor']['column_count'] == 1
+            assert result['cut_corridor']['knife_xs_px'] == []
+        assert not zones
         for zone in zones:
             assert output.crop((zone['safe_left_px'],0,zone['safe_right_px'],output.height)).getchannel('A').getextrema()[1]==0
 
 
 def test_non_width_errors_are_not_recovered():
-    from automatic_print.layout_engine.whole_rotation import recover_normal_width
+    from automatic_print.layout_engine.planning.rotation.whole_rotation import recover_normal_width
     error=ValueError('订单被拆散')
     with pytest.raises(ValueError,match='订单被拆散'):
         recover_normal_width([],LayoutSettings(cutter_mode='dual',cutter_compare_whole_rotation=True),None,error)

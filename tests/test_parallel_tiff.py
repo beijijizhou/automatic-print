@@ -3,7 +3,7 @@ from pathlib import Path
 from PIL import Image
 import tifffile
 
-from automatic_print.layout import LayoutSettings, generate_layout
+from automatic_print.layout_engine import LayoutSettings, generate_layout
 
 
 def test_parallel_tiff_preserves_rgba_dpi_and_strips(tmp_path):
@@ -36,7 +36,7 @@ def test_parallel_tiff_preserves_rgba_dpi_and_strips(tmp_path):
 
 
 def test_tiff_names_keep_extension_when_deduplicated(tmp_path):
-    from automatic_print.layout_engine.output_name import unused_output_path
+    from automatic_print.layout_engine.output.output_name import unused_output_path
     (tmp_path / 'batch.tif').touch()
     assert unused_output_path(tmp_path, 'batch.tif').name == 'batch (2).tif'
 

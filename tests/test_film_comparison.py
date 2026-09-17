@@ -4,11 +4,12 @@ import json
 from PIL import Image
 import pytest
 
-from automatic_print.layout import LayoutSettings
-from automatic_print.layout_engine.film_comparison import compare_films, comparison_text
-from automatic_print.layout_engine.planner import plan_layout
-from automatic_print.layout_engine import cutter_planner, rotation_zones
-from automatic_print.layout_engine import film_comparison
+from automatic_print.layout_engine import LayoutSettings
+from automatic_print.layout_engine.planning.film.film_comparison import compare_films, comparison_text
+from automatic_print.layout_engine.planning.base.planner import plan_layout
+from automatic_print.layout_engine.planning.columns import cutter_planner
+from automatic_print.layout_engine.planning.rotation import rotation_zones
+from automatic_print.layout_engine.planning.film import film_comparison
 
 
 def sources(tmp_path):

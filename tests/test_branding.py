@@ -5,8 +5,8 @@ os.environ.setdefault('QT_QPA_PLATFORM', 'offscreen')
 
 from PIL import Image
 
-from automatic_print.resources import asset_path
-from automatic_print import branding
+from automatic_print.runtime.resources import asset_path
+from automatic_print.runtime import branding
 
 UI_OWNERS = []
 

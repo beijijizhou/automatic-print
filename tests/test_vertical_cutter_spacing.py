@@ -3,9 +3,9 @@ from dataclasses import replace
 import pytest
 from PIL import Image
 
-from automatic_print.layout import LayoutSettings
-from automatic_print.layout_engine.cutter_planner import plan_cutter_layout
-from automatic_print.layout_engine.models import mm_to_px
+from automatic_print.layout_engine import LayoutSettings
+from automatic_print.layout_engine.planning.columns.cutter_planner import plan_cutter_layout
+from automatic_print.layout_engine.domain.models import mm_to_px
 
 
 @pytest.mark.parametrize('mode', ['single', 'dual'])

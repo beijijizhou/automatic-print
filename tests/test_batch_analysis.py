@@ -3,11 +3,11 @@ from pathlib import Path
 
 from PIL import Image
 
-from automatic_print.layout import LayoutSettings, generate_layout
-from automatic_print.layout_engine.batch_analysis import analyze_batch, compact_distribution_text
-from automatic_print.layout_engine.planner import plan_layout
-from automatic_print.layout_engine.order_groups import order_key
-from automatic_print.layout_engine.source_metadata import source_size
+from automatic_print.layout_engine import LayoutSettings, generate_layout
+from automatic_print.layout_engine.orders.batch_analysis import analyze_batch, compact_distribution_text
+from automatic_print.layout_engine.planning.base.planner import plan_layout
+from automatic_print.layout_engine.orders.order_groups import order_key
+from automatic_print.layout_engine.intake.metadata.source_metadata import source_size
 
 
 def source(tmp_path, order, size, w=180, h=260, piece=1, side=1):
@@ -64,14 +64,18 @@ def test_small_image_can_pair_with_large_size_without_breaking_a_double(tmp_path
     assert abs([p for p,_ in planned].index(double[0])-[p for p,_ in planned].index(double[1]))==1
 
 
-def test_large_size_is_measured_and_slender_order_rotates(tmp_path):
+def test_large_size_is_measured_and_slender_order_rotates(tmp_path, monkeypatch):
+    from automatic_print.layout_engine.planning.cache import plan_cache
+    monkeypatch.setattr(plan_cache, 'load', lambda _key: None)
     paths=[source(tmp_path,'BSLENDER','M',w=80,h=330),
            source(tmp_path,'BLARGE','4XL',w=310,h=200),
            source(tmp_path,'BCHEST','S',w=100,h=150)]
     stages=[]
     result=generate_layout(paths,tmp_path/'unused',settings(),preview_only=True,analysis_ready=stages.append)
     assert not (tmp_path/'unused').exists()
-    assert [r['stage'] for r in stages]==['文件名分析','排版前分析','分区候选分析','排版结果']
+    # Gap fallback may evaluate several candidates internally; the UI receives
+    # only the selected, internally consistent final report.
+    assert [r['stage'] for r in stages] == ['排版结果']
     orders={o['order']:o for o in result['analysis']['orders']}
     assert orders['BSLENDER']['decision']=='旋转区'
     assert orders['BLARGE']['decision']=='旋转区'  # All following size blocks rotate together.

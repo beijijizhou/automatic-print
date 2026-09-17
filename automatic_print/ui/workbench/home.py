@@ -10,7 +10,7 @@ from PySide6.QtWidgets import (
 )
 
 from ... import __version__, __version_display__
-from ...automation_dialog import AutomationDialog
+from ...batch_ui.dialog import AutomationDialog
 from ..developer_mode import build_developer_mode
 from ..erp_download_entry import install_production_platform_tab
 

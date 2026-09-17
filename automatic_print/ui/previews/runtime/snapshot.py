@@ -4,9 +4,9 @@ from PIL.ImageQt import ImageQt
 from PySide6.QtCore import QSize, Qt
 from PySide6.QtGui import QImage, QImageReader
 
-from ....layout_engine.dynamic_label import source_label_badge
-from ....layout_engine.models import mm_to_px
-from ....layout_engine.transition_marks import marked_height, transition_rects
+from ....layout_engine.labeling.base.dynamic_label import source_label_badge
+from ....layout_engine.domain.models import mm_to_px
+from ....layout_engine.cutting.geometry.transition_marks import marked_height, transition_rects
 
 
 def install_snapshot(preview, planned, labels, settings, warning="", overflow=()):

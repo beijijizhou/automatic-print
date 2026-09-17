@@ -5,7 +5,7 @@ import re
 import shutil
 import subprocess
 import sys
-from ..versioning import release_display
+from .versioning import release_display
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 REMOTE_URLS = {'https://github.com/beijijizhou/automatic-print.git',

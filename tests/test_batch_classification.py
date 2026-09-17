@@ -1,6 +1,6 @@
 import pytest
 
-from automatic_print.automation.batch_classification import (
+from automatic_print.automation.batches.classification import (
     DOUBLE_FACE,
     SINGLE_FACE,
     UNKNOWN_FACE,
@@ -8,7 +8,7 @@ from automatic_print.automation.batch_classification import (
     composition_filter,
     detailed_compositions,
 )
-from automatic_print.automation.rule_batches import (
+from automatic_print.automation.batches.rules import (
     RuleBatchItem,
     _generate_filtered_batch_api,
     _preview_plan_from_api,
@@ -65,7 +65,7 @@ def test_unknown_face_is_left_unmatched_for_safety(monkeypatch) -> None:
         },
     ]
     monkeypatch.setattr(
-        "automatic_print.automation.rule_batches._load_all_received_rows",
+        "automatic_print.automation.batches.rules._load_all_received_rows",
         lambda _page: (rows, 2),
     )
 
@@ -83,11 +83,11 @@ def test_generation_payload_filters_double_face(monkeypatch) -> None:
         return {"total": 1}
 
     monkeypatch.setattr(
-        "automatic_print.automation.rule_batches.list_production_items",
+        "automatic_print.automation.batches.rules.list_production_items",
         list_items,
     )
     monkeypatch.setattr(
-        "automatic_print.automation.rule_batches.generate_filtered_batch",
+        "automatic_print.automation.batches.rules.generate_filtered_batch",
         lambda *_args: None,
     )
 

@@ -57,7 +57,7 @@ def test_single_folder_selection_detects_s2b_without_changing_action(tmp_path,mo
 
 
 def test_s2b_detection_requires_a_size_folder_group(tmp_path):
-    from automatic_print.layout_engine.platform_detection import detect_selected_platform
+    from automatic_print.layout_engine.intake.metadata.platform_detection import detect_selected_platform
     root=tmp_path/'普通批次'
     (root/'L').mkdir(parents=True)
     assert detect_selected_platform(root)==''

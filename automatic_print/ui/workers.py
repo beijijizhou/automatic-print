@@ -4,11 +4,11 @@ from pathlib import Path
 
 from PySide6.QtCore import QObject, Signal, Slot
 
-from ..cancellation import Cancellation, TaskCancelled
-from ..layout import LayoutSettings, generate_layout, discover_images, discovered_extensions
-from ..updater import fetch_latest_release
-from ..layout_engine.operation_timing import OperationTiming, PROGRESS_PHASES, timing_report
-from ..layout_engine.output_sizes import cutting_report
+from ..runtime.cancellation import Cancellation, TaskCancelled
+from ..layout_engine import LayoutSettings, generate_layout, discover_images, discovered_extensions
+from ..updates.release import fetch_latest_release
+from ..layout_engine.reporting.operation_timing import OperationTiming, PROGRESS_PHASES, timing_report
+from ..layout_engine.output.output_sizes import cutting_report
 
 
 class GenerateWorker(QObject):
@@ -104,7 +104,7 @@ class GenerateWorker(QObject):
                 self._save_history(result)
                 self.finished.emit("", result)
                 return
-            from ..layout_engine.output_name import (
+            from ..layout_engine.output.output_name import (
                 finish_output_files, output_log_path, remap_result_files,
             )
             self._progress('整理输出文件夹',0,1,'将合格排版图移入切膜机文件')
@@ -135,7 +135,7 @@ class GenerateWorker(QObject):
             return
         except Exception as error:
             self.timings_ready.emit(self.timing.finish('失败'))
-            from ..layout_engine.error_context import error_context
+            from ..layout_engine.diagnostics.error_context import error_context
             message = error_context(error, self.images, self.source, self.failure_stage, self.settings)
             try:
                 if self.output.is_dir():

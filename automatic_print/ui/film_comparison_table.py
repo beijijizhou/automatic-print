@@ -1,7 +1,7 @@
 """Existing and future film alternatives, separate from execution timings."""
 from PySide6.QtGui import QColor
 from PySide6.QtWidgets import QAbstractItemView, QHeaderView, QTableWidget, QTableWidgetItem
-from ..layout_engine.film_specs import AVAILABLE_WIDTHS, COMPARISON_COUNT, comparison_widths
+from ..layout_engine.planning.film.film_specs import AVAILABLE_WIDTHS, COMPARISON_COUNT, comparison_widths
 
 
 class FilmComparisonTable(QTableWidget):

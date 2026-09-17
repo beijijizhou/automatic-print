@@ -10,8 +10,8 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
-from ..automation.platforms import ERP_PLATFORMS
-from ..automation_dialog import AutomationDialog
+from ..automation.providers.registry import ERP_PLATFORMS
+from ..batch_ui.dialog import AutomationDialog
 
 
 PLATFORM_ORDER = ("隆丰", "莆田", "S2B", "Haloo")

@@ -6,13 +6,13 @@ from PIL import Image, ImageFile
 import pytest
 import numpy as np
 
-from automatic_print.layout import LayoutSettings, generate_layout
-from automatic_print.layout_engine import film_comparison
-from automatic_print.layout_engine.measurement_session import measurement_session
-from automatic_print.layout_engine.item_factory import read_items
-from automatic_print.layout_engine.models import Placement
-from automatic_print.layout_engine.printed_guides import collect_guides, dot_boxes
-from automatic_print.layout_engine.marked_pixel_validation import validate_marked_pillow
+from automatic_print.layout_engine import LayoutSettings, generate_layout
+from automatic_print.layout_engine.planning.film import film_comparison
+from automatic_print.layout_engine.measurement.measurement_session import measurement_session
+from automatic_print.layout_engine.intake.preparation.item_factory import read_items
+from automatic_print.layout_engine.domain.models import Placement
+from automatic_print.layout_engine.cutting.geometry.printed_guides import collect_guides, dot_boxes
+from automatic_print.layout_engine.cutting.validation.marked_pixel_validation import validate_marked_pillow
 
 
 def qr_sources(tmp_path):

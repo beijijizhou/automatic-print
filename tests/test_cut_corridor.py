@@ -8,9 +8,9 @@ import pytest
 from PIL import Image
 from preview_wait import wait_preview
 
-from automatic_print.layout import LayoutSettings
-from automatic_print.layout_engine.planner import plan_layout
-from automatic_print.layout_engine.cut_validation import (
+from automatic_print.layout_engine import LayoutSettings
+from automatic_print.layout_engine.planning.base.planner import plan_layout
+from automatic_print.layout_engine.cutting.validation.cut_validation import (
     corridor_checks,
     validate_canvas_pixels,
     validate_cut_corridor,

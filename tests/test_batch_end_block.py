@@ -4,8 +4,8 @@ from pathlib import Path
 import pytest
 import numpy as np
 from PIL import Image
-from automatic_print.layout import LayoutSettings, generate_layout
-from automatic_print.layout_engine.transition_marks import transition_rects
+from automatic_print.layout_engine import LayoutSettings, generate_layout
+from automatic_print.layout_engine.cutting.geometry.transition_marks import transition_rects
 
 
 def test_ui_migrates_existing_end_block_to_off_once(tmp_path):
@@ -25,7 +25,7 @@ def test_ui_migrates_existing_end_block_to_off_once(tmp_path):
 def test_preview_uses_same_end_block_rectangle():
     from types import SimpleNamespace
     from PySide6.QtGui import QImage,QPainter
-    from automatic_print.layout_engine.models import Placement
+    from automatic_print.layout_engine.domain.models import Placement
     from automatic_print.ui.cut_guide_preview import _transition_lines
     p=Placement('a.png',1,20,0,100,140,0,0,0,0,0,120,140)
     planned=[(Path('a.png'),p)]

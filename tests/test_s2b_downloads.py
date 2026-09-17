@@ -49,7 +49,7 @@ def test_s2b_dispatch_reuses_shared_batch_record(monkeypatch):
         "automatic_print.automation.api.s2b.production.downloads.list_s2b_batches",
         lambda progress=None: [record],
     )
-    from automatic_print.automation.batch_browser import load_batch_records
+    from automatic_print.automation.browser.batches import load_batch_records
     result = load_batch_records("S2B")
     assert result[0].batch_number == "22UJ9KT4VCZA"
     assert result[0].piece_count == 40

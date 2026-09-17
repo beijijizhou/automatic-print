@@ -5,7 +5,7 @@ from PIL import Image
 from PySide6.QtCore import QSettings, QPoint
 from PySide6.QtWidgets import QApplication
 
-from automatic_print.layout import LayoutSettings, generate_layout
+from automatic_print.layout_engine import LayoutSettings, generate_layout
 from automatic_print.ui.main_window import MainWindow
 
 
@@ -48,6 +48,8 @@ def test_current_batch_preview_and_summary_are_visible_and_retained(tmp_path):
     viewport = window.automation_home.workbench_scroll.viewport()
     summary_top = panel.summary.mapTo(viewport, QPoint(0, 0)).y()
     assert 0 <= summary_top < viewport.height()
+    panel.preview_tabs.setCurrentWidget(panel.actual_preview_page)
+    app.processEvents()
     assert panel.preview_scroll.isVisible()
     assert panel.preview_scroll.height() <= 720
     assert panel.preview_scroll.verticalScrollBar().maximum() > 0

@@ -4,11 +4,12 @@ import numpy as np
 import pytest
 from PIL import Image
 
-from automatic_print.layout_engine.membrane_region import MembraneRegion, region_from_ink
-from automatic_print.layout_engine import dynamic_label, item_factory
-from automatic_print.layout_engine.models import LayoutSettings
-from automatic_print.layout_engine.planner import plan_layout
-from automatic_print.layout_engine.pillow_renderer import _prepare
+from automatic_print.layout_engine.labeling.platform.membrane_region import MembraneRegion, region_from_ink
+from automatic_print.layout_engine.labeling.base import dynamic_label
+from automatic_print.layout_engine.intake.preparation import item_factory
+from automatic_print.layout_engine.domain.models import LayoutSettings
+from automatic_print.layout_engine.planning.base.planner import plan_layout
+from automatic_print.layout_engine.rendering.engines.pillow_renderer import _prepare
 
 
 def test_isolated_header_includes_text_but_not_artwork():

@@ -4,15 +4,17 @@ import numpy as np
 from PIL import Image
 import pytest
 
-from automatic_print.layout import LayoutSettings, generate_layout
-from automatic_print.layout_engine.cut_guide_geometry import detect_guide_band
-from automatic_print.layout_engine.item_factory import read_items
-from automatic_print.layout_engine.transition_marks import rotation_marker_item
+from automatic_print.layout_engine import LayoutSettings, generate_layout
+from automatic_print.layout_engine.cutting.geometry.cut_guide_geometry import detect_guide_band
+from automatic_print.layout_engine.intake.preparation.item_factory import read_items
+from automatic_print.layout_engine.cutting.geometry.transition_marks import rotation_marker_item
 
 
 @pytest.mark.parametrize('engine', ['pillow', 'libvips'])
 @pytest.mark.parametrize('parts', [1, 3])
-def test_rotated_whole_batch_qr_label_and_fixed_marker(tmp_path, engine, parts):
+def test_rotated_whole_batch_qr_label_and_fixed_marker(tmp_path, engine, parts, monkeypatch):
+    from automatic_print.layout_engine.planning.cache import plan_cache
+    monkeypatch.setattr(plan_cache, 'load', lambda _key: None)
     cv2 = pytest.importorskip('cv2')
     qr = Image.fromarray(cv2.QRCodeEncoder_create().encode('ROTATED123')).convert('RGBA')
     paths = []
@@ -37,7 +39,7 @@ def test_rotated_whole_batch_qr_label_and_fixed_marker(tmp_path, engine, parts):
     previews = []
     result = generate_layout(paths, tmp_path/'out', settings, plan_ready=previews.append)
     assert len(previews[0]['planned']) == 12
-    from automatic_print.layout_engine.marker_space import validate_embedded_marks
+    from automatic_print.layout_engine.labeling.markers.marker_space import validate_embedded_marks
     path, placement = previews[0]['planned'][0]
     with pytest.raises(ValueError, match='安全基准高度'):
         validate_embedded_marks([(path, replace(placement,
@@ -72,9 +74,9 @@ def test_rotated_whole_batch_qr_label_and_fixed_marker(tmp_path, engine, parts):
     assert shifted.block_rx == item.block_rx
     assert shifted.label_rx == item.label_rx
     if parts == 1:
-        from automatic_print.layout_engine.rotation_zones import _rotated
-        from automatic_print.layout_engine.service import generate_layout as save_plan
-        from automatic_print.layout_engine.batch_analysis import analyze_batch
+        from automatic_print.layout_engine.planning.rotation.rotation_zones import _rotated
+        from automatic_print.layout_engine.pipeline.service import generate_layout as save_plan
+        from automatic_print.layout_engine.orders.batch_analysis import analyze_batch
         zone_settings = replace(settings, cutter_mode='dual', output_parts=1,
             cutter_rotation_zone=True, transition_lines=True, rotation_marker_shift_mm=2)
         planned, labels, height, knife = _rotated(paths, zone_settings)
@@ -84,14 +86,16 @@ def test_rotated_whole_batch_qr_label_and_fixed_marker(tmp_path, engine, parts):
             'plan': (planned, labels, 580, height, height), 'settings': zone_settings,
             'analysis': analyze_batch(paths, zone_settings)})
         assert zone['cut_corridor']['pixel_verified']
+        marker_xs = {0, round(zone['right_marker_mm'])}
         with Image.open(tmp_path/'zone'/zone['filename']) as output:
             for p in zone['placements']:
-                assert p['color_block_x_px'] == 0
+                assert p['color_block_x_px'] in marker_xs
                 assert p['number_x_px'] > 0
-                assert output.getpixel((0, p['color_block_y_px'])) == (255, 0, 0, 255)
+                assert output.getpixel((p['color_block_x_px'], p['color_block_y_px'])) == (255, 0, 0, 255)
                 with Image.open(tmp_path/p['source']) as source:
                     original = np.asarray(source.rotate(90, expand=True))
                 crop = np.asarray(output.crop((p['x_px'], p['y_px'],
                     p['x_px']+p['width_px'], p['y_px']+p['height_px'])))
                 ink = original[:, :, 3] > 0
                 assert np.array_equal(original[ink], crop[ink])
+        assert {p['color_block_x_px'] for p in zone['placements']} == marker_xs

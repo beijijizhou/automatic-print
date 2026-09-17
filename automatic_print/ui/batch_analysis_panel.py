@@ -5,7 +5,7 @@ from PySide6.QtWidgets import (
     QApplication, QGroupBox, QHeaderView, QLabel, QTreeWidget, QTreeWidgetItem, QVBoxLayout,
 )
 
-from ..layout_engine.source_metadata import size_key
+from ..layout_engine.intake.metadata.source_metadata import size_key
 
 
 class AnalysisTree(QTreeWidget):

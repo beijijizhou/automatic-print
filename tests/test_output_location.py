@@ -6,7 +6,7 @@ from PIL import Image
 
 from PySide6.QtCore import QSettings
 from PySide6.QtWidgets import QApplication, QMessageBox
-from automatic_print.layout import LayoutSettings
+from automatic_print.layout_engine import LayoutSettings
 from automatic_print.ui import generation_actions
 from automatic_print.ui.main_window import MainWindow
 from automatic_print.ui.settings.output import output_base

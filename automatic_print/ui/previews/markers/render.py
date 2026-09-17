@@ -1,7 +1,7 @@
 """Bounded preview pixels, with production geometry and production badge rendering."""
 from PIL import Image, ImageDraw
-from ....layout_engine.dynamic_label import source_label_badge
-from ....layout_engine.platform_label import placement_badge, platform_text
+from ....layout_engine.labeling.base.dynamic_label import source_label_badge
+from ....layout_engine.labeling.platform.platform_label import placement_badge, platform_text
 
 
 def render_example(path, item, labels, settings):

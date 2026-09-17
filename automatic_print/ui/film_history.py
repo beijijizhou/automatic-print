@@ -4,7 +4,7 @@ from PySide6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushB
                               QTableWidget, QTableWidgetItem, QAbstractItemView,
                               QHeaderView, QFileDialog, QPlainTextEdit)
 from ..history.store import load_runs, history_path, export_csv
-from ..layout_engine.film_comparison import comparison_text
+from ..layout_engine.planning.film.film_comparison import comparison_text
 from .film_comparison_table import FilmComparisonTable
 from .action_icons import action_icon
 

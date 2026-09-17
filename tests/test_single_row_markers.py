@@ -3,8 +3,8 @@ from dataclasses import replace
 from PIL import Image
 import pytest
 
-from automatic_print.layout import LayoutSettings, generate_layout
-from automatic_print.layout_engine.cut_validation import corridor_checks, validate_cut_corridor
+from automatic_print.layout_engine import LayoutSettings, generate_layout
+from automatic_print.layout_engine.cutting.validation.cut_validation import corridor_checks, validate_cut_corridor
 
 
 @pytest.mark.parametrize('engine', ['pillow', 'libvips'])

@@ -1,5 +1,5 @@
 from automatic_print.batch_ui.local.processing import process_local_batches
-from automatic_print.layout import LayoutSettings
+from automatic_print.layout_engine import LayoutSettings
 
 
 def test_selected_batches_are_merged_in_selection_order(

@@ -1,6 +1,6 @@
 from test_developer_mode import window, APP
-from automatic_print.layout_engine.operation_timing import OperationTiming
-from automatic_print.layout_engine.algorithm_costs import STEPS
+from automatic_print.layout_engine.reporting.operation_timing import OperationTiming
+from automatic_print.layout_engine.reporting.algorithm_costs import STEPS
 
 
 def test_costs_are_developer_only_and_copyable_without_image_read(tmp_path):

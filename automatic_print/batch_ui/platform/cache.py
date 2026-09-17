@@ -4,7 +4,7 @@ import json
 from dataclasses import asdict
 from datetime import datetime
 
-from ...automation.batch_browser import BatchRecord
+from ...automation.browser.batches import BatchRecord
 
 
 def save_batch_cache(settings, platform: str, records) -> str:

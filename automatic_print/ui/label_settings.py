@@ -12,7 +12,7 @@ from PySide6.QtWidgets import (
 )
 from .setting_preview import SettingPreview
 from .spinbox_style import double_spinbox
-from ..layout_engine.labels import compact_label_text
+from ..layout_engine.labeling.base.labels import compact_label_text
 class LabelSettingsDialog(QDialog):
     settings_changed = Signal()
     def __init__(self, parent: QWidget | None = None) -> None:

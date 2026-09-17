@@ -6,29 +6,29 @@ import numpy as np
 import pytest
 from PIL import Image
 
-from automatic_print.layout import LayoutSettings, generate_layout
-from automatic_print.layout_engine.models import mm_to_px
-from automatic_print.layout_engine.marker_stack import stacked_coordinates, validate_stack
-from automatic_print.layout_engine.marker_space import validate_embedded_marks
-from automatic_print.layout_engine.cut_guide_geometry import detect_guide_band
+from automatic_print.layout_engine import LayoutSettings, generate_layout
+from automatic_print.layout_engine.domain.models import mm_to_px
+from automatic_print.layout_engine.labeling.markers.marker_stack import stacked_coordinates, validate_stack
+from automatic_print.layout_engine.labeling.markers.marker_space import validate_embedded_marks
+from automatic_print.layout_engine.cutting.geometry.cut_guide_geometry import detect_guide_band
 from test_marker_examples import sources
 
 
 def test_explicit_stack_font_does_not_search_membrane_card(monkeypatch):
-    from automatic_print.layout_engine import platform_label
+    from automatic_print.layout_engine.labeling.platform import platform_label
     def unexpected_search(*args):
         raise AssertionError('外置明确字号无需搜索膜标签')
     monkeypatch.setattr(platform_label, 'detect_guide_band', unexpected_search)
     settings = LayoutSettings(dpi=25.4, platform_name='隆丰',
         platform_below_marker=True, platform_font_height_mm=6)
     x, y, width, height = platform_label.platform_geometry(Path('unused.png'), settings, 270, 300, 90)
-    assert (x, y, height) == (0, 0, 6)
-    assert width > 0
+    assert (x, y, width) == (0, 0, 6)
+    assert height > 0
 
 
 def test_platform_badge_reuses_qr_card_when_header_is_preserved(monkeypatch):
-    from automatic_print.layout_engine import platform_label
-    from automatic_print.layout_engine.membrane_region import MembraneRegion
+    from automatic_print.layout_engine.labeling.platform import platform_label
+    from automatic_print.layout_engine.labeling.platform.membrane_region import MembraneRegion
     region = MembraneRegion(.7, .05, .9, .2)
     monkeypatch.setattr(platform_label, 'detect_guide_band', lambda _path: region)
     monkeypatch.setattr(platform_label, 'header_space', lambda *_args: 42)
@@ -129,7 +129,7 @@ def test_segmented_double_batch_stack_and_full_saved_corridors(tmp_path, engine)
     for part in result['parts']:
         with Image.open(tmp_path/'out'/part['filename']) as output:
             for row in part['placements']:
-                from automatic_print.layout_engine.models import Placement
+                from automatic_print.layout_engine.domain.models import Placement
                 p = Placement(**row)
                 validate_stack(Path(p.source), p, settings)
                 assert p.x_px <= p.platform_x_px

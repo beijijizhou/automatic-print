@@ -1,4 +1,4 @@
-from automatic_print.automation.batch_exports import (
+from automatic_print.automation.transfer.exports import (
     ready_production_image_codes,
 )
 
@@ -9,7 +9,7 @@ class Page:
 
 def test_ready_codes_come_from_production_image_export(monkeypatch) -> None:
     monkeypatch.setattr(
-        "automatic_print.automation.batch_exports.call_module",
+        "automatic_print.automation.transfer.exports.call_module",
         lambda *_args, **_kwargs: [
             {"biz_no": "607250635009", "export_type": 3, "status": 2},
             {"biz_no": "607250635010", "export_type": 3, "status": 1},

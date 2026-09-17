@@ -5,12 +5,12 @@ from types import SimpleNamespace
 from PIL import Image
 import pytest
 
-from automatic_print.layout import LayoutSettings, generate_layout
-from automatic_print.layout_engine.planner import plan_layout
-from automatic_print.layout_engine.cut_validation import validate_cut_corridor
-from automatic_print.layout_engine.transition_marks import transition_rects
-from automatic_print.layout_engine.output_sizes import size_range_label
-from automatic_print.layout_engine.segmented_output import save_concurrency
+from automatic_print.layout_engine import LayoutSettings, generate_layout
+from automatic_print.layout_engine.planning.base.planner import plan_layout
+from automatic_print.layout_engine.cutting.validation.cut_validation import validate_cut_corridor
+from automatic_print.layout_engine.cutting.geometry.transition_marks import transition_rects
+from automatic_print.layout_engine.output.output_sizes import size_range_label
+from automatic_print.layout_engine.rendering.storage.segmented_output import save_concurrency
 
 
 def sources(tmp_path):

@@ -2,8 +2,8 @@ from pathlib import Path
 
 import pytest
 
-from automatic_print.cancellation import Cancellation, TaskCancelled
-from automatic_print.layout import LayoutSettings
+from automatic_print.runtime.cancellation import Cancellation, TaskCancelled
+from automatic_print.layout_engine import LayoutSettings
 from automatic_print.ui.workers import GenerateWorker
 
 

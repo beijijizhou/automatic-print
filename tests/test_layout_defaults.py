@@ -1,4 +1,4 @@
-from automatic_print.layout import LayoutSettings
+from automatic_print.layout_engine import LayoutSettings
 
 
 def test_default_settings_are_print_ready() -> None:

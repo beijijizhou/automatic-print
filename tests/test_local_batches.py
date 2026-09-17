@@ -1,6 +1,6 @@
 from pathlib import Path
 
-from automatic_print.automation.local_batches import discover_local_batches
+from automatic_print.automation.batches.local import discover_local_batches
 
 
 def test_discovers_downloaded_batches_but_not_processed_output(

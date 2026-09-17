@@ -4,9 +4,9 @@ from pathlib import Path
 import pytest
 from PIL import Image
 import numpy as np
-from automatic_print.layout import LayoutSettings, generate_layout
-from automatic_print.layout_engine.order_groups import ordered_paths
-from automatic_print.layout_engine.source_metadata import source_color,source_size,source_block
+from automatic_print.layout_engine import LayoutSettings, generate_layout
+from automatic_print.layout_engine.orders.order_groups import ordered_paths
+from automatic_print.layout_engine.intake.metadata.source_metadata import source_color,source_size,source_block
 
 
 def test_color_aliases_and_multicolor_order_stays_together():
@@ -24,7 +24,7 @@ def test_uniform_color_multis_and_singles_group_without_splitting_orders():
            'B2-2-A-Black-XL-NO1-1.png','W2-1-A-White-L-NO1-1.png']
     result=ordered_paths([Path(n) for n in names])
     assert [source_color(p) for p in result]==['黑色']*3+['白色']*3
-    from automatic_print.layout_engine.order_groups import complete_orders
+    from automatic_print.layout_engine.orders.order_groups import complete_orders
     assert sorted(map(len,complete_orders(result)))==[1,1,2,2]
 
 

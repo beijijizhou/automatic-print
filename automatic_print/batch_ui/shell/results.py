@@ -5,7 +5,7 @@ from PySide6.QtCore import QUrl
 from PySide6.QtGui import QDesktopServices
 from PySide6.QtWidgets import QMessageBox
 
-from ...layout_engine.metrics import saving_text
+from ...layout_engine.reporting.metrics import saving_text
 
 
 def present_action_result(owner, result: dict) -> None:

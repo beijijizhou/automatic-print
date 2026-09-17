@@ -7,13 +7,13 @@ from PySide6.QtCore import QRectF, QSize, Qt
 from PySide6.QtGui import QColor, QImage, QImageReader, QPainter, QPen, QTransform
 from PySide6.QtWidgets import QWidget
 
-from ..layout import discover_images
-from ..layout_engine.images import print_dimensions
-from ..layout_engine.item_factory import read_items
-from ..layout_engine.labels import format_label, settings_label_badge
-from ..layout_engine.dynamic_label import source_label_badge
-from ..layout_engine.platform_label import numbered_template
-from ..layout_engine.qr_detection import detect_qr_location
+from ..layout_engine import discover_images
+from ..layout_engine.intake.metadata.images import print_dimensions
+from ..layout_engine.intake.preparation.item_factory import read_items
+from ..layout_engine.labeling.base.labels import format_label, settings_label_badge
+from ..layout_engine.labeling.base.dynamic_label import source_label_badge
+from ..layout_engine.labeling.platform.platform_label import numbered_template
+from ..layout_engine.labeling.markers.qr_detection import detect_qr_location
 
 
 class ProductionPreview(QWidget):

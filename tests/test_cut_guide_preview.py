@@ -10,10 +10,10 @@ import pytest
 from PySide6.QtGui import QImage
 from PySide6.QtWidgets import QApplication
 
-from automatic_print.layout import LayoutSettings
-from automatic_print.layout_engine.cut_guide_geometry import guide_spans
-from automatic_print.layout_engine.membrane_region import MembraneRegion
-from automatic_print.layout_engine.planner import plan_layout
+from automatic_print.layout_engine import LayoutSettings
+from automatic_print.layout_engine.cutting.geometry.cut_guide_geometry import guide_spans
+from automatic_print.layout_engine.labeling.platform.membrane_region import MembraneRegion
+from automatic_print.layout_engine.planning.base.planner import plan_layout
 from automatic_print.ui.pair_preview import PairProductionPreview
 from automatic_print.ui.previews.runtime.snapshot import install_snapshot
 

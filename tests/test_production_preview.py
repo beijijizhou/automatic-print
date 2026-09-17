@@ -6,8 +6,8 @@ from PIL import Image
 from PySide6.QtGui import QImage
 from PySide6.QtWidgets import QApplication
 
-from automatic_print.layout import LayoutSettings
-from automatic_print.layout_engine.item_factory import read_items
+from automatic_print.layout_engine import LayoutSettings
+from automatic_print.layout_engine.intake.preparation.item_factory import read_items
 from automatic_print.ui.production_preview import ProductionPreview
 
 

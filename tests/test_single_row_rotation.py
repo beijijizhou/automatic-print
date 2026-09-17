@@ -3,7 +3,7 @@ os.environ.setdefault('QT_QPA_PLATFORM','offscreen')
 import numpy as np
 import pytest
 from PIL import Image
-from automatic_print.layout import LayoutSettings, generate_layout
+from automatic_print.layout_engine import LayoutSettings, generate_layout
 
 
 @pytest.mark.parametrize('engine',['pillow','libvips'])
@@ -40,13 +40,13 @@ def test_single_rows_choose_direction_per_complete_order_without_knife(tmp_path,
 
 
 def test_single_rotation_can_use_full_width_without_second_knife_safety(tmp_path):
-    from automatic_print.layout_engine.planner import plan_layout
+    from automatic_print.layout_engine.planning.base.planner import plan_layout
     path=tmp_path/'B1-1-T-Black-M-NO1-1.png'
     Image.new('RGBA',(80,415),'blue').save(path,dpi=(25.4,25.4))
     settings=LayoutSettings(dpi=25.4,media_width_mm=430,cutter_mode='single',
         cutter_single_row_rotation=True,cutter_compare_whole_rotation=True,
         cutter_left_marker_external=True,cutter_left_marker_lift_mm=1.5,
-        cutter_knife_dots=False,preserve_header_gap=True)
+        cutter_knife_dots=False,preserve_header_gap=False)
     planned,_,width,*_=plan_layout([path],settings,None)
     assert width==430
     assert planned[0][1].rotation_degrees==90

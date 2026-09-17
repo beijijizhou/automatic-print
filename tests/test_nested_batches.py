@@ -6,7 +6,7 @@ import pytest
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import QFileDialog
 
-from automatic_print.layout_engine.batch_discovery import scan_batches
+from automatic_print.layout_engine.intake.discovery.batch_discovery import scan_batches
 from automatic_print.ui.bulk_generation_worker import BulkGenerationWorker
 from automatic_print.ui.batch_status_board import BatchStatusBoard
 from test_parallel_film_geometry import qr_sources, settings
@@ -169,7 +169,7 @@ def test_nested_scan_off_gui_and_selected_file_information_before_preview(tmp_pa
     monkeypatch.setattr(owner, '_layout_settings', lambda: replace(settings(), compare_film_sizes=False))
     monkeypatch.setattr(QFileDialog, 'getExistingDirectory', lambda *_: str(root))
     monkeypatch.setattr('automatic_print.ui.workers.GenerateWorker._save_history', lambda *_: None)
-    import automatic_print.layout_engine.batch_discovery as discovery
+    import automatic_print.layout_engine.intake.discovery.batch_discovery as discovery
     original, threads = discovery.scan_batches, []
     def scan(*a, **kw):
         threads.append(get_ident())
@@ -207,8 +207,8 @@ def test_discovered_names_available_before_any_layout_payload(tmp_path):
 
 
 def test_unreadable_branch_does_not_block_other_batches_and_scan_can_cancel(tmp_path, monkeypatch):
-    import automatic_print.layout_engine.batch_discovery as discovery
-    from automatic_print.cancellation import Cancellation, TaskCancelled
+    import automatic_print.layout_engine.intake.discovery.batch_discovery as discovery
+    from automatic_print.runtime.cancellation import Cancellation, TaskCancelled
     root = tmp_path/'HL'
     tree(root)
     original = discovery.scandir

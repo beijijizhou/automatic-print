@@ -3,9 +3,9 @@ import numpy as np
 from PIL import Image
 import pytest
 
-from automatic_print.layout import LayoutSettings, generate_layout
-from automatic_print.layout_engine.marker_space import validate_embedded_marks
-from automatic_print.layout_engine.cut_guide_geometry import detect_guide_band
+from automatic_print.layout_engine import LayoutSettings, generate_layout
+from automatic_print.layout_engine.labeling.markers.marker_space import validate_embedded_marks
+from automatic_print.layout_engine.cutting.geometry.cut_guide_geometry import detect_guide_band
 
 
 def make_batch(tmp_path):

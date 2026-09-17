@@ -6,7 +6,7 @@ from PySide6.QtWidgets import (
     QMessageBox,
 )
 
-from ...automation.batch_browser import BatchRecord
+from ...automation.browser.batches import BatchRecord
 from .cache import load_batch_cache, save_batch_cache
 from ..task.worker import AutomationWorker
 

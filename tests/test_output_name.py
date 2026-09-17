@@ -1,8 +1,8 @@
 from PIL import Image
 import pytest
 
-from automatic_print.layout import LayoutSettings, generate_layout
-from automatic_print.layout_engine.output_name import (
+from automatic_print.layout_engine import LayoutSettings, generate_layout
+from automatic_print.layout_engine.output.output_name import (
     label_output_name, batch_directory_name, batch_output_directory, order_quantity,
     production_quantity,
 )
@@ -87,7 +87,7 @@ def test_different_batches_share_cutting_container(tmp_path):
 
 
 def test_finished_directory_matches_png_and_preserves_existing_output(tmp_path):
-    from automatic_print.layout_engine.output_name import finish_output_files
+    from automatic_print.layout_engine.output.output_name import finish_output_files
     stage = batch_output_directory(tmp_path, '批次123', 'JOB_1')
     stage.mkdir(parents=True)
     filename = '批次123_批次4单 CY26 M1 M-XL.png'
@@ -106,7 +106,7 @@ def test_finished_directory_matches_png_and_preserves_existing_output(tmp_path):
 
 
 def test_segment_files_flatten_and_result_names_follow_collision(tmp_path):
-    from automatic_print.layout_engine.output_name import (
+    from automatic_print.layout_engine.output.output_name import (
         finish_output_files, remap_result_files,
     )
     stage = batch_output_directory(tmp_path, '批次123', 'JOB_3')

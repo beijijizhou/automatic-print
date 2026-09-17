@@ -5,9 +5,9 @@ import numpy as np
 import pytest
 from PIL import Image
 import pyvips
-from automatic_print.layout import LayoutSettings
-from automatic_print.layout_engine.atomic_png import save_png
-from automatic_print.layout_engine.png_codecs import fast
+from automatic_print.layout_engine import LayoutSettings
+from automatic_print.layout_engine.rendering.storage.atomic_png import save_png
+from automatic_print.layout_engine.rendering.png import fast
 
 
 @pytest.mark.parametrize('vips', [False, True])
@@ -80,7 +80,7 @@ def test_gui_fast_save_defaults_and_persists(tmp_path):
 
 
 def test_progress_cancellation_is_not_swallowed_by_codec_fallback(tmp_path):
-    from automatic_print.cancellation import TaskCancelled
+    from automatic_print.runtime.cancellation import TaskCancelled
     def cancelled(*a): raise TaskCancelled('test cancellation')
     target = tmp_path/'cancelled.png'
     with pytest.raises(TaskCancelled):

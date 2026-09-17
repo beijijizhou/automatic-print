@@ -4,8 +4,9 @@ from pathlib import Path
 import numpy as np
 import pytest
 from PIL import Image
-from automatic_print.layout import LayoutSettings,generate_layout
-from automatic_print.layout_engine import header_gap,gap_fallback
+from automatic_print.layout_engine import LayoutSettings,generate_layout
+from automatic_print.layout_engine.labeling.base import header_gap
+from automatic_print.layout_engine.planning.zones import gap_fallback
 from test_header_gap import sample
 
 
@@ -65,7 +66,7 @@ def test_uniform_dual_knife_failure_retries_original_paths(monkeypatch):
 
 
 def test_selected_majority_plan_skips_redundant_rotation_overflow_pass(monkeypatch):
-    from automatic_print.layout_engine import width_fit
+    from automatic_print.layout_engine.planning.zones import width_fit
     calls = []
     def plan(_paths, _settings, _progress, analysis):
         calls.append(1)

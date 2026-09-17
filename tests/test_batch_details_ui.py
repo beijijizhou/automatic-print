@@ -25,8 +25,9 @@ def test_removed_batch_details_leave_only_developer_pages(tmp_path):
         assert tool.isVisible()
     assert window.batch_record.document() is window.run_log.document()
     assert panel.preview_tabs.count() == 2
-    assert panel.preview_tabs.tabText(1) == '刀码四种情况'
-    panel.preview_tabs.setCurrentIndex(0)
+    assert panel.preview_tabs.tabText(0) == '标签与刀码位置（默认）'
+    assert panel.preview_tabs.tabText(1) == '批次排版预览'
+    panel.preview_tabs.setCurrentIndex(1)
     assert panel.preview_scroll.isVisible()
     window.developer_mode_checkbox.setChecked(True)
     panel.history_button.click()

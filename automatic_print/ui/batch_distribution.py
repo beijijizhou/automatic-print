@@ -23,7 +23,7 @@ class BatchDistributionLabel(QLabel):
         if not report:
             self.reset()
             return
-        from ..layout_engine.batch_analysis import (
+        from ..layout_engine.orders.batch_analysis import (
             compact_distribution_text, distribution_text, group_distribution,
         )
         distribution = report.get('group_distribution') or group_distribution(report)

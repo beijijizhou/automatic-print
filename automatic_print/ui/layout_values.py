@@ -1,7 +1,7 @@
 from __future__ import annotations
 import json
 
-from ..layout import LayoutSettings
+from ..layout_engine import LayoutSettings
 
 
 def settings_from_window(window) -> LayoutSettings:

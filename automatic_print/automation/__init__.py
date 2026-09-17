@@ -1,10 +1,10 @@
 """Browser automation for receiving and downloading production images."""
 
-from .batch_downloads import (
+from .transfer.downloads import (
     download_production_images,
     extract_production_archives,
 )
-from .longfeng import (
+from .providers.longfeng import (
     BatchPreview,
     ShippingBatchPlan,
     preview_filtered_batch,

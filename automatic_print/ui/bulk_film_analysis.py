@@ -3,7 +3,7 @@ from pathlib import Path
 from PySide6.QtCore import QObject, Signal, Slot, QThread, Qt
 from PySide6.QtWidgets import (QDialog, QVBoxLayout, QHBoxLayout, QPushButton,
     QFileDialog, QListWidget, QAbstractItemView, QLabel, QPlainTextEdit, QSpinBox)
-from ..cancellation import Cancellation
+from ..runtime.cancellation import Cancellation
 from ..history.bulk_analysis import analyze_folders, summary_text
 from .action_icons import action_icon
 from .folder_dialog_paths import image_dialog_start, remember_image_directory

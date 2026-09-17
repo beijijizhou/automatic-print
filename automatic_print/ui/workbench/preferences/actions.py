@@ -25,7 +25,7 @@ class PreferenceActionsMixin:
         if not folder:
             return False
         remember_image_directory(self, folder)
-        from ....layout_engine.platform_detection import detect_selected_platform
+        from ....layout_engine.intake.metadata.platform_detection import detect_selected_platform
         platform = detect_selected_platform(folder)
         if platform:
             self.label_settings.platform.setCurrentText(platform)

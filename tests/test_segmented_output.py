@@ -4,9 +4,9 @@ from pathlib import Path
 import pytest
 from PIL import Image
 
-from automatic_print.layout import LayoutSettings, generate_layout
-from automatic_print.layout_engine.cut_validation import corridor_checks
-from automatic_print.layout_engine.order_groups import order_key
+from automatic_print.layout_engine import LayoutSettings, generate_layout
+from automatic_print.layout_engine.cutting.validation.cut_validation import corridor_checks
+from automatic_print.layout_engine.orders.order_groups import order_key
 
 
 @pytest.mark.parametrize('engine', ['pillow', 'libvips'])
@@ -66,7 +66,7 @@ def test_one_large_order_cannot_be_split(tmp_path):
 
 
 def test_partial_segment_failure_quarantines_only_new_files(tmp_path, monkeypatch):
-    from automatic_print.layout_engine import service
+    from automatic_print.layout_engine.pipeline import service
     paths = []
     for i in range(4):
         path = tmp_path/f'B{i}-1-T-Black-M-NO1-1.png'

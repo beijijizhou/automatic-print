@@ -9,7 +9,7 @@ from .production_preview import ProductionPreview
 from .previews.runtime.loader import PreviewLoader
 from .cut_guide_cache import CutGuideCache
 from .cut_guide_preview import draw_cut_guides
-from ..layout_engine.order_groups import detail_members
+from ..layout_engine.orders.order_groups import detail_members
 from .previews.runtime.snapshot import install_snapshot
 from .layout_schematic import draw_preview_placement
 from .previews.runtime.viewport import resize_preview

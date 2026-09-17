@@ -3,10 +3,10 @@ from dataclasses import replace
 from PIL import Image
 import pytest
 
-from automatic_print.layout import LayoutSettings, generate_layout
-from automatic_print.layout_engine.planner import plan_layout
-from automatic_print.layout_engine.rotation_zones import complete_orders
-from automatic_print.layout_engine.rotation_zones import _rotated
+from automatic_print.layout_engine import LayoutSettings, generate_layout
+from automatic_print.layout_engine.planning.base.planner import plan_layout
+from automatic_print.layout_engine.planning.rotation.rotation_zones import complete_orders
+from automatic_print.layout_engine.planning.rotation.rotation_zones import _rotated
 
 
 def _sources(tmp_path):

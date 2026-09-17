@@ -4,11 +4,11 @@ from pathlib import Path
 from dataclasses import replace
 from time import monotonic
 from .batch_queue import run_queue
-from ..layout import discover_images
-from ..layout_engine.batch_analysis import analyze_batch
-from ..layout_engine.film_comparison import compare_films
+from ..layout_engine import discover_images
+from ..layout_engine.orders.batch_analysis import analyze_batch
+from ..layout_engine.planning.film.film_comparison import compare_films
 from .store import save_run
-from ..layout_engine.batch_snapshot import batch_measurements
+from ..layout_engine.intake.preparation.batch_snapshot import batch_measurements
 
 
 def analyze_folders(folders, settings, progress=None, cancellation=None, path=None, parallelism=4):
@@ -28,8 +28,8 @@ def analyze_folders(folders, settings, progress=None, cancellation=None, path=No
         images = discover_images(folder)
         if not images:
             raise ValueError('文件夹没有支持的图片')
-        from ..layout_engine.header_gap import prepare_paths, annotate_analysis, verify_records
-        from ..layout_engine.output_dpi import resolve_output_dpi
+        from ..layout_engine.labeling.base.header_gap import prepare_paths, annotate_analysis, verify_records
+        from ..layout_engine.intake.metadata.output_dpi import resolve_output_dpi
         local = replace(settings, worker_threads=max(1, min(settings.worker_threads, 4//workers)))
         images, local, gap_records = prepare_paths(images, local, report)
         local = resolve_output_dpi(images, local, report)

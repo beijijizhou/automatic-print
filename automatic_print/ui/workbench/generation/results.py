@@ -7,8 +7,8 @@ from PySide6.QtGui import QDesktopServices
 from PySide6.QtWidgets import QMessageBox
 
 from ....automation.api.s2b.metadata.prepare import metadata_warning_text
-from ....layout_engine.metrics import saving_text
-from ....layout_engine.output_file_info import production_summary_text
+from ....layout_engine.reporting.metrics import saving_text
+from ....layout_engine.output.output_file_info import production_summary_text
 from ...busy_spinner import show_progress
 from ...failure_dialog import show_failure_dialog
 from ...progress_format import duration_text, file_size_text

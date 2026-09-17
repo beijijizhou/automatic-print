@@ -3,9 +3,9 @@ from pathlib import Path
 import pytest
 from PIL import Image
 import pyvips
-from automatic_print.layout import LayoutSettings, generate_layout
-from automatic_print.layout_engine.png_codecs.streaming import validate_final_canvas, validate_header
-from automatic_print.layout_engine.vips_renderer import _balanced_vertical_join
+from automatic_print.layout_engine import LayoutSettings, generate_layout
+from automatic_print.layout_engine.rendering.png.streaming import validate_final_canvas, validate_header
+from automatic_print.layout_engine.rendering.engines.vips_renderer import _balanced_vertical_join
 
 
 def test_final_canvas_rejects_actual_pixel_in_corridor():
@@ -51,7 +51,7 @@ def test_streaming_checks_saved_png_once_without_pre_rendering_canvas(tmp_path):
 
 
 def test_saved_png_reader_rejects_alpha_inside_corridor(tmp_path):
-    from automatic_print.layout_engine.png_codecs.corridor_reader import validate
+    from automatic_print.layout_engine.rendering.png.corridor_reader import validate
     path = tmp_path/'occupied.png'
     with Image.new('RGBA', (100, 200)) as image:
         image.putpixel((50, 199), (1, 2, 3, 255))
@@ -61,8 +61,8 @@ def test_saved_png_reader_rejects_alpha_inside_corridor(tmp_path):
 
 
 def test_saved_png_reader_allows_declared_guide_pixels(tmp_path):
-    from automatic_print.layout_engine.png_codecs.corridor_reader import validate
-    from automatic_print.layout_engine.printed_guides import dot_sprite
+    from automatic_print.layout_engine.rendering.png.corridor_reader import validate
+    from automatic_print.layout_engine.cutting.geometry.printed_guides import dot_sprite
     path = tmp_path/'guide.png'
     box = (49, 190, 3)
     with Image.new('RGBA', (100, 200)) as image, dot_sprite(3) as dot:
@@ -72,7 +72,7 @@ def test_saved_png_reader_allows_declared_guide_pixels(tmp_path):
 
 
 def test_streaming_uses_fixed_fast_png_filter(tmp_path):
-    from automatic_print.layout_engine.atomic_png import save_png
+    from automatic_print.layout_engine.rendering.storage.atomic_png import save_png
     class Canvas:
         width, height = 10, 20
         options = None

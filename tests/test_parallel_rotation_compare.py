@@ -5,10 +5,10 @@ from dataclasses import replace
 from PIL import Image
 import pytest
 
-from automatic_print.layout import LayoutSettings, generate_layout
-from automatic_print.layout_engine import rotation_compare
-from automatic_print.layout_engine.cut_validation import corridor_checks
-from automatic_print.layout_engine.planner import plan_layout
+from automatic_print.layout_engine import LayoutSettings, generate_layout
+from automatic_print.layout_engine.planning.rotation import rotation_compare
+from automatic_print.layout_engine.cutting.validation.cut_validation import corridor_checks
+from automatic_print.layout_engine.planning.base.planner import plan_layout
 
 
 @pytest.mark.parametrize('engine', ['pillow', 'libvips'])
@@ -75,3 +75,30 @@ def test_rotation_switch_is_clickable_from_fast_mode(tmp_path):
     assert window._layout_settings().cutter_rotation_zone
     window.close()
     window.deleteLater()
+
+
+def test_rotation_failure_keeps_verified_normal_plan(monkeypatch):
+    settings = LayoutSettings(
+        dpi=25.4, cutter_mode='dual', cutter_rotation_zone=True,
+        cutter_majority_two_zone=False, film_geometry_workers=1,
+    )
+    normal_result = ([], {}, 100, 200, 200)
+    monkeypatch.setattr(rotation_compare, 'read_cutter_items', lambda *_a, **_k: ({}, {}))
+    monkeypatch.setattr(rotation_compare, 'rotation_items', lambda *_a, **_k: ({}, {}))
+    monkeypatch.setattr(rotation_compare, 'plan_cutter_layout', lambda *_a, **_k: normal_result)
+    monkeypatch.setattr(
+        rotation_compare, 'plan_rotation_zones',
+        lambda *_a, **_k: (_ for _ in ()).throw(ValueError('旋转不安全')),
+    )
+    monkeypatch.setattr(rotation_compare, 'validate_order_placements', lambda *_a: None)
+    monkeypatch.setattr(rotation_compare, 'validate_cut_corridor', lambda *_a: None)
+    monkeypatch.setattr(rotation_compare, 'validate_embedded_marks', lambda *_a: None)
+    monkeypatch.setattr(rotation_compare, 'marked_height', lambda _p, _s, _w, h: h)
+    analysis = {}
+    result = rotation_compare.compare_rotation([], settings, None, analysis, None)
+    assert result[:4] == normal_result[:4]
+    assert analysis['rotation_comparison']['selected_strategy'] == (
+        '常规方案（旋转候选不可用）'
+    )
+    assert analysis['rotation_comparison']['rotation_m'] == .2
+    assert analysis['rotation_comparison']['saved_m'] == 0
