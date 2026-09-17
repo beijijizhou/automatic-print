@@ -6,7 +6,10 @@ from PySide6.QtCore import QProcess, QTimer
 from PySide6.QtWidgets import QApplication
 
 
-RESTART_REQUEST = Path(__file__).parents[1] / ".restart-request"
+# Keep this exactly aligned with dev.py.  The runtime lives two directories
+# below the checkout root; using parents[1] leaves an orphan marker inside the
+# package that the parent launcher can neither observe nor clear.
+RESTART_REQUEST = Path(__file__).parents[2] / ".restart-request"
 
 
 def request_application_restart(window) -> bool:

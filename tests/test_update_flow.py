@@ -30,6 +30,12 @@ def test_normal_launch_discards_stale_development_restart_marker(
     assert not timer.isActive()
 
 
+def test_runtime_and_development_launcher_share_restart_marker():
+    import dev
+
+    assert restart.RESTART_REQUEST == dev.RESTART_REQUEST
+
+
 def wait_until(predicate):
     deadline = monotonic()+5
     while not predicate():
