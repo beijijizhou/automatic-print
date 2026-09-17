@@ -55,6 +55,14 @@ def test_application_root_contains_only_startup_entry_points():
     assert {path.name for path in modules('')} == {'__main__.py', 'app.py'}
 
 
+def test_desktop_entry_points_follow_runtime_module_moves():
+    import dev
+    import run_app
+
+    assert callable(dev.main)
+    assert callable(run_app.run_with_crash_logging)
+
+
 def test_automation_root_is_only_a_public_facade():
     assert not modules('automation')
 

@@ -21,17 +21,14 @@ from automatic_print.layout_engine.intake.preparation.batch_snapshot import batc
 @batch_measurements
 def generate_layout(
     image_paths: Iterable[Path], output_dir: Path, settings: LayoutSettings,
-    progress: ProgressCallback | None = None, plan_ready=None,
-    preview_only=False, analysis_ready=None, batch_name="", phase_ready=None,
-    prepared_plan=None,
-    filename_suffix="",
+    progress: ProgressCallback | None = None, plan_ready=None, preview_only=False,
+    analysis_ready=None, batch_name="", phase_ready=None,
+    prepared_plan=None, filename_suffix="",
 ) -> dict:
     total_started = perf_counter()
     paths = list(image_paths)
     if paths:
-        label_batch_name = str(
-            batch_name or settings.label_batch_name or paths[0].parent.name
-        ).strip()
+        label_batch_name = str(batch_name or settings.label_batch_name or paths[0].parent.name).strip()
         settings = replace(settings, label_batch_name=label_batch_name)
     from automatic_print.automation.api.s2b.metadata.prepare import prepare_s2b_metadata
     s2b_metadata = prepare_s2b_metadata(paths, settings, progress)
@@ -196,8 +193,7 @@ def generate_layout(
         output_format=output_format, use_vips=use_vips,
         save_details=save_details, reading_seconds=reading_seconds,
         combining_seconds=combining_seconds, saving_seconds=saving_seconds,
-        validation_seconds=output_validation_seconds,
-        total_seconds=perf_counter() - total_started,
+        validation_seconds=output_validation_seconds, total_seconds=perf_counter() - total_started,
     )
     from automatic_print.layout_engine.labeling.base.header_gap import verify_records
     verify_records(gap_records)

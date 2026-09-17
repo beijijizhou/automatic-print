@@ -8,7 +8,7 @@ import sys
 import time
 from pathlib import Path
 
-from automatic_print.crash_logging import latest_log_path
+from automatic_print.runtime.crash_logging import latest_log_path
 
 
 PROJECT_ROOT = Path(__file__).resolve().parent
