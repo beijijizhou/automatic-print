@@ -1,4 +1,5 @@
 import os
+from pathlib import Path
 
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
@@ -99,7 +100,7 @@ def test_download_completion_opens_folder_when_option_is_checked(
         },
     )
 
-    assert opened == [str(platform_folder.resolve())]
+    assert [Path(path).resolve() for path in opened] == [platform_folder.resolve()]
     workbench.open_download_folder.setChecked(False)
     result_view.present_action_result(
         workbench,
@@ -110,7 +111,7 @@ def test_download_completion_opens_folder_when_option_is_checked(
             "output_folder": str(platform_folder),
         },
     )
-    assert opened == [str(platform_folder.resolve())]
+    assert [Path(path).resolve() for path in opened] == [platform_folder.resolve()]
     owner.close()
 
 

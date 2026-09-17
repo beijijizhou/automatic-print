@@ -34,7 +34,7 @@ def prepare_one(path, settings):
     root = cache_root()
     if root in path.parents:
         try:
-            record = json.loads(path.with_suffix('.json').read_text())
+            record = json.loads(path.with_suffix('.json').read_text(encoding='utf-8'))
             verify_records([record])
             return path, record
         except (OSError, ValueError, KeyError):
@@ -53,7 +53,7 @@ def prepare_one(path, settings):
     info = target.with_suffix('.json')
     if target.is_file() and info.is_file() and time() - info.stat().st_mtime < TTL:
         try:
-            record = json.loads(info.read_text())
+            record = json.loads(info.read_text(encoding='utf-8'))
             if record.get('source_identity') == fingerprint[:3]:
                 return target, record
         except (OSError, ValueError):

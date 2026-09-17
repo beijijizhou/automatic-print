@@ -24,7 +24,7 @@ def image_name_rows(folder: Path) -> list[tuple[str, str]]:
     if load_batch_type(folder) in MULTI_PIECE_TYPES:
         images = sort_multi_piece_images(images)
     return [
-        (image.name, str(image.relative_to(folder)))
+        (image.name, image.relative_to(folder).as_posix())
         for image in images
     ]
 

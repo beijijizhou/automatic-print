@@ -47,7 +47,7 @@ def test_selected_film_and_current_child_are_highlighted_without_reading(tmp_pat
     assert badge.isVisible()
     assert not panel.summary.info.isVisible()
     assert panel.selected_source.isVisible()
-    assert owner.grab().save('/private/tmp/automatic-print-current-identity.png')
+    assert owner.grab().save(str(tmp_path/'automatic-print-current-identity.png'))
     owner.cutter_settings.printable.right.setValue(450)
     assert '禁止生成' in badge.text()
     assert '#ef4444' in badge.styleSheet()

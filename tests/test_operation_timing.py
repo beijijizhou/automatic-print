@@ -74,7 +74,7 @@ def test_worker_reports_scan_through_output_and_persists_timings(tmp_path):
     assert updates[-1] == result
     assert worker.output == tmp_path/'切膜机文件'
     assert not list(worker.output.glob('*.json'))
-    report = next((tmp_path/'排版日志').glob('*_排版报告*.txt')).read_text()
+    report = next((tmp_path/'排版日志').glob('*_排版报告*.txt')).read_text(encoding='utf-8')
     assert '扫描文件名' in report and '最耗时步骤' in report
     assert '耗时与并行处理' in report
     assert '输出文件信息' in report

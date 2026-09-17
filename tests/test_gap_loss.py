@@ -2,22 +2,23 @@ from automatic_print.layout_engine import LayoutSettings
 from automatic_print.layout_engine.planning.zones.gap_loss import compare_gap_loss, gap_loss_text
 
 
-def test_gap_loss_uses_source_paths_same_policy_and_full_film_area(monkeypatch):
+def test_gap_loss_uses_source_paths_same_policy_and_full_film_area(monkeypatch, tmp_path):
     from automatic_print.layout_engine.planning.base import planner
+    source = tmp_path/'original.png'
+    prepared = tmp_path/'prepared.png'
     seen = []
     def plan(paths, settings, progress):
-        assert str(paths[0]) == '/tmp/original.png'
+        assert paths[0] == source
         assert settings.membrane_gap_mm == 0
         assert not settings.developer_gap_loss and not settings.compare_film_sizes
-        from pathlib import Path
-        assert settings.manual_rotations == ((str(Path('/tmp/original.png').resolve()),90),)
-        assert settings.sequence_numbers == ((str(Path('/tmp/original.png').resolve()),1),)
+        assert settings.manual_rotations == ((str(source.resolve()),90),)
+        assert settings.sequence_numbers == ((str(source.resolve()),1),)
         progress('批次刀位已确定',100,25.4,'参考刀位')
         return [], {}, 580, 1000, 1000
     monkeypatch.setattr(planner, 'plan_layout', plan)
     settings = LayoutSettings(dpi=25.4,media_width_mm=580,developer_gap_loss=True,
-        manual_rotations=(('/tmp/prepared.png',90),), sequence_numbers=(('/tmp/prepared.png',1),))
-    rows = [dict(source='/tmp/original.png',prepared='/tmp/prepared.png',added_px=40)]
+        manual_rotations=((str(prepared),90),), sequence_numbers=((str(prepared),1),))
+    rows = [dict(source=str(source),prepared=str(prepared),added_px=40)]
     result = compare_gap_loss(rows,settings,1.1,lambda *args:seen.append(args))
     assert abs(result['extra_m']-.1)<1e-10
     assert abs(result['extra_area_m2']-.06)<1e-10
