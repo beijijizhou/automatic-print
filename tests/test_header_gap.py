@@ -83,6 +83,22 @@ def test_coloured_haloo_card_footer_is_included_before_gap(tmp_path):
     assert added == 190
 
 
+def test_gap_summary_shows_total_changed_existing_and_failed_counts():
+    records = [
+        {'minimum_mm': 40, 'added_px': 226, 'added_mm': 31.89, 'warning': ''},
+        {'minimum_mm': 40, 'added_px': 227, 'added_mm': 32.04, 'warning': ''},
+        {'minimum_mm': 40, 'added_px': 0, 'warning': ''},
+        {'minimum_mm': 40, 'added_px': 0, 'warning': '未找到可靠分界'},
+    ]
+
+    text = header_gap.gap_summary(records)
+
+    for expected in ('目标 40 毫米', '共 4 张', '实际扩充 2 张',
+                     '原本已满足 1 张', '未能扩充 1 张',
+                     '31.89–32.04 毫米'):
+        assert expected in text
+
+
 def test_cache_expiry_parameter_change_and_original_freshness(tmp_path, monkeypatch):
     path = sample(tmp_path/'B1-1-T-Black-M-NO1-1.png')
     settings = LayoutSettings(dpi=25.4, membrane_gap_mm=40)

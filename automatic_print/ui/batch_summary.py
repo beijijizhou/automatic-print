@@ -80,7 +80,11 @@ class BatchSummaryPanel(QGroupBox):
         if not report:
             return
         from ..layout_engine.planning.zones.gap_loss import gap_loss_text
-        self.gap_loss.setText(gap_loss_text(report.get('gap_loss')))
+        from ..layout_engine.labeling.base.header_gap import gap_summary
+        self.gap_loss.setText('\n'.join(filter(None, (
+            gap_summary(report.get('header_gap', [])),
+            gap_loss_text(report.get('gap_loss')),
+        ))))
         folder = self.info.text().split('\n')[0]
         self.info.setText(f"{folder}\n{report['batch_type']} · {report['order_count']} 个订单组"
                           f" · {report['piece_count']} 件 / {report['image_count']} 张图"

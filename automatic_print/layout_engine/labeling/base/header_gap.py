@@ -191,6 +191,27 @@ def gap_report(records):
         return ''
     changed = [record for record in records if record['added_px']]
     rolled = [r for r in records if r.get('rollback_added_mm')]
-    return (f"膜标签与图案最小间距：{records[0]['minimum_mm']:g}毫米 · 补足{len(changed)}张（不缩放原图）\n" +
+    return (gap_summary(records) + '\n' +
             '\n'.join(f"{r['filename']}：新增透明空白{r['added_mm']:.2f}毫米" for r in changed)+
             '\n'+'\n'.join(f"{r['filename']}：已回退新增{r['rollback_added_mm']:.2f}毫米；用户设置未修改" for r in rolled))
+
+
+def gap_summary(records):
+    if not records:
+        return ''
+    changed = [record for record in records if record.get('added_px')]
+    warnings = [record for record in records if record.get('warning')]
+    rolled = [record for record in records if record.get('rollback_added_mm')]
+    already = len(records) - len(changed) - len(warnings) - len(rolled)
+    added = ''
+    if changed:
+        low = min(record['added_mm'] for record in changed)
+        high = max(record['added_mm'] for record in changed)
+        added = (f' · 每张新增 {low:.2f} 毫米' if abs(high-low) < .005 else
+                 f' · 每张新增 {low:.2f}–{high:.2f} 毫米')
+    rollback = f' · 已回退 {len(rolled)} 张' if rolled else ''
+    return (
+        f"膜标签间距：目标 {records[0]['minimum_mm']:g} 毫米 · 共 {len(records)} 张"
+        f" · 实际扩充 {len(changed)} 张 · 原本已满足 {max(0, already)} 张"
+        f" · 未能扩充 {len(warnings)} 张{rollback}{added}（不缩放原图）"
+    )
