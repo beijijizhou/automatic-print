@@ -6,7 +6,9 @@ import pytest
 from automatic_print.layout import LayoutSettings, generate_layout
 from automatic_print.layout_engine.cut_guide_geometry import detect_guide_band
 from automatic_print.layout_engine.item_factory import read_items
-from automatic_print.layout_engine.platform_label import numbered_template, platform_badge
+from automatic_print.layout_engine.platform_label import (
+    numbered_template, placement_badge, platform_badge, platform_text,
+)
 from automatic_print.layout_engine.segmented_output import shift_part
 from automatic_print.layout_engine.cut_validation import validate_cut_corridor
 
@@ -41,9 +43,11 @@ def test_full_batch_platform_badges_and_numbers_are_printed_safely(tmp_path, eng
     with Image.open(tmp_path/'out'/result['filename']) as output:
         for path, p in payloads[0]['planned']:
             qr = detect_guide_band(path)
-            target = round(qr.bottom*p.height_px)-round(qr.top*p.height_px)
-            assert p.platform_height_px == target
-            assert p.platform_y_px == p.y_px+round(qr.top*p.height_px)
+            source_height = p.width_px if p.rotation_degrees % 180 else p.height_px
+            maximum = round(qr.bottom*source_height)-round(qr.top*source_height)
+            font_height = (p.platform_width_px if p.rotation_degrees % 180
+                           else p.platform_height_px)
+            assert 0 < font_height <= maximum
             assert p.platform_x_px+p.platform_width_px < p.x_px
             box = (p.platform_x_px, p.platform_y_px,
                    p.platform_x_px+p.platform_width_px, p.platform_y_px+p.platform_height_px)
@@ -63,9 +67,16 @@ def test_rotated_platform_uses_actual_rotated_qr_height(tmp_path, degrees, engin
     options, _ = read_items([path], settings(cutter_mode='single',
         manual_rotations=((str(path.resolve()), degrees),)), None)
     item = options[0][0]
-    qr = detect_guide_band(path).rotated(degrees)
-    assert item.platform_height == round(qr.bottom*item.height)-round(qr.top*item.height)
-    assert item.platform_ry-item.image_ry == round(qr.top*item.height)
+    qr = detect_guide_band(path)
+    source_height = item.width if degrees % 180 else item.height
+    maximum = round(qr.bottom*source_height)-round(qr.top*source_height)
+    font_height = item.platform_width if degrees % 180 else item.platform_height
+    assert 0 < font_height <= maximum
+    badge = placement_badge(
+        platform_text(path, settings()), item.platform_width,
+        item.platform_height, degrees,
+    )
+    badge.close()
     result = generate_layout([path], tmp_path/'out', settings(cutter_mode='single',
         png_engine=engine, manual_rotations=((str(path.resolve()), degrees),)))
     p = result['placements'][0]
@@ -91,6 +102,79 @@ def test_missing_qr_warns_without_blocking_and_sequence_is_not_duplicated(tmp_pa
     assert badge.height == 40
     assert badge.getchannel('A').getbbox()[3]-badge.getchannel('A').getbbox()[1] >= 38
     badge.close()
+
+
+def test_platform_badge_includes_source_size_and_stays_within_qr_height(tmp_path):
+    path = qr_image(tmp_path/'ORDER-1-T-Black-3XL-NO1-1.png')
+    text = platform_text(path, settings())
+    assert text == '隆丰 · 3XL'
+    badge = platform_badge(text, 40)
+    ink = badge.getchannel('A').getbbox()
+    assert badge.height == 40
+    assert ink is not None and ink[3]-ink[1] <= 40
+    badge.close()
+
+
+@pytest.mark.parametrize('degrees', [0, 90])
+def test_source_size_badge_uses_largest_space_inside_rotated_qr_card(
+        tmp_path, degrees):
+    cv2 = pytest.importorskip('cv2')
+    qr = Image.fromarray(cv2.QRCodeEncoder_create().encode('SIZE')).convert('RGBA')
+    path = tmp_path/'ORDER-1-T-Black-3XL-NO1-1.png'
+    source = Image.new('RGBA', (270, 250))
+    source.paste('white', (0, 0, 110, 60))
+    source.paste(qr, (75, 10))
+    source.paste('blue', (0, 70, 270, 250))
+    source.save(path, dpi=(25.4, 25.4))
+    source.close()
+    options, _ = read_items([path], settings(
+        cutter_mode='single', platform_reuse_qr=True,
+        manual_rotations=((str(path.resolve()), degrees),),
+    ), None)
+    item = options[0][0]
+    source_region = detect_guide_band(path)
+    source_height = item.width if degrees % 180 else item.height
+    maximum = (round(source_region.bottom*source_height)
+               - round(source_region.top*source_height))
+    font_height = item.platform_width if degrees % 180 else item.platform_height
+    assert 0 < font_height <= maximum
+    badge = placement_badge(
+        '隆丰 · 3XL', item.platform_width, item.platform_height, degrees,
+    )
+    assert badge.size == (item.platform_width, item.platform_height)
+    if degrees == 90:
+        assert badge.height > badge.width
+    badge.close()
+
+
+@pytest.mark.parametrize('engine', ['pillow', 'libvips'])
+@pytest.mark.parametrize('degrees', [0, 90])
+def test_source_size_badge_is_rendered_in_qr_card_for_each_engine(
+        tmp_path, engine, degrees):
+    cv2 = pytest.importorskip('cv2')
+    qr = Image.fromarray(cv2.QRCodeEncoder_create().encode('OUTPUT')).convert('RGBA')
+    path = tmp_path/'ORDER-1-T-Black-3XL-NO1-1.png'
+    source = Image.new('RGBA', (270, 250))
+    source.paste('white', (0, 0, 110, 60))
+    source.paste(qr, (75, 10))
+    source.paste('blue', (0, 70, 270, 250))
+    source.save(path, dpi=(25.4, 25.4))
+    source.close()
+    result = generate_layout([path], tmp_path/engine, settings(
+        cutter_mode='single', platform_reuse_qr=True, png_engine=engine,
+        manual_rotations=((str(path.resolve()), degrees),),
+    ))
+    placement = result['placements'][0]
+    assert placement['platform_width_px'] > 0
+    with Image.open(tmp_path/engine/result['filename']) as output:
+        box = (
+            placement['platform_x_px'], placement['platform_y_px'],
+            placement['platform_x_px']+placement['platform_width_px'],
+            placement['platform_y_px']+placement['platform_height_px'],
+        )
+        badge = output.crop(box)
+        assert badge.getchannel('A').getbbox() is not None
+        assert (0, 0, 0, 255) in set(badge.getdata())
 
 
 def test_qr_reuse_never_falls_back_to_cutter_lane(tmp_path, monkeypatch):
@@ -127,9 +211,7 @@ def test_parallel_segments_keep_global_numbers_and_platform_coordinates(tmp_path
     for part in result['parts']:
         assert part['cut_corridor']['pixel_verified']
         with Image.open(tmp_path/'out'/part['filename']) as output:
-            for p in part['placements']:
-                qr = detect_guide_band(tmp_path/p['source'])
-                assert p['platform_y_px'] == p['y_px']+round(qr.top*p['height_px'])
-                box = (p['platform_x_px'], p['platform_y_px'],
+                for p in part['placements']:
+                    box = (p['platform_x_px'], p['platform_y_px'],
                     p['platform_x_px']+p['platform_width_px'], p['platform_y_px']+p['platform_height_px'])
                 assert output.crop(box).getchannel('A').getbbox() is not None

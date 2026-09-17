@@ -5,8 +5,8 @@ from functools import lru_cache
 from .cut_guide_geometry import detect_guide_band
 from .models import mm_to_px
 from .platform_space import header_space
-from .membrane_region import MembraneRegion
 from .measurement_timing import measured
+from .source_metadata import source_size
 
 
 def _font(size):
@@ -21,9 +21,34 @@ def _font(size):
 
 
 @measured('平台文字测量')
-def platform_badge(text, target_height):
+def platform_badge(text, target_height, degrees=0):
     width, pixels = _badge_data(text, target_height)
-    return Image.frombytes('RGBA', (width, target_height), pixels)
+    badge = Image.frombytes('RGBA', (width, target_height), pixels)
+    transpose = {
+        90: Image.Transpose.ROTATE_90,
+        -90: Image.Transpose.ROTATE_270,
+        180: Image.Transpose.ROTATE_180,
+    }.get(degrees)
+    if transpose is None:
+        return badge
+    rotated = badge.transpose(transpose)
+    badge.close()
+    return rotated
+
+
+def placement_badge(text, width, height, degrees):
+    """Rebuild the badge from stored final geometry without changing scale."""
+    source_height = width if degrees % 180 else height
+    badge = platform_badge(text, source_height, degrees)
+    if badge.size != (width, height):
+        badge.close()
+        raise ValueError('平台尺码标签测量与输出尺寸不一致，禁止输出。')
+    return badge
+
+
+def platform_text(path, settings):
+    """Use one per-image badge text for geometry, preview, and output."""
+    return f'{settings.platform_name} · {source_size(path)}'
 
 
 @lru_cache(maxsize=64)
@@ -60,31 +85,49 @@ def platform_geometry(path, settings, width, height, degrees):
     if (settings.platform_below_marker and not settings.platform_reuse_qr
             and settings.color_block_enabled and settings.platform_font_height_mm > 0):
         target = max(2, mm_to_px(settings.platform_font_height_mm, settings.dpi))
-        badge = platform_badge(settings.platform_name, target)
-        badge_width = badge.width
+        badge = platform_badge(platform_text(path, settings), target, degrees)
+        badge_width, badge_height = badge.size
         badge.close()
-        return 0, 0, badge_width, target
-    region = detect_guide_band(path)
-    if region is None:
+        return 0, 0, badge_width, badge_height
+    source_region = detect_guide_band(path)
+    if source_region is None:
         # Preserve the source, but never invent the platform badge's geometry.
         return 0, 0, 0, 0
-    region = region.rotated(degrees)
+    source_width, source_height = (
+        (height, width) if degrees % 180 else (width, height)
+    )
+    target = max(
+        1,
+        round(source_region.bottom * source_height)
+        - round(source_region.top * source_height),
+    )
+    region = source_region.rotated(degrees)
     top = round(region.top*height)
-    target = max(1, round(region.bottom*height)-top)
     if settings.platform_font_height_mm > 0:
         target = min(target, max(2, mm_to_px(settings.platform_font_height_mm, settings.dpi)))
-    region = MembraneRegion(region.left, top/height, region.right, (top+target)/height)
-    badge = platform_badge(settings.platform_name, target)
-    badge_width = badge.width
+    text = platform_text(path, settings)
+    badge = platform_badge(text, target, degrees)
+    badge_width, badge_height = badge.size
     badge.close()
     gap = mm_to_px(settings.platform_gap_mm, settings.dpi)
     if settings.platform_below_marker and not settings.platform_reuse_qr and settings.color_block_enabled:
-        return 0, 0, badge_width, target
+        return 0, 0, badge_width, badge_height
     # Developer mode may explicitly reuse verified QR-card space even while
     # the original header gap is preserved.
-    x = (header_space(path, region, width, height, badge_width, target, gap, degrees)
-         if settings.platform_reuse_qr or not (settings.preserve_header_gap and degrees % 180 == 0)
-         else None)
+    search_header = (
+        settings.platform_reuse_qr
+        or not (settings.preserve_header_gap and degrees % 180 == 0)
+    )
+    fitted = (
+        _largest_header_badge(
+            path, source_region, source_width, source_height,
+            text, target, gap, degrees,
+        )
+        if search_header else None
+    )
+    if fitted is not None:
+        return fitted
+    x = None
     if x is None:
         if settings.platform_reuse_qr:
             # Missing verified space means no added badge. Never move source-label
@@ -92,7 +135,50 @@ def platform_geometry(path, settings, width, height, degrees):
             return 0, 0, 0, 0
         # Never append a wide platform name to the artwork's right edge.
         x = -gap-badge_width
-    return x, top, badge_width, target
+    return x, top, badge_width, badge_height
+
+
+def _largest_header_badge(
+        path, source_region, source_width, source_height,
+        text, maximum_height, gap, degrees):
+    """Fit in the source QR card, then rotate the whole label with the image."""
+    low, high, best = 2, maximum_height, None
+    while low <= high:
+        target = (low + high) // 2
+        try:
+            badge = platform_badge(text, target)
+        except ValueError:
+            low = target + 1
+            continue
+        badge_width, badge_height = badge.size
+        badge.close()
+        candidate = header_space(
+            path, source_region, source_width, source_height,
+            badge_width, badge_height, gap, 0,
+        )
+        if candidate is None:
+            high = target - 1
+        else:
+            best = _rotate_rect(
+                (candidate, round(source_region.top * source_height),
+                 badge_width, badge_height),
+                source_width, source_height, degrees,
+            )
+            low = target + 1
+    return best
+
+
+def _rotate_rect(rect, source_width, source_height, degrees):
+    """Rotate source pixel geometry exactly like the source image and QR card."""
+    x, y, width, height = rect
+    degrees = degrees % 360
+    if degrees == 90:
+        return y, source_width-x-width, height, width
+    if degrees == 270:
+        return source_height-y-height, x, height, width
+    if degrees == 180:
+        return source_width-x-width, source_height-y-height, width, height
+    return x, y, width, height
 
 
 def numbered_template(settings):

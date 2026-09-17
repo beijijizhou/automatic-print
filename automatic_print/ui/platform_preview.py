@@ -2,16 +2,21 @@ from PIL.ImageQt import ImageQt
 from PySide6.QtCore import QRectF
 from PySide6.QtGui import QImage, QFont, QColor, QPen
 
-from ..layout_engine.platform_label import platform_badge
+from ..layout_engine.platform_label import placement_badge, platform_text
 
 
-def draw_platform_badge(preview, painter, placement):
+def draw_platform_badge(preview, painter, placement, path):
     if not placement.platform_width_px:
         return
     cache = preview.platform_badges
-    key = (preview.render_settings.platform_name, placement.platform_height_px)
+    key = (
+        platform_text(path, preview.render_settings),
+        placement.platform_width_px,
+        placement.platform_height_px,
+        placement.rotation_degrees,
+    )
     if key not in cache:
-        badge = platform_badge(*key)
+        badge = placement_badge(*key)
         cache[key] = QImage(ImageQt(badge)).copy()
         badge.close()
         while len(cache) > 12:
@@ -35,7 +40,7 @@ def draw_platform_diagram(preview, painter, image):
     painter.setFont(font)
     painter.setPen(QColor('black'))
     painter.drawText(QRectF(qr.right()+6, qr.top(), card.right()-qr.right()-10, qr.height()),
-                     preview.values()['platform_name'])
+                     preview.values()['platform_name']+' · M')
     painter.restore()
 
 

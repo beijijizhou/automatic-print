@@ -6,7 +6,7 @@ from threading import RLock
 from PIL import ImageColor
 from .dynamic_label import source_label_badge
 from .models import LayoutSettings, Placement, ProgressCallback, mm_to_px
-from .platform_label import platform_badge
+from .platform_label import placement_badge, platform_text
 try:
     import pyvips
 except (ImportError, OSError):
@@ -88,7 +88,12 @@ def build_vips_rows(
             xs.append(placement.x_px)
             ys.append(placement.y_px - row_y)
             if placement.platform_width_px:
-                badge = platform_badge(settings.platform_name, placement.platform_height_px)
+                badge = placement_badge(
+                    platform_text(path, settings),
+                    placement.platform_width_px,
+                    placement.platform_height_px,
+                    placement.rotation_degrees,
+                )
                 layers.append(pyvips.Image.new_from_memory(badge.tobytes(), badge.width,
                     badge.height, 4, 'uchar').copy(interpretation='srgb'))
                 xs.append(placement.platform_x_px)

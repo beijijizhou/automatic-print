@@ -84,7 +84,7 @@ def draw_preview_placement(preview, painter, path, placement, rect, pending, sca
                        placement.number_width_px, placement.number_height_px),
                 preview.badges[path],
             )
-    draw_platform_badge(preview, painter, placement)
+    draw_platform_badge(preview, painter, placement, path)
     if placement.color_block_width_px:
         painter.fillRect(
             QRectF(placement.color_block_x_px, placement.color_block_y_px,

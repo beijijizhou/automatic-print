@@ -1,7 +1,7 @@
 """Bounded preview pixels, with production geometry and production badge rendering."""
 from PIL import Image, ImageDraw
 from ....layout_engine.dynamic_label import source_label_badge
-from ....layout_engine.platform_label import platform_badge
+from ....layout_engine.platform_label import placement_badge, platform_text
 
 
 def render_example(path, item, labels, settings):
@@ -33,7 +33,10 @@ def render_example(path, item, labels, settings):
         paste(badge, item.label_rx, item.label_ry, item.label_width, item.label_height)
         badge.close()
     if item.platform_width:
-        badge = platform_badge(settings.platform_name, item.platform_height)
+        badge = placement_badge(
+            platform_text(path, settings), item.platform_width,
+            item.platform_height, item.rotation_degrees,
+        )
         paste(badge, item.platform_rx, item.platform_ry, item.platform_width, item.platform_height)
         badge.close()
     if item.block_width:

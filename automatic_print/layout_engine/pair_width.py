@@ -16,7 +16,7 @@ def apply_pair_width_cap(paths, settings, progress=None):
             and settings.cutter_majority_two_zone):
         return settings
     requested_cap = settings.force_small_pair_width_mm
-    cap = min(requested_cap, _safe_artwork_width(settings))
+    cap = min(requested_cap, _safe_artwork_width(paths, settings))
     if cap <= 0:
         raise ValueError('强制双排宽度必须大于 0 毫米。')
     overrides = dict(settings.dimension_overrides)
@@ -43,17 +43,16 @@ def apply_pair_width_cap(paths, settings, progress=None):
                    width_adjustments=tuple(notices))
 
 
-def _safe_artwork_width(settings):
+def _safe_artwork_width(paths, settings):
     lane = settings.media_width_mm / 2 - settings.cutter_safety_mm
     marker = settings.color_block_width_mm if settings.color_block_enabled else 0
     if settings.number_images and settings.platform_name and settings.platform_font_height_mm > 0:
-        from .platform_label import platform_badge
-        badge = platform_badge(
-            settings.platform_name,
-            max(2, mm_to_px(settings.platform_font_height_mm, settings.dpi)),
-        )
-        marker = max(marker, badge.width * 25.4 / settings.dpi)
-        badge.close()
+        from .platform_label import platform_badge, platform_text
+        target = max(2, mm_to_px(settings.platform_font_height_mm, settings.dpi))
+        for path in paths:
+            badge = platform_badge(platform_text(path, settings), target)
+            marker = max(marker, badge.width * 25.4 / settings.dpi)
+            badge.close()
     # The external cutter marker touches the source QR-card edge in the
     # preserved-header production layout; do not reserve the old 5 mm gap.
     reserve = marker

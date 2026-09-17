@@ -9,7 +9,7 @@ from .images import normalized_image
 from .dynamic_label import source_label_badge
 from .models import LayoutSettings, Placement, ProgressCallback
 from .image_pipeline import prepared_images
-from .platform_label import platform_badge
+from .platform_label import placement_badge, platform_text
 
 
 def _prepare(item: tuple[Path, Placement]):
@@ -55,7 +55,13 @@ def _compose(canvas, planned, labels, settings, progress, workers):
         ):
             canvas.paste(image, (placement.x_px, placement.y_px))
             if placement.platform_width_px:
-                badge = platform_badge(settings.platform_name, placement.platform_height_px)
+                path = planned[index-1][0]
+                badge = placement_badge(
+                    platform_text(path, settings),
+                    placement.platform_width_px,
+                    placement.platform_height_px,
+                    placement.rotation_degrees,
+                )
                 canvas.alpha_composite(badge, (placement.platform_x_px, placement.platform_y_px))
                 badge.close()
             if settings.number_images:
