@@ -150,8 +150,8 @@ def validate_vips_output(path, check, progress=None, guide_boxes=(), transition_
     corridors = sorted(
         corridor_checks(check), key=lambda row: row.get("start_y_px", 0)
     )
-    image = pyvips.Image.new_from_file(
-        str(path), access="sequential")
+    access = 'random' if path.suffix.lower() in {'.tif', '.tiff'} else 'sequential'
+    image = pyvips.Image.new_from_file(str(path), access=access)
     from automatic_print.layout_engine.cutting.geometry.printed_guides import vips_corridors_are_clear
     if not vips_corridors_are_clear(
         image, corridors, guide_boxes, transition_rectangles

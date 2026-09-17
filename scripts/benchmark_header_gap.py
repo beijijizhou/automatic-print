@@ -36,7 +36,7 @@ def verify_copies(records):
     return count
 
 
-def run(source, output, cache, stack_platform=False):
+def run(source, output, cache, stack_platform=False, output_format='png'):
     paths = sorted(source.glob('*.png'))
     if not paths:
         raise ValueError('源目录没有PNG')
@@ -46,6 +46,7 @@ def run(source, output, cache, stack_platform=False):
         cutter_left_marker_external=True, cutter_left_marker_lift_mm=1.5,
         cutter_knife_dots=False, preserve_header_gap=True, cutter_compare_whole_rotation=True,
         cutter_tail_rotation=True, png_engine='libvips', platform_name='隆丰',
+        output_format=output_format,
         platform_font_height_mm=8, label_text_template='CY 1001Mt26',
         label_machine_enabled=True, label_sequence_enabled=True, compare_film_sizes=True,
         platform_below_marker=stack_platform)
@@ -85,5 +86,6 @@ if __name__ == '__main__':
     parser.add_argument('--output', type=Path, required=True)
     parser.add_argument('--cache', type=Path, required=True)
     parser.add_argument('--stack-platform', action='store_true')
+    parser.add_argument('--format', choices=('png', 'tiff'), default='png')
     args = parser.parse_args()
-    run(args.source, args.output, args.cache, args.stack_platform)
+    run(args.source, args.output, args.cache, args.stack_platform, args.format)

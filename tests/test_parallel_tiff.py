@@ -4,6 +4,7 @@ from PIL import Image
 import tifffile
 
 from automatic_print.layout_engine import LayoutSettings, generate_layout
+from automatic_print.layout_engine.cutting.validation import cut_validation
 
 
 def test_parallel_tiff_preserves_rgba_dpi_and_strips(tmp_path):
@@ -39,6 +40,25 @@ def test_tiff_names_keep_extension_when_deduplicated(tmp_path):
     from automatic_print.layout_engine.output.output_name import unused_output_path
     (tmp_path / 'batch.tif').touch()
     assert unused_output_path(tmp_path, 'batch.tif').name == 'batch (2).tif'
+
+
+def test_tiff_cut_validation_uses_random_access(tmp_path, monkeypatch):
+    accesses = []
+    monkeypatch.setattr(
+        'pyvips.Image.new_from_file',
+        lambda path, access: accesses.append(access) or object(),
+    )
+    monkeypatch.setattr(
+        'automatic_print.layout_engine.cutting.geometry.printed_guides.vips_corridors_are_clear',
+        lambda image, corridors, guide_boxes, transition_rectangles: True,
+    )
+
+    cut_validation.validate_vips_output(
+        tmp_path / 'batch.tif',
+        {'safe_left_px': 10, 'safe_right_px': 20},
+    )
+
+    assert accesses == ['random']
 
 
 def test_segmented_tiff_keeps_each_parallel_output(tmp_path):
