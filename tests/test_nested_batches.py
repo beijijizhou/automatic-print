@@ -37,7 +37,7 @@ def test_scan_lists_direct_images_once_and_skips_outputs_and_symlink_loops(tmp_p
     ordered = [b['folder'] for b in scan['batches']]
     board.reset(ordered, root, dict(enumerate(scan['batches'])))
     assert {item.text(0) for item in board.items.values()} == {'HL', '白色/批次A', '黑色/大码/批次A'}
-    assert all(item.text(2) == '12' for item in board.items.values())
+    assert all(item.text(1) == '12' for item in board.items.values())
     assert all('NO1-1.png' in item.toolTip(0) for item in board.items.values())
     board.close()
 
@@ -148,16 +148,16 @@ def test_combined_status_keeps_child_folders_visible(tmp_path):
     item=board.items[0]
     assert item.childCount()==3 and item.isExpanded()
     assert [item.child(i).text(0) for i in range(3)]==['S','M','3XL']
-    assert [item.child(i).text(2) for i in range(3)]==['12','8','4']
+    assert [item.child(i).text(1) for i in range(3)]==['12','8','4']
     board.update_source(0,str(root/'S'),'测量标签与刀码 · 4线程并行',3,12,'S-003.png')
-    assert item.child(0).text(1).endswith('3/12')
-    assert item.child(1).text(1)=='已加入合并批次'
+    assert item.child(0).toolTip(0).endswith('S-003.png') and '3/12' in item.child(0).toolTip(0)
+    assert '已加入合并批次' in item.child(1).toolTip(0)
     board.update_batch(0,'膜规格比较',2,4)
     assert item.treeWidget() is board.groups['进行中'] and item.isExpanded()
-    assert all(item.child(i).text(1).startswith('随整批处理') for i in range(3))
+    assert all('随整批处理' in item.child(i).toolTip(0) for i in range(3))
     board.update_batch(0,'批次生成完成')
     assert item.treeWidget() is board.groups['已完成'] and item.isExpanded()
-    assert all(item.child(i).text(1)=='已随整批完成' for i in range(3))
+    assert all('已随整批完成' in item.child(i).toolTip(0) for i in range(3))
     board.close()
 
 

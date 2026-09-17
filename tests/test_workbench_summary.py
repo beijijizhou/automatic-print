@@ -32,14 +32,15 @@ def test_current_batch_preview_and_summary_are_visible_and_retained(tmp_path):
     window.settings_dialog.show()
     controller.start()
     assert not panel.summary.progress.isVisible()
+    assert not window.busy_spinner.isVisible()
     window.worker_bridge.layout_preview.emit(payloads[0])
     app.processEvents()
     assert not window.settings_dialog.isVisible()
     assert panel.summary.isVisible()
-    assert panel.summary.title() == '排版数据 · 进度、耗时与总结'
-    assert panel.summary.isAncestorOf(window.progress)
-    assert panel.summary.isAncestorOf(window.status)
-    assert panel.summary.isAncestorOf(window.current_file)
+    assert panel.summary.title() == '排版数据 · 耗时与总结'
+    assert not window.progress.isVisible()
+    assert not window.status.isVisible()
+    assert not window.current_file.isVisible()
     assert panel.summary.isAncestorOf(panel.timings)
     assert panel.timings.title() == ''
     assert 'TEST_BATCH' in panel.summary.info.text()
@@ -71,7 +72,7 @@ def test_current_batch_preview_and_summary_are_visible_and_retained(tmp_path):
     assert '节省用膜' in panel.summary.metrics.text()
     controller.start()
     assert not panel.preview.planned
-    assert '正在计算' in panel.summary.metrics.text()
+    assert not panel.summary.metrics.isVisible()
     controller.end()
     window.close()
 

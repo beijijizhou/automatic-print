@@ -17,6 +17,7 @@ class BatchSummaryPanel(QGroupBox):
             'border: 2px solid #60a5fa; border-radius: 7px; padding: 9px; '
             'font-size: 17px; font-weight: bold; }')
         self.metrics = QLabel('排版后显示总长度、节省用膜和旋转数量。')
+        self.metrics.hide()
         self.progress = QLabel('尚未开始')
         self.gap_loss = QLabel()
         self.gap_loss.setWordWrap(True)
@@ -60,8 +61,9 @@ class BatchSummaryPanel(QGroupBox):
         self.cutting.hide()
         path = Path(folder)
         quantity = f'{count} 张图片' if count is not None else '正在读取图片名称'
-        self.info.setText(f'批次 / 文件夹：{path.name} · {quantity}\n来源：{path}')
+        self.info.setText(f'文件夹：{path.name} · {quantity}\n来源：{path}')
         self.metrics.setText('正在计算本批次长度和省膜结果…')
+        self.metrics.hide()
         self.progress.setText('正在读取本批次；旧预览已清除。')
 
     def show_plan(self, payload):
@@ -70,6 +72,7 @@ class BatchSummaryPanel(QGroupBox):
         rotations = sum(bool(p.rotation_degrees) for _, p in planned)
         self.metrics.setText(self.metrics.text()+f' · 旋转 {rotations} 张'
                              f" · 可用宽度 {payload['settings'].media_width_mm:g} 毫米")
+        self.metrics.show()
         self._show_quality(payload.get('dual_quality', {}))
         self.progress.setText(payload.get('warning') or '排版已确定，下面显示本批次真实预览。')
 
@@ -89,6 +92,7 @@ class BatchSummaryPanel(QGroupBox):
             self.metrics.setText(f"排版长度 {report['height_m']:.3f} 米"
                                  f" · 常规基准 {report['height_m']+saved:.3f} 米"
                                  f" · 节省用膜 {saved:.3f} 米")
+            self.metrics.show()
         self._show_comparison(report)
         self.anomalies.setText(anomaly_text(report))
         self.anomalies.setVisible(bool(self.anomalies.text()))
@@ -126,6 +130,7 @@ class BatchSummaryPanel(QGroupBox):
                              f" · 常规基准 {result['baseline_height_mm']/1000:.3f} 米"
                              f" · 节省用膜 {result['saved_length_m']:.3f} 米"
                              f"（{result['saved_percent']:.1f}%） · 旋转 {result['rotation_count']} 张")
+        self.metrics.show()
         self.progress.setText(f"已完成 · 输出：{Path(output)/result['filename']}")
         if result.get('segment_count', 1) == 1:
             self.progress.setText(self.progress.text()+' · 单张输出，未启用多段并行')

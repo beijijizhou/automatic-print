@@ -29,14 +29,14 @@ def test_all_batches_are_visible_in_three_groups_with_live_independent_states(tm
     assert board.groups['进行中'].topLevelItemCount() == 4
     assert board.groups['未完成'].topLevelItemCount() == 2
     for index in range(4):
-        assert f'{index+1}/20' in board.items[index].text(1)
-        assert f'image-{index}.png' in board.items[index].toolTip(1)
+        assert f'{index+1}/20' in board.items[index].toolTip(0)
+        assert f'image-{index}.png' in board.items[index].toolTip(0)
         assert not board.items[index].icon(0).isNull()
     board.setCurrentIndex(2)
     before = list(selected)
     board.update_batch(2, '批次预览完成')
     board.update_distribution(2, {'sizes': {'S': 12, 'M': 8}})
-    assert board.items[2].text(3) == 'S 12件 · M 8件'
+    assert board.items[2].text(2) == 'S 12件 · M 8件'
     assert board.currentIndex() == 2
     assert selected == before  # Moving between groups does not change the preview.
     assert board.items[2].isSelected()
@@ -44,7 +44,7 @@ def test_all_batches_are_visible_in_three_groups_with_live_independent_states(tm
     assert board.groups['已完成'].topLevelItemCount() == 1
     assert board.groups['进行中'].topLevelItemCount() == 2
     assert board.groups['未完成'].topLevelItemCount() == 3
-    assert '失败' in board.items[1].text(1)
+    assert '失败' in board.items[1].toolTip(0)
     board.groups['未完成'].setCurrentItem(board.items[5])
     assert selected[-1] == 5
     board.resize(900, 230)

@@ -28,10 +28,11 @@ class BatchStatusBoard(QWidget):
             heading.addStretch()
             body.addLayout(heading)
             tree = QTreeWidget()
-            tree.setHeaderLabels(['批次 / 子文件夹相对路径', '当前状态', '图片数', '尺码群 / 订单群'])
+            tree.setHeaderLabels(['文件夹', '图片数', '尺码群 / 订单群'])
             tree.setRootIsDecorated(True)
             tree.setWordWrap(True)
-            tree.setColumnWidth(0, 180)
+            tree.setColumnWidth(0, 120)
+            tree.setColumnWidth(1, 60)
             tree.itemSelectionChanged.connect(lambda t=tree: self.choose(t))
             body.addWidget(tree)
             row.addLayout(body, 1)
@@ -49,21 +50,24 @@ class BatchStatusBoard(QWidget):
         for index, folder in enumerate(folders):
             info = (information or {}).get(index, {})
             name = folder.relative_to(root).as_posix() if root else folder.name
-            item = QTreeWidgetItem([name if name != '.' else folder.name, '等待开始',
-                                   str(info['image_count']) if 'image_count' in info else ''])
+            item = QTreeWidgetItem([name if name != '.' else folder.name,
+                                   str(info['image_count']) if 'image_count' in info else '', ''])
             item.setData(0, Qt.UserRole, index)
             item.setIcon(0, action_icon('waiting', '#b45309'))
-            item.setToolTip(0, str(folder)+'\n'+'\n'.join(p.name for p in info.get('images', [])))
+            source_tip = str(folder)+'\n'+'\n'.join(p.name for p in info.get('images', []))
+            item.setData(0, Qt.UserRole+2, source_tip)
+            item.setToolTip(0, source_tip+'\n状态：等待开始')
             sources=info.get('source_batches',())
             if sources:
-                item.setText(1,f'等待合并 · {len(sources)}个子文件夹')
                 for source in sources:
                     path=source['folder']
                     relative=path.relative_to(root).as_posix() if root else path.name
-                    child=QTreeWidgetItem([relative,'已加入合并批次',str(source['image_count'])])
+                    child=QTreeWidgetItem([relative,str(source['image_count']),''])
                     child.setIcon(0,action_icon('folder','#64748b'))
                     child.setData(0,Qt.UserRole+1,str(path))
-                    child.setToolTip(0,str(path)+'\n'+'\n'.join(p.name for p in source.get('images',())))
+                    child_tip=str(path)+'\n'+'\n'.join(p.name for p in source.get('images',()))
+                    child.setData(0,Qt.UserRole+2,child_tip)
+                    child.setToolTip(0,child_tip+'\n状态：已加入合并批次')
                     item.addChild(child)
             self.groups['未完成'].addTopLevelItem(item)
             if sources:
@@ -95,8 +99,7 @@ class BatchStatusBoard(QWidget):
             item.setExpanded(True)
         count = f' · {current}/{total}' if total else (
             ' · 已写入 '+file_size_text(current) if stage == '保存图片' else '')
-        item.setText(1, stage+count)
-        item.setToolTip(1, stage+count+'\n'+filename)
+        item.setToolTip(0, item.data(0,Qt.UserRole+2)+'\n状态：'+stage+count+'\n'+filename)
         icon, color = ('done', '#15803d') if done else (
             ('warning', '#be123c') if failed else ('waiting', '#b45309') if group == '未完成'
             else ('refresh', '#2563eb'))
@@ -105,8 +108,8 @@ class BatchStatusBoard(QWidget):
             '整批失败，未单独输出' if failed else f'随整批处理 · {stage}')
         if '测量标签与刀码' not in stage:
             for child_index in range(item.childCount()):
-                item.child(child_index).setText(1,child_status)
-                item.child(child_index).setToolTip(1,child_status+count)
+                child=item.child(child_index)
+                child.setToolTip(0,child.data(0,Qt.UserRole+2)+'\n状态：'+child_status+count)
         item.setSelected(index == self.index)
         for tree in self.groups.values():
             tree.blockSignals(False)
@@ -121,8 +124,7 @@ class BatchStatusBoard(QWidget):
             if child.data(0,Qt.UserRole+1)==folder:
                 done=current>=total
                 text=f'{stage} · {current}/{total}'+(' · 已完成' if done else '')
-                child.setText(1,text)
-                child.setToolTip(1,text+'\n'+filename)
+                child.setToolTip(0,child.data(0,Qt.UserRole+2)+'\n状态：'+text+'\n'+filename)
                 child.setIcon(0,action_icon('done' if done else 'refresh',
                                            '#15803d' if done else '#2563eb'))
                 return
@@ -132,8 +134,8 @@ class BatchStatusBoard(QWidget):
         if item is None:
             return
         from ..layout_engine.orders.batch_analysis import compact_distribution_text, distribution_text
-        item.setText(3, compact_distribution_text(report, limit=4))
-        item.setToolTip(3, distribution_text(report))
+        item.setText(2, compact_distribution_text(report, limit=4))
+        item.setToolTip(2, distribution_text(report))
 
     def currentIndex(self):
         return self.index

@@ -54,9 +54,15 @@ class BusySpinner(QWidget):
 
 def show_busy(window) -> None:
     window.progress.hide()
+    if getattr(window, 'compact_status_only', False):
+        window.busy_spinner.stop()
+        return
     window.busy_spinner.start()
 
 
 def show_progress(window) -> None:
     window.busy_spinner.stop()
+    if getattr(window, 'compact_status_only', False):
+        window.progress.hide()
+        return
     window.progress.show()

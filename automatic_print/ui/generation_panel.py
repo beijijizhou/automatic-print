@@ -5,7 +5,8 @@ from PySide6.QtWidgets import (
 
 
 def build_data_panel(window, summary, timings):
-    summary.setTitle('排版数据 · 进度、耗时与总结')
+    window.compact_status_only = True
+    summary.setTitle('排版数据 · 耗时与总结')
     layout = summary.layout()
     layout.removeWidget(summary.film_table)
     for widget in (summary.info, summary.metrics, summary.progress):
@@ -17,14 +18,9 @@ def build_data_panel(window, summary, timings):
     left = QVBoxLayout()
     for widget in (summary.info, summary.metrics, summary.progress):
         left.addWidget(widget)
-    activity = QHBoxLayout()
-    activity.addWidget(window.busy_spinner)
-    activity.addWidget(window.progress, 1)
-    left.addLayout(activity)
-    for widget in (window.status, window.current_file):
-        left.addWidget(widget)
-    window.status.setWordWrap(True)
-    window.current_file.setWordWrap(True)
+    for widget in (window.busy_spinner, window.progress, window.status, window.current_file):
+        widget.setParent(summary)
+        widget.hide()
     left.addStretch()
     columns = QHBoxLayout()
     columns.addLayout(left, 1)
