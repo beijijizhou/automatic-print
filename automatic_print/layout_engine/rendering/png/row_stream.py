@@ -21,7 +21,15 @@ def save(rows, target, width, height, settings, guide_boxes, rectangles, progres
     started = perf_counter()
     first_pixels = [None]
     rendered_rows = [0]
-    compressor = zlib.compressobj(settings.png_compression_level)
+    strategy = (zlib.Z_RLE if settings.png_compression_level <= 1
+                else zlib.Z_DEFAULT_STRATEGY)
+    compressor = zlib.compressobj(
+        settings.png_compression_level,
+        zlib.DEFLATED,
+        zlib.MAX_WBITS,
+        zlib.DEF_MEM_LEVEL,
+        strategy,
+    )
     previous = np.zeros(width * 4, dtype=np.uint8)
     ppm = round(settings.dpi / 0.0254)
     header = struct.pack('>IIBBBBB', width, height, 8, 6, 0, 0, 0)
@@ -105,7 +113,7 @@ def save(rows, target, width, height, settings, guide_boxes, rectangles, progres
     finished = perf_counter()
     first = first_pixels[0] or encoded
     return {
-        'encoder': '原生逐行流式PNG（固定UP滤波）',
+        'encoder': '原生逐行流式PNG（固定UP滤波、无损RLE）',
         'steps': [
             {'name': '首行像素准备', 'seconds': first - started},
             {'name': '逐行生成、过滤、压缩与写入', 'seconds': encoded - first},

@@ -5,6 +5,7 @@ from automatic_print.layout_engine.labeling.base.header_region import search_hea
 from automatic_print.layout_engine.cutting.geometry.cut_guide_geometry import detect_guide_band
 from automatic_print.layout_engine.labeling.markers.qr_detection import detect_qr_location
 from automatic_print.layout_engine.labeling.platform.membrane_region import detect_membrane_region
+from automatic_print.layout_engine.measurement.measurement_session import measurement_session
 
 
 @pytest.mark.parametrize('side', ['left', 'right'])
@@ -97,3 +98,23 @@ def test_component_fallback_matches_native_geometry():
     mask[20:35, 20:80] = False
     boxes = _components(mask)
     assert boxes == [[10, 5, 100, 60, int(mask.sum())]]
+
+
+def test_header_region_survives_memory_cache_reset(tmp_path, monkeypatch):
+    from automatic_print.layout_engine.labeling.base import header_region
+    from automatic_print.layout_engine.measurement import measurement_cache
+    monkeypatch.setattr(measurement_cache, 'cache_directory', lambda: tmp_path/'cache')
+    source = Image.new('RGBA', (1000, 1400))
+    source.paste('white', (680, 0, 1000, 150))
+    path = tmp_path/'persistent-card.png'
+    source.save(path)
+
+    with measurement_session():
+        expected = search_header(path)
+    header_region._cached.cache_clear()
+    monkeypatch.setattr(
+        header_region, '_header_pixels',
+        lambda _path: pytest.fail('persistent label geometry was not reused'),
+    )
+    with measurement_session():
+        assert search_header(path) == expected

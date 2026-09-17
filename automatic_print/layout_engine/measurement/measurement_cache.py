@@ -11,6 +11,7 @@ from time import time
 ITEM_SCHEMA = 2
 DIMENSION_SCHEMA = 2
 TRANSPARENT_RECT_SCHEMA = 1
+HEADER_REGION_SCHEMA = 1
 TTL_SECONDS = 24 * 60 * 60
 
 
@@ -150,6 +151,10 @@ def transparent_rect_key(
         TRANSPARENT_RECT_SCHEMA,
         (file_identity, width, height, degrees, tuple(rectangle)),
     )
+
+
+def header_region_key(file_identity):
+    return MeasurementCache.key(HEADER_REGION_SCHEMA, file_identity)
 
 
 def encode_item(item, text):

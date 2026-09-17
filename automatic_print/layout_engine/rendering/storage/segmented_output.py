@@ -74,6 +74,16 @@ def save_concurrency(settings, width, plans, planned):
     return parallel, estimate
 
 
+def use_process_pool(settings, parallel):
+    from automatic_print.layout_engine.labeling.gap.virtual import enabled
+    return (
+        parallel > 1
+        and settings.png_streaming
+        and settings.output_format.lower() == 'png'
+        and enabled(settings)
+    )
+
+
 def generate_segments(paths, output_dir, settings, progress, plan_ready,
                       analysis_ready, batch_name, phase_ready, gap_records):
     from automatic_print.layout_engine.pipeline.service import generate_layout
@@ -140,15 +150,7 @@ def generate_segments(paths, output_dir, settings, progress, plan_ready,
                         progress(stage, current, total, f'第{index+1:03d}段 · {filename}')
         return render_segment_job(*job, progress=report)
     try:
-        platform = settings.platform_name.strip().casefold()
-        process_safe = (
-            parallel > 1
-            and settings.png_streaming
-            and settings.output_format.lower() == 'png'
-            and (platform == 's2b'
-                 or (platform in {'haloo', '隆丰'}
-                     and bool(getattr(settings, 'header_gap_overrides', ()))))
-        )
+        process_safe = use_process_pool(settings, parallel)
         if parallel == 1:
             for index in range(len(parts)):
                 results[index] = render(index)

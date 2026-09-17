@@ -94,7 +94,7 @@
   换行和徽标渲染。单图排版对象`LayoutItem`与`Placement`统一归`layout_engine/domain/models.py`。
 - 渲染与编码：`layout_engine/rendering/engines/pillow_renderer.py`、`layout_engine/rendering/engines/vips_renderer.py`、`layout_engine/rendering/png/`、
   `layout_engine/rendering/storage/segmented_output.py`、`layout_engine/rendering/storage/atomic_png.py`、`layout_engine/rendering/storage/atomic_tiff.py`。超长 PNG 由 `layout_engine/rendering/png/row_stream.py`
-  按排版行依次解码、合成、固定 UP 滤波、压缩和写入，每行只求值一次且不生成中间图片；同一行的最终
+  按排版行依次解码、合成、固定 UP 滤波、无损 RLE 压缩和写入，每行只求值一次且不生成中间图片；同一行的最终
   alpha 像素在压缩前同步核对全部刀位，PNG 发布后顺序读取数据块并核对 CRC、尺寸和 RGBA 格式，
   不再完整解压刚刚验证并编码的超长像素流；不再为每条刀位重复触发超长延迟画布合成，
   也不依赖 libvips 二次打开大图，
@@ -112,7 +112,7 @@
 - 膜方案与统计：`layout_engine/planning/film/film_comparison.py` 直接复用当前实际输出行并并行计算其余方案；`layout_engine/planning/film/film_specs.py`、`layout_engine/reporting/metrics.py`、
   `layout_engine/reporting/operation_timing.py`、`layout_engine/reporting/algorithm_costs.py`。
 - 缓存：`layout_engine/planning/cache/plan_cache.py`、`layout_engine/planning/cache/normal_plan_cache.py`、`layout_engine/planning/cache/cached_planner.py`；单图测量由
-  `layout_engine/measurement/measurement_cache.py` 持久化，并由 `layout_engine/measurement/measurement_session.py` 在任务内共享连接；PNG/TIFF及压缩参数不改变几何，跨输出格式复用同一缓存；单图占位记录首次查询时一次装入任务快照，后续工作线程不再逐条争用 SQLite；
+  `layout_engine/measurement/measurement_cache.py` 持久化，并由 `layout_engine/measurement/measurement_session.py` 在任务内共享连接；PNG/TIFF及压缩参数不改变几何，跨输出格式复用同一缓存；单图占位和标签卡片区域按文件指纹持久化，后续安全复核不重新解码顶部条带；单图占位记录首次查询时一次装入任务快照，后续工作线程不再逐条争用 SQLite；
   `layout_engine/measurement/cutter_measurements.py` 保存本批正常/旋转刀码几何；后续方案即使改变路径顺序，也按文件身份重组并复用，生产方案、整批旋转和膜规格比较不再重复逐图测量。
   内置刀码和文字的透明矩形像素结论也按文件身份、方向和精确矩形持久化；单图缓存24小时，
   重新组批、膜宽变化和普通版本更新不触发源图重新测量。整批排版缓存使用独立排版算法版本而非

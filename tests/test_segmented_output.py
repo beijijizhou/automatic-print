@@ -7,6 +7,7 @@ from PIL import Image
 from automatic_print.layout_engine import LayoutSettings, generate_layout
 from automatic_print.layout_engine.cutting.validation.cut_validation import corridor_checks
 from automatic_print.layout_engine.orders.order_groups import order_key
+from automatic_print.layout_engine.rendering.storage.segmented_output import use_process_pool
 
 
 @pytest.mark.parametrize('engine', ['pillow', 'libvips'])
@@ -63,6 +64,15 @@ def test_one_large_order_cannot_be_split(tmp_path):
     assert result['segment_count'] == 1
     assert len(result['parts'][0]['placements']) == 4
     assert '批次1单 4件 本段1单 4件' in result['filename']
+
+
+@pytest.mark.parametrize('platform', ['Haloo', 'S2B', '莆田', '隆丰'])
+def test_virtual_gap_platforms_use_isolated_png_processes(platform):
+    settings = LayoutSettings(
+        platform_name=platform, png_streaming=True, output_format='png',
+    )
+    assert use_process_pool(settings, 4)
+    assert not use_process_pool(settings, 1)
 
 
 def test_partial_segment_failure_quarantines_only_new_files(tmp_path, monkeypatch):

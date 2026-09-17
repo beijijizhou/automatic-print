@@ -1,6 +1,7 @@
 """Locate opaque light label cards in preferred top corners, without QR detection."""
 from functools import lru_cache
 from pathlib import Path
+import sqlite3
 import numpy as np
 from PIL import Image
 
@@ -19,16 +20,54 @@ def search_header(path):
 @lru_cache(maxsize=4096)
 @measured('膜标签卡片定位')
 def _cached(path, _mtime, _size):
+    persistent, persistent_key = _persistent_region_cache(path, _mtime, _size)
+    if persistent is not None:
+        try:
+            cached = persistent.load('header_region', persistent_key)
+            if cached is not None:
+                values = cached.get('region')
+                return MembraneRegion(*values) if values else None
+        except (OSError, ValueError, TypeError, KeyError, sqlite3.Error):
+            persistent = persistent_key = None
     pixels, source_width, source_height, header_height = _header_pixels(Path(path))
     white = (pixels[:, :, 3] >= 240) & (pixels[:, :, :3].min(axis=2) >= 220)
     candidates = _cards(white)
-    if not candidates:
-        return None
-    sample_height, sample_width = white.shape
-    left, top, right, bottom = min(candidates, key=lambda r:
-        (r[1], -(r[2]-r[0])*(r[3]-r[1]), min(r[0], sample_width-r[2])))
-    return MembraneRegion(left/sample_width, top/sample_height*header_height/source_height,
-                          right/sample_width, bottom/sample_height*header_height/source_height)
+    result = None
+    if candidates:
+        sample_height, sample_width = white.shape
+        left, top, right, bottom = min(candidates, key=lambda r:
+            (r[1], -(r[2]-r[0])*(r[3]-r[1]), min(r[0], sample_width-r[2])))
+        result = MembraneRegion(
+            left/sample_width, top/sample_height*header_height/source_height,
+            right/sample_width, bottom/sample_height*header_height/source_height,
+        )
+    if persistent is not None:
+        try:
+            persistent.save(
+                'header_region', persistent_key,
+                {'region': ([result.left, result.top, result.right, result.bottom]
+                            if result else None)},
+            )
+        except (OSError, ValueError, TypeError, sqlite3.Error):
+            pass
+    return result
+
+
+def _persistent_region_cache(path, mtime, size):
+    """Reuse one file fingerprint without opening SQLite for standalone probes."""
+    try:
+        from automatic_print.layout_engine.measurement.measurement_session import (
+            SESSION, persistent_cache,
+        )
+        if SESSION.get() is None:
+            return None, None
+        from automatic_print.layout_engine.measurement.measurement_cache import (
+            header_region_key,
+        )
+        identity = (str(Path(path).resolve()), mtime, size)
+        return persistent_cache(), header_region_key(identity)
+    except (OSError, ValueError, TypeError, sqlite3.Error):
+        return None, None
 
 
 def _header_pixels(path):
