@@ -4,7 +4,7 @@ os.environ.setdefault('QT_QPA_PLATFORM', 'offscreen')
 from PySide6.QtWidgets import QApplication
 
 from automatic_print.automation.api.riin import RiinProbeReport, RiinWindow
-from automatic_print.automation.api.riin.window_control import probe_riin
+from automatic_print.automation.api.riin.window_control import _matching_windows, probe_riin
 from automatic_print.ui.riin_diagnostic import RiinDiagnosticDialog
 
 
@@ -16,6 +16,37 @@ def test_probe_reports_unsupported_platform(monkeypatch):
     report = probe_riin('RIIN')
     assert not report.found
     assert 'Windows' in report.error
+
+
+class FakeFunction:
+    def __init__(self, function):
+        self.function = function
+        self.argtypes = None
+        self.restype = None
+
+    def __call__(self, *args):
+        return self.function(*args)
+
+
+def test_enum_windows_declares_generated_callback_type():
+    callbacks = []
+
+    class User32:
+        IsWindowVisible = FakeFunction(lambda _hwnd: True)
+        GetWindowTextLengthW = FakeFunction(lambda _hwnd: len('RIIN Main'))
+        GetWindowTextW = FakeFunction(
+            lambda _hwnd, buffer, _length: setattr(buffer, 'value', 'RIIN Main') or 9)
+
+        def __init__(self):
+            self.EnumWindows = FakeFunction(self.enumerate)
+
+        def enumerate(self, callback, _lparam):
+            callbacks.append(callback)
+            return callback(101, 0)
+
+    user32 = User32()
+    assert _matching_windows(user32, 'RIIN') == [101]
+    assert user32.EnumWindows.argtypes[0] is type(callbacks[0])
 
 
 def test_dialog_explains_safe_success_and_foreground_limit():

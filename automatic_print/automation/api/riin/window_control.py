@@ -48,9 +48,10 @@ def probe_riin(keyword='RIIN', activate=True):
 
 def _matching_windows(user32, keyword):
     matches = []
-    callback_type = getattr(ctypes, 'WINFUNCTYPE', ctypes.CFUNCTYPE)
+    callback_factory = getattr(ctypes, 'WINFUNCTYPE', ctypes.CFUNCTYPE)
+    callback_type = callback_factory(wintypes.BOOL, wintypes.HWND, wintypes.LPARAM)
 
-    @callback_type(wintypes.BOOL, wintypes.HWND, wintypes.LPARAM)
+    @callback_type
     def collect(hwnd, _lparam):
         if not user32.IsWindowVisible(hwnd):
             return True
