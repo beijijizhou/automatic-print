@@ -41,6 +41,26 @@ python dev.py
 
 ## 验证与发布
 
+### RIIN独立管理员控制入口
+
+RIIN要求管理员权限时，在已登录的Windows桌面运行以下命令，并手动确认UAC弹窗：
+
+```powershell
+.venv\Scripts\python.exe -m automatic_print.automation.api.riin inspect --elevate --report riin-inspect.json
+```
+
+该入口只提升一次指定操作。支持`inspect`、`open-import`、`import`、`confirm-import`和`import-menu`；
+`import`需要`--source`图片目录，递归读取PNG，使用`--chunk-index`指定从0开始的导入分段。
+必须在RIIN文件选择框已打开时提交；提交后先核对“导入图像设置”，确认参数再执行`confirm-import`。
+报告中的`submitted_count`只表示提交文件数，不能代替RIIN加载完成后的数量核验。当前不启动物理打印，
+也尚未提供一键目录导入并排版流程。
+
+文件输出使用`open-output`、`begin-file-output`、`save-print-file --output 文件.prn`，
+只允许“文件”发送方式，且拒绝覆盖现有PRN。`inspect-printexp`检查PrintExp窗口，
+`load-printexp --output 文件.prn`提交已有文件；报告`load_requested`仅表示提交，
+需要核对PrintExp预览或任务列表确认加载成功。以上命令均需要`--report`，可加`--elevate`。
+使用`select-document --document 文档标题`明确选择输出文档。已在本机完成单图PRN生成和PrintExp预览加载验证；跨子目录批量导入仍需逐批核验，尚未接入主界面一键流程。
+
 针对性测试用于开发反馈：
 
 ```bash

@@ -150,6 +150,8 @@
 
 ## 外部自动化
 
+- `automation/api/riin/__main__.py`提供独立管理员命令入口，`elevation.py`通过Windows正常UAC授权启动一次指定操作；不要求主工作台或Codex提权。`desktop.py`拥有原生/UIA控件发现、导入文件选择框与导入设置操作，来源目录递归读取PNG并按文件选择框容量分段。报告区分“提交导入”和实际加载完成，失败保留RIIN界面供用户继续处理；文件输出由output.py负责。旧版MFC导入按钮使用已核验的工具栏相对位置，工具栏高度不符时拒绝点击并要求重新校准。
+- `automation/api/riin/output.py`新增文件输出和PrintExp加载命令，扩展上述导入入口。RIIN发送方式必须是“文件”，输出路径不可覆盖；PrintExp仅提交已有PRN，不启动物理打印。加载报告与实际预览核验分开。
 - 开发者模式提供独立“RIIN代码控制测试”：`automation/api/riin/window_control.py`在已登录的Windows
   交互桌面按标题发现RIIN顶层窗口、发送`WM_NULL`响应探测并请求恢复/置前，`ui/riin_diagnostic.py`
   显示PID、窗口类、坐标、响应与置前结果。该诊断不导入文件、不点击打印、不修改RIIN队列；
