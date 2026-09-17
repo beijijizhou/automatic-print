@@ -4,15 +4,30 @@ os.environ.setdefault('QT_QPA_PLATFORM', 'offscreen')
 from pathlib import Path
 from PIL import Image
 from PySide6.QtWidgets import QApplication
+from PySide6.QtWidgets import QPushButton, QWidget
 
 from automatic_print.layout_engine import LayoutSettings
 from automatic_print.layout_engine.reporting.operation_timing import OperationTiming
 from automatic_print.ui.workers import GenerateWorker
 from automatic_print.ui.worker_bridge import MainWindowWorkerBridge
 from automatic_print.ui.operation_timing import OperationTimingPanel
+from automatic_print.ui.layout_activity import LayoutActivity
 
 APP = QApplication.instance() or QApplication([])
 OWNERS = []
+
+
+def test_layout_button_shows_phase_and_total_elapsed_time():
+    parent = QWidget()
+    single, multiple = QPushButton('开始排版…'), QPushButton('多批次排版')
+    activity = LayoutActivity(single, multiple, parent)
+    OWNERS.extend((parent, activity))
+    activity.start('single')
+    activity.update_phase('保存输出图片', 27.82, 38.75, .718)
+    assert '当前 27.82秒' in single.text()
+    assert '总计 38.75秒' in single.text()
+    assert '本次总耗时：38.75秒' in single.toolTip()
+    activity.stop()
 
 
 def test_exclusive_timings_accumulate_repeated_phases_and_freeze():

@@ -85,7 +85,7 @@ class OperationTimingPanel(QGroupBox):
                                 if row['name'] == active)
             activity = getattr(self.window(), 'layout_activity', None)
             if activity:
-                activity.update_phase(active, values[active_index],
+                activity.update_phase(active, values[active_index], total,
                                       values[active_index]/max(total, .001))
         slowest = rows[values.index(max(values))]['name'] if values else '等待开始'
         current = f' · 当前：{active}' if active else ''
