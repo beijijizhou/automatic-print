@@ -19,7 +19,7 @@
   完成结果、方案耗时与总结，不重复放置当前进度条、当前文件和状态文字。文件夹队列表仅显示
   “文件夹、图片数、尺码群/订单群”，详细阶段保留在行提示中。
 - 普通模式显示生产排版规则、45/60厘米方案、批次处理记录、膜标签间距和额外损耗。补足膜间距
-  由 `ui/header_gap.py` 的独立开关控制，保存的毫米数值本身不会自动启用；`layout_engine/labeling/base/header_gap.py`负责批次编排，`layout_engine/labeling/gap/virtual.py`让Haloo和隆丰只记录间距几何并在最终合成时插入透明像素，不创建中间大图；其他平台仍由`layout_engine/labeling/gap/preparation.py`生成兼容副本，`layout_engine/labeling/gap/cache_files.py`负责Windows占用重试和临时文件回收。补距会越过Haloo标签不属于白色卡片连通域的彩色底栏，再从真实透明分界补足40毫米。批次预览和最终报告显示总数、实际扩充、原本已满足、未能扩充及新增毫米范围。开发者模式显示算法
+  由 `ui/header_gap.py` 的独立开关控制，保存的毫米数值本身不会自动启用；`layout_engine/labeling/base/header_gap.py`负责批次编排，`layout_engine/labeling/gap/virtual.py`让Haloo、S2B和隆丰持久缓存间距几何并在最终合成时插入透明像素，不创建中间大图；其他平台仍由`layout_engine/labeling/gap/preparation.py`生成兼容副本，`layout_engine/labeling/gap/cache_files.py`负责Windows占用重试和临时文件回收。补距会越过Haloo标签不属于白色卡片连通域的彩色底栏，再从真实透明分界补足40毫米。批次预览和最终报告显示总数、实际扩充、原本已满足、未能扩充及新增毫米范围。开发者模式显示算法
   诊断、排版历史、批量膜分析和批次顺序标注；主界面底部的功能列表按分类展示全部开发者功能
   及当前开启状态；膜规格比较固定为45/60厘米四套方案。
 - 开发者模式主界面“刀码与标签”参数组同时提供切膜刀码和平台尺码标签开关。前者在正常排版与上次

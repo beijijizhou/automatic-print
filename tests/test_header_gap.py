@@ -65,8 +65,8 @@ def test_existing_gap_not_shrunk_and_unknown_retained(tmp_path):
     assert records[0]['warning']
 
 
-@pytest.mark.parametrize('platform', ['Haloo', '隆丰'])
-def test_platform_gap_is_applied_during_render_without_intermediate_copy(tmp_path, platform):
+@pytest.mark.parametrize('platform', ['Haloo', 'S2B', '隆丰'])
+def test_platform_gap_is_applied_during_render_without_intermediate_copy(tmp_path, platform, monkeypatch):
     path = sample(tmp_path/'B1-1-T-Black-M-NO1-1.png')
     settings = LayoutSettings(
         dpi=25.4, media_width_mm=600, membrane_gap_mm=40,
@@ -82,6 +82,10 @@ def test_platform_gap_is_applied_during_render_without_intermediate_copy(tmp_pat
     assert records[0]['final_gap_mm'] == 40
     assert not list(header_gap.cache_root().rglob('*.png'))
     assert adjusted.header_gap_overrides
+    monkeypatch.setattr(header_gap, 'search_header', lambda _: pytest.fail('virtual cache must avoid measurement'))
+    cached, _, cached_records = header_gap.prepare_paths([path], settings)
+    assert cached == [path]
+    assert cached_records[0]['added_px'] == records[0]['added_px']
     result = generate_layout([path], tmp_path/'out', settings)
     placement = result['placements'][0]
     assert placement['height_px'] == 332
@@ -248,3 +252,23 @@ def test_complete_double_orders_segmented_with_safe_corridors(tmp_path, mode, en
                 for zone in part['cut_corridor'].get('zones', [part['cut_corridor']]):
                     assert output.crop((zone['safe_left_px'], zone.get('start_y_px', 0),
                         zone['safe_right_px'], zone.get('end_y_px', output.height))).getchannel('A').getextrema()[1] == 0
+
+
+def test_segmented_output_prepares_header_gap_once_for_the_whole_batch(tmp_path, monkeypatch):
+    paths = [sample(tmp_path/f'B{index}-1-T-Black-M-NO1-1.png') for index in range(4)]
+    calls = []
+    original = header_gap.prepare_paths
+
+    def counted(*args, **kwargs):
+        calls.append(tuple(args[0]))
+        return original(*args, **kwargs)
+
+    monkeypatch.setattr(header_gap, 'prepare_paths', counted)
+    result = generate_layout(paths, tmp_path/'out', LayoutSettings(
+        dpi=25.4, media_width_mm=580, membrane_gap_mm=40,
+        cutter_mode='dual', output_parts=2, save_parallelism=1,
+        number_images=False, png_engine='libvips',
+    ))
+
+    assert calls == [tuple(paths)]
+    assert len(result['header_gap']) == len(paths)

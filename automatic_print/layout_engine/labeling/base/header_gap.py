@@ -69,6 +69,11 @@ def prepare_one(path, settings):
     fingerprint = [str(path.resolve()), stat.st_mtime_ns, stat.st_size, settings.membrane_gap_mm, 4]
     target = root / sha256(json.dumps(fingerprint).encode()).hexdigest() / path.name
     info = target.with_suffix('.json')
+    if virtual:
+        from automatic_print.layout_engine.labeling.gap.virtual_cache import load
+        cached = load(info, path, fingerprint[:3], TTL)
+        if cached is not None:
+            return path, cached
     if target.is_file() and info.is_file() and time() - info.stat().st_mtime < TTL:
         try:
             record = json.loads(info.read_text(encoding='utf-8'))
@@ -94,13 +99,21 @@ def prepare_one(path, settings):
         record['warning'] = str(exc)
         return path, record
     if not added:
-        record['final_gap_mm'] = settings.membrane_gap_mm
+        record.update(final_gap_mm=settings.membrane_gap_mm,
+                      source_identity=fingerprint[:3])
+        if virtual:
+            record.update(prepared=str(path), virtual_gap=True,
+                          preparation_engine='合成时虚拟补距')
+            from automatic_print.layout_engine.labeling.gap.virtual_cache import save
+            save(info, record)
         return path, record
     record.update(added_px=added, split_px=split, added_mm=added*25.4/dimensions.y_dpi,
                   final_gap_mm=settings.membrane_gap_mm,
                   source_identity=fingerprint[:3], prepared=str(path if virtual else target))
     if virtual:
         record.update(virtual_gap=True, preparation_engine='合成时虚拟补距')
+        from automatic_print.layout_engine.labeling.gap.virtual_cache import save
+        save(info, record)
         return path, record
     temporary = target.with_name(target.name + '.' + uuid4().hex + '.未完成')
     try:

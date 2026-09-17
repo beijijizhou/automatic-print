@@ -75,7 +75,7 @@ def save_concurrency(settings, width, plans, planned):
 
 
 def generate_segments(paths, output_dir, settings, progress, plan_ready,
-                      analysis_ready, batch_name, phase_ready):
+                      analysis_ready, batch_name, phase_ready, gap_records):
     from automatic_print.layout_engine.pipeline.service import generate_layout
     started = perf_counter()
     snapshots = []
@@ -85,7 +85,8 @@ def generate_segments(paths, output_dir, settings, progress, plan_ready,
         if plan_ready:
             plan_ready(payload)
     generate_layout(paths, output_dir, base, progress, ready, preview_only=True,
-                    analysis_ready=analysis_ready, phase_ready=phase_ready, batch_name=batch_name)
+                    analysis_ready=analysis_ready, phase_ready=phase_ready,
+                    batch_name=batch_name, prepared_gap_records=gap_records)
     payload = snapshots[0]
     # API/metadata warnings remain visible but are recoverable.  Only a real
     # geometry or cutter-safety failure may block segmented production output.
@@ -190,7 +191,7 @@ def generate_segments(paths, output_dir, settings, progress, plan_ready,
         estimated_parallel_memory_mb=round(estimate/1024/1024, 1),
         placements=[dict(p, output_filename=r['filename'], segment_index=r['segment_index'])
                     for r in ordered for p in r['placements']],
-        header_gap=[record for part in ordered for record in part.get('header_gap', ())],
+        header_gap=list(gap_records),
         analysis=payload['analysis'], order_check=payload['order_check'],
         size_range=size_range_label([path for path, p in sorted(payload['planned'], key=lambda entry: (entry[1].row_y_px, entry[1].x_px))]),
         height_px=total_height, height_mm=round(total_height*25.4/settings.dpi, 1),
@@ -209,4 +210,6 @@ def generate_segments(paths, output_dir, settings, progress, plan_ready,
                                   for part in ordered for r in part['transition_marks']]
     result['output_megabytes_per_second'] = round(total_size/1_000_000/max(wall, .001), 1)
     result.update(saving_metrics(baseline, total_height, settings.dpi))
+    from automatic_print.layout_engine.labeling.base.header_gap import verify_records
+    verify_records(gap_records)
     return result

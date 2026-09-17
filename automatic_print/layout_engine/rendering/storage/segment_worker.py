@@ -25,6 +25,7 @@ def render_segment_job(
             'end_notice': end_notice,
             'batch_quantity': batch_quantity,
         },
+        prepared_gap_records=(),
     )
     result['operation_timings'] = timer.finish()
     result['segment_index'] = index + 1

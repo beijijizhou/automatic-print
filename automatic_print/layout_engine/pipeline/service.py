@@ -23,7 +23,7 @@ def generate_layout(
     image_paths: Iterable[Path], output_dir: Path, settings: LayoutSettings,
     progress: ProgressCallback | None = None, plan_ready=None, preview_only=False,
     analysis_ready=None, batch_name="", phase_ready=None,
-    prepared_plan=None, filename_suffix="",
+    prepared_plan=None, filename_suffix="", prepared_gap_records=None,
 ) -> dict:
     total_started = perf_counter()
     paths = list(image_paths)
@@ -38,15 +38,19 @@ def generate_layout(
     inherited_analysis = (prepared_plan or {}).get('analysis') or {}
     s2b_metadata = inherited_analysis.get('s2b_metadata') or []
     from automatic_print.layout_engine.labeling.base.header_gap import prepare_paths
-    if phase_ready and settings.membrane_gap_mm > 0:
-        phase_ready('补足膜标签间距')
-    paths, settings, gap_records = prepare_paths(paths, settings, progress)
+    if prepared_gap_records is None:
+        if phase_ready and settings.membrane_gap_mm > 0:
+            phase_ready('补足膜标签间距')
+        paths, settings, gap_records = prepare_paths(paths, settings, progress)
+    else:
+        gap_records = list(prepared_gap_records)
     from automatic_print.layout_engine.intake.metadata.output_dpi import resolve_output_dpi
     settings = resolve_output_dpi(paths, settings, progress)
     if settings.output_parts > 1 and not preview_only and prepared_plan is None:
         from automatic_print.layout_engine.rendering.storage.segmented_output import generate_segments
         return generate_segments(paths, output_dir, settings, progress,
-                                 plan_ready, analysis_ready, batch_name, phase_ready)
+                                 plan_ready, analysis_ready, batch_name, phase_ready,
+                                 gap_records)
     if not s2b_metadata and prepared_plan is None:
         s2b_metadata = prepare_s2b_metadata(paths, settings, progress)
     if not preview_only:

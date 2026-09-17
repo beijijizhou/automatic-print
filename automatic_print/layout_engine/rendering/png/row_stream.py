@@ -11,7 +11,7 @@ from automatic_print.layout_engine.rendering.storage.save_progress import monito
 from automatic_print.layout_engine.cutting.geometry.transition_marks import paint_transition_lines
 
 
-STRIP_ROWS = 1024
+STRIP_ROWS = 8192
 
 
 def save(rows, target, width, height, settings, guide_boxes, rectangles, progress,
