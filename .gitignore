@@ -10,7 +10,7 @@ dist/
 build/
 .DS_Store
 Thumbs.db
-output/
+/output/
 downloads/
 installer-dist/
 .restart-request

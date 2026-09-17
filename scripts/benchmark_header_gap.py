@@ -59,15 +59,16 @@ def run(source, output, cache, stack_platform=False):
     print(f'间距副本全部原像素复核：{pixels:.3f}秒', flush=True)
     started = perf_counter()
     image = pyvips.Image.new_from_file(str(output/result['filename']), access='random')
-    zones = result['cut_corridor'].get('zones', [result['cut_corridor']])
-    for zone in zones:
-        if not vips_corridor_is_clear(image, zone):
+    from automatic_print.layout_engine.cutting.validation.cut_validation import corridor_checks
+    corridors = corridor_checks(result['cut_corridor'])
+    for corridor in corridors:
+        if not vips_corridor_is_clear(image, corridor):
             raise ValueError('保存后整批刀位通道不透明')
     corridor = perf_counter()-started
     report = dict(batch=source.name, version=__version__, images=len(paths),
         changed_images=copied, unchanged_images=len(paths)-copied,
         generation_seconds=generation, source_copy_check_seconds=pixels,
-        saved_corridor_check_seconds=corridor, zones=len(zones),
+        saved_corridor_check_seconds=corridor, zones=len(corridors),
         save_seconds=result['timings_seconds']['saving_png'],
         width_px=result['width_px'], height_px=result['height_px'], dpi=result['output_dpi'],
         settings=asdict(settings), file_size_bytes=result['file_size_bytes'],
