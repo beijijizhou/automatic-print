@@ -127,13 +127,14 @@ def generate_layout(
         phase('合成像素安全检查')
         if not use_vips:
             validate_canvas_pixels(canvas, cut_check, progress)
-        elif not streaming:
+        elif not streaming and output_format != 'tiff':
             validate_vips_canvas(canvas, cut_check)
         phase('膜标签与辅助线处理')
         guide_spans, missing_guides = collect_guides(planned, settings, progress)
         guide_boxes = list(dot_boxes(guide_spans, settings.dpi))
         transitions = transition_rects(planned, settings, width,
                                       (prepared_plan or {}).get('end_notice', '批次结束'))
+        output_validation_seconds = 0.0
         if not row_streaming:
             canvas = paint_guides(canvas, guide_boxes, use_vips)
             canvas = paint_transition_lines(canvas, transitions, use_vips)
@@ -141,9 +142,14 @@ def generate_layout(
                 validate_marked_pillow(
                     canvas, cut_check, guide_boxes, transitions, progress
                 )
+            elif output_format == 'tiff':
+                validation_started = perf_counter()
+                validate_vips_canvas(
+                    canvas, cut_check, guide_boxes, transitions
+                )
+                output_validation_seconds = perf_counter() - validation_started
         filename = output_path.name
         saving_started = perf_counter()
-        output_validation_seconds = 0.0
         phase('保存输出图片')
         if row_streaming:
             from automatic_print.layout_engine.rendering.png.row_stream import save as save_rows
@@ -161,7 +167,7 @@ def generate_layout(
                 output_path, width, height, cut_check, guide_boxes,
                 transitions, progress, phase, save_details,
             )
-        elif native_validation:
+        elif native_validation and output_format != 'tiff':
             phase('输出文件安全复核')
             validate_vips_output(output_path, cut_check, progress, guide_boxes, transitions)
         elif settings.png_fast_encoding and cut_check:

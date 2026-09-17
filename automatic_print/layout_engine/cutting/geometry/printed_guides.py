@@ -181,10 +181,12 @@ def _vips_corridor_excess(image, check, boxes=(), rectangles=()):
     return alpha > mask
 
 
-def validate_vips_canvas(canvas, check):
+def validate_vips_canvas(canvas, check, boxes=(), rectangles=()):
     if check is None:
         return
-    from automatic_print.layout_engine.cutting.validation.cut_validation import corridor_checks
-    for zone in corridor_checks(check):
-        if not vips_corridor_is_clear(canvas, zone):
-            raise ValueError('合成图片进入整批切割安全通道，已禁止保存打印文件。')
+    from automatic_print.layout_engine.cutting.validation.cut_validation import corridor_checks, mark_pixel_verified
+    if not vips_corridors_are_clear(
+        canvas, corridor_checks(check), boxes, rectangles
+    ):
+        raise ValueError('合成图片进入整批切割安全通道，已禁止保存打印文件。')
+    mark_pixel_verified(check)

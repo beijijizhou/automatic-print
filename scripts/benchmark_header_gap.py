@@ -14,6 +14,7 @@ from automatic_print import __version__
 from automatic_print.layout_engine import LayoutSettings, generate_layout
 from automatic_print.layout_engine.labeling.base import header_gap
 from automatic_print.layout_engine.cutting.geometry.printed_guides import vips_corridor_is_clear
+from automatic_print.layout_engine.reporting.operation_timing import OperationTiming, PROGRESS_PHASES
 
 
 def verify_copies(records):
@@ -36,7 +37,10 @@ def verify_copies(records):
     return count
 
 
-def run(source, output, cache, stack_platform=False, output_format='png'):
+def run(
+    source, output, cache, stack_platform=False, output_format='png',
+    independent_checks=True, workers=4,
+):
     paths = sorted(source.glob('*.png'))
     if not paths:
         raise ValueError('源目录没有PNG')
@@ -47,34 +51,51 @@ def run(source, output, cache, stack_platform=False, output_format='png'):
         cutter_knife_dots=False, preserve_header_gap=True, cutter_compare_whole_rotation=True,
         cutter_tail_rotation=True, png_engine='libvips', platform_name='隆丰',
         output_format=output_format,
+        worker_threads=workers,
         platform_font_height_mm=8, label_text_template='CY 1001Mt26',
         label_machine_enabled=True, label_sequence_enabled=True, compare_film_sizes=True,
         platform_below_marker=stack_platform)
+    timer = OperationTiming()
+    timer.phase('开始生成')
+    def progress(stage, current, total, detail):
+        if stage in PROGRESS_PHASES:
+            timer.phase(PROGRESS_PHASES[stage])
     started = perf_counter()
-    result = generate_layout(paths, output, settings, batch_name=source.name)
+    result = generate_layout(
+        paths, output, settings, progress=progress, batch_name=source.name,
+        phase_ready=timer.phase,
+    )
+    operation_timings = timer.finish()
     generation = perf_counter()-started
     print(f'生成：{generation:.3f}秒', flush=True)
-    started = perf_counter()
-    copied = verify_copies(result['header_gap'])
-    pixels = perf_counter()-started
-    print(f'间距副本全部原像素复核：{pixels:.3f}秒', flush=True)
-    started = perf_counter()
-    image = pyvips.Image.new_from_file(str(output/result['filename']), access='random')
+    copied, pixels, corridor = 0, 0.0, 0.0
     from automatic_print.layout_engine.cutting.validation.cut_validation import corridor_checks
     corridors = corridor_checks(result['cut_corridor'])
-    for corridor in corridors:
-        if not vips_corridor_is_clear(image, corridor):
-            raise ValueError('保存后整批刀位通道不透明')
-    corridor = perf_counter()-started
+    if independent_checks:
+        started = perf_counter()
+        copied = verify_copies(result['header_gap'])
+        pixels = perf_counter()-started
+        print(f'间距副本全部原像素复核：{pixels:.3f}秒', flush=True)
+        started = perf_counter()
+        image = pyvips.Image.new_from_file(str(output/result['filename']), access='random')
+        for item in corridors:
+            if not vips_corridor_is_clear(image, item):
+                raise ValueError('保存后整批刀位通道不透明')
+        corridor = perf_counter()-started
     report = dict(batch=source.name, version=__version__, images=len(paths),
         changed_images=copied, unchanged_images=len(paths)-copied,
         generation_seconds=generation, source_copy_check_seconds=pixels,
         saved_corridor_check_seconds=corridor, zones=len(corridors),
         save_seconds=result['timings_seconds']['saving_png'],
+        generation_timings=result['timings_seconds'],
+        operation_timings=operation_timings,
+        save_details=result['png_save_details'],
         width_px=result['width_px'], height_px=result['height_px'], dpi=result['output_dpi'],
         settings=asdict(settings), file_size_bytes=result['file_size_bytes'],
         generation_includes_independent_checks=False,
-        source_copy_pixels_exact=True, saved_corridors_clear=True)
+        independent_checks_run=independent_checks,
+        source_copy_pixels_exact=independent_checks,
+        saved_corridors_clear=independent_checks)
     print(json.dumps(report, ensure_ascii=False, indent=2), flush=True)
     (output/'独立基准测试.json').write_text(json.dumps(report, ensure_ascii=False, indent=2), encoding='utf-8')
     return report
@@ -87,5 +108,10 @@ if __name__ == '__main__':
     parser.add_argument('--cache', type=Path, required=True)
     parser.add_argument('--stack-platform', action='store_true')
     parser.add_argument('--format', choices=('png', 'tiff'), default='png')
+    parser.add_argument('--quick', action='store_true')
+    parser.add_argument('--workers', type=int, default=4)
     args = parser.parse_args()
-    run(args.source, args.output, args.cache, args.stack_platform, args.format)
+    run(
+        args.source, args.output, args.cache, args.stack_platform, args.format,
+        not args.quick, args.workers,
+    )

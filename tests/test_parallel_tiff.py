@@ -61,6 +61,30 @@ def test_tiff_cut_validation_uses_random_access(tmp_path, monkeypatch):
     assert accesses == ['random']
 
 
+def test_tiff_validates_rendered_canvas_without_reopening_output(
+    tmp_path, monkeypatch,
+):
+    source = tmp_path / 'B1-1-T-Black-M-NO1-1.png'
+    Image.new('RGBA', (80, 120), 'blue').save(
+        source, dpi=(25.4, 25.4)
+    )
+    monkeypatch.setattr(
+        'automatic_print.layout_engine.pipeline.service.validate_vips_output',
+        lambda *args, **kwargs: (_ for _ in ()).throw(
+            AssertionError('TIFF must not be decoded again after saving')
+        ),
+    )
+
+    result = generate_layout([source], tmp_path / 'out', LayoutSettings(
+        dpi=25.4, media_width_mm=200, margin_mm=0, number_images=False,
+        color_block_enabled=True, allow_rotation=False,
+        output_format='tiff', png_engine='libvips', cutter_mode='dual',
+        cutter_knife_mm=100, cutter_auto_knife=False,
+    ))
+
+    assert result['cut_corridor']['pixel_verified'] is True
+
+
 def test_segmented_tiff_keeps_each_parallel_output(tmp_path):
     paths = []
     for index in range(4):
