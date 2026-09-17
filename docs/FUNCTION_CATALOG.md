@@ -7,7 +7,7 @@
 | --- | --- | --- |
 | 图片发现与嵌套批次扫描 | `layout_engine/intake/discovery/discovery.py`, `layout_engine/intake/discovery/batch_discovery.py` | 单批、多批和分析功能复用，不各自遍历目录。 |
 | 图片尺寸、DPI与源信息 | `layout_engine/intake/metadata/source_metadata.py`, `layout_engine/intake/metadata/images.py`, `layout_engine/intake/metadata/output_dpi.py`, `layout_engine/domain/models.py` | 一次读取形成共享事实；`LayoutItem`与`Placement`集中在模型模块，标签、排版和报告不得重复解码。 |
-| 批次数据快照与并行测量 | `layout_engine/intake/preparation/batch_snapshot.py`, `layout_engine/measurement/measurement_session.py`, `layout_engine/measurement/parallel_measurement.py` | 生成、仅预览和批量分析从首次读取到最终报告共享一个批次会话；保持结果原顺序，线程完成顺序不能改变生产顺序。 |
+| 批次数据快照与并行测量 | `layout_engine/intake/preparation/batch_snapshot.py`, `layout_engine/measurement/measurement_session.py`, `layout_engine/measurement/parallel_measurement.py`, `ui/layout_values.py`, `ui/bulk_generation_worker.py` | 生成、仅预览和批量分析从首次读取到最终报告共享一个批次会话；保持结果原顺序，线程完成顺序不能改变生产顺序；最低线程档自动给单批次最多4线程，多批次按实际并行数均分。 |
 | 订单、双面、尺码归组及批次构成 | `layout_engine/orders/order_groups.py`, `layout_engine/orders/batch_analysis.py`, `layout_engine/orders/size_policy.py`, `ui/batch_distribution.py` | 排版、比较、预览、报告和安全检查使用同一身份；预览上方单件显示紧凑尺码-数量，多件显示紧凑订单号-件数。 |
 | 颜色与生产顺序 | `layout_engine/orders/color_policy.py`, `layout_engine/orders/single_order_sequence.py` | 颜色优先、尺码业务顺序集中维护。 |
 | S2B批次元数据 | `automation/api/s2b/`, `.github/workflows/windows-release.yml` | 从文件夹尾部解析批次号；识别到 S2B 后不依赖开发者模式或平台选择，排版前必须一次读取共享服务并按订单项、尺码匹配全部本地图片。文件名失效时以订单文件夹对接口订单号作唯一回退匹配。颜色缺失时带诊断继续排版并由用户确认是否采用；颜色排序和四种膜方案复用缓存，不重复访问接口。中心地址内置，受限客户端密钥只在 Windows 构建时注入。 |

@@ -13,6 +13,18 @@ from test_parallel_film_geometry import qr_sources, settings
 APP = QApplication.instance() or QApplication([])
 
 
+def test_worker_threads_follow_actual_batch_parallelism(tmp_path):
+    config = replace(settings(), worker_threads=4)
+    single = BulkGenerationWorker([tmp_path/'one'], config, 4)
+    assert single.parallelism == 1
+    assert single.settings.worker_threads == 4
+
+    folders = [tmp_path/str(index) for index in range(4)]
+    multiple = BulkGenerationWorker(folders, config, 4)
+    assert multiple.parallelism == 4
+    assert multiple.settings.worker_threads == 1
+
+
 @pytest.mark.parametrize('engine', ['pillow', 'libvips'])
 def test_normal_bulk_generates_independent_complete_batches(tmp_path, monkeypatch, engine):
     inputs = []

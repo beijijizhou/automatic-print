@@ -2,7 +2,7 @@ from test_developer_mode import window, APP
 from automatic_print.ui.bulk_generation import BulkGenerationDialog
 
 
-def test_settings_categories_reuse_controls_and_persist_parallelism(tmp_path):
+def test_settings_categories_reuse_controls_and_persist_parallelism(tmp_path, monkeypatch):
     path = tmp_path/'prefs.ini'
     owner = window(path)
     tabs = owner.print_settings_tabs
@@ -19,6 +19,12 @@ def test_settings_categories_reuse_controls_and_persist_parallelism(tmp_path):
     assert owner.segmented_output.workers.value() == 4
     assert owner.bulk_parallelism.value() == 4
     assert not owner.combine_bulk_batches.isChecked()
+    monkeypatch.setattr('automatic_print.ui.layout_values.os.cpu_count', lambda: 12)
+    owner.worker_threads.setValue(1)
+    assert owner.worker_threads.text() == '自动（最多4线程）'
+    assert owner._layout_settings().worker_threads == 4
+    owner.worker_threads.setValue(3)
+    assert owner._layout_settings().worker_threads == 3
     # The spacing callback still owns the same label after layout transfer.
     owner.cutter_settings.mode.setCurrentIndex(owner.cutter_settings.mode.findData('free'))
     label = tabs.widget(1).layout().labelForField(owner.spacing)

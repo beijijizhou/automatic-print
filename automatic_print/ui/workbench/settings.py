@@ -53,6 +53,9 @@ def _build_parameter_controls(window) -> QFormLayout:
     build_header_gap(window)
     window.worker_threads = QSpinBox()
     window.worker_threads.setRange(1, 32)
+    window.worker_threads.setSpecialValueText('自动（最多4线程）')
+    window.worker_threads.setToolTip(
+        '设为自动时，单批次最多使用4线程；多个批次同时运行时按实际并行批次数均分。')
     window.segmented_output = SegmentedOutputSettings(window.preferences, window)
     window.allow_rotation = QCheckBox("允许旋转以节省材料")
     window.allow_rotation.setChecked(True)

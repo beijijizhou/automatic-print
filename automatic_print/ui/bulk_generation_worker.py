@@ -57,10 +57,10 @@ class BulkGenerationWorker(QObject):
         def progress(stage, current, total, filename):
             token,separator,detail=filename.partition('\t')
             display=stage
-            if self.combine_batches and total and stage in {'读取图片尺寸','测量标签与刀码'}:
+            if total and stage in {'读取图片尺寸','测量标签与刀码'}:
                 from ..layout_engine.measurement.parallel_measurement import measurement_workers
                 display=f'{stage} · {measurement_workers(self.settings.worker_threads,total)}线程并行'
-            elif self.combine_batches and total and stage=='合成图片':
+            elif total and stage=='合成图片':
                 display=f'{stage} · {min(self.settings.worker_threads,total)}路图片准备'
             source=self.image_sources.get(token) if separator else None
             if separator and stage=='测量标签与刀码' and current==1:

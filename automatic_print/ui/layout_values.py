@@ -1,7 +1,15 @@
 from __future__ import annotations
 import json
+import os
 
 from ..layout_engine import LayoutSettings
+
+
+def effective_worker_threads(configured):
+    """Treat the legacy value 1 as automatic instead of accidental serial mode."""
+    if configured > 1:
+        return configured
+    return max(1, min(4, os.cpu_count() or 4))
 
 
 def settings_from_window(window) -> LayoutSettings:
@@ -30,7 +38,7 @@ def settings_from_window(window) -> LayoutSettings:
         png_engine=window.png_engine.currentData(),
         png_fast_encoding=False,
         png_streaming=window.segmented_output.fast_png.isChecked(),
-        worker_threads=window.worker_threads.value(),
+        worker_threads=effective_worker_threads(window.worker_threads.value()),
         output_parts=window.segmented_output.parts.value(),
         save_parallelism=window.segmented_output.workers.value(),
         save_memory_mb=window.segmented_output.memory.value(),

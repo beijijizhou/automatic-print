@@ -78,6 +78,8 @@ def file_information_text(result):
         engine = {'libvips': '原生分块引擎', 'Pillow': '普通兼容引擎'}.get(
             result['png_engine'], result['png_engine'])
         lines.append('实际合成引擎：'+engine)
+    if result.get('worker_threads'):
+        lines.append(f"本批次有效并行：{result['worker_threads']} 线程（图片测量、准备与编码共享上限）")
     seconds = result.get('timings_seconds', {}).get('saving_png')
     if seconds is not None:
         lines.append(f'保存阶段耗时：{seconds:.3f} 秒（可能包含延迟合成、编码与写入）')

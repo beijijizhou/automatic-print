@@ -6,6 +6,7 @@ def record(name='批次.png', size=600_000_000):
     return dict(filename=name, file_size_bytes=size, width_px=6850, height_px=242714,
         output_dpi=300, output_format='PNG', pixel_format='RGBA', bits_per_channel=8,
         alpha_channel=True, png_compression_level=1, png_engine='libvips',
+        worker_threads=4,
         timings_seconds={'saving_png': 48.627}, png_save_details={
             'encoder': '原生分块流式PNG',
             'timing_note': '流水线交错执行', 'observed_bytes': size,
@@ -25,6 +26,7 @@ def test_file_information_uses_metadata_without_any_file_access(monkeypatch):
                      '水平 300 DPI', '垂直 300 DPI', 'PNG · RGBA · 每通道 8 位',
                      '透明通道：保留', '压缩等级：1', '无损', '原生分块流式PNG', '48.627 秒']:
         assert expected in text
+    assert '本批次有效并行：4 线程' in text
     assert '计时口径：流水线交错执行' in text
     assert '保存阶段平均文件产出' in text
 

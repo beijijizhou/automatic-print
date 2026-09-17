@@ -45,6 +45,7 @@ def build_result(*, filename, output_path, settings, paths, planned, analysis,
         'output_format': 'TIFF' if output_format == 'tiff' else 'PNG',
         'pixel_format': 'RGBA', 'bits_per_channel': 8, 'alpha_channel': True,
         'png_compression_level': settings.png_compression_level,
+        'worker_threads': settings.worker_threads,
         'png_engine': ('tifffile + imagecodecs' if output_format == 'tiff'
                        else 'libvips' if use_vips else 'Pillow'),
         'png_save_details': save_details,
