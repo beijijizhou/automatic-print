@@ -4,6 +4,7 @@ from functools import lru_cache
 from PIL import Image, ImageDraw, ImageFont
 
 
+@lru_cache(maxsize=128)
 def _font(size):
     for path in (
         'C:/Windows/Fonts/msyhbd.ttc', 'C:/Windows/Fonts/simhei.ttf',
@@ -17,7 +18,7 @@ def _font(size):
     raise ValueError('未找到中文字体，无法清晰打印平台名称。请安装微软雅黑或思源黑体。')
 
 
-@lru_cache(maxsize=64)
+@lru_cache(maxsize=2048)
 def badge_data(text, target_height):
     """Cache immutable pixels, never a mutable image or shared font face."""
     if target_height < 2:

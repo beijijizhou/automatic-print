@@ -145,7 +145,7 @@ def generate_segments(paths, output_dir, settings, progress, plan_ready,
             and settings.png_streaming
             and settings.output_format.lower() == 'png'
             and (platform == 's2b'
-                 or (platform == 'haloo'
+                 or (platform in {'haloo', '隆丰'}
                      and bool(getattr(settings, 'header_gap_overrides', ()))))
         )
         if parallel == 1:

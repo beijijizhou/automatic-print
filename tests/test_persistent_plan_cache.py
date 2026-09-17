@@ -112,6 +112,22 @@ def test_cache_key_reads_file_identities_once_and_in_parallel(tmp_path, monkeypa
         assert len(calls) == 4
 
 
+def test_virtual_gap_render_map_does_not_duplicate_geometry_cache(tmp_path):
+    path = tmp_path/'B1-1-T-Black-M-NO1-1.png'
+    path.write_bytes(b'original')
+    now = datetime(2026, 9, 17)
+    dimensions = ((str(path.resolve()), (100.0, 200.0)),)
+    common = config(dimension_overrides=dimensions)
+    virtual = config(
+        dimension_overrides=dimensions,
+        header_gap_overrides=((str(path.resolve()), 10, 20, 30, 40),),
+    )
+    with measurement_session():
+        assert plan_cache.cache_key([path], common, now) == plan_cache.cache_key(
+            [path], virtual, now,
+        )
+
+
 def test_corrupt_and_geometrically_invalid_cache_recompute_instead_of_blocking(tmp_path, monkeypatch):
     paths = qr_sources(tmp_path)
     first = planner.plan_layout(paths, config(), None)

@@ -53,6 +53,7 @@ class LayoutSettings:
     force_small_pair_width: bool = False
     force_small_pair_width_mm: float = 270
     dimension_overrides: tuple = ()
+    header_gap_overrides: tuple = ()
     width_adjustments: tuple = ()
     png_compression_level: int = 1
     output_format: str = "png"

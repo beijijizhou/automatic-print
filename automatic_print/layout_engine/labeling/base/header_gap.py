@@ -3,6 +3,7 @@ from concurrent.futures import FIRST_COMPLETED, ThreadPoolExecutor, wait
 from dataclasses import replace
 from hashlib import sha256
 import json
+from math import ceil
 from pathlib import Path
 from time import time
 from uuid import uuid4
@@ -31,6 +32,23 @@ def cache_root():
 
 def prepare_one(path, settings):
     path = Path(path)
+    from automatic_print.layout_engine.labeling.gap.virtual import enabled, gap_map
+    virtual = enabled(settings)
+    existing_virtual = gap_map(settings).get(str(path.resolve())) if virtual else None
+    if existing_virtual:
+        split, added, mtime_ns, size = existing_virtual
+        stat = path.stat()
+        if (stat.st_mtime_ns, stat.st_size) == (mtime_ns, size):
+            return path, {
+                'source': str(path), 'filename': path.name,
+                'minimum_mm': settings.membrane_gap_mm,
+                'added_px': added, 'split_px': split,
+                'added_mm': added * 25.4 / print_dimensions(path, settings.dpi).y_dpi,
+                'final_gap_mm': settings.membrane_gap_mm,
+                'source_identity': [str(path.resolve()), mtime_ns, size],
+                'prepared': str(path), 'virtual_gap': True,
+                'preparation_engine': '合成时虚拟补距', 'warning': '',
+            }
     root = cache_root()
     if root in path.parents:
         try:
@@ -48,7 +66,7 @@ def prepare_one(path, settings):
                             '可在排版缓存中清理后重新生成'),
             }
     stat = path.stat()
-    fingerprint = [str(path.resolve()), stat.st_mtime_ns, stat.st_size, settings.membrane_gap_mm, 3]
+    fingerprint = [str(path.resolve()), stat.st_mtime_ns, stat.st_size, settings.membrane_gap_mm, 4]
     target = root / sha256(json.dumps(fingerprint).encode()).hexdigest() / path.name
     info = target.with_suffix('.json')
     if target.is_file() and info.is_file() and time() - info.stat().st_mtime < TTL:
@@ -70,15 +88,20 @@ def prepare_one(path, settings):
         return path, record
     try:
         split, added = gap_geometry_file(
-            path, region, round(settings.membrane_gap_mm * dimensions.y_dpi / 25.4),
+            path, region, ceil(settings.membrane_gap_mm * dimensions.y_dpi / 25.4),
         )
     except ValueError as exc:
         record['warning'] = str(exc)
         return path, record
     if not added:
+        record['final_gap_mm'] = settings.membrane_gap_mm
         return path, record
     record.update(added_px=added, split_px=split, added_mm=added*25.4/dimensions.y_dpi,
-                  source_identity=fingerprint[:3], prepared=str(target))
+                  final_gap_mm=settings.membrane_gap_mm,
+                  source_identity=fingerprint[:3], prepared=str(path if virtual else target))
+    if virtual:
+        record.update(virtual_gap=True, preparation_engine='合成时虚拟补距')
+        return path, record
     temporary = target.with_name(target.name + '.' + uuid4().hex + '.未完成')
     try:
         target.parent.mkdir(parents=True, exist_ok=True)
@@ -156,8 +179,26 @@ def prepare_paths(paths, settings, progress=None):
     from automatic_print.automation.api.s2b.metadata.store import register_path_aliases
     register_path_aliases(mapping)
     remap = lambda values: tuple((mapping.get(name, name), value) for name, value in values)
-    settings = replace(settings, manual_rotations=remap(settings.manual_rotations),
-                       sequence_numbers=remap(settings.sequence_numbers))
+    virtuals = {row[0]: row[1:] for row in settings.header_gap_overrides}
+    overrides = dict(settings.dimension_overrides)
+    for original, (_prepared, record) in zip(paths, results):
+        if not record.get('virtual_gap') or not record.get('added_px'):
+            continue
+        key = str(original.resolve())
+        if key in virtuals:
+            continue
+        stat = original.stat()
+        virtuals[key] = (record['split_px'], record['added_px'], stat.st_mtime_ns, stat.st_size)
+        dimensions = print_dimensions(original, settings.dpi)
+        width_mm, height_mm = overrides.get(key, (dimensions.width_mm, dimensions.height_mm))
+        overrides[key] = (width_mm, height_mm + record['added_mm'])
+    settings = replace(
+        settings,
+        manual_rotations=remap(settings.manual_rotations),
+        sequence_numbers=remap(settings.sequence_numbers),
+        dimension_overrides=tuple(overrides.items()),
+        header_gap_overrides=tuple((key, *value) for key, value in virtuals.items()),
+    )
     return [path for path, _ in results], settings, [record for _, record in results]
 
 

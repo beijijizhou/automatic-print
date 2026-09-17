@@ -12,7 +12,7 @@ from automatic_print.layout_engine.intake.preparation.image_pipeline import prep
 from automatic_print.layout_engine.labeling.platform.platform_label import placement_badge, platform_text
 
 
-def _prepare(item: tuple[Path, Placement]):
+def _prepare(item: tuple[Path, Placement], settings=None):
     path, placement = item
     rotated = bool(placement.rotation_degrees % 180)
     size = (
@@ -20,7 +20,16 @@ def _prepare(item: tuple[Path, Placement]):
         if rotated
         else (placement.width_px, placement.height_px)
     )
-    image = normalized_image(path, size)
+    from automatic_print.layout_engine.labeling.gap.virtual import entry, expand_pillow
+    if settings is not None and entry(path, settings):
+        with Image.open(path) as opened:
+            image = expand_pillow(opened.convert('RGBA'), path, settings)
+        if image.size != size:
+            original = image
+            image = original.resize(size, Image.Resampling.LANCZOS)
+            original.close()
+    else:
+        image = normalized_image(path, size)
     rotation = {90: Image.Transpose.ROTATE_90, -90: Image.Transpose.ROTATE_270,
                 180: Image.Transpose.ROTATE_180}.get(placement.rotation_degrees)
     if rotation is not None:
@@ -49,7 +58,7 @@ def build_pillow_canvas(
 
 
 def _compose(canvas, planned, labels, settings, progress, workers):
-    with closing(prepared_images(_prepare, planned, workers)) as images:
+    with closing(prepared_images(lambda item: _prepare(item, settings), planned, workers)) as images:
         for index, (image, placement) in enumerate(
             images, start=1
         ):

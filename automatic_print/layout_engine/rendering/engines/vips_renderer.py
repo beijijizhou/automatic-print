@@ -24,10 +24,12 @@ else:
 demand_lock = RLock()
 def available() -> bool:
     return pyvips is not None
-def _rgba(path: Path, width: int, height: int, rotation_degrees: int):
+def _rgba(path: Path, width: int, height: int, rotation_degrees: int, settings):
     # Pixel validation can evaluate a source before PNG saving re-reads it.
     # A forward-only decoder fails on that second pass, especially after rotation.
     image = pyvips.Image.new_from_file(str(path), access="random")
+    from automatic_print.layout_engine.labeling.gap.virtual import expand_vips
+    image = expand_vips(image, path, settings, pyvips)
     if str(image.interpretation) not in {
         "srgb", "rgb", "b-w", "grey16", "multiband"
     }:
@@ -83,6 +85,7 @@ def build_vips_rows(
                     placement.width_px,
                     placement.height_px,
                     placement.rotation_degrees,
+                    settings,
                 )
             )
             xs.append(placement.x_px)

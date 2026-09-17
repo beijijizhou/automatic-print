@@ -65,6 +65,33 @@ def test_existing_gap_not_shrunk_and_unknown_retained(tmp_path):
     assert records[0]['warning']
 
 
+@pytest.mark.parametrize('platform', ['Haloo', '隆丰'])
+def test_platform_gap_is_applied_during_render_without_intermediate_copy(tmp_path, platform):
+    path = sample(tmp_path/'B1-1-T-Black-M-NO1-1.png')
+    settings = LayoutSettings(
+        dpi=25.4, media_width_mm=600, membrane_gap_mm=40,
+        platform_name=platform, allow_rotation=False, number_images=False,
+        color_block_enabled=False, png_engine='libvips', png_streaming=True,
+    )
+
+    prepared, adjusted, records = header_gap.prepare_paths([path], settings)
+
+    assert prepared == [path]
+    assert records[0]['virtual_gap'] is True
+    assert records[0]['preparation_engine'] == '合成时虚拟补距'
+    assert records[0]['final_gap_mm'] == 40
+    assert not list(header_gap.cache_root().rglob('*.png'))
+    assert adjusted.header_gap_overrides
+    result = generate_layout([path], tmp_path/'out', settings)
+    placement = result['placements'][0]
+    assert placement['height_px'] == 332
+    with Image.open(tmp_path/'out'/result['filename']) as output, Image.open(path) as source:
+        actual = np.asarray(output.crop((placement['x_px'], placement['y_px'],
+            placement['x_px']+placement['width_px'], placement['y_px']+placement['height_px'])))
+        expected = np.asarray(header_gap.insert_gap(source, 45, 32))
+        assert np.array_equal(actual, expected)
+
+
 def test_coloured_haloo_card_footer_is_included_before_gap(tmp_path):
     image = Image.new('RGBA', (1000, 700))
     draw = ImageDraw.Draw(image)
@@ -202,6 +229,7 @@ def test_complete_double_orders_segmented_with_safe_corridors(tmp_path, mode, en
     result = generate_layout(paths, tmp_path/'out', settings)
     assert result['order_check']['orders'] == 4
     assert result['order_check']['double_pairs'] == 4
+    assert len(result['header_gap']) == len(paths)
     for part in result['parts']:
         assert len(part['placements']) % 2 == 0
         with Image.open(tmp_path/'out'/part['filename']) as output:

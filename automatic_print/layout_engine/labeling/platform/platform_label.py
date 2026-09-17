@@ -26,6 +26,14 @@ def platform_badge(text, target_height, degrees=0):
     return rotated
 
 
+def platform_badge_size(text, target_height, degrees=0):
+    """Measure cached badge pixels without constructing a temporary image."""
+    from automatic_print.layout_engine.labeling.text.platform_badge import badge_data
+    width, _pixels = badge_data(text, target_height)
+    return ((target_height, width) if degrees % 180
+            else (width, target_height))
+
+
 def placement_badge(text, width, height, degrees):
     """Rebuild the badge from stored final geometry without changing scale."""
     source_height = width if degrees % 180 else height
@@ -48,9 +56,9 @@ def platform_geometry(path, settings, width, height, degrees):
     if (settings.platform_below_marker and not settings.platform_reuse_qr
             and settings.color_block_enabled and settings.platform_font_height_mm > 0):
         target = max(2, mm_to_px(settings.platform_font_height_mm, settings.dpi))
-        badge = platform_badge(platform_text(path, settings), target, degrees)
-        badge_width, badge_height = badge.size
-        badge.close()
+        badge_width, badge_height = platform_badge_size(
+            platform_text(path, settings), target, degrees,
+        )
         return 0, 0, badge_width, badge_height
     source_region = detect_guide_band(path)
     if source_region is None:
@@ -69,9 +77,7 @@ def platform_geometry(path, settings, width, height, degrees):
     if settings.platform_font_height_mm > 0:
         target = min(target, max(2, mm_to_px(settings.platform_font_height_mm, settings.dpi)))
     text = platform_text(path, settings)
-    badge = platform_badge(text, target, degrees)
-    badge_width, badge_height = badge.size
-    badge.close()
+    badge_width, badge_height = platform_badge_size(text, target, degrees)
     gap = mm_to_px(settings.platform_gap_mm, settings.dpi)
     if settings.platform_below_marker and not settings.platform_reuse_qr and settings.color_block_enabled:
         return 0, 0, badge_width, badge_height
@@ -110,12 +116,10 @@ def _largest_card_badge(
     while low <= high:
         target = (low + high) // 2
         try:
-            badge = platform_badge(text, target)
+            badge_width, badge_height = platform_badge_size(text, target)
         except ValueError:
             low = target + 1
             continue
-        badge_width, badge_height = badge.size
-        badge.close()
         candidate = card_space(
             path, source_region, source_width, source_height,
             badge_width, badge_height,
@@ -140,12 +144,10 @@ def _largest_header_badge(
     while low <= high:
         target = (low + high) // 2
         try:
-            badge = platform_badge(text, target)
+            badge_width, badge_height = platform_badge_size(text, target)
         except ValueError:
             low = target + 1
             continue
-        badge_width, badge_height = badge.size
-        badge.close()
         candidate = header_space(
             path, source_region, source_width, source_height,
             badge_width, badge_height, gap, 0,

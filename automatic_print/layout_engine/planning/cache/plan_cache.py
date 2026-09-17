@@ -45,6 +45,7 @@ def cache_key(paths, settings, created_at, progress=None):
         progress('读取排版缓存', len(paths), len(paths),
                  f'已一次读取{len(paths)}个文件状态（{identity_workers}路并行）')
     settings_data = asdict(settings)
+    settings_data.pop('header_gap_overrides', None)
     developer_knife_gap = settings.cutter_knife_change_gap_mm > 0
     # This feature is strictly isolated from production mode.  In particular,
     # the added field must not perturb the legacy production cache key merely
