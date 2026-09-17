@@ -7,8 +7,10 @@ from automatic_print.layout_engine.orders.batch_analysis import analyze_batch, f
 from automatic_print.layout_engine.cutting.geometry.transition_marks import marked_height
 from automatic_print.layout_engine.intake.preparation.item_factory import read_items
 from automatic_print.layout_engine.reporting.metrics import basic_ordered_height
-from automatic_print.layout_engine.domain.models import LayoutSettings, Placement, ProgressCallback, mm_to_px
-from automatic_print.layout_engine.planning.base.row_optimizer import optimal_ordered_layout
+from automatic_print.layout_engine.domain.models import LayoutSettings, ProgressCallback, mm_to_px
+from automatic_print.layout_engine.planning.base.row_optimizer import (
+    optimal_ordered_layout, place_rows, used_canvas_width,
+)
 from automatic_print.layout_engine.planning.packing.units import build_units, optimizer_options
 from automatic_print.layout_engine.measurement.measurement_session import resolved_name
 def plan_layout(
@@ -116,7 +118,7 @@ def _plan_layout(paths, settings, progress, analysis, analysis_ready):
     rows = optimal_ordered_layout(
         optimizer_options(units), usable_width, spacing
     )
-    planned = _place_rows(units, rows, margin, spacing)
+    planned = place_rows(units, rows, margin, spacing)
     canvas_height = (
         max(
             placement.row_y_px + placement.footprint_height_px
@@ -128,24 +130,10 @@ def _plan_layout(paths, settings, progress, analysis, analysis_ready):
     baseline_height = (
         basic_ordered_height(baseline, usable_width, spacing) + 2 * margin
     )
-    used_width = min(canvas_width, _used_canvas_width(planned))
+    used_width = min(canvas_width, used_canvas_width(planned))
     return planned, labels, used_width, canvas_height, baseline_height
-def _used_canvas_width(planned):
-    right_edges = []
-    for _path, placement in planned:
-        if placement.platform_width_px:
-            right_edges.append(placement.platform_x_px+placement.platform_width_px)
-        right_edges.append(placement.x_px + placement.width_px)
-        if placement.number_width_px:
-            right_edges.append(
-                placement.number_x_px + placement.number_width_px
-            )
-        if placement.color_block_width_px:
-            right_edges.append(
-                placement.color_block_x_px
-                + placement.color_block_width_px
-            )
-    return max(right_edges)
+
+
 def _baseline_choice(choices, usable_width):
     fitting = next(
         (choice for choice in choices if choice.width <= usable_width),
@@ -154,54 +142,3 @@ def _baseline_choice(choices, usable_width):
     if fitting is None:
         raise ValueError("至少一个图片组超过了材料可打印宽度。")
     return fitting.width, fitting.height
-def _place_rows(units, rows, top_margin, spacing):
-    planned, y = [], top_margin
-    for start, end, choice_indexes in rows:
-        row = [
-            units[index][choice]
-            for index, choice in zip(
-                range(start, end), choice_indexes, strict=True
-            )
-        ]
-        row_height = max(choice.height for choice in row)
-        x = 0
-        for choice in row:
-            planned.extend(_place_choice(choice, x, y))
-            x += choice.width + spacing
-        y += row_height + spacing
-    return planned
-def _place_choice(choice, unit_x, row_y):
-    placed = []
-    for member in choice.members:
-        item = member.item
-        base_x, base_y = unit_x + member.x, row_y + member.y
-        placed.append(
-            (
-                item.path,
-                Placement(
-                    item.path.name,
-                    item.index,
-                    base_x + item.image_rx,
-                    base_y + item.image_ry,
-                    item.width,
-                    item.height,
-                    base_x + item.label_rx,
-                    base_y + item.label_ry,
-                    item.label_width,
-                    item.label_height,
-                    row_y,
-                    choice.width,
-                    choice.height,
-                    item.rotation_degrees,
-                    base_x + item.block_rx,
-                    base_y + item.block_ry,
-                    item.block_width,
-                    item.block_height,
-                    platform_x_px=base_x+item.platform_rx,
-                    platform_y_px=base_y+item.platform_ry,
-                    platform_width_px=item.platform_width,
-                    platform_height_px=item.platform_height,
-                ),
-            )
-        )
-    return placed

@@ -9,7 +9,7 @@ from PySide6.QtWidgets import (
 )
 
 from ..platform.pages import table_widget
-from ...ui.label_quick_panel import LabelQuickPanel
+from ...ui.workbench.overview import LabelQuickPanel
 
 
 def build_local_page(owner) -> QWidget:

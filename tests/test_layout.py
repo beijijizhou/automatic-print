@@ -35,7 +35,7 @@ def test_chinese_label_template_fields() -> None:
 
 
 def test_batch_folder_forward_and_reverse_label_fields() -> None:
-    from automatic_print.layout_engine.labeling.platform.platform_label import source_order_template
+    from automatic_print.layout_engine.labeling.text.templates import source_order_template
     text = _format_label(
         source_order_template('M1'), 3,
         Path('/订单/609162025022/S/很长的图片文件名字.png'),

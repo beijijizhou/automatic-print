@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from automatic_print.layout_engine.domain.models import Placement
+
 
 def optimal_ordered_rows(
     footprints: list[tuple[int, int]],
@@ -107,3 +109,52 @@ def _pareto_states(states):
         ]
         result.append(state)
     return result
+
+
+def used_canvas_width(planned):
+    right_edges = []
+    for _path, placement in planned:
+        if placement.platform_width_px:
+            right_edges.append(placement.platform_x_px + placement.platform_width_px)
+        right_edges.append(placement.x_px + placement.width_px)
+        if placement.number_width_px:
+            right_edges.append(placement.number_x_px + placement.number_width_px)
+        if placement.color_block_width_px:
+            right_edges.append(placement.color_block_x_px + placement.color_block_width_px)
+    return max(right_edges)
+
+
+def place_rows(units, rows, top_margin, spacing):
+    planned, y = [], top_margin
+    for start, end, choice_indexes in rows:
+        row = [units[index][choice] for index, choice in zip(
+            range(start, end), choice_indexes, strict=True)]
+        row_height = max(choice.height for choice in row)
+        x = 0
+        for choice in row:
+            planned.extend(_place_choice(choice, x, y))
+            x += choice.width + spacing
+        y += row_height + spacing
+    return planned
+
+
+def _place_choice(choice, unit_x, row_y):
+    placed = []
+    for member in choice.members:
+        item = member.item
+        base_x, base_y = unit_x + member.x, row_y + member.y
+        placed.append((item.path, Placement(
+            item.path.name, item.index,
+            base_x + item.image_rx, base_y + item.image_ry,
+            item.width, item.height,
+            base_x + item.label_rx, base_y + item.label_ry,
+            item.label_width, item.label_height,
+            row_y, choice.width, choice.height, item.rotation_degrees,
+            base_x + item.block_rx, base_y + item.block_ry,
+            item.block_width, item.block_height,
+            platform_x_px=base_x + item.platform_rx,
+            platform_y_px=base_y + item.platform_ry,
+            platform_width_px=item.platform_width,
+            platform_height_px=item.platform_height,
+        )))
+    return placed

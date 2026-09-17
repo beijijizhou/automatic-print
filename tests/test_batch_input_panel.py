@@ -57,7 +57,7 @@ def test_everyday_parameters_are_grouped_and_marker_preview_is_default(tmp_path)
     home = owner.automation_home
     panel = home.label_quick_panel
     titles = {group.title() for group in home.batch_input_panel.findChildren(type(home.batch_input_panel))}
-    assert {'批次', '输出', '排版', '标签'} <= titles
+    assert {'批次', '输出', '排版', '刀码与标签'} <= titles
     assert home.batch_input_panel.isAncestorOf(owner.quick_header_gap_group)
     assert home.batch_input_panel.isAncestorOf(owner.quick_force_small_pair)
     assert home.batch_input_panel.isAncestorOf(panel.source_order)

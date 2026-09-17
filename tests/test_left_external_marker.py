@@ -67,7 +67,7 @@ def test_full_batch_left_external_right_unchanged_and_pixels_safe(tmp_path, engi
 
 
 def test_external_item_is_idempotent_and_validation_rejects_embedded_left(tmp_path):
-    from automatic_print.layout_engine.planning.base.planner import _place_choice
+    from automatic_print.layout_engine.planning.base.row_optimizer import _place_choice
     from automatic_print.layout_engine.planning.packing.units import UnitChoice, UnitMember
     paths = sources(tmp_path)
     settings = LayoutSettings(dpi=25.4, cutter_mode='single', allow_rotation=False,

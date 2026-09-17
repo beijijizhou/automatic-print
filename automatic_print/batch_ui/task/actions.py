@@ -106,6 +106,7 @@ class ThreadActionsMixin:
             self.refresh_button,
             self.select_button,
             self.download_button,
+            getattr(self, "open_download_folder", None),
             self.process_button,
             self.merge_batches,
             self.range_button,

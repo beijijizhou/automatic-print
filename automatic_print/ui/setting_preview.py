@@ -14,7 +14,7 @@ class SettingPreview(QWidget):
     def sample_text(self) -> str:
         template = self.values().get("text", "{编号}")
         if self.values().get('source_order_enabled'):
-            from ..layout_engine.labeling.platform.platform_label import source_order_template
+            from ..layout_engine.labeling.text.templates import source_order_template
             template = source_order_template(template)
         if self.values().get('machine_enabled') and not any(t in template for t in ('{机器号}', '{machine}')):
             template = (template.strip()+' {机器号}').strip()

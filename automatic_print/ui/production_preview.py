@@ -12,7 +12,7 @@ from ..layout_engine.intake.metadata.images import print_dimensions
 from ..layout_engine.intake.preparation.item_factory import read_items
 from ..layout_engine.labeling.base.labels import format_label, settings_label_badge
 from ..layout_engine.labeling.base.dynamic_label import source_label_badge
-from ..layout_engine.labeling.platform.platform_label import numbered_template
+from ..layout_engine.labeling.text.templates import numbered_template
 from ..layout_engine.labeling.markers.qr_detection import detect_qr_location
 
 

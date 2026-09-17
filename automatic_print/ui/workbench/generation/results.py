@@ -6,7 +6,9 @@ from PySide6.QtCore import QUrl
 from PySide6.QtGui import QDesktopServices
 from PySide6.QtWidgets import QMessageBox
 
-from ....automation.api.s2b.metadata.prepare import metadata_warning_text
+from ....automation.api.s2b.metadata.prepare import (
+    metadata_summary_text, metadata_warning_text,
+)
 from ....layout_engine.reporting.metrics import saving_text
 from ....layout_engine.output.output_file_info import production_summary_text
 from ...busy_spinner import show_progress
@@ -44,10 +46,12 @@ def generation_finished(window, output, result) -> None:
         )
     saving = saving_text(result)
     summary = production_summary_text(result)
-    warning = metadata_warning_text(
-        result.get("analysis", {}).get("s2b_metadata", ())
-    )
+    metadata_records = result.get("analysis", {}).get("s2b_metadata", ())
+    metadata_summary = metadata_summary_text(metadata_records)
+    warning = metadata_warning_text(metadata_records)
     window.run_log.appendPlainText(summary)
+    if metadata_summary:
+        window.run_log.appendPlainText("S2B批次信息：\n" + metadata_summary)
     if warning:
         window.run_log.appendPlainText("S2B订单颜色提示：\n" + warning)
     window.run_log.appendPlainText(saving)

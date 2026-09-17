@@ -67,6 +67,8 @@ class PreviewTask(QRunnable):
                 annotate_analysis(report, gap_records, self.settings,
                     lambda stage, current, total, name: self.emit(self.signals.progress,
                         f'{stage} · {current}/{total} · {name}'))
+                if s2b_metadata:
+                    report['s2b_metadata'] = s2b_metadata
                 reports[:] = [report]
                 self.emit(self.signals.analysis, report)
 
@@ -92,8 +94,6 @@ class PreviewTask(QRunnable):
                        'warning': warning, 'overflow': overflow, 'order_check': order_check,
                        'analysis': reports[-1] if reports else {}, 'header_gap': gap_records,
                        'saved_meters': max(0, baseline-height)*25.4/self.settings.dpi/1000}
-            if reports and s2b_metadata:
-                reports[-1]['s2b_metadata'] = s2b_metadata
             self.cancel.check()
         except TaskCancelled:
             error = '预览任务已停止。'

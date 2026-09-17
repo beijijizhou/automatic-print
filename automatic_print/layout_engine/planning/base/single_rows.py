@@ -10,7 +10,7 @@ from automatic_print.layout_engine.planning.packing.units import UnitChoice, Uni
 
 
 def plan_single_rows(paths, settings, progress):
-    from .planner import _place_choice, _used_canvas_width
+    from .row_optimizer import _place_choice, used_canvas_width
     if not settings.color_block_enabled:
         raise ValueError('单排切膜必须启用左侧刀码。')
     paths = ordered_paths(paths)
@@ -47,4 +47,4 @@ def plan_single_rows(paths, settings, progress):
         if progress:
             progress('单排方向比较',index,len(groups),'完整订单相邻；无第二刀位，仅按实际占用长度选择方向')
     height = y-spacing+margin
-    return planned,labels,min(width,_used_canvas_width(planned)),height,baseline-spacing+margin if normal_valid else height
+    return planned,labels,min(width,used_canvas_width(planned)),height,baseline-spacing+margin if normal_valid else height

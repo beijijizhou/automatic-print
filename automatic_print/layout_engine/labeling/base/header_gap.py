@@ -12,9 +12,9 @@ from PIL import Image
 
 from automatic_print.layout_engine.labeling.base.header_region import search_header
 from automatic_print.layout_engine.intake.metadata.images import print_dimensions
+from automatic_print.layout_engine.reporting.metrics import gap_report, gap_summary
 
 TTL = 86400
-
 
 def cache_root():
     from automatic_print.layout_engine.planning.cache.plan_cache import cache_directory
@@ -58,9 +58,20 @@ def prepare_one(path, settings):
     path = Path(path)
     root = cache_root()
     if root in path.parents:
-        record = json.loads(path.with_suffix('.json').read_text())
-        verify_records([record])
-        return path, record
+        try:
+            record = json.loads(path.with_suffix('.json').read_text())
+            verify_records([record])
+            return path, record
+        except (OSError, ValueError, KeyError):
+            original = Path(str(locals().get('record', {}).get('source', '')))
+            if original.is_file() and root not in original.parents:
+                return prepare_one(original, settings)
+            return path, {
+                'source': str(path), 'filename': path.name,
+                'minimum_mm': settings.membrane_gap_mm, 'added_px': 0,
+                'warning': ('膜标签间距缓存记录损坏或缺失；已保留现有缓存图片继续排版，'
+                            '可在排版缓存中清理后重新生成'),
+            }
     stat = path.stat()
     fingerprint = [str(path.resolve()), stat.st_mtime_ns, stat.st_size, settings.membrane_gap_mm, 3]
     target = root / sha256(json.dumps(fingerprint).encode()).hexdigest() / path.name
@@ -146,6 +157,8 @@ def prepare_paths(paths, settings, progress=None):
                              (' · ' + result[1]['warning'] if result[1]['warning'] else ''))
                 submit_next()
     mapping = {str(old.resolve()): str(new.resolve()) for old, (new, _) in zip(paths, results)}
+    from automatic_print.automation.api.s2b.metadata.store import register_path_aliases
+    register_path_aliases(mapping)
     remap = lambda values: tuple((mapping.get(name, name), value) for name, value in values)
     settings = replace(settings, manual_rotations=remap(settings.manual_rotations),
                        sequence_numbers=remap(settings.sequence_numbers))
@@ -184,34 +197,3 @@ def annotate_analysis(data, records, settings=None, progress=None):
             rows.append({'source': record['filename'], 'path': record['source'],
                          'kind': warning, 'action': '保留原图间距；请人工核对'})
     return data
-
-
-def gap_report(records):
-    if not records:
-        return ''
-    changed = [record for record in records if record['added_px']]
-    rolled = [r for r in records if r.get('rollback_added_mm')]
-    return (gap_summary(records) + '\n' +
-            '\n'.join(f"{r['filename']}：新增透明空白{r['added_mm']:.2f}毫米" for r in changed)+
-            '\n'+'\n'.join(f"{r['filename']}：已回退新增{r['rollback_added_mm']:.2f}毫米；用户设置未修改" for r in rolled))
-
-
-def gap_summary(records):
-    if not records:
-        return ''
-    changed = [record for record in records if record.get('added_px')]
-    warnings = [record for record in records if record.get('warning')]
-    rolled = [record for record in records if record.get('rollback_added_mm')]
-    already = len(records) - len(changed) - len(warnings) - len(rolled)
-    added = ''
-    if changed:
-        low = min(record['added_mm'] for record in changed)
-        high = max(record['added_mm'] for record in changed)
-        added = (f' · 每张新增 {low:.2f} 毫米' if abs(high-low) < .005 else
-                 f' · 每张新增 {low:.2f}–{high:.2f} 毫米')
-    rollback = f' · 已回退 {len(rolled)} 张' if rolled else ''
-    return (
-        f"膜标签间距：目标 {records[0]['minimum_mm']:g} 毫米 · 共 {len(records)} 张"
-        f" · 实际扩充 {len(changed)} 张 · 原本已满足 {max(0, already)} 张"
-        f" · 未能扩充 {len(warnings)} 张{rollback}{added}（不缩放原图）"
-    )

@@ -122,6 +122,8 @@ def build_production_page(owner, output_row: QHBoxLayout) -> QWidget:
     owner.select_button.clicked.connect(owner.select_all_ready)
     owner.download_button = QPushButton("下载并解压")
     owner.download_button.clicked.connect(owner.download_selected)
+    owner.open_download_folder = QCheckBox("下载完成后打开文件夹")
+    owner.open_download_folder.setChecked(True)
     owner.process_button = QPushButton("重新排版已下载批次")
     owner.process_button.clicked.connect(owner.process_batches)
     actions = QHBoxLayout()
@@ -166,6 +168,8 @@ def build_production_page(owner, output_row: QHBoxLayout) -> QWidget:
     if not getattr(owner, "local_only", False):
         layout.addWidget(QLabel("下载保存位置"))
         layout.addLayout(output_row)
+        if getattr(owner, "download_only", False):
+            layout.addWidget(owner.open_download_folder)
     layout.addWidget(owner.summary)
     layout.addLayout(range_row)
     layout.addWidget(owner.table)

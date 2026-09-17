@@ -6,7 +6,8 @@ from automatic_print.layout_engine.domain.models import LayoutItem, LayoutSettin
 from automatic_print.layout_engine.labeling.markers.qr_detection import detect_qr_location
 from automatic_print.layout_engine.labeling.base.dynamic_label import source_label_badge
 from automatic_print.layout_engine.labeling.platform.membrane_region import detect_membrane_region
-from automatic_print.layout_engine.labeling.platform.platform_label import platform_geometry, numbered_template
+from automatic_print.layout_engine.labeling.platform.platform_label import platform_geometry
+from automatic_print.layout_engine.labeling.text.templates import numbered_template
 from automatic_print.layout_engine.labeling.markers.marker_space import can_embed_marker, transparent_rect
 from automatic_print.layout_engine.cutting.geometry.rotated_marks import rotated_marks
 from automatic_print.layout_engine.labeling.markers.qr_placement import rotated_qr as _rotated_qr, qr_label_layout as _qr_label_layout

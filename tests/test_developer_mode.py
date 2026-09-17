@@ -65,7 +65,8 @@ def test_default_shows_production_layout_but_hides_diagnostic_tools(tmp_path, mo
         for row in range(feature_dialog.tree.topLevelItem(group).childCount())
     ]
     assert features == [
-        '排版历史', '批量分析文件夹', '算法诊断', '批次顺序标注',
+        '排版历史', '批量分析文件夹', '算法诊断',
+        '切膜刀码开关', '平台＋尺码标签开关', '批次顺序标注',
         'S2B 批次信息查询', '隆丰 ERP 下载', 'S2B 生产图下载',
         '莆田平台', 'Haloo平台', '并行分块 TIFF',
         '刀位切换停止距离',
@@ -187,9 +188,11 @@ def test_active_developer_task_blocks_exit_and_mode_disable(tmp_path):
     owner.developer_mode_checkbox.setChecked(False)
     assert owner.developer_mode_checkbox.isChecked()
     owner.close()
-    assert not owner.isVisible()
+    assert owner.isVisible()
+    assert '任务仍在运行' in owner.status.text()
     dialog.thread = None
     dialog.close()
     owner.developer_mode_checkbox.setChecked(False)
     assert not owner.has_active_tasks()
     owner.close()
+    assert not owner.isVisible()

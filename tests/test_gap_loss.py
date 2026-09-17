@@ -37,7 +37,10 @@ def test_reference_failure_is_nonblocking(monkeypatch):
         raise ValueError('参考宽度不足')
     monkeypatch.setattr(planner,'plan_layout',fail)
     result=compare_gap_loss([dict(source='/tmp/a.png',added_px=40)],LayoutSettings(),2)
-    assert '参考宽度不足' in gap_loss_text(result)
+    text=gap_loss_text(result)
+    assert '参考宽度不足' in text
+    assert '不影响当前排版' in text
+    assert '禁止输出' not in text
 
 
 def test_actual_preview_compares_added_rows_without_output(tmp_path, monkeypatch):

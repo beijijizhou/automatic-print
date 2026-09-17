@@ -1,4 +1,3 @@
-import json
 from types import SimpleNamespace
 
 import pytest
@@ -7,17 +6,16 @@ from automatic_print.automation.api.s2b.metadata.batch_name import (
     find_s2b_batch_folder,
     parse_s2b_batch_name,
 )
-from automatic_print.automation.api.s2b.metadata.client import (
-    DEFAULT_ENDPOINT,
-    fetch_s2b_batch_info,
-    gateway_config,
-)
 from automatic_print.automation.api.s2b.metadata.store import (
     color_for_path,
     order_for_path,
     register_batch_records,
+    register_path_aliases,
 )
-from automatic_print.automation.api.s2b.metadata.prepare import prepare_s2b_metadata
+from automatic_print.automation.api.s2b.metadata.prepare import (
+    metadata_summary_text,
+    prepare_s2b_metadata,
+)
 
 
 def test_batch_name_is_parsed_from_stable_right_hand_fields():
@@ -45,44 +43,6 @@ def test_batch_folder_is_found_above_size_and_image(tmp_path):
     assert find_s2b_batch_folder(image).batch_number == "26OP3LGLUEUV"
 
 
-def test_gateway_client_posts_batch_and_account(monkeypatch):
-    captured = {}
-
-    class Response:
-        def __enter__(self): return self
-        def __exit__(self, *_args): return None
-        def read(self):
-            return json.dumps({
-                "records": [], "batch_number": "ABC123ABC123"
-            }).encode()
-
-    def open_request(request, timeout):
-        captured["body"] = json.loads(request.data)
-        captured["key"] = request.headers["X-automatic-print-key"]
-        captured["timeout"] = timeout
-        return Response()
-
-    monkeypatch.setattr(
-        "automatic_print.automation.api.s2b.metadata.client.urlopen", open_request
-    )
-    result = fetch_s2b_batch_info(
-        "ABC123ABC123",
-        endpoint="https://example.test/batch",
-        access_key="limited-key",
-    )
-    assert result["batch_number"] == "ABC123ABC123"
-    assert captured["body"] == {
-        "account": "DTF", "batch_number": "ABC123ABC123"
-    }
-    assert captured["key"] == "limited-key"
-
-
-def test_gateway_uses_shared_endpoint_without_per_machine_url(monkeypatch):
-    monkeypatch.delenv("AUTOMATIC_PRINT_S2B_BATCH_INFO_URL", raising=False)
-    monkeypatch.delenv("AUTOMATIC_PRINT_S2B_BATCH_INFO_KEY", raising=False)
-    assert gateway_config() == (DEFAULT_ENDPOINT, "")
-
-
 def test_api_color_matches_s2b_order_item_and_size(tmp_path):
     root = tmp_path / "LNS2B017Sg_b__SP___1_26OP3LGLUEUV_20260916_010042_5unwyr1p"
     image = root / "S" / "26OP3LGLUEUV-1-1-2TB3P5-1-1-1-1-棉-S.png"
@@ -99,6 +59,28 @@ def test_api_color_matches_s2b_order_item_and_size(tmp_path):
     })
     assert count == 1
     assert color_for_path(image) == "黑色"
+
+
+def test_prepared_gap_copy_keeps_api_order_and_color(tmp_path):
+    root = tmp_path / "AS2B014Mt______1_22UJ9KT4VCZA_20260917_014406_ucjfsdyh"
+    image = root / "S" / "22UJ9KT4VCZA-1-1-ORDER7-1-1-1-1-棉-S.png"
+    image.parent.mkdir(parents=True)
+    image.write_bytes(b"source")
+    prepared = tmp_path / "cache" / image.name
+    prepared.parent.mkdir()
+    prepared.write_bytes(b"prepared")
+    register_batch_records([image], {
+        "batch_number": "22UJ9KT4VCZA",
+        "records": [{
+            "order_code": "ORDER7", "order_item_code": "ORDER7-1",
+            "color": "黑色", "size": "S",
+        }],
+    })
+
+    register_path_aliases({str(image.resolve()): str(prepared.resolve())})
+
+    assert color_for_path(prepared) == "黑色"
+    assert order_for_path(prepared) == "ORDER7"
 
 
 def test_api_order_and_color_fall_back_to_unique_order_folder(tmp_path):
@@ -172,9 +154,12 @@ def test_detected_s2b_always_fetches_color_without_developer_mode(
         [image],
         SimpleNamespace(s2b_batch_api_enabled=False, platform_name=""),
     )
-    prepare_s2b_metadata([image], SimpleNamespace())
+    cached = prepare_s2b_metadata([image], SimpleNamespace())
     assert calls == ["22UJ9KT4VCZA"]
     assert result[0]["colors"] == {"蓝色": 1}
+    assert cached[0]["colors"] == {"蓝色": 1}
+    assert cached[0]["matched_images"] == 1
+    assert "颜色：蓝色1张" in metadata_summary_text(cached)
 
 
 def test_detected_s2b_reports_unmatched_color_and_keeps_running(
@@ -224,7 +209,7 @@ def test_missing_service_reports_choice_instead_of_stopping(tmp_path, monkeypatc
     image.touch()
     monkeypatch.setattr(
         "automatic_print.automation.api.s2b.metadata.prepare.gateway_config",
-        lambda: ("https://example.test", ""),
+        lambda: ("", ""),
     )
     result = prepare_s2b_metadata([image], SimpleNamespace())
     assert len(result) == 1

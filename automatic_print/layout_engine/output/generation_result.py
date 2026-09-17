@@ -2,7 +2,7 @@
 from dataclasses import asdict
 
 from automatic_print.layout_engine.intake.metadata.images import print_dimensions
-from automatic_print.layout_engine.cutting.geometry.knife_positions import result_fields
+from automatic_print.layout_engine.cutting.geometry.knife_change_gap import result_fields
 from automatic_print.layout_engine.labeling.base.labels import normalize_machine_number
 from automatic_print.layout_engine.reporting.metrics import saving_metrics
 

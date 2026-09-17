@@ -22,6 +22,16 @@ def present_action_result(owner, result: dict) -> None:
                 '未启动排版；请回到本地排版页，点击开始排版。')
         owner.summary.setText(text)
         QMessageBox.information(owner, '下载完成', text)
+        open_folder = getattr(owner, 'open_download_folder', None)
+        folder = Path(result['output_folder'])
+        if (
+            open_folder is not None
+            and open_folder.isChecked()
+            and folder.is_dir()
+        ):
+            QDesktopServices.openUrl(
+                QUrl.fromLocalFile(str(folder.resolve()))
+            )
         return
     mode = ('排版预览' if result.get('preview_only') else
             '测试小样' if result['test'] else '生产批次')

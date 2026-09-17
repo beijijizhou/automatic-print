@@ -167,22 +167,8 @@ class CutterSettingsPanel(QWidget):
         self.transitions.setEnabled(mode!='free')
 
     def save(self):
-        self.printable.save()
-        for key, value in {
-            'quick_mode': self.quick_mode.isChecked(),
-            "film_mm": self.width_control.value(), "mode": self.mode.currentData(),
-            'custom_film_selected': self.film.currentData()=='custom',
-            "auto_knife": self.auto_knife.isChecked(),
-            "rotation_zone": self.rotation_zone.isChecked(),
-            'tail_rotation': self.tail_rotation.isChecked(),
-            "knife_mm": self.knife.value(), "safety_mm": self.safety.value(),
-            "marker_offset_mm": self.marker_offset.value(),
-            'left_marker_lift_mm': self.left_marker_lift.value(),
-            'knife_change_gap_mm': self.knife_change_gap.value(),
-        }.items():
-            self.preferences.setValue("cutter/" + key, value)
-        self.preferences.setValue('layout/majority_two_zone', self.two_zone.isChecked())
-        self.preferences.setValue('layout/force_small_pair_width', self.force_small_pair.isChecked())
+        from .cutter_settings_state import save_cutter_settings
+        save_cutter_settings(self)
 
     def _rotation_requested(self, enabled):
         if enabled and self.mode.currentData() == 'dual':

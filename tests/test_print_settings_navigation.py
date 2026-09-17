@@ -1,5 +1,4 @@
 from test_developer_mode import window, APP
-from automatic_print.ui.bulk_generation import BulkGenerationDialog
 
 
 def test_settings_categories_reuse_controls_and_persist_parallelism(tmp_path, monkeypatch):
@@ -42,12 +41,7 @@ def test_settings_categories_reuse_controls_and_persist_parallelism(tmp_path, mo
     owner.combine_bulk_batches.setChecked(True)
     owner.worker_threads.setValue(3)
     owner.preference_autosave.flush()
-    dialog = BulkGenerationDialog(owner)
-    assert dialog.parallelism.isHidden()
-    dialog.begin()  # Empty queue; copies saved production concurrency without starting work.
-    assert dialog.parallelism.value() == 2
-    assert dialog.thread is None
-    dialog.close()
+    assert owner.bulk_parallelism.value() == 2
     owner.settings_dialog.close()
     owner.close()
     reopened = window(path)

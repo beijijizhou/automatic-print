@@ -35,7 +35,10 @@ def gap_loss_text(data):
     if not data:
         return ''
     if data.get('unavailable'):
-        return '间距额外用膜：原间距参考方案不可用：'+data['unavailable']
+        reason = str(data['unavailable']).replace('禁止输出：', '')
+        reason = reason.replace('，禁止输出。', '。').replace('禁止输出。', '').strip()
+        return ('间距额外用膜：原间距对照未完成，不影响当前排版；'
+                '当前采用补足间距方案。对照未完成原因：'+reason)
     return (f"间距额外用膜：补足 {data['changed_images']} 张 · 原间距 {data['original_m']:.3f} 米"
             f" · 当前 {data['current_m']:.3f} 米 · 增量 {data['extra_m']:+.3f} 米"
             f" / {data['extra_area_m2']:+.3f} 平方米\n"

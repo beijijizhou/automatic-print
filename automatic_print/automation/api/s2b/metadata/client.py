@@ -22,13 +22,12 @@ def gateway_config():
         packaged_key = str(S2B_BATCH_INFO_KEY).strip()
     except ImportError:
         pass
+    configured_key = os.environ.get("AUTOMATIC_PRINT_S2B_BATCH_INFO_KEY", "").strip()
     return (
         os.environ.get(
             "AUTOMATIC_PRINT_S2B_BATCH_INFO_URL", DEFAULT_ENDPOINT
         ).strip(),
-        os.environ.get(
-            "AUTOMATIC_PRINT_S2B_BATCH_INFO_KEY", packaged_key
-        ).strip(),
+        configured_key or packaged_key,
     )
 
 
@@ -63,18 +62,20 @@ def call_s2b_gateway(
     configured_url, configured_key = gateway_config()
     endpoint = str(endpoint or configured_url).strip()
     access_key = str(access_key or configured_key).strip()
-    if not endpoint or not access_key:
+    if not endpoint:
         raise S2BBatchInfoError("尚未配置共享 S2B 批次信息服务")
     payload = json.dumps(payload).encode("utf-8")
+    headers = {
+        "Content-Type": "application/json",
+        "Accept": "application/json",
+    }
+    if access_key:
+        headers["X-Automatic-Print-Key"] = access_key
     request = Request(
         endpoint,
         data=payload,
         method="POST",
-        headers={
-            "Content-Type": "application/json",
-            "Accept": "application/json",
-            "X-Automatic-Print-Key": access_key,
-        },
+        headers=headers,
     )
     try:
         with urlopen(request, timeout=float(timeout)) as response:

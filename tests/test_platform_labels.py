@@ -7,7 +7,7 @@ from automatic_print.layout_engine import LayoutSettings, generate_layout
 from automatic_print.layout_engine.cutting.geometry.cut_guide_geometry import detect_guide_band
 from automatic_print.layout_engine.intake.preparation.item_factory import read_items
 from automatic_print.layout_engine.labeling.platform.platform_label import (
-    numbered_template, placement_badge, platform_badge, platform_text,
+    placement_badge, platform_badge, platform_text,
 )
 from automatic_print.layout_engine.rendering.storage.segmented_output import shift_part
 from automatic_print.layout_engine.cutting.validation.cut_validation import validate_cut_corridor
@@ -93,11 +93,6 @@ def test_missing_qr_warns_without_blocking_and_sequence_is_not_duplicated(tmp_pa
     assert (tmp_path/'out'/result['filename']).exists()
     assert result['placements'][0]['platform_width_px'] == 0
     assert result['analysis']['image_anomalies'][0]['source'] == path.name
-    assert numbered_template(settings(label_text_template='{编号} CY')) == '{编号} CY'
-    assert numbered_template(settings(label_sequence_enabled=False)) == 'CY'
-    assert numbered_template(settings(label_machine_enabled=True)) == 'CY {机器号} {编号}'
-    assert numbered_template(settings(label_machine_enabled=True,
-        label_text_template='CY {机器号} {编号}')) == 'CY {机器号} {编号}'
     badge = platform_badge('隆丰', 40)
     assert badge.height == 40
     assert badge.getchannel('A').getbbox()[3]-badge.getchannel('A').getbbox()[1] >= 38

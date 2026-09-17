@@ -38,6 +38,9 @@ def test_platform_download_is_multi_select_and_preview_only(tmp_path):
     assert longfeng.download_preview_only.isChecked()
     assert not longfeng.download_preview_only.isEnabled()
     assert longfeng.download_button.text() == "下载并解压"
+    assert longfeng.open_download_folder.text() == "下载完成后打开文件夹"
+    assert longfeng.open_download_folder.isChecked()
+    assert not longfeng.open_download_folder.isHidden()
     assert longfeng.process_button.isHidden()
     assert longfeng.test_mode.isHidden()
     assert longfeng.download_preview_only.isHidden()
@@ -64,6 +67,50 @@ def test_platform_download_is_multi_select_and_preview_only(tmp_path):
     owner.developer_mode_checkbox.setChecked(False)
     assert not owner.workspace_tabs.isTabVisible(index)
     assert owner.workspace_tabs.currentIndex() == 0
+    owner.close()
+
+
+def test_download_completion_opens_folder_when_option_is_checked(
+    tmp_path, monkeypatch
+):
+    from automatic_print.batch_ui.shell import results as result_view
+
+    platform_folder = tmp_path / "隆丰"
+    platform_folder.mkdir()
+    owner = MainWindow(QSettings(str(tmp_path / "prefs.ini"), QSettings.IniFormat))
+    owner.startup_update_timer.stop()
+    owner.developer_mode_checkbox.setChecked(True)
+    workbench = owner.production_platform_download_page.workbenches["隆丰"]
+    opened = []
+    monkeypatch.setattr(result_view.QMessageBox, "information", lambda *_args: None)
+    monkeypatch.setattr(
+        result_view.QDesktopServices,
+        "openUrl",
+        lambda url: opened.append(url.toLocalFile()) or True,
+    )
+
+    result_view.present_action_result(
+        workbench,
+        {
+            "type": "downloaded",
+            "platform": "隆丰",
+            "files": [platform_folder / "batch.zip"],
+            "output_folder": str(platform_folder),
+        },
+    )
+
+    assert opened == [str(platform_folder.resolve())]
+    workbench.open_download_folder.setChecked(False)
+    result_view.present_action_result(
+        workbench,
+        {
+            "type": "downloaded",
+            "platform": "隆丰",
+            "files": [platform_folder / "batch.zip"],
+            "output_folder": str(platform_folder),
+        },
+    )
+    assert opened == [str(platform_folder.resolve())]
     owner.close()
 
 

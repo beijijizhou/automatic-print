@@ -27,7 +27,7 @@ def generate_layout(
 ) -> dict:
     total_started = perf_counter()
     paths = list(image_paths)
-    from automatic_print.layout_engine.output.output_policy import enforce_output_compatibility
+    from automatic_print.layout_engine.output.output_sizes import enforce_output_compatibility
     settings, output_format_fallback = enforce_output_compatibility(settings, progress)
     if paths:
         label_batch_name = str(batch_name or settings.label_batch_name or paths[0].parent.name).strip()
@@ -49,21 +49,11 @@ def generate_layout(
     reading_started = perf_counter()
     phase = phase_ready or (lambda name: None)
     phase('订单与尺码分析')
-    effective = [settings]
-    def report(stage, current, total, filename):
-        if stage == "批次刀位已确定":
-            effective[0] = replace(settings, cutter_knife_mm=current*25.4/total)
-        if progress:
-            progress(stage, current, total, filename)
-    analysis = []
-    def analyzed(data):
-        from automatic_print.layout_engine.labeling.base.header_gap import annotate_analysis
-        annotate_analysis(data, gap_records, settings, progress)
-        if output_format_fallback:
-            data['output_format_fallback'] = output_format_fallback
-        analysis[:] = [data]
-        if analysis_ready:
-            analysis_ready(data)
+    from .analysis import analysis_callbacks
+    effective, analysis, report, analyzed = analysis_callbacks(
+        settings, gap_records, progress, analysis_ready,
+        s2b_metadata, output_format_fallback,
+    )
     if prepared_plan is None:
         from automatic_print.layout_engine.planning.zones.gap_fallback import plan_with_gap_fallback
         paths, settings, result = plan_with_gap_fallback(paths, settings, gap_records, report, analyzed)

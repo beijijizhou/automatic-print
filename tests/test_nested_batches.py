@@ -182,7 +182,7 @@ def test_nested_scan_off_gui_and_selected_file_information_before_preview(tmp_pa
         APP.processEvents()
     assert threads and threads[0] != get_ident()
     assert len(owner.bulk_controller.records) == 3
-    assert all(item.text(2) == '12' for item in owner.bulk_controller.selector.items.values())
+    assert all(item.text(1) == '12' for item in owner.bulk_controller.selector.items.values())
     assert not (tmp_path/'切膜机文件').exists()
     owner.close()
 

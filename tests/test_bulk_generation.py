@@ -99,7 +99,9 @@ def test_normal_entry_and_active_task_protection(tmp_path, monkeypatch):
     controller.thread = object()
     assert owner.has_active_tasks()
     owner.close()
-    assert not owner.isVisible()
+    assert owner.isVisible()
+    assert '任务仍在运行' in owner.status.text()
     controller.thread = None
     assert owner.grab().save(str(tmp_path/'bulk-generation.png'))
     owner.close()
+    assert not owner.isVisible()

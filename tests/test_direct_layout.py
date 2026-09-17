@@ -34,10 +34,11 @@ def test_main_start_uses_unified_batch_entry_without_settings(tmp_path, monkeypa
     window.automation_home.start_layout_button.click()
     assert calls == [(window, str(source))]
     assert not window.settings_dialog.isVisible()
-    for control in (window.progress, window.status, window.current_file,
-                    window.stop_generation_button):
-        assert control.isVisible()
+    for control in (window.progress, window.status, window.current_file):
+        assert not control.isVisible()
         assert not window.settings_dialog.isAncestorOf(control)
+    assert window.stop_generation_button.isVisible()
+    assert not window.settings_dialog.isAncestorOf(window.stop_generation_button)
     assert not window.run_log.isVisible()
     assert not window.settings_dialog.isAncestorOf(window.run_log)
     window.close()

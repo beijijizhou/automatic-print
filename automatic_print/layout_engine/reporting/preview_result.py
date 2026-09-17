@@ -8,7 +8,7 @@ def build_preview_result(
     output_name, planned, quality, sizes, settings, analysis, gap_records,
     cut_check, order_check, width, height, baseline_height,
 ):
-    from automatic_print.layout_engine.cutting.geometry.knife_positions import result_fields
+    from automatic_print.layout_engine.cutting.geometry.knife_change_gap import result_fields
     result = {
         'preview_only': True,
         'filename': output_name,

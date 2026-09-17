@@ -1,5 +1,26 @@
-"""Output size labels and one copyable production report."""
+"""Output compatibility, size labels, and one copyable production report."""
+from dataclasses import replace
+
 from automatic_print.layout_engine.intake.metadata.source_metadata import source_size, size_key
+
+
+def enforce_output_compatibility(settings, progress=None):
+    """RIIN cutter workflows use PNG; safely downgrade a stale TIFF choice."""
+    if settings.cutter_mode == 'free' or settings.output_format.lower() != 'tiff':
+        return settings, None
+    message = (
+        'RIIN 切膜链路不支持 TIFF：原值 TIFF，已采用 PNG；'
+        '仅改变输出容器，不改变排版坐标、图片尺寸或刀位。'
+    )
+    if progress:
+        progress('输出格式确认', 1, 1, message)
+    return replace(settings, output_format='png'), {
+        'original': 'TIFF',
+        'adopted': 'PNG',
+        'impact': '仅改变输出容器；排版坐标、图片尺寸和刀位不变',
+        'edit_path': '打印参数 → 输出图片格式',
+        'message': message,
+    }
 
 
 def size_range_label(paths):
@@ -79,9 +100,15 @@ def cutting_report(result):
     review += '\n'+gap_report(result.get('analysis', {}).get('header_gap', []))
     from automatic_print.layout_engine.planning.zones.gap_loss import gap_loss_text
     review += '\n'+gap_loss_text(result.get('analysis', {}).get('gap_loss'))
-    from automatic_print.automation.api.s2b.metadata.prepare import metadata_warning_text
+    from automatic_print.automation.api.s2b.metadata.prepare import (
+        metadata_summary_text, metadata_warning_text,
+    )
+    metadata_records = result.get('analysis', {}).get('s2b_metadata', ())
+    metadata_summary = metadata_summary_text(metadata_records)
+    if metadata_summary:
+        review += '\nS2B批次信息：\n'+metadata_summary
     metadata_warning = metadata_warning_text(
-        result.get('analysis', {}).get('s2b_metadata', ()))
+        metadata_records)
     if metadata_warning:
         review += '\nS2B订单颜色提示：\n'+metadata_warning
     from .output_file_info import result_file_report

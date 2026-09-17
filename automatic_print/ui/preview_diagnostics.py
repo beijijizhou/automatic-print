@@ -4,7 +4,7 @@ from math import ceil
 
 from ..layout_engine.intake.preparation.item_factory import read_items
 from ..layout_engine.domain.models import mm_to_px
-from ..layout_engine.planning.base.planner import _place_choice
+from ..layout_engine.planning.base.row_optimizer import _place_choice
 from ..layout_engine.planning.packing.units import UnitChoice, UnitMember
 
 

@@ -46,6 +46,10 @@ def show_selected_batch_summary(panel, folder, report=None):
                 f" · {report.get('piece_count', 0)} 件 / {report.get('image_count', 0)} 张图"
                 f" · {report.get('double_pairs', 0)} 组双面")
     lines = [identity, f'{group_name}：{compact_distribution_text(report, limit=8)}']
+    from ..automation.api.s2b.metadata.prepare import metadata_summary_text
+    metadata = metadata_summary_text(report.get('s2b_metadata', ()))
+    if metadata:
+        lines.append(f'S2B批次信息：{metadata}')
     gap_records = report.get('header_gap', ())
     if gap_records:
         expanded = sum(record.get('added_px', 0) > 0 for record in gap_records)
@@ -56,7 +60,7 @@ def show_selected_batch_summary(panel, folder, report=None):
     lines.append(f'来源：{path}')
     panel.selected_source.setText('\n'.join(lines))
     panel.selected_source.setToolTip(
-        f'{distribution_text(report)}\n来源：{path}'
+        '\n'.join(filter(None, (distribution_text(report), metadata, f'来源：{path}')))
     )
 
 

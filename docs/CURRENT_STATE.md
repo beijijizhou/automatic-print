@@ -66,7 +66,7 @@
   `layout_engine/intake/preparation/item_factory.py`只把测量结果组装为单张排版对象。
 - S2B 文件夹批次号解析、中心批次查询及本地图片颜色匹配位于
   `automation/api/s2b/metadata/`，生产批次列表和导出下载位于`production/`；只要识别到 S2B 批次，预览和生成都会在排版前查询一次订单颜色并按本地
-  路径缓存，不依赖开发者模式或手动平台选择。服务不可用或任一图片颜色未匹配时保留本地信息继续
+  路径、修改时间和文件大小缓存，不依赖开发者模式或手动平台选择；同一路径被替换后颜色和订单缓存自动失效，完整缓存命中时不再访问服务配置。服务不可用或任一图片颜色未匹配时保留本地信息继续
   排版，在预览、报告和完成确认中显示诊断，由用户选择是否采用结果；文件名不能识别订单时，以批次目录内的订单文件夹作唯一匹配回退，并把接口订单身份
   写回共享订单归组。中心地址随应用提供，正式 Windows 构建从 GitHub Secret
   `AUTOMATIC_PRINT_S2B_BATCH_INFO_KEY` 注入受限客户端密钥；源码树只保留空占位，
@@ -103,7 +103,7 @@
   开发者模式可在主界面“输出”参数组直接选择 PNG 或并行分块 BigTIFF，并与完整打印参数双向同步；
   BigTIFF 画布按整幅宽度和内存预算选择256至4096行 Strip 有界生成，
   tifffile/imagecodecs 多线程压缩，单一写入器登记块偏移；每个 Strip 在压缩前同步核对真实 alpha 刀位，
-  不再保存后重新解压超长 TIFF；普通模式始终回到 PNG。RIIN单列/自动多列切膜即使读取到开发者旧TIFF设置，也由`layout_engine/output/output_policy.py`继续任务并降级为PNG；TIFF仅保留给自由排版性能测试。
+  不再保存后重新解压超长 TIFF；普通模式始终回到 PNG。RIIN单列/自动多列切膜即使读取到开发者旧TIFF设置，也由`layout_engine/output/output_sizes.py`继续任务并降级为PNG；TIFF仅保留给自由排版性能测试。
 - 输出安全：`layout_engine/cutting/validation/order_validation.py`、`layout_engine/cutting/validation/cut_validation.py`、
   `layout_engine/cutting/validation/marked_pixel_validation.py`、`layout_engine/cutting/geometry/printed_guides.py`、`layout_engine/output/output_file_info.py`。
   `layout_engine/cutting/geometry/knife_change_gap.py`在开发者模式参数启用时，只对实际刀位变化边界移动后续整行，
@@ -155,6 +155,7 @@
 - ERP生产批次读取兼容顶层表格与工厂外壳中的`fnsz-sale`内嵌表格；莆田从首页“生产 / 批量生产”进入后可复用同一列表、搜索和下载通路。
 - 蜂鸟ERP原始批次行到中立`BatchRecord`的转换集中在`automation/api/erp/records.py`，浏览器模块只负责页面与请求流程。
 - “生产平台下载”作为主工作台独立页签，仅随开发者模式显示；支持多选已配置平台，每个平台独立显示批次、下载进度和日志。隆丰、莆田和Haloo复用蜂鸟ERP通路；S2B优先通过Supabase受限网关读取平台批次、人员标签、触发生产图导出并取得真实下载地址，原始S2B Token只在服务端解密；网关不可用时才回退专用浏览器登录。`production/downloads.py`负责编排，`production/archive_io.py`负责下载、校验及安全解压到`S2B/ARCHIVES`和`S2B/BATCHES`。下载流程不触发排版，也不自动创建生产批次。
+  各平台下载页默认勾选下载完成后打开对应平台文件夹，用户可在下载前关闭该行为。
 - “莆田”和“Haloo”本地排版入口由`ui/developer_mode.py`控制，仅在开发者模式加入平台选择；`ui/print_settings_navigation.py`集中应用40毫米膜标签间距默认值。
 - 新增外部平台接口必须进入`automation/api/<provider>/`；跨平台编排复用浏览器、批次和传输层，
   不在根目录增加平台文件或无业务含义的兼容转发层。

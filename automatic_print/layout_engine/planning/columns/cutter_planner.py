@@ -13,7 +13,7 @@ from automatic_print.layout_engine.planning.columns.column_solver import solve_g
 
 
 def plan_cutter_layout(paths, settings, progress, prepared=None, preserve_sequence=False):
-    from automatic_print.layout_engine.planning.base.planner import _place_choice, _used_canvas_width
+    from automatic_print.layout_engine.planning.base.row_optimizer import _place_choice
 
     settings = replace(settings, sequence_numbers=settings.sequence_numbers or
                        tuple((resolved_name(path), i) for i, path in enumerate(paths, 1)))
@@ -71,8 +71,8 @@ def plan_cutter_layout(paths, settings, progress, prepared=None, preserve_sequen
 
 def cutter_output_width(planned, settings, maximum):
     """Trim unused right canvas while retaining every active knife corridor."""
-    from automatic_print.layout_engine.planning.base.planner import _used_canvas_width
-    used = _used_canvas_width(planned)
+    from automatic_print.layout_engine.planning.base.row_optimizer import used_canvas_width
+    used = used_canvas_width(planned)
     if settings.cutter_mode != 'dual':
         return min(maximum, used)
     safety = ceil(settings.cutter_safety_mm*settings.dpi/25.4)

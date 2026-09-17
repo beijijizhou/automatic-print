@@ -117,6 +117,37 @@ def test_cache_expiry_parameter_change_and_original_freshness(tmp_path, monkeypa
         header_gap.verify_records(records)
 
 
+def test_missing_cache_sidecar_keeps_prepared_image_and_reports_warning(tmp_path):
+    prepared = header_gap.cache_root()/'orphan'/'prepared.png'
+    prepared.parent.mkdir(parents=True)
+    Image.new('RGBA', (20, 20), 'blue').save(prepared)
+
+    actual, record = header_gap.prepare_one(
+        prepared, LayoutSettings(membrane_gap_mm=40),
+    )
+
+    assert actual == prepared
+    assert record['added_px'] == 0
+    assert '缓存记录损坏或缺失' in record['warning']
+
+
+def test_stale_prepared_copy_is_regenerated_from_recorded_source(tmp_path):
+    source = sample(tmp_path/'B1-1-T-Black-M-NO1-1.png')
+    settings = LayoutSettings(dpi=25.4, membrane_gap_mm=40)
+    prepared, _, _ = header_gap.prepare_paths([source], settings)
+    prepared = prepared[0]
+    prepared.with_suffix('.json').write_text(
+        '{"source": "' + str(source) + '", "source_identity": ["missing", 0, 0]}',
+        encoding='utf-8',
+    )
+
+    actual, record = header_gap.prepare_one(prepared, settings)
+
+    assert actual.is_file()
+    assert record['source'] == str(source)
+    assert record['added_px'] == 32
+
+
 @pytest.mark.parametrize('engine', ['pillow', 'libvips'])
 @pytest.mark.parametrize('degrees', [0, 90])
 def test_output_and_preview_use_expanded_source_pixels(tmp_path, engine, degrees):

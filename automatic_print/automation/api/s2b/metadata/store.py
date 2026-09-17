@@ -1,5 +1,6 @@
 """Match gateway records to local S2B images without rereading image pixels."""
 from collections import defaultdict
+from pathlib import Path
 import re
 from threading import RLock
 
@@ -10,6 +11,26 @@ _LOCK = RLock()
 _COLORS = {}
 _ORDERS = {}
 _BATCHES = {}
+
+
+def _identity(path):
+    path = path.resolve()
+    try:
+        stat = path.stat()
+    except OSError:
+        return str(path), None, None
+    return str(path), stat.st_mtime_ns, stat.st_size
+
+
+def _cached(mapping, path):
+    key = str(path.resolve())
+    identity = _identity(path)
+    with _LOCK:
+        entry = mapping.get(key)
+        if entry and entry[0] == identity:
+            return entry[1]
+        mapping.pop(key, None)
+    return None
 
 
 def _contains_code(folder_name, code):
@@ -68,7 +89,7 @@ def register_batch_records(paths, payload):
         }
         orders.discard("")
         if len(orders) == 1:
-            resolved_orders[str(path.resolve())] = next(iter(orders))
+            resolved_orders[str(path.resolve())] = (_identity(path), next(iter(orders)))
         stem = production_stem(path)
         exact = [row for row in candidates if stem.startswith(
             str(row.get("order_item_code") or "").strip().casefold() + "-"
@@ -82,7 +103,7 @@ def register_batch_records(paths, payload):
         colors = {str(row.get("color") or "").strip() for row in candidates}
         colors.discard("")
         if len(colors) == 1:
-            resolved[str(path.resolve())] = next(iter(colors))
+            resolved[str(path.resolve())] = (_identity(path), next(iter(colors)))
     batch = str(payload.get("batch_number") or "")
     with _LOCK:
         _COLORS.update(resolved)
@@ -101,15 +122,35 @@ def register_batch_records(paths, payload):
 
 
 def color_for_path(path):
-    with _LOCK:
-        return _COLORS.get(str(path.resolve()))
+    return _cached(_COLORS, path)
 
 
 def order_for_path(path):
-    with _LOCK:
-        return _ORDERS.get(str(path.resolve()))
+    return _cached(_ORDERS, path)
 
 
 def batch_metadata(batch_number):
     with _LOCK:
         return dict(_BATCHES.get(str(batch_number), {}))
+
+
+def register_path_aliases(path_mapping):
+    """Carry API identity onto lossless prepared copies used by layout."""
+    aliases = []
+    for source, prepared in path_mapping.items():
+        source = Path(source)
+        prepared = Path(prepared)
+        color = color_for_path(source)
+        order = order_for_path(source)
+        identity = _identity(prepared)
+        aliases.append((str(prepared.resolve()), identity, color, order))
+    with _LOCK:
+        for path, identity, color, order in aliases:
+            if color:
+                _COLORS[path] = (identity, color)
+            if order:
+                _ORDERS[path] = (identity, order)
+    from .....layout_engine.intake.metadata.source_metadata import source_color
+    from .....layout_engine.orders.order_groups import order_key
+    source_color.cache_clear()
+    order_key.cache_clear()

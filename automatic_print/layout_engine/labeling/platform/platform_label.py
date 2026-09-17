@@ -1,6 +1,5 @@
 """A separate readable platform badge, sized from the actual rotated QR."""
-from PIL import Image, ImageDraw, ImageFont
-from functools import lru_cache
+from PIL import Image
 
 from automatic_print.layout_engine.cutting.geometry.cut_guide_geometry import detect_guide_band
 from automatic_print.layout_engine.domain.models import mm_to_px
@@ -10,20 +9,10 @@ from automatic_print.layout_engine.measurement.measurement_timing import measure
 from automatic_print.layout_engine.intake.metadata.source_metadata import source_size
 
 
-def _font(size):
-    for path in ('C:/Windows/Fonts/msyhbd.ttc', 'C:/Windows/Fonts/simhei.ttf',
-                 '/System/Library/Fonts/Supplemental/Songti.ttc',
-                 '/usr/share/fonts/opentype/noto/NotoSansCJK-Bold.ttc'):
-        try:
-            return ImageFont.truetype(path, size)
-        except OSError:
-            pass
-    raise ValueError('未找到中文字体，无法清晰打印平台名称。请安装微软雅黑或思源黑体。')
-
-
 @measured('平台文字测量')
 def platform_badge(text, target_height, degrees=0):
-    width, pixels = _badge_data(text, target_height)
+    from automatic_print.layout_engine.labeling.text.platform_badge import badge_data
+    width, pixels = badge_data(text, target_height)
     badge = Image.frombytes('RGBA', (width, target_height), pixels)
     transpose = {
         90: Image.Transpose.ROTATE_90,
@@ -51,34 +40,6 @@ def platform_text(path, settings):
     """Use one per-image badge text for geometry, preview, and output."""
     size = source_size(path)
     return f'{settings.platform_name} · {size}'
-
-
-@lru_cache(maxsize=64)
-def _badge_data(text, target_height):
-    # Cache immutable pixels, never share a font face or mutable image across workers.
-    if target_height < 2:
-        raise ValueError('膜标签打印高度太小，无法显示可读的平台名称。')
-    measure = ImageDraw.Draw(Image.new('L', (1, 1)))
-    low, high, best = 1, target_height*3, None
-    while low <= high:
-        size = (low+high)//2
-        font = _font(size)
-        box = measure.textbbox((0, 0), text, font=font, stroke_width=1)
-        if box[3]-box[1] <= target_height:
-            best = font, box
-            low = size+1
-        else:
-            high = size-1
-    if best is None:
-        raise ValueError('膜标签高度不足以容纳平台名称。')
-    font, box = best
-    badge = Image.new('RGBA', (box[2]-box[0], target_height))
-    ImageDraw.Draw(badge).text((-box[0], (target_height-(box[3]-box[1]))//2-box[1]),
-                               text, font=font, fill='black', stroke_width=1)
-    pixels = badge.tobytes()
-    width = badge.width
-    badge.close()
-    return width, pixels
 
 
 def platform_geometry(path, settings, width, height, degrees):
@@ -212,20 +173,3 @@ def _rotate_rect(rect, source_width, source_height, degrees):
     if degrees == 180:
         return source_width-x-width, source_height-y-height, width, height
     return x, y, width, height
-
-
-def numbered_template(settings):
-    template = settings.label_text_template
-    if settings.label_source_order_enabled:
-        template = source_order_template(template)
-    if settings.label_machine_enabled and not any(token in template for token in ('{机器号}', '{machine}')):
-        template = (template.strip()+' {机器号}').strip()
-    if settings.label_sequence_enabled and not any(token in template for token in ('{编号}', '{number}')):
-        template = (template.strip()+' {编号}').strip()
-    return template
-
-
-def source_order_template(template):
-    if not any(token in template for token in ('{批次}', '{文件夹}', '{batch}')):
-        template = (template.strip()+' {批次}').strip()
-    return (template.strip()+' · 正序 {编号}/{总数} · 倒序 {倒序}/{总数}').strip()
