@@ -83,7 +83,8 @@ def build_batch_input(owner, panel):
     source_order_control, panel.source_order_label = _copyable_toggle(
         panel.source_order, '批次文件夹名＋正序/倒序')
     panel.source_order_group = _parameter_group(
-        '标签', panel.platform_enabled, source_order_control
+        '刀码与标签', panel.cutter_marker_enabled,
+        panel.platform_enabled, source_order_control
     )
     parameters.addWidget(batch, 0, 0)
     parameters.addWidget(output, 0, 1)

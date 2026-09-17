@@ -14,7 +14,7 @@ def mirrored_checkbox(text, source):
     return checkbox
 
 
-def build_label_controls(panel, label, window):
+def build_label_controls(panel, label, block, window):
     panel.text = QLineEdit(label.text_template.text())
     panel.text.setPlaceholderText("手动输入标签文字；机器号和序号自动显示")
     panel.text.textChanged.connect(label.text_template.setText)
@@ -77,11 +77,12 @@ def build_label_controls(panel, label, window):
     label.platform.currentTextChanged.connect(panel.platform.setCurrentText)
     panel.platform.setStyleSheet("QComboBox { font-size: 20px; font-weight: bold; }")
     panel.platform_enabled = mirrored_checkbox(
-        '显示平台＋尺码标签（刀码保持）', label.platform_enabled
+        '平台＋尺码标签', label.platform_enabled
     )
     panel.platform_enabled.setToolTip(
         '关闭后不测量、不绘制新增的平台和尺码文字；切膜刀码及原图二维码保持不变。'
     )
+    panel.cutter_marker_enabled = _cutter_marker_toggle(window)
     panel.platform_font_height = QDoubleSpinBox()
     panel.platform_font_height.setRange(0, 50)
     panel.platform_font_height.setDecimals(1)
@@ -104,6 +105,35 @@ def build_label_controls(panel, label, window):
         control.setParent(panel)
         control.hide()
     return form
+
+
+def _cutter_marker_toggle(window):
+    """Expose cutter mode as one clear on/off control beside label controls."""
+    mode = window.cutter_settings.mode
+    toggle = QCheckBox('切膜刀码')
+    previous = {'value': mode.currentData() if mode.currentData() != 'free' else 'dual'}
+
+    def sync_from_mode(*_args):
+        value = mode.currentData()
+        if value != 'free':
+            previous['value'] = value
+        toggle.blockSignals(True)
+        toggle.setChecked(value != 'free')
+        toggle.blockSignals(False)
+
+    def apply(enabled):
+        value = previous['value'] if enabled else 'free'
+        index = mode.findData(value)
+        if index >= 0:
+            mode.setCurrentIndex(index)
+
+    toggle.toggled.connect(apply)
+    mode.currentIndexChanged.connect(sync_from_mode)
+    toggle.setToolTip(
+        '关闭后切换为正常排版，不生成左侧识别刀码和纵向刀位；再次开启恢复之前的切膜模式。'
+    )
+    sync_from_mode()
+    return toggle
 
 
 def _mirror_combo(source):

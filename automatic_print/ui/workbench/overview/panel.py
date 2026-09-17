@@ -14,7 +14,7 @@ class LabelQuickPanel(QWidget):
     def __init__(self, label, block, parent=None, window=None):
         super().__init__(parent)
         self.label = label
-        form = build_label_controls(self, label, window)
+        form = build_label_controls(self, label, block, window)
         preview_group = build_preview(self, window, label, block)
 
         layout = QVBoxLayout(self)

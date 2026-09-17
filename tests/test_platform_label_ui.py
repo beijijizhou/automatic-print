@@ -62,6 +62,29 @@ def test_platform_label_can_be_disabled_without_disabling_cutter_marks(tmp_path)
     window.close()
 
 
+def test_cutter_marks_and_platform_labels_share_one_group_but_toggle_independently(tmp_path):
+    prefs = QSettings(str(tmp_path/'marker-toggle.ini'), QSettings.IniFormat)
+    prefs.setValue('developer/enabled', True)
+    window = MainWindow(prefs)
+    WINDOWS.append(window)
+    window.startup_update_timer.stop()
+    panel = window.automation_home.label_quick_panel
+    mode = window.cutter_settings.mode
+    mode.setCurrentIndex(mode.findData('dual'))
+
+    assert panel.cutter_marker_enabled.isChecked()
+    assert panel.platform_enabled.isChecked()
+    panel.cutter_marker_enabled.setChecked(False)
+    assert mode.currentData() == 'free'
+    assert window._layout_settings().platform_name == '隆丰'
+    assert not window._layout_settings().color_block_enabled
+
+    panel.cutter_marker_enabled.setChecked(True)
+    assert mode.currentData() == 'dual'
+    assert window._layout_settings().color_block_enabled
+    window.close()
+
+
 def test_old_erp_selection_is_corrected_and_new_manual_label_starts_empty(tmp_path):
     prefs = QSettings(str(tmp_path/'old.ini'), QSettings.IniFormat)
     prefs.setValue('label/platform_name', '蜂鸟')
