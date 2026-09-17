@@ -160,8 +160,8 @@ def validate_vips_output(path, check, progress=None, guide_boxes=(), transition_
     if not vips_corridors_are_clear(
         image, corridors, guide_boxes, transition_rectangles
     ):
-        path.rename(path.with_suffix(".禁止打印"))
-        raise ValueError(f"最终 {kind} 进入切割安全通道，文件已标记为禁止打印。")
+        path.rename(path.with_suffix(".生成未完成"))
+        raise ValueError(f"最终 {kind} 进入切割安全通道，文件已保留为生成未完成，等待用户处理。")
     mark_pixel_verified(check)
     if progress:
         progress("核对切割通道", 1, 1, f"输出 {kind} 全长通道检查通过")

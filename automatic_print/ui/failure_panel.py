@@ -4,7 +4,7 @@ from PySide6.QtWidgets import QGroupBox, QVBoxLayout, QHBoxLayout, QPlainTextEdi
 
 class FailurePanel(QGroupBox):
     def __init__(self,parent=None):
-        super().__init__('报错诊断 · 未完成结果禁止打印',parent)
+        super().__init__('报错诊断 · 结果需要处理',parent)
         self.setStyleSheet('FailurePanel { border: 2px solid #ef4444; border-radius: 7px; '
                           'background: #fff1f2; margin-top: 12px; padding: 10px; }')
         self.details=QPlainTextEdit()

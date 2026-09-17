@@ -139,9 +139,9 @@ def generate_segments(paths, output_dir, settings, progress, plan_ready,
     except BaseException:
         # Keep unfinished files recoverable, but never leave them print-labelled.
         for path in set(output_dir.glob('*'+suffix))-existing:
-            target, suffix = path.with_suffix('.禁止打印'), 2
+            target, suffix = path.with_suffix('.生成未完成'), 2
             while target.exists():
-                target = path.with_name(f'{path.stem} ({suffix}).禁止打印')
+                target = path.with_name(f'{path.stem} ({suffix}).生成未完成')
                 suffix += 1
             path.rename(target)
         raise

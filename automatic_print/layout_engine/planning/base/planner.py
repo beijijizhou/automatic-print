@@ -62,7 +62,7 @@ def _measured_plan(paths, settings, progress, analysis_ready):
         from automatic_print.layout_engine.planning.film.film_comparison import compare_films
         analysis['film_comparison'] = compare_films(paths, settings, progress, result)
     from automatic_print.layout_engine.intake.metadata.image_anomalies import collect_image_anomalies
-    analysis['image_anomalies'] = collect_image_anomalies(paths, settings)
+    analysis['image_anomalies'] = collect_image_anomalies(paths, settings, result[0])
     analysis['image_anomalies'].extend(
         {'source': name, 'path': path, 'kind': text,
          'action': '已按开发者设置等比缩小；请核对预览和实际烫印尺寸'}

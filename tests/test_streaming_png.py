@@ -27,9 +27,9 @@ def test_header_checks_dimensions_crc_and_complete_file(tmp_path):
             with path.open('r+b') as file:
                 file.seek(29 if name=='crc' else -1, 0 if name=='crc' else 2)
                 file.write(b'\x00')
-        with pytest.raises(ValueError, match='禁止打印'):
+        with pytest.raises(ValueError, match='生成未完成'):
             validate_header(path, 101 if name=='size' else 100, 200)
-        assert path.with_suffix('.禁止打印').exists()
+        assert path.with_suffix('.生成未完成').exists()
 
 
 def test_streaming_checks_saved_png_once_without_pre_rendering_canvas(tmp_path):

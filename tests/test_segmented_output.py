@@ -87,4 +87,4 @@ def test_partial_segment_failure_quarantines_only_new_files(tmp_path, monkeypatc
             output_parts=2, save_parallelism=1, number_images=False))
     assert list(output.glob('*.png')) == [old]
     assert old.read_bytes() == b'old output'
-    assert list(output.glob('*.禁止打印'))
+    assert list(output.glob('*.生成未完成'))

@@ -7,7 +7,7 @@ def show_failure_dialog(parent, message):
     dialog.setWindowTitle('生成失败 · 订单诊断')
     dialog.resize(780,520)
     layout = QVBoxLayout(dialog)
-    layout.addWidget(QLabel('本批未完成结果禁止打印。可复制下方订单、文件及原因进行核查。'))
+    layout.addWidget(QLabel('本批结果尚未完成。可复制下方订单、文件及原因，并选择后续处理。'))
     details = QPlainTextEdit()
     details.setReadOnly(True)
     details.setPlainText(message)

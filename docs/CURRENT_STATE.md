@@ -81,9 +81,10 @@
 - 标签与刀码：`layout_engine/labeling/base/labels.py`、`layout_engine/labeling/base/dynamic_label.py`、`layout_engine/labeling/markers/marker_stack.py`、`layout_engine/labeling/markers/left_marker.py`、
   `layout_engine/labeling/platform/platform_label.py`、`layout_engine/labeling/base/header_region.py`、`layout_engine/labeling/platform/transparent_search.py`。平台尺码文字只放入原图二维码卡片内部
   已验证的未印刷白色或透明空位，绝不放到卡片与图案之间，使用不超过二维码卡片高度的最大字号；先在原图坐标确定位置，再与二维码一起旋转，预览与输出复用同一坐标；普通标签和平台文字都在旋转后的膜标签高度带内搜索
-  图片自身的透明空位并互相避让，外置刀码紧贴图片边缘；整批复用透明带失败时由`layout_engine/planning/zones/gap_fallback.py`
+  图片自身的透明空位并互相避让；二维码卡片没有经过最终像素验证的安全空位时，仅跳过该图的平台尺码文字、记录异常并继续，不阻断整批。外置刀码紧贴图片边缘；整批复用透明带失败时由`layout_engine/planning/zones/gap_fallback.py`
   改用外置标签真实占位、重算刀位并记录完整恢复诊断。最终坐标越界等不可恢复安全冲突仍不得猜值绕过，
   不能回退到刀码与二维码之间或膜标签与图案之间。
+- 开发者排版隔离：刀位变化570毫米停止距离只有开发者模式显式传入正数时才进入规划、候选比较和缓存版本4；普通模式不调用该逻辑，继续使用算法缓存版本2，缓存键也不包含该新增字段。
 - 标签字体加载与线程内有界缓存由`layout_engine/labeling/text/fonts.py`唯一拥有；`layout_engine/labeling/base/labels.py`只负责标签内容、
   换行和徽标渲染。单图排版对象`LayoutItem`与`Placement`统一归`layout_engine/domain/models.py`。
 - 渲染与编码：`layout_engine/rendering/engines/pillow_renderer.py`、`layout_engine/rendering/engines/vips_renderer.py`、`layout_engine/rendering/png/`、
@@ -128,7 +129,7 @@
 - 保存耗时：`layout_engine/rendering/storage/save_progress.py`记录首批PNG数据、持续文件增长、编码收尾和原子发布；
   `layout_engine/rendering/storage/atomic_png.py`与输出报告复用该事实，不把libvips重叠流水线伪装成互斥CPU步骤。流式PNG编码每行时，
   `layout_engine/cutting/validation/cut_validation.py`的全部区域刀位同步核对最终 alpha；发布后只顺序复核全部数据块 CRC、尺寸和格式。失败文件
-  仍改名为“禁止打印”，同时避免再次解压整幅超长PNG。
+  改名为“生成未完成”并保留诊断，等待用户选择后续处理，同时避免再次解压整幅超长PNG。
 - 预览：异步任务、快照生成、加载和缩放控件集中在`ui/previews/runtime/`；“刀码四种情况”页签的视图、
   数据、渲染与标注集中在`ui/previews/markers/`。`layout_engine/reporting/preview_result.py` 形成不落地打印图片的
   完整报告数据，`ui/batch_summary.py` 显示可复制的刀位、单排原因和耗时报告。

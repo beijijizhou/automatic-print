@@ -32,8 +32,8 @@ def validate_header(path, width, height):
             or struct.unpack('>IIBBBBB', header[16:29]) != expected
             or zlib.crc32(header[12:29]) & 0xffffffff != struct.unpack('>I', header[29:33])[0]
             or ending != b'\x00\x00\x00\x00IEND\xaeB`\x82'):
-        path.rename(path.with_suffix('.禁止打印'))
-        raise ValueError('输出PNG尺寸或像素格式与已检查画布不一致，禁止打印。')
+        path.rename(path.with_suffix('.生成未完成'))
+        raise ValueError('输出PNG尺寸或像素格式与已检查画布不一致，文件已保留为生成未完成。')
 
 
 def validate_chunks(path, width, height):
@@ -92,10 +92,10 @@ def validate_saved_output(path, width, height, check, boxes, rectangles,
             validate_header(path, width, height)
         mark_pixel_verified(check)
     except (OSError, ValueError, zlib.error):
-        forbidden = path.with_suffix('.禁止打印')
+        forbidden = path.with_suffix('.生成未完成')
         if path.exists():
             path.rename(forbidden)
-        raise ValueError('输出PNG完整性或刀位像素检查失败，已禁止打印。')
+        raise ValueError('输出PNG完整性或刀位像素检查失败，文件已保留为生成未完成。')
     seconds = perf_counter() - started
     name = ('输出PNG数据块CRC、尺寸与格式复核'
             if save_details.get('pixel_verified_during_encoding') else

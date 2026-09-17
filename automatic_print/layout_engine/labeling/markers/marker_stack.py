@@ -37,13 +37,16 @@ def header_safe_coordinates(
         if settings.platform_reuse_qr:
             if not card_rect_clear(path, image_size[0], height, degrees,
                                    (px, py, pw, ph)):
-                raise ValueError(f'{path.name}：平台文字没有可复用的二维码卡片空位。')
+                # A platform badge is optional. Keep the source image and the
+                # cutter geometry unchanged when the QR card has no verified
+                # blank rectangle.
+                px = py = pw = ph = 0
         else:
             px = header_space(path, region, image_size[0], height, pw, ph, 0, degrees)
             if px is None:
                 raise ValueError(f'{path.name}：膜标签高度带内没有平台文字的透明空位，禁止输出。')
             py = top
-        reserved = ((px, py, pw, ph),)
+        reserved = ((px, py, pw, ph),) if pw and ph else ()
     label_x = header_space(
         path, region, image_size[0], height, lw, lh, 0, degrees,
         reserved=reserved,

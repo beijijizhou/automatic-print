@@ -104,6 +104,29 @@ def test_missing_qr_warns_without_blocking_and_sequence_is_not_duplicated(tmp_pa
     badge.close()
 
 
+def test_qr_card_without_verified_space_skips_platform_text_and_continues(
+        tmp_path, monkeypatch):
+    from automatic_print.layout_engine.labeling.platform import platform_label, platform_space
+
+    path = qr_image(tmp_path/'A00000002-B7RLBYZ-1-T-LSJ-2-Black-L-NO1-2.png')
+    monkeypatch.setattr(
+        platform_label, '_largest_card_badge',
+        lambda *_args, **_kwargs: (1, 1, 20, 20),
+    )
+    monkeypatch.setattr(platform_space, 'card_rect_clear', lambda *_args, **_kwargs: False)
+
+    result = generate_layout(
+        [path], tmp_path/'out',
+        settings(cutter_mode='single', platform_reuse_qr=True),
+    )
+
+    assert (tmp_path/'out'/result['filename']).exists()
+    assert result['placements'][0]['platform_width_px'] == 0
+    anomaly = result['analysis']['image_anomalies'][0]
+    assert anomaly['source'] == path.name
+    assert '继续完成排版' in anomaly['action']
+
+
 def test_platform_badge_includes_source_size_and_stays_within_qr_height(tmp_path):
     path = qr_image(tmp_path/'ORDER-1-T-Black-3XL-NO1-1.png')
     text = platform_text(path, settings())

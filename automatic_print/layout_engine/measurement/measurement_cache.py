@@ -8,7 +8,7 @@ from threading import RLock
 from time import time
 
 
-ITEM_SCHEMA = 1
+ITEM_SCHEMA = 2
 DIMENSION_SCHEMA = 2
 TRANSPARENT_RECT_SCHEMA = 1
 TTL_SECONDS = 24 * 60 * 60

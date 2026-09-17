@@ -170,7 +170,7 @@ def generate_layout(
                 with Image.open(output_path) as saved:
                     validate_marked_pillow(saved, cut_check, guide_boxes, transitions, progress)
             except ValueError:
-                output_path.rename(output_path.with_suffix('.禁止打印'))
+                output_path.rename(output_path.with_suffix('.生成未完成'))
                 raise
         if native_validation:
             canvas = None

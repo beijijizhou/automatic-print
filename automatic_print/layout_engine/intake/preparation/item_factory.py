@@ -85,7 +85,11 @@ def _make_item(
         from automatic_print.layout_engine.labeling.platform.platform_space import card_rect_clear
         if not card_rect_clear(path, width, height, rotation_degrees,
                                (px, py, pw, ph)):
-            raise ValueError(f'{path.name}：平台文字没有可复用的二维码卡片空位。')
+            # Platform text is optional production metadata.  If the final
+            # pixel check cannot prove that the proposed QR-card rectangle is
+            # blank, preserve the source artwork and continue without adding
+            # the badge; never turn this decoration into a batch-level gate.
+            px = py = pw = ph = 0
     from automatic_print.layout_engine.labeling.markers.marker_stack import header_safe_coordinates
     block, label, platform = header_safe_coordinates(
         path, settings, (width, height), rotation_degrees,

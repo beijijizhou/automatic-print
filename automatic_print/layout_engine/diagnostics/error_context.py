@@ -31,5 +31,5 @@ def error_context(error, paths, folder='', stage='', settings=None):
                 lines.append('  图片参数：'+source_parameters(p,settings.dpi))
     if not selected:
         lines.append('尚未获取图片清单，无法定位订单。')
-    lines.append('处理：保留原图与已完成输出；未完成结果禁止打印。请复制本详情核查，不拆订单或绕过刀位检查。')
+    lines.append('处理：保留原图、已完成输出和当前任务状态；未完成结果等待用户选择继续、修改或放弃。请复制本详情核查。')
     return '\n'.join(lines)

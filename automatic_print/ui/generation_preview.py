@@ -129,10 +129,10 @@ class GenerationPreviewController(QObject):
     def failed(self, message):
         self.panel.summary.show_failure(message)
         self.panel.analysis.failed(message)
-        self.panel.summary.progress.setText('生成失败，禁止打印；完整原因见独立报错诊断区。')
-        self.preview.warning = '生成失败，禁止打印；完整原因见独立报错诊断区。'
+        self.panel.summary.progress.setText('生成未完成；原因和可选处理见独立诊断区。')
+        self.preview.warning = '生成未完成；原因和可选处理见独立诊断区。'
         self.end()
 
     @Slot()
     def cancelled(self):
-        self.panel.summary.progress.setText('当前排版已停止；已计算的本批次信息保留，未完成结果不可打印。')
+        self.panel.summary.progress.setText('当前排版已停止；已计算的本批次信息和未完成结果均已保留。')

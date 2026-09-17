@@ -72,8 +72,8 @@ class GenerateWorker(QObject):
         try:
             if not self.preview_only:
                 self.output.mkdir(parents=True, exist_ok=True)
-                marker = self.output / '批次未完成，禁止打印.txt'
-                marker.write_text('本批次尚未全部完成或被中途退出。禁止打印本目录中的文件。\n'
+                marker = self.output / '批次生成未完成.txt'
+                marker.write_text('本批次尚未全部完成或被中途退出，任务状态和已有结果已保留，请由用户选择后续处理。\n'
                                   '已完成的其他批次不受影响；请重新生成此批次。', encoding='utf-8')
             self._phase('扫描文件名')
             self.cancellation.check()
