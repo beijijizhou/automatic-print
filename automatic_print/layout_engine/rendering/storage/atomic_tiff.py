@@ -31,6 +31,7 @@ def _compress_strip(strip, level):
 class StripSource:
     def __init__(
         self, canvas, level, workers, rows_per_strip, progress=None,
+        cut_check=None, guide_boxes=(), rectangles=(),
     ):
         self.canvas = canvas
         self.level = level
@@ -41,6 +42,17 @@ class StripSource:
         self.started = perf_counter()
         self.first_ready = None
         self.exhausted = None
+        from automatic_print.layout_engine.cutting.validation.cut_validation import corridor_checks
+        self.checks = corridor_checks(cut_check)
+        if self.checks:
+            from automatic_print.layout_engine.rendering.png.corridor_reader import (
+                _allowed_shapes, _shape_events,
+            )
+            self.shapes = _allowed_shapes(guide_boxes, rectangles)
+            self.starts, self.ends = _shape_events(self.shapes)
+            self.active = set()
+        else:
+            self.shapes, self.starts, self.ends, self.active = (), {}, {}, set()
 
     def __iter__(self):
         current = 0
@@ -60,6 +72,13 @@ class StripSource:
                     strip = np.empty((height, self.canvas.width, 4), dtype=np.uint8)
                     strip[:, :, :3] = pixels[:, :, :3]
                     strip[:, :, 3] = 255
+                if self.checks:
+                    from automatic_print.layout_engine.rendering.png.corridor_reader import _check_row
+                    for local_y, alpha in enumerate(strip[:, :, 3]):
+                        _check_row(
+                            y + local_y, alpha, self.checks, self.shapes,
+                            self.starts, self.ends, self.active,
+                        )
                 if self.first_ready is None:
                     self.first_ready = perf_counter()
                 pending.append(pool.submit(_compress_strip, strip, self.level))
@@ -80,7 +99,8 @@ class StripSource:
         return encoded
 
 
-def save_tiff(canvas, target, settings, progress=None):
+def save_tiff(canvas, target, settings, progress=None, cut_check=None,
+              guide_boxes=(), rectangles=()):
     """Write one RGBA BigTIFF; tifffile compresses independent tiles in parallel."""
     import tifffile
 
@@ -89,7 +109,7 @@ def save_tiff(canvas, target, settings, progress=None):
     rows_per_strip = strip_height(canvas.width, settings, workers)
     source = StripSource(
         canvas, settings.png_compression_level, workers, rows_per_strip,
-        progress,
+        progress, cut_check, guide_boxes, rectangles,
     )
     started = perf_counter()
     with monitor_save(pending, progress) as observation:
@@ -114,6 +134,9 @@ def save_tiff(canvas, target, settings, progress=None):
     published = perf_counter()
     pending.rename(target)
     finished = perf_counter()
+    if source.checks:
+        from automatic_print.layout_engine.cutting.validation.cut_validation import mark_pixel_verified
+        mark_pixel_verified(cut_check)
     return {
         'encoder': f'并行分块 BigTIFF（{workers} 线程）',
         'steps': [
@@ -127,6 +150,7 @@ def save_tiff(canvas, target, settings, progress=None):
         'rows_per_strip': rows_per_strip,
         'strip_count': source.total,
         'worker_threads': workers,
+        'pixel_verified_during_encoding': bool(source.checks),
         'timing_note': (
             'Strip 像素生成、压缩和写入以有界流水线重叠；各阶段按生成器边界拆分，'
             '不把重叠墙钟时间重复相加。'

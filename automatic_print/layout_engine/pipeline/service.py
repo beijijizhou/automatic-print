@@ -139,12 +139,6 @@ def generate_layout(
                 validate_marked_pillow(
                     canvas, cut_check, guide_boxes, transitions, progress
                 )
-            elif output_format == 'tiff':
-                validation_started = perf_counter()
-                validate_vips_canvas(
-                    canvas, cut_check, guide_boxes, transitions
-                )
-                output_validation_seconds = perf_counter() - validation_started
         filename = output_path.name
         saving_started = perf_counter()
         phase('保存输出图片')
@@ -156,7 +150,9 @@ def generate_layout(
             )
         else:
             save_details = save_output(
-                canvas, output_path, settings, use_vips, progress)
+                canvas, output_path, settings, use_vips, progress,
+                cut_check, guide_boxes, transitions,
+            )
         saving_seconds = perf_counter() - saving_started
         if streaming:
             from automatic_print.layout_engine.rendering.png.streaming import validate_saved_output

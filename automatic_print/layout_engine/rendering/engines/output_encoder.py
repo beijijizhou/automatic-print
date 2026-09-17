@@ -15,10 +15,14 @@ def encoder_plan(settings, width, height):
     return output_format, streaming, use_vips
 
 
-def save_output(canvas, target, settings, use_vips, progress=None):
+def save_output(canvas, target, settings, use_vips, progress=None,
+                cut_check=None, guide_boxes=(), rectangles=()):
     if settings.output_format.lower() == 'tiff':
         # TIFF is an optional developer output.  Its native codec must not be
         # loaded while ordinary PNG users are starting the application.
         from automatic_print.layout_engine.rendering.storage.atomic_tiff import save_tiff
-        return save_tiff(canvas, target, settings, progress)
+        return save_tiff(
+            canvas, target, settings, progress,
+            cut_check, guide_boxes, rectangles,
+        )
     return save_png(canvas, target, settings, use_vips, progress)

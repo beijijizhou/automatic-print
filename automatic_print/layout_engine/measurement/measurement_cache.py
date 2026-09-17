@@ -124,6 +124,8 @@ def item_settings(settings):
         worker_threads=1, output_parts=1,
         cutter_mode='free' if settings.cutter_mode == 'free' else 'dual',
         save_parallelism=1, save_memory_mb=512, save_memory_unlimited=False,
+        output_format='png', png_engine='pillow', png_compression_level=1,
+        png_fast_encoding=False, png_streaming=False,
         compare_film_sizes=False, compare_reference_films=False,
         film_geometry_workers=4, cutter_auto_knife=False,
         cutter_rotation_zone=False, cutter_tail_rotation=False,

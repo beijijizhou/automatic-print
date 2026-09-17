@@ -51,6 +51,7 @@ def test_file_parameters_date_and_algorithm_revision_invalidate_cache_key(tmp_pa
     assert key(config(platform_name='测试平台')) != original
     assert key(config(machine_number='M2')) != original
     assert key(config(worker_threads=1, output_parts=8)) == original
+    assert key(config(output_format='tiff', png_compression_level=3)) == original
     dated = config(label_text_template='{日期}')
     assert key(dated, now) != key(dated, now+timedelta(days=1))
     path.write_bytes(b'changed source')

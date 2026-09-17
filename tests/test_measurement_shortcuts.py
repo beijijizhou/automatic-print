@@ -96,3 +96,12 @@ def test_unavailable_persistent_cache_is_not_reopened_for_each_image(monkeypatch
         assert persistent_cache().load('item', 'one') is None
         assert persistent_cache().load('item', 'two') is None
     assert len(attempts) == 1
+
+
+def test_item_geometry_cache_is_shared_by_png_and_tiff():
+    from dataclasses import replace
+    from automatic_print.layout_engine import LayoutSettings
+    from automatic_print.layout_engine.measurement.measurement_cache import item_settings
+    png = LayoutSettings(output_format='png', png_compression_level=1)
+    tiff = replace(png, output_format='tiff', png_compression_level=3)
+    assert item_settings(png) == item_settings(tiff)

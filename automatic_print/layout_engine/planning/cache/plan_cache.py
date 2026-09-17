@@ -31,7 +31,9 @@ def cache_key(paths, settings, created_at, progress=None):
                                          if settings.label_source_order_enabled else ''),
                        worker_threads=1, output_parts=1, save_parallelism=1,
                        save_memory_mb=512, save_memory_unlimited=False, png_engine='pillow',
-                       png_compression_level=1, png_fast_encoding=False, png_streaming=False, film_geometry_workers=1)
+                       output_format='png', png_compression_level=1,
+                       png_fast_encoding=False, png_streaming=False,
+                       film_geometry_workers=1)
     if identity_workers == 1:
         files = [identity(path) for path in paths]
     else:

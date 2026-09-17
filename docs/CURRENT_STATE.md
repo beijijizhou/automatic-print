@@ -96,14 +96,14 @@
   工作线程的 libvips 外层延迟任务由共享门禁协调，原生库内部仍保留并行，并在正常退出时完成清理。
   开发者模式可在主界面“输出”参数组直接选择 PNG 或并行分块 BigTIFF，并与完整打印参数双向同步；
   BigTIFF 画布按整幅宽度和内存预算选择256至4096行 Strip 有界生成，
-  tifffile/imagecodecs 多线程压缩，单一写入器登记块偏移；最终辅助线画布在编码前完成全长刀位检查，
+  tifffile/imagecodecs 多线程压缩，单一写入器登记块偏移；每个 Strip 在压缩前同步核对真实 alpha 刀位，
   不再保存后重新解压超长 TIFF；普通模式始终回到 PNG。
 - 输出安全：`layout_engine/cutting/validation/order_validation.py`、`layout_engine/cutting/validation/cut_validation.py`、
   `layout_engine/cutting/validation/marked_pixel_validation.py`、`layout_engine/cutting/geometry/printed_guides.py`、`layout_engine/output/output_file_info.py`。
 - 膜方案与统计：`layout_engine/planning/film/film_comparison.py` 直接复用当前实际输出行并并行计算其余方案；`layout_engine/planning/film/film_specs.py`、`layout_engine/reporting/metrics.py`、
   `layout_engine/reporting/operation_timing.py`、`layout_engine/reporting/algorithm_costs.py`。
 - 缓存：`layout_engine/planning/cache/plan_cache.py`、`layout_engine/planning/cache/normal_plan_cache.py`、`layout_engine/planning/cache/cached_planner.py`；单图测量由
-  `layout_engine/measurement/measurement_cache.py` 持久化，并由 `layout_engine/measurement/measurement_session.py` 在任务内共享连接；单图占位记录首次查询时一次装入任务快照，后续工作线程不再逐条争用 SQLite；
+  `layout_engine/measurement/measurement_cache.py` 持久化，并由 `layout_engine/measurement/measurement_session.py` 在任务内共享连接；PNG/TIFF及压缩参数不改变几何，跨输出格式复用同一缓存；单图占位记录首次查询时一次装入任务快照，后续工作线程不再逐条争用 SQLite；
   `layout_engine/measurement/cutter_measurements.py` 保存本批正常/旋转刀码几何；后续方案即使改变路径顺序，也按文件身份重组并复用，生产方案、整批旋转和膜规格比较不再重复逐图测量。
   内置刀码和文字的透明矩形像素结论也按文件身份、方向和精确矩形持久化；单图缓存24小时，
   重新组批、膜宽变化和普通版本更新不触发源图重新测量。整批排版缓存使用独立排版算法版本而非
