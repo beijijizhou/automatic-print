@@ -73,8 +73,10 @@ Runner 仅绑定本仓库，标签为 `automatic-print`；工作流不接受 `pu
 
 脚本会以隐藏输入方式读取一次性令牌，避免令牌进入 PowerShell 命令历史。
 
-在 Actions 仓库变量 `AUTOMATIC_PRINT_REAL_BATCH_PATHS` 中保存这台机器上的真实批次绝对路径，
-多个目录用分号分隔。也可以手动触发工作流时临时指定批次目录和要测试的提交 SHA。
+测试机默认使用 `C:\actions-runner\real-batches\smoke\YD-CY-YD001` 中的稳定生产样本。
+如需替换或扩充样本，可在 Actions 仓库变量 `AUTOMATIC_PRINT_REAL_BATCH_PATHS` 中保存真实批次
+绝对路径，多个目录用分号分隔。也可以手动触发工作流时临时指定批次目录和要测试的提交 SHA。
+真实图片回归会在单元测试失败时继续执行，确保报告同时包含代码测试和生产数据兼容性结果。
 
 ## 输出
 

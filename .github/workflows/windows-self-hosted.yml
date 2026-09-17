@@ -35,7 +35,9 @@ jobs:
     env:
       QT_QPA_PLATFORM: offscreen
       PSExecutionPolicyPreference: Bypass
-      REAL_BATCH_PATHS: ${{ inputs.real_batch_paths || vars.AUTOMATIC_PRINT_REAL_BATCH_PATHS }}
+      PYTHONUTF8: 1
+      PYTHONIOENCODING: utf-8
+      REAL_BATCH_PATHS: ${{ inputs.real_batch_paths || vars.AUTOMATIC_PRINT_REAL_BATCH_PATHS || 'C:\actions-runner\real-batches\smoke\YD-CY-YD001' }}
       BUILD_INSTALLER: ${{ github.event_name == 'push' || inputs.build_installer }}
     steps:
       - name: Check out requested source
@@ -75,12 +77,12 @@ jobs:
             --junitxml=artifacts/test-results/pytest.xml
 
       - name: Run real-image layout regressions
-        if: env.REAL_BATCH_PATHS != ''
+        if: always() && env.REAL_BATCH_PATHS != ''
         shell: powershell
         run: ./windows/run-real-batch-ci.ps1 -BatchPaths "$env:REAL_BATCH_PATHS" -ArtifactRoot artifacts/real-batches
 
       - name: Record skipped real-image regression
-        if: env.REAL_BATCH_PATHS == ''
+        if: always() && env.REAL_BATCH_PATHS == ''
         shell: powershell
         run: |
           New-Item -ItemType Directory -Force artifacts/real-batches | Out-Null
