@@ -39,8 +39,8 @@ def test_selected_film_and_current_child_are_highlighted_without_reading(tmp_pat
     assert '当前子批次' in panel.summary.info.text()
     assert '111 张图片' in panel.summary.info.text()
     assert '#dbeafe' in panel.summary.info.styleSheet()
-    assert '总目录' in panel.selected_source.text()
-    assert '当前子批次' not in panel.selected_source.text()
+    assert '当前批次' in panel.selected_source.text()
+    assert '当前子批次' in panel.selected_source.text()
     assert calls == []
     owner.show()
     APP.processEvents()

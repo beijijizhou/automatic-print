@@ -28,6 +28,7 @@ class BatchSummaryPanel(QGroupBox):
         self.anomalies.setStyleSheet('color: #a35400; background: #fff3d6; padding: 6px;')
         self.anomalies.hide()
         self.failure_message = ''
+        self.current_folder = None
         from .failure_panel import FailurePanel
         self.failure_panel = FailurePanel(self)
         self.failure_details = self.failure_panel.open_button
@@ -60,6 +61,11 @@ class BatchSummaryPanel(QGroupBox):
         self.failure_panel.reset()
         self.cutting.hide()
         path = Path(folder)
+        self.current_folder = path
+        owner = self.parent()
+        if owner is not None and hasattr(owner, 'selected_source'):
+            from .quick_fields import show_selected_batch_summary
+            show_selected_batch_summary(owner, path)
         quantity = f'{count} 张图片' if count is not None else '正在读取图片名称'
         self.info.setText(f'文件夹：{path.name} · {quantity}\n来源：{path}')
         self.metrics.setText('正在计算本批次长度和省膜结果…')
@@ -79,6 +85,10 @@ class BatchSummaryPanel(QGroupBox):
     def show_analysis(self, report):
         if not report:
             return
+        owner = self.parent()
+        if owner is not None and hasattr(owner, 'selected_source') and self.current_folder:
+            from .quick_fields import show_selected_batch_summary
+            show_selected_batch_summary(owner, self.current_folder, report)
         from ..layout_engine.planning.zones.gap_loss import gap_loss_text
         from ..layout_engine.labeling.base.header_gap import gap_summary
         self.gap_loss.setText('\n'.join(filter(None, (

@@ -4,11 +4,17 @@ from PySide6.QtCore import Qt
 from PySide6.QtWidgets import QHBoxLayout, QLabel
 
 
+def _selected_source_text(path, prefix='已选择排版目录'):
+    return f'{prefix}：{path.name}  ·  {path}' if path else '尚未选择图片文件夹'
+
+
 def show_selected_source(panel, value, mode='single', window=None):
     """Input root is distinct from the currently rendered child batch."""
     path = Path(str(value).strip()) if str(value).strip() else None
     prefix = '已选择排版目录' if mode in {'layout', 'multiple'} else '已选择'
-    panel.selected_source.setText(f'{prefix}：{path.name}  ·  {path}' if path else '尚未选择图片文件夹')
+    panel.selected_source_root = path
+    panel.selected_source.setText(_selected_source_text(path, prefix))
+    panel.selected_source.setToolTip(str(path) if path else '')
     panel.selected_source.setStyleSheet('QLabel { background: #dbeafe; color: #1e40af; '
         'border: 1px solid #60a5fa; border-radius: 5px; padding: 7px; font-weight: bold; }'
         if path else 'QLabel { color: #64748b; padding: 5px; }')
@@ -16,6 +22,42 @@ def show_selected_source(panel, value, mode='single', window=None):
         window.preferences.setValue('layout/input_root', str(path) if path else '')
         window.preferences.setValue('layout/input_mode', mode)
         window.preferences.sync()
+
+
+def show_selected_batch_summary(panel, folder, report=None):
+    """Show the active child batch and reuse its completed in-memory analysis."""
+    path = Path(str(folder).strip()) if str(folder).strip() else None
+    panel.selected_batch_path = path
+    if not path:
+        panel.selected_source.setText('尚未选择图片文件夹')
+        panel.selected_source.setToolTip('')
+        return
+    if not report:
+        panel.selected_source.setText(_selected_source_text(path, '当前批次'))
+        panel.selected_source.setToolTip(str(path))
+        return
+    from ..layout_engine.orders.batch_analysis import (
+        compact_distribution_text, distribution_text, group_distribution,
+    )
+    distribution = report.get('group_distribution') or group_distribution(report)
+    group_name = '尺码群' if distribution['kind'] == 'sizes' else '订单群'
+    identity = (f"当前批次：{path.name} · {report.get('batch_type', '批次')}"
+                f" · {report.get('order_count', 0)} 个订单组"
+                f" · {report.get('piece_count', 0)} 件 / {report.get('image_count', 0)} 张图"
+                f" · {report.get('double_pairs', 0)} 组双面")
+    lines = [identity, f'{group_name}：{compact_distribution_text(report, limit=8)}']
+    gap_records = report.get('header_gap', ())
+    if gap_records:
+        expanded = sum(record.get('added_px', 0) > 0 for record in gap_records)
+        failed = sum(bool(record.get('warning')) for record in gap_records)
+        satisfied = len(gap_records) - expanded - failed
+        lines[-1] += (f' · 膜间距：扩充 {expanded}/{len(gap_records)} 张'
+                      f'，已满足 {satisfied} 张，未扩充 {failed} 张')
+    lines.append(f'来源：{path}')
+    panel.selected_source.setText('\n'.join(lines))
+    panel.selected_source.setToolTip(
+        f'{distribution_text(report)}\n来源：{path}'
+    )
 
 
 def quick_fields(panel, date_button, window):
