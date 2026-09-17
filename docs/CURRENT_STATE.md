@@ -94,7 +94,8 @@
   也不依赖 libvips 二次打开大图，
   避免超长PNG二次解码触发原生库崩溃。保存计时包含 libvips 延迟合成、编码与写入，不能解释成纯磁盘耗时。多个 Python
   工作线程的 libvips 外层延迟任务由共享门禁协调，原生库内部仍保留并行，并在正常退出时完成清理。
-  开发者模式可选择并行分块 BigTIFF：画布按整幅宽度和内存预算选择256至4096行 Strip 有界生成，
+  开发者模式可在主界面“输出”参数组直接选择 PNG 或并行分块 BigTIFF，并与完整打印参数双向同步；
+  BigTIFF 画布按整幅宽度和内存预算选择256至4096行 Strip 有界生成，
   tifffile/imagecodecs 多线程压缩，单一写入器登记块偏移；最终辅助线画布在编码前完成全长刀位检查，
   不再保存后重新解压超长 TIFF；普通模式始终回到 PNG。
 - 输出安全：`layout_engine/cutting/validation/order_validation.py`、`layout_engine/cutting/validation/cut_validation.py`、

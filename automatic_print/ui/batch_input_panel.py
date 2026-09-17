@@ -68,7 +68,9 @@ def build_batch_input(owner, panel):
     parameters.setHorizontalSpacing(12)
     parameters.setVerticalSpacing(8)
     batch = _parameter_group('批次', owner.window().combine_bulk_batches)
-    output = _parameter_group('输出', owner.preview_only)
+    from .settings.output import build_quick_output_format
+    quick_format = build_quick_output_format(owner.window())
+    output = _parameter_group('输出', owner.preview_only, quick_format)
     from .header_gap import build_quick_force_pair, build_quick_header_gap
     gap = build_quick_header_gap(owner.window())
     force_pair = build_quick_force_pair(owner.window())

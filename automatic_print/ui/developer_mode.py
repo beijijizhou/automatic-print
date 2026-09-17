@@ -144,6 +144,7 @@ def build_developer_mode(window, footer):
             if not enabled:
                 window.output_format.setCurrentIndex(
                     max(0, window.output_format.findData('png')))
+            window.quick_output_format_group.setVisible(enabled)
             window.output_parallel_form.setRowVisible(window.output_format, enabled)
             panel = window.automation_home.label_quick_panel
             window.batch_record_group.setVisible(True)

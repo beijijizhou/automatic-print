@@ -149,11 +149,17 @@ def test_tiff_output_is_developer_only(tmp_path):
     from test_developer_mode import APP, window
     owner = window(tmp_path / 'prefs.ini')
     assert not owner.output_parallel_form.isRowVisible(owner.output_format)
+    assert not owner.quick_output_format_group.isVisible()
     owner.developer_mode_checkbox.setChecked(True)
     assert owner.output_parallel_form.isRowVisible(owner.output_format)
-    owner.output_format.setCurrentIndex(owner.output_format.findData('tiff'))
+    assert owner.quick_output_format_group.isVisible()
+    owner.quick_output_format.setCurrentIndex(
+        owner.quick_output_format.findData('tiff'))
+    assert owner.output_format.currentData() == 'tiff'
     assert owner._layout_settings().output_format == 'tiff'
     owner.developer_mode_checkbox.setChecked(False)
+    assert not owner.quick_output_format_group.isVisible()
+    assert owner.quick_output_format.currentData() == 'png'
     assert owner.output_format.currentData() == 'png'
     assert owner._layout_settings().output_format == 'png'
     owner.close()
