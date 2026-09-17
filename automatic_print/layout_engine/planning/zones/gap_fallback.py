@@ -165,6 +165,10 @@ def plan_with_gap_fallback(paths, settings, records, progress=None, analysis_rea
         result = plan_layout(paths,settings,progress,analysis_ready)
     except ValueError as error:
         count = sum(bool(r.get('rollback_added_mm')) for r in records)
+        if header_space_failure(error):
+            return recover_header_space(
+                paths, settings, error, progress, analysis_ready,
+            )
         if settings.cutter_mode in {'single', 'dual'} and settings.auto_fit_width and width_failure(error):
             return recover_width(paths,settings,error,progress,analysis_ready)
         raise ValueError(f'{error}\n已尝试自动恢复：回退{count}张的程序新增膜标签间距，原间距仍无安全方案；用户参数未修改。') from error

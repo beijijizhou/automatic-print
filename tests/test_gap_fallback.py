@@ -176,3 +176,38 @@ def test_header_space_fallback_does_not_hide_second_safety_error(monkeypatch):
             [],
         )
     assert len(calls) == 2
+
+
+def test_gap_rollback_then_header_space_failure_uses_external_labels(monkeypatch):
+    calls = []
+    reports = []
+
+    def plan(_paths, settings, _progress, ready):
+        calls.append((settings.membrane_gap_mm, settings.preserve_header_gap))
+        if len(calls) == 1:
+            raise ValueError('当前膜宽不存在安全的自动分栏方案')
+        if len(calls) == 2:
+            raise ValueError(
+                'image.png：膜标签高度带内没有批次标签的透明空位，禁止输出。'
+            )
+        data = {'image_anomalies': []}
+        ready(data)
+        reports.append(data)
+        return [], {}, 580, 200, 200
+
+    monkeypatch.setattr(gap_fallback, 'plan_layout', plan)
+    rows = [dict(
+        source='/tmp/source.png', prepared='/tmp/copy.png',
+        added_px=32, added_mm=32,
+    )]
+
+    _paths, settings, _result = gap_fallback.plan_with_gap_fallback(
+        [Path('/tmp/copy.png')],
+        LayoutSettings(membrane_gap_mm=40, preserve_header_gap=True),
+        rows,
+    )
+
+    assert calls == [(40, True), (0, True), (0, False)]
+    assert not settings.preserve_header_gap
+    assert rows[0]['rollback_added_mm'] == 32
+    assert reports[-1]['header_space_recovery']['adopted'] == '整批外置标签占位'
