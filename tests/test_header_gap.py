@@ -193,6 +193,28 @@ def test_busy_cache_falls_back_to_original_and_keeps_batch_running(tmp_path, mon
     assert '已继续排版' in record['warning']
 
 
+def test_unexpected_single_image_gap_failure_keeps_other_images_running(tmp_path, monkeypatch):
+    failed = sample(tmp_path/'FAILED-1-T-Black-M-NO1-1.png')
+    healthy = sample(tmp_path/'HEALTHY-1-T-Black-M-NO1-1.png')
+    original = header_gap.prepare_one
+
+    def fail_one(path, settings):
+        if Path(path) == failed:
+            raise RuntimeError('pngsave: out of order read')
+        return original(path, settings)
+
+    monkeypatch.setattr(header_gap, 'prepare_one', fail_one)
+    prepared, _, records = header_gap.prepare_paths(
+        [failed, healthy], LayoutSettings(dpi=25.4, membrane_gap_mm=40),
+    )
+
+    assert prepared[0] == failed
+    assert prepared[1] != healthy
+    assert 'out of order read' in records[0]['warning']
+    assert '已继续排版' in records[0]['warning']
+    assert records[1]['added_px'] == 32
+
+
 @pytest.mark.parametrize('engine', ['pillow', 'libvips'])
 @pytest.mark.parametrize('degrees', [0, 90])
 def test_output_and_preview_use_expanded_source_pixels(tmp_path, engine, degrees):

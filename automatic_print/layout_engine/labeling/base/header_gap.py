@@ -139,7 +139,18 @@ def prepare_paths(paths, settings, progress=None):
     results = [None] * len(paths)
     workers = min(max(1, settings.worker_threads), 4, len(paths) or 1)
     def process(path):
-        return prepare_one(path, settings)
+        try:
+            return prepare_one(path, settings)
+        except Exception as error:
+            path = Path(path)
+            return path, {
+                'source': str(path), 'filename': path.name,
+                'minimum_mm': settings.membrane_gap_mm, 'added_px': 0,
+                'warning': (f'补足膜标签间距时发生可恢复错误（{error}）；'
+                            f'原值：补足 {settings.membrane_gap_mm:g} 毫米；'
+                            '采用值：保留原图间距；影响：仅本张未补足，已继续排版；'
+                            '修改位置：排版设置→膜标签与图案间距'),
+            }
     with ThreadPoolExecutor(max_workers=workers, thread_name_prefix='header-gap') as pool:
         iterator = iter(enumerate(paths))
         pending = {}

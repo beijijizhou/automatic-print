@@ -60,11 +60,24 @@ def insert_gap(source, split, added):
 
 def save_gap_copy(path, target, split, added, dimensions):
     """Stream the expanded PNG with libvips, retaining Pillow as a fallback."""
+    def save_with_pillow():
+        with Image.open(path) as opened, opened.convert('RGBA') as source:
+            with insert_gap(source, split, added) as canvas:
+                canvas.save(target, format='PNG', dpi=(dimensions.x_dpi, dimensions.y_dpi),
+                            icc_profile=opened.info.get('icc_profile'), compress_level=1)
+
     try:
         import pyvips
+    except ImportError:
+        save_with_pillow()
+        return 'Pillow兼容补距'
+    try:
         from automatic_print.layout_engine.rendering.engines.vips_renderer import demand_lock
         with demand_lock:
-            source = pyvips.Image.new_from_file(str(path), access='sequential')
+            # The joined top/blank/body graph can request source rows again while PNG is
+            # encoded.  `sequential` rejects that demand pattern on Windows as
+            # "out of order read"; random access keeps the streaming output valid.
+            source = pyvips.Image.new_from_file(str(path), access='random')
             if source.format != 'uchar' or source.bands != 4:
                 raise ValueError('需要兼容像素路径')
             top = source.crop(0, 0, source.width, split)
@@ -77,9 +90,6 @@ def save_gap_copy(path, target, split, added, dimensions):
             )
             expanded.pngsave(str(target), compression=1, strip=True)
         return 'libvips流式补距'
-    except (ImportError, OSError, ValueError):
-        with Image.open(path) as opened, opened.convert('RGBA') as source:
-            with insert_gap(source, split, added) as canvas:
-                canvas.save(target, format='PNG', dpi=(dimensions.x_dpi, dimensions.y_dpi),
-                            icc_profile=opened.info.get('icc_profile'), compress_level=1)
+    except (OSError, ValueError, pyvips.Error):
+        save_with_pillow()
         return 'Pillow兼容补距'
