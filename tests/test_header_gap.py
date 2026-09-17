@@ -149,6 +149,50 @@ def test_stale_prepared_copy_is_regenerated_from_recorded_source(tmp_path):
     assert record['added_px'] == 32
 
 
+def test_windows_busy_cache_publish_retries_then_succeeds(tmp_path, monkeypatch):
+    source = sample(tmp_path/'B1-1-T-Black-M-NO1-1.png')
+    original_replace = Path.replace
+    attempts = []
+
+    def busy_twice(path, target):
+        if path.name.endswith('.未完成') and Path(target).suffix == '.png':
+            attempts.append(path)
+            if len(attempts) <= 2:
+                raise PermissionError(13, 'file is in use', str(path))
+        return original_replace(path, target)
+
+    monkeypatch.setattr(Path, 'replace', busy_twice)
+    monkeypatch.setattr(header_gap, 'sleep', lambda _seconds: None)
+    prepared, record = header_gap.prepare_one(
+        source, LayoutSettings(dpi=25.4, membrane_gap_mm=40),
+    )
+
+    assert len(attempts) == 3
+    assert prepared != source
+    assert record['added_px'] == 32
+
+
+def test_busy_cache_falls_back_to_original_and_keeps_batch_running(tmp_path, monkeypatch):
+    source = sample(tmp_path/'B1-1-T-Black-M-NO1-1.png')
+    original_replace = Path.replace
+
+    def always_busy(path, target):
+        if path.name.endswith('.未完成') and Path(target).suffix == '.png':
+            raise PermissionError(13, 'file is in use', str(path))
+        return original_replace(path, target)
+
+    monkeypatch.setattr(Path, 'replace', always_busy)
+    monkeypatch.setattr(header_gap, 'sleep', lambda _seconds: None)
+    prepared, record = header_gap.prepare_one(
+        source, LayoutSettings(dpi=25.4, membrane_gap_mm=40),
+    )
+
+    assert prepared == source
+    assert record['added_px'] == 0
+    assert '保留原图间距' in record['warning']
+    assert '已继续排版' in record['warning']
+
+
 @pytest.mark.parametrize('engine', ['pillow', 'libvips'])
 @pytest.mark.parametrize('degrees', [0, 90])
 def test_output_and_preview_use_expanded_source_pixels(tmp_path, engine, degrees):

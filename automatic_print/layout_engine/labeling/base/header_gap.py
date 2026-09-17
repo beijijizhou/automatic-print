@@ -4,7 +4,7 @@ from dataclasses import replace
 from hashlib import sha256
 import json
 from pathlib import Path
-from time import time
+from time import sleep, time
 from uuid import uuid4
 
 from automatic_print.layout_engine.labeling.base.header_region import search_header
@@ -18,6 +18,31 @@ from automatic_print.layout_engine.intake.metadata.images import print_dimension
 from automatic_print.layout_engine.reporting.metrics import gap_report, gap_summary
 
 TTL = 86400
+
+
+def _replace_with_busy_retry(source, target, attempts=8):
+    """Publish cache files after transient Windows scanners release them."""
+    for attempt in range(attempts):
+        try:
+            source.replace(target)
+            return
+        except OSError as error:
+            retryable = (getattr(error, 'winerror', None) in {32, 33}
+                         or getattr(error, 'errno', None) in {1, 13, 16})
+            if not retryable or attempt + 1 == attempts:
+                raise
+            sleep(.05 * (attempt + 1))
+
+
+def _unlink_temporary(path):
+    try:
+        _replace_with_busy_retry(path, path.with_name(path.name + '.待清理'), attempts=3)
+        path.with_name(path.name + '.待清理').unlink(missing_ok=True)
+    except OSError:
+        try:
+            path.unlink(missing_ok=True)
+        except OSError:
+            pass  # A scanner still owns only this disposable cache file.
 
 def cache_root():
     from automatic_print.layout_engine.planning.cache.plan_cache import cache_directory
@@ -74,23 +99,32 @@ def prepare_one(path, settings):
         return path, record
     record.update(added_px=added, split_px=split, added_mm=added*25.4/dimensions.y_dpi,
                   source_identity=fingerprint[:3], prepared=str(target))
-    target.parent.mkdir(parents=True, exist_ok=True)
     temporary = target.with_name(target.name + '.' + uuid4().hex + '.未完成')
     try:
+        target.parent.mkdir(parents=True, exist_ok=True)
         record['preparation_engine'] = save_gap_copy(
             path, temporary, split, added, dimensions,
         )
         if (path.stat().st_mtime_ns, path.stat().st_size) != (stat.st_mtime_ns, stat.st_size):
             raise ValueError(f'{path.name}：补足间距期间源文件发生变化')
-        temporary.replace(target)
+        _replace_with_busy_retry(temporary, target)
         metadata = info.with_name(info.name + '.' + uuid4().hex + '.未完成')
         try:
             metadata.write_text(json.dumps(record, ensure_ascii=False), encoding='utf-8')
-            metadata.replace(info)
+            _replace_with_busy_retry(metadata, info)
         finally:
-            metadata.unlink(missing_ok=True)
+            _unlink_temporary(metadata)
+    except OSError as error:
+        record.update(
+            added_px=0,
+            warning=(f'膜标签间距缓存文件被占用或无法写入（{error}）；'
+                     f'原值：补足 {settings.membrane_gap_mm:g} 毫米；采用值：保留原图间距；'
+                     '影响：仅本张未补足，已继续排版；修改位置：排版设置→膜标签与图案间距'),
+        )
+        record.pop('prepared', None)
+        return path, record
     finally:
-        temporary.unlink(missing_ok=True)
+        _unlink_temporary(temporary)
     return target, record
 
 
