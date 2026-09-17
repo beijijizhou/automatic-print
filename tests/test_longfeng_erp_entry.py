@@ -71,6 +71,24 @@ def test_platform_download_is_multi_select_and_preview_only(tmp_path):
     owner.close()
 
 
+def test_haloo_workbench_uses_its_platform_and_forty_mm_gap(tmp_path):
+    owner = MainWindow(QSettings(str(tmp_path / "prefs.ini"), QSettings.IniFormat))
+    owner.startup_update_timer.stop()
+    owner.developer_mode_checkbox.setChecked(True)
+    page = owner.production_platform_download_page
+    page.platform_checks["Haloo"].setChecked(True)
+    APP.processEvents()
+
+    # A stale main-window selection must not leak into Haloo local processing.
+    owner.label_settings.platform.setCurrentText("隆丰")
+    owner.membrane_gap_enabled.setChecked(False)
+    settings = page.workbenches["Haloo"]._current_layout_settings()
+
+    assert settings.platform_name == "Haloo"
+    assert settings.membrane_gap_mm == 40
+    owner.close()
+
+
 def test_download_completion_opens_folder_when_option_is_checked(
     tmp_path, monkeypatch
 ):

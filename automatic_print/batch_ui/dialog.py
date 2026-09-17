@@ -1,3 +1,5 @@
+from dataclasses import replace
+
 from PySide6.QtCore import QSettings
 from PySide6.QtWidgets import QTabWidget, QWidget
 
@@ -144,5 +146,15 @@ class AutomationDialog(
     def _current_layout_settings(self) -> LayoutSettings:
         window = self.settings_host or self.window()
         if window is None or not hasattr(window, "width"):
-            return LayoutSettings(png_engine="libvips")
-        return settings_from_window(window)
+            settings = LayoutSettings(png_engine="libvips")
+        else:
+            settings = settings_from_window(window)
+        platform = self.platform.currentData()
+        updates = {"platform_name": platform}
+        # Haloo and Putian production images have a short source label gap.
+        # Bind their documented 40 mm default to the selected ERP workbench,
+        # rather than relying on whichever platform happens to be selected in
+        # the main window.
+        if platform in {"Haloo", "莆田"}:
+            updates["membrane_gap_mm"] = 40
+        return replace(settings, **updates)
