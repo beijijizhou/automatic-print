@@ -26,6 +26,7 @@ def platform_badge(text, target_height, degrees=0):
     return rotated
 
 
+@measured('平台文字测量')
 def platform_badge_size(text, target_height, degrees=0):
     """Measure cached badge pixels without constructing a temporary image."""
     from automatic_print.layout_engine.labeling.text.platform_badge import badge_data

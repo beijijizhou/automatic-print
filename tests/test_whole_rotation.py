@@ -30,15 +30,16 @@ def config():
         platform_name='隆丰',platform_font_height_mm=6)
 
 
-def test_fast_path_keeps_more_efficient_automatic_columns(tmp_path):
+def test_fast_path_chooses_shorter_dynamic_column_rotation(tmp_path):
     paths=sources(tmp_path)
     settings=config()
     normal=plan_layout(paths,replace(settings,cutter_compare_whole_rotation=False),None)
     rotated=plan_layout(paths,settings,None)
     assert len({p.row_y_px for _,p in normal[0]})==1
     assert {p.cut_column_count for _, p in normal[0]} == {4}
-    assert all(p.rotation_degrees==0 for _,p in rotated[0])
-    assert rotated[3] == normal[3]
+    assert all(p.rotation_degrees==90 for _,p in rotated[0])
+    assert {p.cut_column_count for _, p in rotated[0]} == {2}
+    assert rotated[3] < normal[3]
 
 
 def test_gap_validator_rejects_text_moved_inside_rotated_source(tmp_path):
@@ -48,7 +49,7 @@ def test_gap_validator_rejects_text_moved_inside_rotated_source(tmp_path):
     plan=plan_layout(paths,settings,None)
     path,p=plan[0][0]
     unsafe=replace(p,number_x_px=p.x_px+40,number_y_px=p.y_px+10)
-    with pytest.raises(ValueError,match='禁用区域|覆盖原图'):
+    with pytest.raises(ValueError,match='禁用区域|覆盖原图|超出膜标签高度范围'):
         validate_embedded_marks([(path,unsafe)],settings)
 
 
@@ -59,8 +60,8 @@ def test_film_comparison_includes_whole_rotation_not_only_tail(tmp_path):
     normal=next(r for r in rows if r['film_mm']==600 and not r['rotation_allowed'])
     rotated=next(r for r in rows if r['film_mm']==600 and r['rotation_allowed'])
     assert not normal['error'] and not rotated['error']
-    assert rotated['rotated_images']==0
-    assert rotated['length_m']==normal['length_m']
+    assert rotated['rotated_images']==4
+    assert rotated['length_m'] < normal['length_m']
 
 
 @pytest.mark.parametrize('engine',['pillow','libvips'])
@@ -68,14 +69,15 @@ def test_unsafe_double_order_rotation_falls_back_and_saved_parts_are_safe(tmp_pa
     paths=sources(tmp_path,double=True)
     settings=replace(config(),png_engine=engine,output_parts=3,save_memory_unlimited=True)
     result=generate_layout(paths,tmp_path/'out',settings)
-    assert all(p['rotation_degrees']==0 for p in result['placements'])
+    assert all(p['rotation_degrees']==90 for p in result['placements'])
     for part in result.get('parts') or [result]:
         assert part['printed_guides']['dot_count']==0
         assert all(p['color_block_x_px'] in (0, 293) for p in part['placements'])
         with Image.open(tmp_path/'out'/part['filename']) as output:
             for p in part['placements']:
-                with Image.open(tmp_path/p['source']) as source:
-                    expected=np.asarray(source)
+                with Image.open(tmp_path/p['source']) as source, source.rotate(
+                        p['rotation_degrees'], expand=True) as rotated:
+                    expected=np.asarray(rotated)
                 actual=np.asarray(output.crop((p['x_px'],p['y_px'],p['x_px']+p['width_px'],p['y_px']+p['height_px'])))
                 assert np.array_equal(actual[expected[:,:,3]==255],expected[expected[:,:,3]==255])
         assert all(z['pixel_verified'] for z in part['cut_corridor']['zones'])
