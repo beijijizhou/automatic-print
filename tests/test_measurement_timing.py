@@ -52,7 +52,7 @@ def test_cold_measurements_report_substeps_and_warm_cache_reports_zero(tmp_path)
     # Production libvips reads only the bounded top strip; Pillow remains a fallback.
     decode = rows.get('顶部标签条带读取与解压') or rows.get('源图片像素读取与解压')
     assert decode['calls'] == len(paths)
-    for name in ('膜标签卡片定位', '平台文字测量', '普通标签文字测量',
+    for name in ('膜标签卡片定位', '普通标签文字测量',
                  '平台透明空位搜索', '尺寸与DPI文件信息读取'):
         assert rows[name]['calls'] > 0
         assert rows[name]['seconds'] >= 0

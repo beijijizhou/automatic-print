@@ -27,7 +27,7 @@
 | 当前膜快捷编辑 | `ui/current_film.py`, `ui/cutter_settings.py` | 主界面卡片直接修改膜规格、排版模式与自定义膜宽；快捷控件和完整打印设置必须双向同步。 |
 | Pillow 渲染 | `layout_engine/rendering/engines/pillow_renderer.py` | 与 vips 共享规划和安全契约，不复制排版业务。 |
 | libvips 分块渲染与运行时门禁 | `layout_engine/rendering/engines/vips_renderer.py`, `layout_engine/rendering/engines/vips_join.py`, `layout_engine/rendering/engine_info.py`, `layout_engine/rendering/storage/atomic_png.py`, `layout_engine/rendering/storage/save_progress.py`, `layout_engine/rendering/png/` | `layout_engine/rendering/png/row_stream.py` 按最终 Y 顺序逐行解码、合成、核对刀位 alpha、固定 UP 滤波、无损 RLE 压缩并写入，每个排版行只求值一次且不生成中间图片；外层任务通过共享门禁串行进入，libvips 内部仍可多线程。完整 PNG 发布后顺序检查全部数据块 CRC、RGBA 尺寸和文件结构，不再二次解压已核对的像素流。 |
-| 排版公共入口与生成编排 | `layout_engine/__init__.py`, `layout_engine/pipeline/service.py`, `layout_engine/pipeline/analysis.py`, `layout_engine/pipeline/validation.py`, `layout_engine/domain/models.py` | 包入口只导出稳定公共能力；生成流程和领域模型各有唯一所有者，不保留根目录兼容模块。 |
+| 排版公共入口与生成编排 | `layout_engine/__init__.py`, `layout_engine/pipeline/service.py`, `layout_engine/pipeline/analysis.py`, `layout_engine/pipeline/preparation.py`, `layout_engine/pipeline/validation.py`, `layout_engine/domain/models.py` | 包入口只导出稳定公共能力；生成流程和领域模型各有唯一所有者，不保留根目录兼容模块。 |
 | 排版单元组合 | `layout_engine/planning/packing/units.py` | 单面与双面不可拆组合统一转换为规划器候选，列规划和区域优化共用。 |
 | 输出格式选择与并行分块 BigTIFF | `layout_engine/output/output_sizes.py`, `layout_engine/rendering/engines/output_encoder.py`, `layout_engine/rendering/storage/atomic_tiff.py`, `ui/settings/output/format.py`, `ui/batch_input_panel.py` | 仅开发者自由排版可使用 TIFF 性能测试；RIIN单列/自动多列切膜遇到旧TIFF设置时不中断，自动采用PNG并报告降级。主界面输出参数与完整打印设置双向同步，关闭开发者模式恢复 PNG；BigTIFF复用同一libvips画布，以有界Strip并行压缩并保留透明通道、DPI和原子发布。 |
 | 分段输出 | `layout_engine/rendering/storage/segmented_output.py`, `layout_engine/rendering/storage/segment_worker.py`, `layout_engine/rendering/storage/atomic_png.py` | 按完整行/订单切分，失败文件不可冒充可打印结果；所有使用虚拟补距的平台共用独立进程并行保存资格，不维护第二份平台名单。 |
@@ -58,6 +58,7 @@
 | S2B生产图下载 | `automation/api/s2b/production/gateway.py`, `downloads.py`, `archive_io.py`, `automation/browser/batches.py` | 优先由Supabase服务端代理生产批次、导出和记录查询，用户选择后按实际件数补发缺失导出，轮询真实下载地址；`archive_io.py`唯一负责下载、ZIP路径校验与解压，网关不可用才回退已登录页面，下载标记接口不承担文件传输。 |
 | 自动化批次规则与本地身份 | `automation/batches/classification.py`, `local.py`, `naming.py`, `rules.py` | 分类、扫描、命名和生成规则按批次域集中；界面只调用这些共享能力，不自行解析或改名。 |
 | 自动化浏览器、传输与平台 | `automation/browser/`, `automation/transfer/`, `automation/providers/`, `automation/workflows/` | 登录会话、批次页面、导出下载、平台配置和端到端流程分别归档；`automation/`根目录只公开稳定入口。 |
+| RIIN桌面控制诊断 | `automation/api/riin/window_control.py`, `ui/riin_diagnostic.py` | 仅在Windows交互桌面发现RIIN窗口、发送无副作用响应探测并请求置前；不得由Runner服务会话点击打印、导入文件或改变生产队列。按钮级自动化必须在确认真实控件树后另行扩展。 |
 | 源码更新 | `updates/source.py`, `updates/release.py`, `updates/versioning.py`, `updates/worker.py` | 源码安装更新、发布包检查、版本展示和后台执行按职责分离；检查、应用和重启保持同一状态机。 |
 | 协作取消与安全关闭 | `runtime/cancellation.py`, `controllers/thread_lifecycle.py`, `ui/stop_actions.py`, `ui/immediate_exit.py` | 控制器拥有线程释放，UI只路由用户停止意图；任务运行时拒绝关闭并继续处理，空闲时由 Qt 正常退出，禁止强杀进程。 |
 | 应用运行时 | `runtime/branding.py`, `runtime/resources.py`, `runtime/crash_logging.py`, `runtime/restart.py`, `runtime/cancellation.py` | 品牌、资源、故障日志、重启和任务取消归运行时层；包根目录只保留启动入口。 |

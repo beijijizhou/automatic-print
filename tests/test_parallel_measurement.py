@@ -54,3 +54,22 @@ def test_measurement_stop_does_not_enqueue_whole_batch(tmp_path):
         read_parallel(measure, paths, replace(settings(), worker_threads=4), stop)
     assert len(visited) <= 4
     assert not any(t.name.startswith('image-measure') for t in threads())
+
+
+def test_cold_dimensions_are_preloaded_in_parallel(tmp_path, monkeypatch):
+    from automatic_print.layout_engine.measurement import parallel_measurement
+    paths = qr_sources(tmp_path)[:4]
+    barrier, observed = Barrier(4), set()
+
+    def read_dimension(path, _dpi):
+        observed.add(get_ident())
+        barrier.wait(5)
+        return path
+
+    monkeypatch.setattr(parallel_measurement, 'print_dimensions', read_dimension)
+    parallel_measurement.preload_dimensions(
+        paths, replace(settings(), worker_threads=4),
+    )
+
+    assert len(observed) == 4
+    assert not any(t.name.startswith('dimension-read') for t in threads())

@@ -52,6 +52,24 @@ def read_parallel(read_one, paths, settings, progress):
     return items, labels
 
 
+def preload_dimensions(paths, settings):
+    """Warm cold PNG metadata in parallel before the one-query item preload."""
+    workers = measurement_workers(settings.worker_threads, len(paths))
+    if workers == 1 or len(paths) < 4:
+        for path in paths:
+            print_dimensions(path, settings.dpi)
+        return
+    with ThreadPoolExecutor(
+        max_workers=workers, thread_name_prefix='dimension-read'
+    ) as pool:
+        futures = [
+            pool.submit(copy_context().run, print_dimensions, path, settings.dpi)
+            for path in paths
+        ]
+        for future in futures:
+            future.result()
+
+
 def measurement_workers(configured,total):
     """Honor the user setting while bounding concurrent source decodes."""
     return max(1,min(8,int(configured),int(total)))

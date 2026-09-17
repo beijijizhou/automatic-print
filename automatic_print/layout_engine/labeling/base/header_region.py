@@ -73,6 +73,13 @@ def _persistent_region_cache(path, mtime, size):
 
 def _header_pixels(path):
     """Decode only the bounded top label strip when libvips is available."""
+    from automatic_print.layout_engine.measurement.measurement_session import (
+        active_source,
+        source_pixels,
+    )
+    if active_source(path) is not None:
+        with source_pixels(path) as source:
+            return _pillow_header_pixels_from_source(source)
     try:
         import pyvips
     except (ImportError, OSError):
@@ -110,12 +117,16 @@ def _vips_header_pixels(path, pyvips):
 def _pillow_header_pixels(path):
     with substep('源图片像素读取与解压'), Image.open(path) as source:
         source.load()
-        source_width, source_height = source.size
-        header_height = min(source_height, max(96, round(source_width*.5)))
-        with source.crop((0, 0, source_width, header_height)) as crop:
-            crop.thumbnail((1000, 1000), Image.Resampling.NEAREST)
-            with crop.convert('RGBA') as rgba:
-                return np.asarray(rgba).copy(), source_width, source_height, header_height
+        return _pillow_header_pixels_from_source(source)
+
+
+def _pillow_header_pixels_from_source(source):
+    source_width, source_height = source.size
+    header_height = min(source_height, max(96, round(source_width*.5)))
+    with source.crop((0, 0, source_width, header_height)) as crop:
+        crop.thumbnail((1000, 1000), Image.Resampling.NEAREST)
+        with crop.convert('RGBA') as rgba:
+            return np.asarray(rgba).copy(), source_width, source_height, header_height
 
 
 def _cards(white):

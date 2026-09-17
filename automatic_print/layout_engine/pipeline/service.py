@@ -35,15 +35,19 @@ def generate_layout(
     # renderers must not re-query the same S2B batch once per output file.
     inherited_analysis = (prepared_plan or {}).get('analysis') or {}
     s2b_metadata = inherited_analysis.get('s2b_metadata') or []
+    from automatic_print.layout_engine.intake.metadata.output_dpi import resolve_output_dpi
+    settings = resolve_output_dpi(paths, settings, progress)
     from automatic_print.layout_engine.labeling.base.header_gap import prepare_paths
     if prepared_gap_records is None:
         if phase_ready and settings.membrane_gap_mm > 0:
             phase_ready('补足膜标签间距')
-        paths, settings, gap_records = prepare_paths(paths, settings, progress)
+        from .preparation import gap_premeasure
+        paths, settings, gap_records = prepare_paths(
+            paths, settings, progress,
+            premeasure=gap_premeasure(paths, settings),
+        )
     else:
         gap_records = list(prepared_gap_records)
-    from automatic_print.layout_engine.intake.metadata.output_dpi import resolve_output_dpi
-    settings = resolve_output_dpi(paths, settings, progress)
     if settings.output_parts > 1 and not preview_only and prepared_plan is None:
         from automatic_print.layout_engine.rendering.storage.segmented_output import generate_segments
         return generate_segments(paths, output_dir, settings, progress,

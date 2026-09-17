@@ -105,3 +105,44 @@ def test_item_geometry_cache_is_shared_by_png_and_tiff():
     png = LayoutSettings(output_format='png', png_compression_level=1)
     tiff = replace(png, output_format='tiff', png_compression_level=3)
     assert item_settings(png) == item_settings(tiff)
+
+
+def test_item_key_ignores_developer_only_batch_packing_switch():
+    from dataclasses import replace
+    from datetime import datetime, timezone
+    from automatic_print.layout_engine import LayoutSettings
+    from automatic_print.layout_engine.measurement.measurement_cache import (
+        item_key,
+        item_settings,
+    )
+    production = item_settings(LayoutSettings())
+    developer = item_settings(replace(
+        LayoutSettings(), developer_compact_cutter_layout=True,
+    ))
+    created = datetime(2026, 9, 17, tzinfo=timezone.utc)
+
+    assert item_key(('a.png', 1, 2), 1, 100, 200, production, 0, created) == item_key(
+        ('a.png', 1, 2), 1, 100, 200, developer, 0, created,
+    )
+
+
+def test_card_pixels_are_extracted_once_for_multiple_badge_sizes(tmp_path, monkeypatch):
+    from automatic_print.layout_engine.labeling.platform import platform_space
+    from automatic_print.layout_engine.measurement.measurement_session import measurement_session
+    path = tmp_path/'source.png'
+    Image.new('RGBA', (300, 200), 'white').save(path)
+    original, calls = platform_space.source_pixels, []
+
+    from contextlib import contextmanager
+    @contextmanager
+    def counted(source):
+        calls.append(source)
+        with original(source) as image:
+            yield image
+
+    monkeypatch.setattr(platform_space, 'source_pixels', counted)
+    card = MembraneRegion(0, 0, 1, 1)
+    with measurement_session():
+        assert platform_space.card_space(path, card, 300, 200, 20, 10) is not None
+        assert platform_space.card_space(path, card, 300, 200, 40, 20) is not None
+    assert calls == [path]

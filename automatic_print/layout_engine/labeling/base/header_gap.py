@@ -1,5 +1,6 @@
 """Lossless source copies with a minimum transparent gap below the label card."""
 from concurrent.futures import FIRST_COMPLETED, ThreadPoolExecutor, wait
+from contextvars import copy_context
 from dataclasses import replace
 from pathlib import Path
 
@@ -19,7 +20,7 @@ def prepare_one(path, settings):
     return _prepare_one(path, settings, cache_root, search_header)
 
 
-def prepare_paths(paths, settings, progress=None):
+def prepare_paths(paths, settings, progress=None, premeasure=None):
     if settings.membrane_gap_mm <= 0:
         return list(paths), settings, []
     if settings.membrane_gap_mm > 200:
@@ -29,19 +30,24 @@ def prepare_paths(paths, settings, progress=None):
         progress('补足膜标签间距', 0, len(paths), '正在检查膜标签与图案间的空白')
     results = [None] * len(paths)
     workers = min(max(1, settings.worker_threads), 4, len(paths) or 1)
-    def process(path):
-        try:
-            return prepare_one(path, settings)
-        except Exception as error:
-            path = Path(path)
-            return path, {
-                'source': str(path), 'filename': path.name,
-                'minimum_mm': settings.membrane_gap_mm, 'added_px': 0,
-                'warning': (f'补足膜标签间距时发生可恢复错误（{error}）；'
-                            f'原值：补足 {settings.membrane_gap_mm:g} 毫米；'
-                            '采用值：保留原图间距；影响：仅本张未补足，已继续排版；'
-                            '修改位置：排版设置→膜标签与图案间距'),
-            }
+    def process(index, path):
+        from automatic_print.layout_engine.measurement.measurement_session import measuring_source
+        with measuring_source(path):
+            try:
+                result = prepare_one(path, settings)
+                if premeasure is not None:
+                    premeasure(index, path, _record_settings(path, settings, result[1]))
+                return result
+            except Exception as error:
+                path = Path(path)
+                return path, {
+                    'source': str(path), 'filename': path.name,
+                    'minimum_mm': settings.membrane_gap_mm, 'added_px': 0,
+                    'warning': (f'补足膜标签间距时发生可恢复错误（{error}）；'
+                                f'原值：补足 {settings.membrane_gap_mm:g} 毫米；'
+                                '采用值：保留原图间距；影响：仅本张未补足，已继续排版；'
+                                '修改位置：排版设置→膜标签与图案间距'),
+                }
     with ThreadPoolExecutor(max_workers=workers, thread_name_prefix='header-gap') as pool:
         iterator = iter(enumerate(paths))
         pending = {}
@@ -49,7 +55,8 @@ def prepare_paths(paths, settings, progress=None):
             entry = next(iterator, None)
             if entry is not None:
                 index, path = entry
-                pending[pool.submit(process, path)] = index
+                context = copy_context()
+                pending[pool.submit(context.run, process, index, path)] = index
         for _ in range(workers):
             submit_next()
         completed = 0
@@ -88,3 +95,15 @@ def prepare_paths(paths, settings, progress=None):
         header_gap_overrides=tuple((key, *value) for key, value in virtuals.items()),
     )
     return [path for path, _ in results], settings, [record for _, record in results]
+def _record_settings(path, settings, record):
+    """Expose one virtual gap to same-pass item measurement."""
+    if not record.get('virtual_gap') or not record.get('added_px'):
+        return settings
+    key = str(path.resolve())
+    dimensions = print_dimensions(path, settings.dpi)
+    overrides = dict(settings.dimension_overrides)
+    width_mm, height_mm = overrides.get(
+        key, (dimensions.width_mm, dimensions.height_mm)
+    )
+    overrides[key] = (width_mm, height_mm + record['added_mm'])
+    return replace(settings, dimension_overrides=tuple(overrides.items()))

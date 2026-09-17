@@ -113,6 +113,19 @@ def _largest_card_badge(
         path, source_region, source_width, source_height,
         text, maximum_height, degrees):
     """Fit in the source QR card, then rotate the whole label with the image."""
+    from automatic_print.layout_engine.measurement.measurement_session import (
+        SESSION,
+        identity,
+    )
+    session = SESSION.get()
+    key = (
+        'largest-card-badge', identity(path), source_region,
+        source_width, source_height, text, maximum_height,
+    ) if session else None
+    if session and key in session.bands:
+        best = session.bands[key]
+        return (_rotate_rect(best, source_width, source_height, degrees)
+                if best is not None else None)
     low, high, best = 2, maximum_height, None
     while low <= high:
         target = (low + high) // 2
@@ -128,13 +141,12 @@ def _largest_card_badge(
         if candidate is None:
             high = target - 1
         else:
-            best = _rotate_rect(
-                (candidate[0], candidate[1],
-                 badge_width, badge_height),
-                source_width, source_height, degrees,
-            )
+            best = (candidate[0], candidate[1], badge_width, badge_height)
             low = target + 1
-    return best
+    if session:
+        session.bands[key] = best
+    return (_rotate_rect(best, source_width, source_height, degrees)
+            if best is not None else None)
 
 
 def _largest_header_badge(
