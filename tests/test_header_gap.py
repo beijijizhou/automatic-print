@@ -96,6 +96,31 @@ def test_platform_gap_is_applied_during_render_without_intermediate_copy(tmp_pat
         assert np.array_equal(actual, expected)
 
 
+def test_virtual_gap_preview_decodes_each_source_once_for_all_measurements(tmp_path, monkeypatch):
+    from PIL import ImageFile
+    from pathlib import Path
+    paths = [sample(tmp_path/f'B{i}-1-T-Black-M-NO1-1.png') for i in range(4)]
+    settings = LayoutSettings(
+        dpi=25.4, media_width_mm=600, membrane_gap_mm=40,
+        platform_name='Haloo', allow_rotation=True, number_images=True,
+        color_block_enabled=True, cutter_mode='dual', preserve_header_gap=True,
+        platform_reuse_qr=True, worker_threads=4,
+    )
+    original, decoded = ImageFile.ImageFile.load, []
+
+    def counted(image, *args, **kwargs):
+        name = Path(getattr(image, 'filename', ''))
+        if image.fp is not None and name in paths:
+            decoded.append(name)
+        return original(image, *args, **kwargs)
+
+    monkeypatch.setattr(ImageFile.ImageFile, 'load', counted)
+    result = generate_layout(paths, tmp_path/'preview', settings, preview_only=True)
+
+    assert len(result['placements']) == len(paths)
+    assert sorted(decoded) == sorted(paths)
+
+
 def test_coloured_haloo_card_footer_is_included_before_gap(tmp_path):
     image = Image.new('RGBA', (1000, 700))
     draw = ImageDraw.Draw(image)

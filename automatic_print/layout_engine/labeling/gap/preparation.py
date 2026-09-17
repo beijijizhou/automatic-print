@@ -22,6 +22,13 @@ def gap_geometry(source, region, minimum_px):
 
 def gap_geometry_file(path, region, minimum_px):
     """Measure only the bounded seam strip; avoid decoding the complete PNG."""
+    from automatic_print.layout_engine.measurement.measurement_session import (
+        active_source,
+        source_pixels,
+    )
+    if active_source(path) is not None:
+        with source_pixels(path) as source:
+            return gap_geometry(source, region, minimum_px)
     try:
         import pyvips
         from automatic_print.layout_engine.rendering.engines.vips_renderer import demand_lock

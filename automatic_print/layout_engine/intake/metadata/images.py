@@ -17,7 +17,12 @@ class PrintDimensions:
 
 
 def print_dimensions(path: Path, fallback_dpi: int) -> PrintDimensions:
-    from automatic_print.layout_engine.measurement.measurement_session import SESSION, identity, persistent_cache
+    from automatic_print.layout_engine.measurement.measurement_session import (
+        SESSION,
+        active_source,
+        identity,
+        persistent_cache,
+    )
     session = SESSION.get()
     file_key = identity(path) if session else None
     embedded_key = (file_key, None) if session else None
@@ -44,7 +49,9 @@ def print_dimensions(path: Path, fallback_dpi: int) -> PrintDimensions:
         except (OSError, ValueError, TypeError, KeyError, sqlite3.Error):
             persistent = persistent_key = None
     with substep('尺寸与DPI文件信息读取'):
-        with Image.open(path) as image:
+        active = active_source(path)
+        if active is not None:
+            image = active
             source = image.info.get("dpi")
             try:
                 x_dpi, y_dpi = float(source[0]), float(source[1])
@@ -58,6 +65,21 @@ def print_dimensions(path: Path, fallback_dpi: int) -> PrintDimensions:
                 image.height * 25.4 / y_dpi,
                 x_dpi, y_dpi, valid,
             )
+        else:
+            with Image.open(path) as image:
+                source = image.info.get("dpi")
+                try:
+                    x_dpi, y_dpi = float(source[0]), float(source[1])
+                    valid = all(math.isfinite(v) and v > 0 for v in (x_dpi, y_dpi))
+                except (TypeError, ValueError, IndexError):
+                    valid = False
+                if not valid:
+                    x_dpi = y_dpi = float(fallback_dpi)
+                result = PrintDimensions(
+                    image.width * 25.4 / x_dpi,
+                    image.height * 25.4 / y_dpi,
+                    x_dpi, y_dpi, valid,
+                )
     if session:
         cache_key = embedded_key if result.embedded_dpi else fallback_key
         session.dimensions[cache_key] = result
