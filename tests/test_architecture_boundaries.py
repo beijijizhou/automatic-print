@@ -65,12 +65,19 @@ def test_desktop_entry_points_follow_runtime_module_moves():
 
 
 def test_packaged_entry_point_loads_ui_inside_crash_guard():
-    source = (ROOT/'run_app.py').read_text(encoding='utf-8')
-    guard_import, ui_import = (
-        source.index('from automatic_print.runtime.crash_logging'),
-        source.index('from automatic_print.app import run'),
-    )
-    assert guard_import < ui_import
+    launchers = {
+        ROOT/'run_app.py': (
+            'from automatic_print.runtime.crash_logging',
+            'from automatic_print.app import run',
+        ),
+        ROOT/'automatic_print/__main__.py': (
+            'from .runtime.crash_logging', 'from .app import run',
+        ),
+    }
+    for path, (guard, ui) in launchers.items():
+        source = path.read_text(encoding='utf-8')
+        assert source.index(guard) < source.index(ui)
+        assert 'run_with_crash_logging(_load_and_run)' in source
 
 
 def test_automation_root_is_only_a_public_facade():
