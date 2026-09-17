@@ -38,6 +38,8 @@ def test_current_batch_preview_and_summary_are_visible_and_retained(tmp_path):
     assert not window.settings_dialog.isVisible()
     assert panel.summary.isVisible()
     assert panel.summary.title() == '排版数据 · 耗时与总结'
+    assert not panel.summary.info.isVisible()
+    assert panel.selected_source.isVisible()
     assert not window.progress.isVisible()
     assert not window.status.isVisible()
     assert not window.current_file.isVisible()

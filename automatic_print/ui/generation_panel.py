@@ -11,12 +11,15 @@ def build_data_panel(window, summary, timings):
     layout.removeWidget(summary.film_table)
     for widget in (summary.info, summary.metrics, summary.progress):
         layout.removeWidget(widget)
+    # The top source card is the single visible batch identity. Keep this label
+    # as an internal compatibility/data surface, but do not repeat it below.
+    summary.info.hide()
     timings.setTitle('')
     timings.setObjectName('integratedTimings')
     timings.setStyleSheet('QGroupBox#integratedTimings { border: none; margin: 0; '
                          'padding: 0; background: transparent; }')
     left = QVBoxLayout()
-    for widget in (summary.info, summary.metrics, summary.progress):
+    for widget in (summary.metrics, summary.progress):
         left.addWidget(widget)
     for widget in (window.busy_spinner, window.progress, window.status, window.current_file):
         widget.setParent(summary)

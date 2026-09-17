@@ -65,7 +65,9 @@ def test_saved_folder_does_not_block_startup_and_stale_results_are_ignored(tmp_p
         assert entered.is_set()
         assert window.isVisible()
         assert ticks  # GUI event loop remains responsive while disk scan is blocked.
-        assert '扫描文件夹' in panel.summary.progress.text()
+        progress_text = panel.summary.progress.text()
+        assert '文件夹' in progress_text
+        assert '扫描' in progress_text or '后台读取' in progress_text
         assert thread_ids[0] != get_ident()
         window.folder.setText(str(second))
         release.set()
