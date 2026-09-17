@@ -148,14 +148,20 @@ def plan_with_gap_fallback(paths, settings, records, progress=None, analysis_rea
                for r in records}
     paths = [Path(mapping.get(str(p.resolve()),str(p))) for p in paths]
     remap = lambda values: tuple((mapping.get(str(Path(p).resolve()),p),v) for p,v in values)
+    requested_gap_mm = settings.membrane_gap_mm
     settings = replace(settings, membrane_gap_mm=0,
         manual_rotations=remap(settings.manual_rotations), sequence_numbers=remap(settings.sequence_numbers))
     for r in records:
         if r.get('added_px'):
             r['rollback_added_mm'] = r.get('added_mm',0)
             r['rollback_reason'] = reason
-            r['warning'] = (f"新增间距导致膜宽无安全方案，已回退新增 {r['rollback_added_mm']:.2f} 毫米，"
-                            '保留原图已有间距并重算整批刀位；用户设置未修改')
+            r['warning'] = (
+                f'补足 {requested_gap_mm:g} 毫米方案失败：新增间距导致膜宽无安全方案；'
+                f'原值：补足 {requested_gap_mm:g} 毫米；'
+                f'采用值：撤销本张新增 {r["rollback_added_mm"]:.2f} 毫米，保留原图已有间距；'
+                '影响：本张未达到目标间距，整批继续尝试外置标签等安全方案；'
+                '用户设置未修改；修改位置：排版设置→膜标签与图案间距'
+            )
             r['added_px'] = 0
             r['added_mm'] = 0
             r.pop('prepared',None)

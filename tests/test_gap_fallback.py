@@ -23,7 +23,11 @@ def test_full_double_batch_rolls_back_only_added_rows(tmp_path,monkeypatch,engin
     assert result['order_check']['double_pairs']==4
     assert all(r['rollback_added_mm']==32 for r in result['header_gap'])
     assert all(r['added_px']==0 for r in result['header_gap'])
-    assert '已回退' in result['analysis']['image_anomalies'][0]['kind']
+    warning = result['analysis']['image_anomalies'][0]['kind']
+    assert '补足 40 毫米方案失败' in warning
+    assert '采用值：撤销本张新增 32.00 毫米' in warning
+    assert '整批继续尝试' in warning
+    assert '修改位置：排版设置→膜标签与图案间距' in warning
     assert settings.membrane_gap_mm==40
     with Image.open(tmp_path/'out'/result['filename']) as output:
         for path,p in plans[0]['planned']:
