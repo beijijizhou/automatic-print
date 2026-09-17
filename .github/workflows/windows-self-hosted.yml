@@ -116,6 +116,7 @@ jobs:
         shell: powershell
         run: |
           $iscc = @(
+            "C:\actions-runner\tools\Inno Setup 6\ISCC.exe"
             "C:\Program Files (x86)\Inno Setup 6\ISCC.exe"
             "C:\Program Files\Inno Setup 6\ISCC.exe"
             Get-ChildItem "C:\Users\*\AppData\Local\Programs\Inno Setup 6\ISCC.exe" `
