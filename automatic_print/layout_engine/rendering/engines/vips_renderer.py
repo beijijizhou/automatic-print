@@ -7,6 +7,7 @@ from PIL import ImageColor
 from automatic_print.layout_engine.labeling.base.dynamic_label import source_label_badge
 from automatic_print.layout_engine.domain.models import LayoutSettings, Placement, ProgressCallback, mm_to_px
 from automatic_print.layout_engine.labeling.platform.platform_label import placement_badge, platform_text
+from .vips_join import balanced_vertical_join as _balanced_vertical_join
 try:
     import pyvips
 except (ImportError, OSError):
@@ -185,18 +186,3 @@ def build_vips_canvas(
         extend="background",
         background=[0, 0, 0, 0],
     ).copy(xres=pixels_per_mm, yres=pixels_per_mm)
-def _balanced_vertical_join(images):
-    """Build a shallow demand graph instead of an O(rows)-deep join chain."""
-    level = list(images)
-    while len(level) > 1:
-        joined = []
-        for index in range(0, len(level), 2):
-            if index + 1 == len(level):
-                joined.append(level[index])
-            else:
-                joined.append(level[index].join(
-                    level[index + 1], "vertical", expand=True,
-                    background=[0, 0, 0, 0], align="low",
-                ))
-        level = joined
-    return level[0]

@@ -8,9 +8,9 @@ from automatic_print.layout_engine.orders.single_order_sequence import (
 from automatic_print.layout_engine.planning.base.row_optimizer import _place_choice
 from automatic_print.layout_engine.planning.packing.units import build_units
 
-from .column_solver import solve_group_choices
-from .cutter_planner import _lanes, cutter_output_width
-from .knife_optimizer import knife_candidates
+from ..column_solver import solve_group_choices
+from ..cutter_planner import _lanes, cutter_output_width
+from ..knife_optimizer import knife_candidates
 
 
 def riin_sequence_height(items, width, spacing, margin=0):
@@ -54,9 +54,6 @@ def plan_choice_cutter_layout(
         result = solve_group_choices(
             ordered_choices, lanes, spacing, pair_adjacent=True,
             allow_order_boundary=True,
-            # RIIN's control candidate may fill a row with any adjacent single
-            # images. Optimized production candidates still obey the existing
-            # colour and complete-order boundaries.
             allow_any_adjacent=preserve_sequence,
         )
         if result is not None:

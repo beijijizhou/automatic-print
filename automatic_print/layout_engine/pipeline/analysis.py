@@ -26,3 +26,21 @@ def analysis_callbacks(
             analysis_ready(data)
 
     return effective, reports, report, analyzed
+
+
+def emit_plan_ready(callback, planned, labels, settings, order_check, analysis,
+                    quality, baseline_height, height, width, warning, metadata):
+    if not callback:
+        return
+    from automatic_print.automation.api.s2b.metadata.prepare import metadata_warning_text
+    metadata_warning = metadata_warning_text(metadata)
+    callback({
+        'planned': planned, 'labels': labels, 'settings': settings,
+        'order_check': order_check, 'analysis': analysis,
+        'dual_quality': quality,
+        'saved_meters': max(0, baseline_height-height)*25.4/settings.dpi/1000,
+        'canvas': (width, height, baseline_height),
+        'warning': '\n'.join(filter(None, (warning, metadata_warning))),
+        'blocking_warning': warning,
+        'metadata_warning': metadata_warning,
+    })

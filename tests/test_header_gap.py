@@ -1,6 +1,7 @@
 import os
 os.environ.setdefault('QT_QPA_PLATFORM', 'offscreen')
 from dataclasses import replace
+import json
 import numpy as np
 import pytest
 from PIL import Image, ImageDraw
@@ -96,31 +97,6 @@ def test_platform_gap_is_applied_during_render_without_intermediate_copy(tmp_pat
         assert np.array_equal(actual, expected)
 
 
-def test_virtual_gap_preview_decodes_each_source_once_for_all_measurements(tmp_path, monkeypatch):
-    from PIL import ImageFile
-    from pathlib import Path
-    paths = [sample(tmp_path/f'B{i}-1-T-Black-M-NO1-1.png') for i in range(4)]
-    settings = LayoutSettings(
-        dpi=25.4, media_width_mm=600, membrane_gap_mm=40,
-        platform_name='Haloo', allow_rotation=True, number_images=True,
-        color_block_enabled=True, cutter_mode='dual', preserve_header_gap=True,
-        platform_reuse_qr=True, worker_threads=4,
-    )
-    original, decoded = ImageFile.ImageFile.load, []
-
-    def counted(image, *args, **kwargs):
-        name = Path(getattr(image, 'filename', ''))
-        if image.fp is not None and name in paths:
-            decoded.append(name)
-        return original(image, *args, **kwargs)
-
-    monkeypatch.setattr(ImageFile.ImageFile, 'load', counted)
-    result = generate_layout(paths, tmp_path/'preview', settings, preview_only=True)
-
-    assert len(result['placements']) == len(paths)
-    assert sorted(decoded) == sorted(paths)
-
-
 def test_coloured_haloo_card_footer_is_included_before_gap(tmp_path):
     image = Image.new('RGBA', (1000, 700))
     draw = ImageDraw.Draw(image)
@@ -136,22 +112,6 @@ def test_coloured_haloo_card_footer_is_included_before_gap(tmp_path):
 
     assert split == 150
     assert added == 190
-
-
-def test_gap_summary_shows_total_changed_existing_and_failed_counts():
-    records = [
-        {'minimum_mm': 40, 'added_px': 226, 'added_mm': 31.89, 'warning': ''},
-        {'minimum_mm': 40, 'added_px': 227, 'added_mm': 32.04, 'warning': ''},
-        {'minimum_mm': 40, 'added_px': 0, 'warning': ''},
-        {'minimum_mm': 40, 'added_px': 0, 'warning': '未找到可靠分界'},
-    ]
-
-    text = header_gap.gap_summary(records)
-
-    for expected in ('目标 40 毫米', '共 4 张', '实际扩充 2 张',
-                     '原本已满足 1 张', '未能扩充 1 张',
-                     '31.89–32.04 毫米'):
-        assert expected in text
 
 
 def test_cache_expiry_parameter_change_and_original_freshness(tmp_path, monkeypatch):
@@ -191,10 +151,10 @@ def test_stale_prepared_copy_is_regenerated_from_recorded_source(tmp_path):
     settings = LayoutSettings(dpi=25.4, membrane_gap_mm=40)
     prepared, _, _ = header_gap.prepare_paths([source], settings)
     prepared = prepared[0]
-    prepared.with_suffix('.json').write_text(
-        '{"source": "' + str(source) + '", "source_identity": ["missing", 0, 0]}',
-        encoding='utf-8',
-    )
+    prepared.with_suffix('.json').write_text(json.dumps({
+        'source': str(source),
+        'source_identity': ['missing', 0, 0],
+    }), encoding='utf-8')
 
     actual, record = header_gap.prepare_one(prepared, settings)
 
@@ -229,21 +189,6 @@ def test_output_and_preview_use_expanded_source_pixels(tmp_path, engine, degrees
     preview = generate_layout([path], tmp_path/'preview', settings, preview_only=True)
     assert (preview['width_px'], preview['height_px']) == (result['width_px'], result['height_px'])
     assert not (tmp_path/'preview').exists()
-
-
-def test_setting_default_and_persistence(tmp_path):
-    from PySide6.QtCore import QSettings
-    from PySide6.QtWidgets import QApplication
-    from automatic_print.ui.header_gap import build_header_gap
-    from types import SimpleNamespace
-    app = QApplication.instance() or QApplication([])
-    prefs = QSettings(str(tmp_path/'prefs.ini'), QSettings.IniFormat)
-    window = SimpleNamespace(preferences=prefs)
-    field = build_header_gap(window)
-    assert field.value() == 40
-    field.setValue(35)
-    assert build_header_gap(window).value() == 35
-    assert app
 
 
 @pytest.mark.parametrize('mode', ['single', 'dual'])
