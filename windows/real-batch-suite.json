@@ -1,0 +1,57 @@
+{
+  "seed": 20260917,
+  "batches": [
+    {
+      "id": "haloo-random-black-2x-609171329038",
+      "platform": "Haloo",
+      "path": "C:\\actions-runner\\real-batches\\acceptance\\haloo-random-black-2x-609171329038",
+      "expected_images": 296,
+      "passes": ["cold"]
+    },
+    {
+      "id": "haloo-random-multi-609171314019",
+      "platform": "Haloo",
+      "path": "C:\\actions-runner\\real-batches\\acceptance\\haloo-random-multi-609171314019",
+      "expected_images": 231,
+      "passes": ["cold"]
+    },
+    {
+      "id": "haloo-random-white-2x-609171338053",
+      "platform": "Haloo",
+      "path": "C:\\actions-runner\\real-batches\\acceptance\\haloo-random-white-2x-609171338053",
+      "expected_images": 36,
+      "passes": ["cold"]
+    },
+    {
+      "id": "longfeng-complete-609172109019",
+      "platform": "隆丰",
+      "path": "C:\\actions-runner\\real-batches\\acceptance\\longfeng-complete-609172109019",
+      "expected_images": 4,
+      "passes": ["cold"]
+    },
+    {
+      "id": "putian-complete-609172046008",
+      "platform": "莆田",
+      "path": "C:\\actions-runner\\real-batches\\acceptance\\putian-complete-609172046008",
+      "expected_images": 4,
+      "passes": ["cold"]
+    },
+    {
+      "id": "s2b-complete-CYS2B002",
+      "platform": "S2B",
+      "path": "C:\\actions-runner\\real-batches\\acceptance\\s2b\\CYS2B002Mr______34_L9IGO772NMBP_20260917_185422_7te7qo5c",
+      "expected_images": 34,
+      "passes": ["cold"]
+    },
+    {
+      "id": "longfeng-performance-609172109020",
+      "platform": "隆丰",
+      "path": "C:\\actions-runner\\real-batches\\acceptance\\longfeng-performance-609172109020",
+      "expected_images": 200,
+      "passes": ["cold", "hot"],
+      "max_generation_seconds": 30,
+      "output_parts": 8,
+      "save_parallelism": 8
+    }
+  ]
+}
