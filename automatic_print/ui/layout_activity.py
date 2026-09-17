@@ -11,6 +11,7 @@ class LayoutActivity(QObject):
         self.original = {key: (b.text(), b.icon(), b.styleSheet(), b.toolTip())
                          for key,b in self.buttons.items()}
         self.active, self.frame = None, 0
+        self.save_progress = None
         self.timer = QTimer(self)
         self.timer.setInterval(80)
         self.timer.timeout.connect(self.tick)
@@ -20,6 +21,7 @@ class LayoutActivity(QObject):
             self.stop()
         self.original = {key: (b.text(), b.icon(), b.styleSheet(), b.toolTip())
                          for key,b in self.buttons.items()}
+        self.save_progress = None
         self.active = self.buttons[mode]
         self.active.setText(self.original[mode][0]+' · 进行中')
         self.active.setStyleSheet('QPushButton:disabled {background:#dbeafe; color:#1d4ed8;'
@@ -32,13 +34,21 @@ class LayoutActivity(QObject):
             return
         mode = next(key for key, button in self.buttons.items() if button is self.active)
         title = self.original[mode][0]
+        progress = ''
+        if phase == '保存输出图片' and self.save_progress:
+            current, total = self.save_progress
+            progress = f' · 进度 {current}/{total}（{current/total:.1%}）'
         self.active.setText(
-            f'{title} · {phase} · 当前 {seconds:.2f}秒 · 总计 {total_seconds:.2f}秒 · {fraction:.1%}'
+            f'{title} · {phase}{progress} · 当前 {seconds:.2f}秒 · 总计 {total_seconds:.2f}秒'
         )
         self.active.setToolTip(
             f'当前操作：{phase}\n本步骤耗时：{seconds:.2f}秒\n'
             f'本次总耗时：{total_seconds:.2f}秒\n占当前总耗时：{fraction:.1%}'
         )
+
+    def update_progress(self, stage, current, total):
+        if stage == '保存图片' and total:
+            self.save_progress = (current, total)
 
     def tick(self):
         if self.active is None:
@@ -73,3 +83,4 @@ class LayoutActivity(QObject):
             button.setStyleSheet(style)
             button.setToolTip(tooltip)
         self.active = None
+        self.save_progress = None

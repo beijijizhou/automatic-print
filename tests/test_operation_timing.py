@@ -23,10 +23,14 @@ def test_layout_button_shows_phase_and_total_elapsed_time():
     activity = LayoutActivity(single, multiple, parent)
     OWNERS.extend((parent, activity))
     activity.start('single')
+    activity.update_progress('保存图片', 17, 118)
     activity.update_phase('保存输出图片', 27.82, 38.75, .718)
+    assert '进度 17/118（14.4%）' in single.text()
     assert '当前 27.82秒' in single.text()
     assert '总计 38.75秒' in single.text()
+    assert '71.8%' not in single.text()
     assert '本次总耗时：38.75秒' in single.toolTip()
+    assert '占当前总耗时：71.8%' in single.toolTip()
     activity.stop()
 
 

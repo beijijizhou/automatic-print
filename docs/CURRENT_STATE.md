@@ -121,7 +121,8 @@
   膜规格比较表不再承载该信息。
 - 进度、停止和线程生命周期：`ui/busy_spinner.py`、`layout_activity.py`、
   `layout_engine/reporting/operation_timing.py`、`stop_actions.py`、`thread_lifecycle.py`、`worker_bridge.py`；
-  顶部唯一活动状态同时显示当前步骤耗时、整次排版总耗时和当前步骤占比。
+  顶部唯一活动状态同时显示当前步骤耗时和整次排版总耗时；TIFF 保存时另显示已完成 Strip 数及
+  真实高度进度，不再把“步骤耗时占总耗时”这个非线性比例伪装成任务完成进度。
 - 保存耗时：`layout_engine/rendering/storage/save_progress.py`记录首批PNG数据、持续文件增长、编码收尾和原子发布；
   `layout_engine/rendering/storage/atomic_png.py`与输出报告复用该事实，不把libvips重叠流水线伪装成互斥CPU步骤。流式PNG编码每行时，
   `layout_engine/cutting/validation/cut_validation.py`的全部区域刀位同步核对最终 alpha；发布后只顺序复核全部数据块 CRC、尺寸和格式。失败文件
