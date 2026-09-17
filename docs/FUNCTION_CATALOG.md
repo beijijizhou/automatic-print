@@ -54,6 +54,7 @@
 | 生产平台下载入口 | `ui/erp_download_entry.py`, `batch_ui/dialog.py`, `batch_ui/platform/`, `batch_ui/task/`, `batch_ui/shell/results.py` | 多选平台后分别显示独立工作区；平台页面与后台任务分层，仅下载、解压已生成批次，绝不自动启动排版；默认按页面选项在完成提示后打开对应平台文件夹。 |
 | ERP工作台壳层 | `batch_ui/local/`, `platform/`, `task/`, `shell/` | 目录直接对应本地排版、平台批次、任务执行和公共窗口外壳；根对话框只装配，控件构造、结果展示和批次表映射各有唯一所有者。 |
 | 蜂鸟ERP接口 | `automation/api/erp/gateway.py`, `items.py`, `batches.py`, `records.py` | 页面桥接、生产项与规则、生产批次、响应转换按请求对象分离；调用方直接复用提供商接口，不保留根目录转发模块。 |
+| Haloo已生产测试批次计划 | `automation/batches/completed.py`, `automation/batches/classification.py`, `automation/api/erp/items.py` | 状态9快照逐项读取实际生产图`A面/B面`，按整单、物流、订单组成、底款、黑白与尺码档生成显式ID计划；接口未证明不会重开生产前，提交请求由安全门禁拒绝。 |
 | S2B接口 | `automation/api/s2b/metadata/`, `production/` | 批次身份、共享颜色尺码元数据与本地匹配归元数据层；生产列表、人员标签、导出请求和下载归生产层；两者复用同一Supabase受限网关客户端，原始Token不进入客户端。 |
 | S2B生产图下载 | `automation/api/s2b/production/gateway.py`, `downloads.py`, `archive_io.py`, `automation/browser/batches.py` | 优先由Supabase服务端代理生产批次、导出和记录查询，用户选择后按实际件数补发缺失导出，轮询真实下载地址；`archive_io.py`唯一负责下载、ZIP路径校验与解压，网关不可用才回退已登录页面，下载标记接口不承担文件传输。 |
 | 自动化批次规则与本地身份 | `automation/batches/classification.py`, `local.py`, `naming.py`, `rules.py` | 分类、扫描、命名和生成规则按批次域集中；界面只调用这些共享能力，不自行解析或改名。 |

@@ -15,6 +15,7 @@ from .items import (
     list_batch_rules,
     list_production_items,
     production_item_count,
+    production_item_images,
     production_item_payload,
 )
 from .records import BatchRecord, records_from_rows
@@ -35,6 +36,7 @@ __all__ = [
     "production_api_frame",
     "production_batch_frame",
     "production_item_count",
+    "production_item_images",
     "production_item_payload",
     "records_from_rows",
 ]

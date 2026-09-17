@@ -149,6 +149,7 @@
 - 更新：`automatic_print/updates/`集中源码更新、发布检查、版本展示和后台执行。
 
 ## 外部自动化
+- Haloo已生产测试批次由`automation/batches/completed.py`只读规划：状态9、实际生产图面别、整单、物流、订单组成、主底款、黑白和尺码档均须明确；已生产项目已有来源批次且生成接口无预演参数，当前安全门禁禁止写入，避免重开生产或扰动队列。接口证据见`docs/HALOO_BATCH_GENERATION.md`。
 
 - `automation/api/riin/__main__.py`提供独立管理员命令入口，`elevation.py`通过Windows正常UAC授权启动一次指定操作；不要求主工作台或Codex提权。`desktop.py`拥有原生/UIA控件发现、导入文件选择框与导入设置操作，来源目录递归读取PNG并按文件选择框容量分段。报告区分“提交导入”和实际加载完成，失败保留RIIN界面供用户继续处理；文件输出由output.py负责。旧版MFC导入按钮使用已核验的工具栏相对位置，工具栏高度不符时拒绝点击并要求重新校准。
 - `automation/api/riin/output.py`新增文件输出和PrintExp加载命令，扩展上述导入入口。RIIN发送方式必须是“文件”，输出路径不可覆盖；PrintExp仅提交已有PRN，不启动物理打印。加载报告与实际预览核验分开。
