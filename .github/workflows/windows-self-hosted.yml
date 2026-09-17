@@ -34,6 +34,7 @@ jobs:
     timeout-minutes: 180
     env:
       QT_QPA_PLATFORM: offscreen
+      PSExecutionPolicyPreference: Bypass
       REAL_BATCH_PATHS: ${{ inputs.real_batch_paths || vars.AUTOMATIC_PRINT_REAL_BATCH_PATHS }}
       BUILD_INSTALLER: ${{ github.event_name == 'push' || inputs.build_installer }}
     steps:
