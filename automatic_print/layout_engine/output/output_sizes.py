@@ -39,10 +39,22 @@ def cutting_description(result):
     )
     rotated = any(placement['cut_zone'] == '旋转区' for placement in result['placements'])
     shift = ' · 刀码保持左侧固定基准' if rotated else ''
+    changes = (result.get('cut_corridor') or {}).get('knife_change_gaps', [])
+    change_text = ''
+    if changes:
+        rows = []
+        for change in changes:
+            required = change['required_px'] * 25.4 / result['output_dpi']
+            actual = change['actual_px'] * 25.4 / result['output_dpi']
+            rows.append(
+                f"{change['from_zone']}→{change['to_zone']}："
+                f"左侧识别刀码 {actual:.1f} 毫米（要求至少 {required:.1f} 毫米）"
+            )
+        change_text = '\n刀位切换停止距离：' + '；'.join(rows)
     return (
         f"{result['filename']} · {sizes} · {len(result['placements'])} 张 · "
         f"{knife or '单列 / 自由排版'}{shift}"
-        + (f'\n{notices}' if notices else '')
+        + change_text + (f'\n{notices}' if notices else '')
     )
 
 

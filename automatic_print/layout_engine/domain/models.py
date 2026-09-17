@@ -104,6 +104,7 @@ class LayoutSettings:
     cutter_knife_mm: float = 300
     cutter_safety_mm: float = 3
     cutter_marker_offset_mm: float = 0
+    cutter_knife_change_gap_mm: float = 0
     machine_number: str = "M1"
     label_fit_height: bool = False
     label_reference_height_mm: float = 10

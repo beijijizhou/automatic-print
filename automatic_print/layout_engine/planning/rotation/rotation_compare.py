@@ -38,6 +38,8 @@ def compare_rotation(paths, settings, progress, analysis, analysis_ready):
                 callback(stage, current, total, filename)
         try:
             result = fn(paths, config, report)
+            from automatic_print.layout_engine.cutting.geometry.knife_change_gap import apply_knife_change_gap
+            result, _changes = apply_knife_change_gap(result, config)
             planned, _, width, height = result[:4]
             validate_order_placements(paths, planned)
             validate_cut_corridor(planned, effective[0], width)

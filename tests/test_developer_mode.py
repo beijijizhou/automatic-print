@@ -39,6 +39,8 @@ def test_default_shows_production_layout_but_hides_diagnostic_tools(tmp_path, mo
     assert not owner._layout_settings().compare_reference_films
     assert not owner.cutter_settings.force_small_pair.isHidden()
     assert owner.cutter_settings.force_small_pair.isChecked()
+    assert owner.cutter_settings.knife_change_gap.isHidden()
+    assert owner._layout_settings().cutter_knife_change_gap_mm == 0
     assert owner.quick_force_small_pair.isVisible()
     assert owner.quick_force_small_pair.isChecked()
     assert owner._layout_settings().force_small_pair_width
@@ -66,6 +68,7 @@ def test_default_shows_production_layout_but_hides_diagnostic_tools(tmp_path, mo
         '排版历史', '批量分析文件夹', '算法诊断', '批次顺序标注',
         'S2B 批次信息查询', '隆丰 ERP 下载', 'S2B 生产图下载',
         '莆田平台', 'Haloo平台', '并行分块 TIFF',
+        '刀位切换停止距离',
     ]
     assert feature_dialog.grab().save(str(tmp_path/'developer-feature-list.png'))
     feature_dialog.close()
@@ -104,6 +107,8 @@ def test_two_zone_layout_stays_visible_and_active_outside_developer_mode(tmp_pat
     control = owner.cutter_settings.two_zone
     owner.developer_mode_checkbox.setChecked(True)
     assert not owner.cutter_settings.force_small_pair.isHidden()
+    assert not owner.cutter_settings.knife_change_gap.isHidden()
+    assert owner._layout_settings().cutter_knife_change_gap_mm == 570
     owner.cutter_settings.force_small_pair.setChecked(True)
     assert owner._layout_settings().force_small_pair_width
     assert owner.label_settings.form.isRowVisible(owner.label_settings.source_order)
@@ -124,6 +129,9 @@ def test_toggle_persists_and_existing_history_tab_hides(tmp_path, monkeypatch):
     owner = window(tmp_path/'prefs.ini')
     panel = owner.automation_home.label_quick_panel
     owner.developer_mode_checkbox.setChecked(True)
+    assert not owner.cutter_settings.knife_change_gap.isHidden()
+    assert owner.cutter_settings.knife_change_gap.value() == 570
+    assert owner._layout_settings().cutter_knife_change_gap_mm == 570
     assert owner.quick_header_gap_group.isVisible()
     assert owner.layout_rules_form.isRowVisible(owner.membrane_gap_enabled)
     assert owner.layout_rules_form.isRowVisible(owner.membrane_gap)

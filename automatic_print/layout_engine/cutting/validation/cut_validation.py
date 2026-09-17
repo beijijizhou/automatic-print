@@ -32,6 +32,10 @@ def mark_pixel_verified(check):
 
 
 def validate_cut_corridor(planned, settings, canvas_width, left_marker_px=0):
+    from automatic_print.layout_engine.cutting.geometry.knife_change_gap import inspect_knife_change_gaps
+    knife_change_gaps = inspect_knife_change_gaps(planned, settings)
+    if any(row['actual_px'] < row['required_px'] for row in knife_change_gaps):
+        raise ValueError('右侧刀位变化时，相邻左侧识别刀码未达到设定的停止距离，禁止输出。')
     if settings.cutter_left_marker_external and settings.cutter_mode in {'single', 'dual'}:
         for path, p in planned:
             if p.color_block_width_px and p.color_block_x_px == 0:
@@ -66,7 +70,7 @@ def validate_cut_corridor(planned, settings, canvas_width, left_marker_px=0):
         if any(a["end_y_px"] > b["start_y_px"] for a,b in zip(zones,zones[1:])):
             raise ValueError("刀位区域重叠，禁止输出。")
         return {"zones":zones,"checked_images":len(planned),"continuous":len(zones)==1,
-                "knife_changes":len(zones)-1}
+                "knife_changes":len(zones)-1,"knife_change_gaps":knife_change_gaps}
     knives = _placement_knives(planned[0][1]) if planned else ()
     if not knives:
         knives = (mm_to_px(settings.cutter_knife_mm, settings.dpi),)

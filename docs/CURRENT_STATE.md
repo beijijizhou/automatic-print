@@ -100,6 +100,8 @@
   不再保存后重新解压超长 TIFF；普通模式始终回到 PNG。
 - 输出安全：`layout_engine/cutting/validation/order_validation.py`、`layout_engine/cutting/validation/cut_validation.py`、
   `layout_engine/cutting/validation/marked_pixel_validation.py`、`layout_engine/cutting/geometry/printed_guides.py`、`layout_engine/output/output_file_info.py`。
+  `layout_engine/cutting/geometry/knife_change_gap.py`在开发者模式参数启用时，只对实际刀位变化边界移动后续整行，
+  保证上下左侧识别刀码至少相隔570毫米；最终刀位检查和输出报告复核同一距离事实。
 - 膜方案与统计：`layout_engine/planning/film/film_comparison.py` 直接复用当前实际输出行并并行计算其余方案；`layout_engine/planning/film/film_specs.py`、`layout_engine/reporting/metrics.py`、
   `layout_engine/reporting/operation_timing.py`、`layout_engine/reporting/algorithm_costs.py`。
 - 缓存：`layout_engine/planning/cache/plan_cache.py`、`layout_engine/planning/cache/normal_plan_cache.py`、`layout_engine/planning/cache/cached_planner.py`；单图测量由

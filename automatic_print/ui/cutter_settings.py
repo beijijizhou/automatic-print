@@ -43,6 +43,13 @@ class CutterSettingsPanel(QWidget):
         self.marker_offset = double_spinbox(0, 0, 100)
         self.left_marker_lift = double_spinbox(preferences.value('cutter/left_marker_lift_mm',1.5,float),0,30)
         self.left_marker_lift.valueChanged.connect(lambda v: preferences.setValue('cutter/left_marker_lift_mm',v))
+        self.knife_change_gap = double_spinbox(
+            preferences.value('cutter/knife_change_gap_mm', 570, float), 0, 2000)
+        self.knife_change_gap.setToolTip(
+            '右侧纵刀位置变化时，保证上下两个左侧识别刀码至少相隔该距离；'
+            '机器搜索距离550毫米时建议使用570毫米。0表示关闭。')
+        self.knife_change_gap.valueChanged.connect(
+            lambda v: preferences.setValue('cutter/knife_change_gap_mm', v))
         self.transitions = TransitionSettings(preferences, self)
         self.compare_films = QCheckBox('比较45/60厘米：常规与旋转（不自动切换，结果存入历史）')
         if not preferences.value('cutter/film_comparison_default_v2', False, bool):
@@ -67,6 +74,7 @@ class CutterSettingsPanel(QWidget):
             ('并排集中', self.two_zone),
             ('S–L宽度上限', self.force_small_pair),
             ('快速末尾旋转', self.tail_rotation),
+            ('刀位切换时左侧刀码距离（毫米）', self.knife_change_gap),
             ('区域与批次提示', self.transitions),
             ('膜规格比较', self.compare_films),
             ("刀位距排版左边（毫米）", self.knife),
@@ -77,6 +85,7 @@ class CutterSettingsPanel(QWidget):
             form.addRow(text, control)
         self.form = form
         self.force_small_pair_label = form.labelForField(self.force_small_pair)
+        self.knife_change_gap_label = form.labelForField(self.knife_change_gap)
         self.set_developer_mode(False)
         previous_width = int(width.value())
         default_film = previous_width if previous_width in {450, 600} else 600
@@ -138,6 +147,7 @@ class CutterSettingsPanel(QWidget):
         self.two_zone.setEnabled(mode == 'dual')
         self.force_small_pair.setEnabled(mode == 'dual')
         self.tail_rotation.setEnabled(mode == 'dual')
+        self.knife_change_gap.setEnabled(mode == 'dual')
         if self.quick_mode.isChecked():
             self.rotation_zone.setChecked(False)
         self.knife.setEnabled(mode == "dual" and not self.auto_knife.isChecked())
@@ -168,6 +178,7 @@ class CutterSettingsPanel(QWidget):
             "knife_mm": self.knife.value(), "safety_mm": self.safety.value(),
             "marker_offset_mm": self.marker_offset.value(),
             'left_marker_lift_mm': self.left_marker_lift.value(),
+            'knife_change_gap_mm': self.knife_change_gap.value(),
         }.items():
             self.preferences.setValue("cutter/" + key, value)
         self.preferences.setValue('layout/majority_two_zone', self.two_zone.isChecked())
@@ -193,3 +204,5 @@ class CutterSettingsPanel(QWidget):
     def set_developer_mode(self, enabled):
         self.force_small_pair.setVisible(True)
         self.force_small_pair_label.setVisible(True)
+        self.knife_change_gap.setVisible(enabled)
+        self.knife_change_gap_label.setVisible(enabled)
