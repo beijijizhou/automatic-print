@@ -150,6 +150,10 @@
 
 ## 外部自动化
 
+- 开发者模式提供独立“RIIN代码控制测试”：`automation/api/riin/window_control.py`在已登录的Windows
+  交互桌面按标题发现RIIN顶层窗口、发送`WM_NULL`响应探测并请求恢复/置前，`ui/riin_diagnostic.py`
+  显示PID、窗口类、坐标、响应与置前结果。该诊断不导入文件、不点击打印、不修改RIIN队列；
+  GitHub Runner服务会话不作为RIIN桌面控制入口。
 - `automatic_print/automation/` 根目录只提供公共入口；批次分类、扫描、命名和规则位于
   `batches/`，浏览器会话与批次页面位于`browser/`，导出下载位于`transfer/`，平台配置与
   平台页面行为位于`providers/`，端到端流程位于`workflows/`。蜂鸟ERP页面桥接、生产项、

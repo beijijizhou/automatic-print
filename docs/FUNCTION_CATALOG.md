@@ -58,6 +58,7 @@
 | S2B生产图下载 | `automation/api/s2b/production/gateway.py`, `downloads.py`, `archive_io.py`, `automation/browser/batches.py` | 优先由Supabase服务端代理生产批次、导出和记录查询，用户选择后按实际件数补发缺失导出，轮询真实下载地址；`archive_io.py`唯一负责下载、ZIP路径校验与解压，网关不可用才回退已登录页面，下载标记接口不承担文件传输。 |
 | 自动化批次规则与本地身份 | `automation/batches/classification.py`, `local.py`, `naming.py`, `rules.py` | 分类、扫描、命名和生成规则按批次域集中；界面只调用这些共享能力，不自行解析或改名。 |
 | 自动化浏览器、传输与平台 | `automation/browser/`, `automation/transfer/`, `automation/providers/`, `automation/workflows/` | 登录会话、批次页面、导出下载、平台配置和端到端流程分别归档；`automation/`根目录只公开稳定入口。 |
+| RIIN桌面控制诊断 | `automation/api/riin/window_control.py`, `ui/riin_diagnostic.py` | 仅在Windows交互桌面发现RIIN窗口、发送无副作用响应探测并请求置前；不得由Runner服务会话点击打印、导入文件或改变生产队列。按钮级自动化必须在确认真实控件树后另行扩展。 |
 | 源码更新 | `updates/source.py`, `updates/release.py`, `updates/versioning.py`, `updates/worker.py` | 源码安装更新、发布包检查、版本展示和后台执行按职责分离；检查、应用和重启保持同一状态机。 |
 | 协作取消与安全关闭 | `runtime/cancellation.py`, `controllers/thread_lifecycle.py`, `ui/stop_actions.py`, `ui/immediate_exit.py` | 控制器拥有线程释放，UI只路由用户停止意图；任务运行时拒绝关闭并继续处理，空闲时由 Qt 正常退出，禁止强杀进程。 |
 | 应用运行时 | `runtime/branding.py`, `runtime/resources.py`, `runtime/crash_logging.py`, `runtime/restart.py`, `runtime/cancellation.py` | 品牌、资源、故障日志、重启和任务取消归运行时层；包根目录只保留启动入口。 |
