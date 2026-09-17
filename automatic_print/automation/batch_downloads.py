@@ -136,6 +136,10 @@ def _start_parallel_downloads(page, tasks, progress):
                 f"生产批次 {task.batch_number} 的图片尚未生成成功。"
             )
         links = row.get_by_text("下载", exact=True)
+        try:
+            links.nth(2).wait_for(state="visible", timeout=10_000)
+        except Exception:
+            pass
         if links.count() != 3:
             raise RuntimeError(
                 f"生产批次 {task.batch_number} 的三个下载入口不完整。"

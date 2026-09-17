@@ -105,6 +105,7 @@ def test_three_downloads_are_started_before_files_are_saved(
         def __init__(self, page, number):
             self.page = page
             self.number = number
+            self.waited = False
 
         def count(self):
             return 3
@@ -113,6 +114,12 @@ def test_three_downloads_are_started_before_files_are_saved(
             assert index == 2
             self.page.pending = self.number
             return self
+
+        def wait_for(self, state, timeout):
+            assert state == "visible"
+            assert timeout == 10_000
+            self.waited = True
+            events.append(f"waited:{self.number}")
 
         def click(self):
             pass
@@ -161,7 +168,10 @@ def test_three_downloads_are_started_before_files_are_saved(
 
     assert len(active) == 3
     assert events == [
+        "waited:123456789010",
         "started:123456789010",
+        "waited:123456789011",
         "started:123456789011",
+        "waited:123456789012",
         "started:123456789012",
     ]
