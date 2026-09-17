@@ -50,23 +50,23 @@ jobs:
           cache: pip
 
       - name: Install test and build dependencies
-        shell: pwsh
+        shell: powershell
         run: python -m pip install -r requirements-build.txt pytest
 
       - name: Run complete automated test suite
-        shell: pwsh
+        shell: powershell
         run: |
           New-Item -ItemType Directory -Force artifacts/test-results | Out-Null
           python -m pytest -q --junitxml=artifacts/test-results/pytest.xml
 
       - name: Run real-image layout regressions
         if: env.REAL_BATCH_PATHS != ''
-        shell: pwsh
+        shell: powershell
         run: ./windows/run-real-batch-ci.ps1 -BatchPaths "$env:REAL_BATCH_PATHS" -ArtifactRoot artifacts/real-batches
 
       - name: Record skipped real-image regression
         if: env.REAL_BATCH_PATHS == ''
-        shell: pwsh
+        shell: powershell
         run: |
           New-Item -ItemType Directory -Force artifacts/real-batches | Out-Null
           "Skipped: configure AUTOMATIC_PRINT_REAL_BATCH_PATHS or dispatch with real_batch_paths." |
@@ -74,7 +74,7 @@ jobs:
 
       - name: Inject shared S2B gateway key
         if: env.BUILD_INSTALLER == 'true'
-        shell: pwsh
+        shell: powershell
         env:
           S2B_BATCH_INFO_KEY: ${{ secrets.AUTOMATIC_PRINT_S2B_BATCH_INFO_KEY }}
         run: |
@@ -87,12 +87,12 @@ jobs:
 
       - name: Build application
         if: env.BUILD_INSTALLER == 'true'
-        shell: pwsh
+        shell: powershell
         run: pyinstaller --noconfirm --clean AutomaticPrint.spec
 
       - name: Build installer
         if: env.BUILD_INSTALLER == 'true'
-        shell: pwsh
+        shell: powershell
         run: |
           $iscc = @(
             "C:\Program Files (x86)\Inno Setup 6\ISCC.exe"
@@ -108,7 +108,7 @@ jobs:
 
       - name: Collect startup and crash logs
         if: always()
-        shell: pwsh
+        shell: powershell
         run: ./windows/collect-runner-logs.ps1 -Destination artifacts/logs
 
       - name: Upload test reports and logs
