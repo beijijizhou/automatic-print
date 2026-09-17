@@ -68,6 +68,12 @@ def generate_layout(
     if s2b_metadata:
         analysis[-1]['s2b_metadata'] = s2b_metadata
     settings = effective[0]
+    if settings.cutter_knife_change_gap_mm > 0:
+        from automatic_print.layout_engine.cutting.geometry.knife_change_gap import apply_knife_change_gap
+        result, knife_changes = apply_knife_change_gap(
+            (planned, labels, width, height, baseline_height), settings)
+        planned, labels, width, height, baseline_height = result
+        analysis[-1]['knife_change_gap'] = knife_changes
     if settings.batch_end_block:
         width = mm_to_px(settings.media_width_mm,settings.dpi)
     height = marked_height(planned, settings, width, height,
@@ -76,7 +82,9 @@ def generate_layout(
     warning, order_check = "", {}
     try:
         order_check = validate_order_placements(paths, planned)
-        cut_check = validate_cut_corridor(planned, settings, width)
+        cut_check = validate_cut_corridor(
+            planned, settings, width, canvas_height=height,
+        )
         if settings.cutter_mode != 'free':
             validate_embedded_marks(planned, settings)
     except ValueError as error:

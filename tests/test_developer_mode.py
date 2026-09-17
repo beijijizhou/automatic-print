@@ -69,7 +69,7 @@ def test_default_shows_production_layout_but_hides_diagnostic_tools(tmp_path, mo
         '切膜刀码开关', '平台＋尺码标签开关', '批次顺序标注',
         'S2B 批次信息查询', '隆丰 ERP 下载', 'S2B 生产图下载',
         '莆田平台', 'Haloo平台', '并行分块 TIFF',
-        '刀位切换停止距离',
+        '换刀与批次结束停止距离',
     ]
     assert feature_dialog.grab().save(str(tmp_path/'developer-feature-list.png'))
     feature_dialog.close()

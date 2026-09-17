@@ -81,8 +81,11 @@ class PreviewTask(QRunnable):
                 planned, labels, _, height, baseline = result
                 effective[0] = replace(self.settings, cutter_knife_mm=effective[0].cutter_knife_mm)
                 order_check = validate_order_placements(paths, planned)
-                validate_cut_corridor(planned, effective[0],
-                                     mm_to_px(self.settings.media_width_mm, self.settings.dpi))
+                validate_cut_corridor(
+                    planned, effective[0],
+                    mm_to_px(self.settings.media_width_mm, self.settings.dpi),
+                    canvas_height=height,
+                )
             except ValueError as exc:
                 warning = '\n'.join(filter(None, (
                     warning, f'仅供检查，当前参数禁止输出：{exc}'

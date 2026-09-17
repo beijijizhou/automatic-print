@@ -11,6 +11,7 @@ from math import ceil
 from automatic_print.layout_engine.cutting.geometry.transition_marks import marked_height
 from automatic_print.layout_engine.cutting.validation.order_validation import validate_order_placements
 from automatic_print.layout_engine.cutting.validation.cut_validation import validate_cut_corridor
+from automatic_print.layout_engine.cutting.geometry.knife_change_gap import apply_knife_change_gap
 from automatic_print.layout_engine.labeling.markers.marker_space import validate_embedded_marks
 from automatic_print.layout_engine.orders.batch_analysis import analyze_batch
 from automatic_print.layout_engine.planning.film.film_specs import AVAILABLE_WIDTHS, availability_text, comparison_widths
@@ -31,13 +32,10 @@ def _compare_films(paths, settings, progress, production=None):
                      cutter_mode='dual', cutter_auto_knife=True, cutter_rotation_zone=False,
                      cutter_tail_rotation=False, allow_rotation=False,
                      manual_rotations=(), compare_film_sizes=False)
-    choices, labels = read_cutter_items(
-        paths, shared, progress, prepare_rotations=True, include_choices=True,
-    )
+    choices, labels = read_cutter_items(paths, shared, progress, prepare_rotations=True,
+                                        include_choices=True)
     options = [[row[0]] for row in choices]
-    rotated_items, rotated_labels = rotation_items(
-        paths, shared, None, prepared=(choices, labels),
-    )
+    rotated_items, rotated_labels = rotation_items(paths, shared, None, prepared=(choices, labels))
     analysis = analyze_batch(paths, shared)
     measured_seconds = monotonic()-started
     if progress:
@@ -85,9 +83,11 @@ def _compare_films(paths, settings, progress, production=None):
                     if normal_error:
                         raise ValueError(normal_error)
                     result, effective[0] = baseline, normal_config
+                if config.cutter_knife_change_gap_mm > 0:
+                    result, _changes = apply_knife_change_gap(result, config)
                 planned, _, width, height = result[:4]
                 validate_order_placements(paths, planned)
-                validate_cut_corridor(planned, effective[0], width)
+                validate_cut_corridor(planned, effective[0], width, 0, height)
                 validate_embedded_marks(planned, config)
                 height = marked_height(planned, config, width, height)
                 metres_per_px = 25.4/config.dpi/1000

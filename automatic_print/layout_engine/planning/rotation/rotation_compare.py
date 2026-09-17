@@ -43,7 +43,7 @@ def compare_rotation(paths, settings, progress, analysis, analysis_ready):
                 result, _changes = apply_knife_change_gap(result, config)
             planned, _, width, height = result[:4]
             validate_order_placements(paths, planned)
-            validate_cut_corridor(planned, effective[0], width)
+            validate_cut_corridor(planned, effective[0], width, 0, result[3])
             validate_embedded_marks(planned, config)
             return result, marked_height(planned, config, width, height), monotonic()-started, ''
         except ValueError as exc:

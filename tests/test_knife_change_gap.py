@@ -38,26 +38,29 @@ def test_knife_change_pushes_next_left_marker_to_570_mm():
         (planned, {}, 580, 200, 200), settings)
     shifted, _labels, _width, height, _baseline = result
     assert changes[0]['added_px'] == 470
-    assert height == 670
+    assert changes[1]['to_zone'] == '批次结束'
+    assert changes[1]['added_px'] == 480
+    assert height == 1150
     second_row = [p for _path, p in shifted if p.row_y_px > 0]
     assert {p.row_y_px for p in second_row} == {570}
     assert {p.color_block_y_px for p in second_row} == {580}
     assert {p.y_px for p in second_row} == {580}
-    verified = inspect_knife_change_gaps(shifted, settings)
+    verified = inspect_knife_change_gaps(shifted, settings, height)
     assert verified[0]['actual_px'] == verified[0]['required_px'] == 570
+    assert verified[1]['actual_px'] == verified[1]['required_px'] == 570
     safe_plan = [(path, p) for path, p in shifted if p.sequence_number != 4]
-    check = validate_cut_corridor(safe_plan, settings, 580)
+    check = validate_cut_corridor(safe_plan, settings, 580, canvas_height=height)
     assert check['knife_change_gaps'][0]['actual_px'] == 570
     text = cutting_description({
         'filename': 'test.png', 'size_range': 'S-L', 'placements': [
             {'cut_zone': p.cut_zone} for _path, p in safe_plan],
         'output_dpi': settings.dpi, 'cut_corridor': check,
     })
-    assert '刀位切换停止距离' in text
+    assert '换刀与批次结束停止距离' in text
     assert '左侧识别刀码 570.0 毫米' in text
 
 
-def test_same_knife_does_not_add_stop_distance():
+def test_same_knife_only_adds_batch_end_stop_distance():
     paths = [Path('1.png'), Path('2.png')]
     planned = [
         (paths[0], placement(1, 0, 0, (100,), '并排区')),
@@ -67,8 +70,32 @@ def test_same_knife_does_not_add_stop_distance():
         dpi=25.4, cutter_mode='dual', cutter_knife_change_gap_mm=570)
     result, changes = apply_knife_change_gap(
         (planned, {}, 580, 200, 200), settings)
-    assert result[3] == 200
-    assert not changes
+    assert result[3] == 680
+    assert len(changes) == 1
+    assert changes[0]['from_zone'] == '并排区'
+    assert changes[0]['to_zone'] == '批次结束'
+    assert changes[0]['actual_px'] == changes[0]['required_px'] == 570
+
+
+def test_both_knife_change_directions_and_batch_end_are_protected():
+    paths = [Path(f'{index}.png') for index in range(1, 4)]
+    planned = [
+        (paths[0], placement(1, 0, 0, (100,), '并排区')),
+        (paths[1], placement(2, 100, 0, (), '旋转区')),
+        (paths[2], placement(3, 200, 0, (100,), '并排区')),
+    ]
+    settings = LayoutSettings(
+        dpi=25.4, cutter_mode='dual', cutter_knife_change_gap_mm=550)
+
+    result, changes = apply_knife_change_gap(
+        (planned, {}, 580, 300, 300), settings)
+
+    assert [(row['from_zone'], row['to_zone']) for row in changes] == [
+        ('并排区', '旋转区'), ('旋转区', '并排区'), ('并排区', '批次结束'),
+    ]
+    assert all(row['actual_px'] == row['required_px'] == 550 for row in changes)
+    assert all(row['actual_px'] >= row['required_px'] for row in
+               inspect_knife_change_gaps(result[0], settings, result[3]))
 
 
 def test_real_two_zone_output_keeps_570_mm_left_marker_stop_distance(tmp_path):
@@ -87,9 +114,12 @@ def test_real_two_zone_output_keeps_570_mm_left_marker_stop_distance(tmp_path):
     ))
     change = result['cut_corridor']['knife_change_gaps'][0]
     assert change['actual_px'] == change['required_px'] == 570
+    batch_end = result['cut_corridor']['knife_change_gaps'][-1]
+    assert batch_end['to_zone'] == '批次结束'
+    assert batch_end['actual_px'] >= batch_end['required_px'] == 570
     assert [zone['name'] for zone in result['cut_corridor']['zones']] == [
         '并排区', '旋转区']
     assert result['cut_corridor']['pixel_verified']
-    assert '刀位切换停止距离' in cutting_description(result)
+    assert '换刀与批次结束停止距离' in cutting_description(result)
     with Image.open(tmp_path/'out'/result['filename']) as output:
         assert output.size == (result['width_px'], result['height_px'])

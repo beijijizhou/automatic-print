@@ -19,7 +19,7 @@
   完成结果、方案耗时与总结，不重复放置当前进度条、当前文件和状态文字。文件夹队列表仅显示
   “文件夹、图片数、尺码群/订单群”，详细阶段保留在行提示中。
 - 普通模式显示生产排版规则、45/60厘米方案、批次处理记录、膜标签间距和额外损耗。补足膜间距
-  由 `ui/header_gap.py` 的独立开关控制，保存的毫米数值本身不会自动启用；`layout_engine/labeling/base/header_gap.py`负责缓存和批次编排，`layout_engine/labeling/gap/preparation.py`负责有限条带测量和流式补距，会越过Haloo标签不属于白色卡片连通域的彩色底栏，再从真实透明分界补足40毫米。批次预览和最终报告显示总数、实际扩充、原本已满足、未能扩充及新增毫米范围。开发者模式显示算法
+  由 `ui/header_gap.py` 的独立开关控制，保存的毫米数值本身不会自动启用；`layout_engine/labeling/base/header_gap.py`负责缓存和批次编排，`layout_engine/labeling/gap/preparation.py`负责有限条带测量和流式补距，`layout_engine/labeling/gap/cache_files.py`负责Windows占用重试和临时文件回收。补距会越过Haloo标签不属于白色卡片连通域的彩色底栏，再从真实透明分界补足40毫米。批次预览和最终报告显示总数、实际扩充、原本已满足、未能扩充及新增毫米范围。开发者模式显示算法
   诊断、排版历史、批量膜分析和批次顺序标注；主界面底部的功能列表按分类展示全部开发者功能
   及当前开启状态；膜规格比较固定为45/60厘米四套方案。
 - 开发者模式主界面“刀码与标签”参数组同时提供切膜刀码和平台尺码标签开关。前者在正常排版与上次
@@ -89,7 +89,7 @@
   图片自身的透明空位并互相避让；二维码卡片没有经过最终像素验证的安全空位时，仅跳过该图的平台尺码文字、记录异常并继续，不阻断整批。外置刀码紧贴图片边缘；整批复用透明带失败时由`layout_engine/planning/zones/gap_fallback.py`
   改用外置标签真实占位、重算刀位并记录完整恢复诊断。最终坐标越界等不可恢复安全冲突仍不得猜值绕过，
   不能回退到刀码与二维码之间或膜标签与图案之间。
-- 开发者排版隔离：刀位变化570毫米停止距离只有开发者模式显式传入正数时才进入规划、候选比较和缓存版本5；普通模式不调用该逻辑，使用算法缓存版本4，缓存键也不包含该新增字段。
+- 开发者排版隔离：换刀与批次结束570毫米停止距离只有开发者模式显式传入正数时才进入规划、候选比较和缓存版本6；普通模式不调用该逻辑，使用算法缓存版本4，缓存键也不包含该新增字段。
 - 标签字体加载与线程内有界缓存由`layout_engine/labeling/text/fonts.py`唯一拥有；`layout_engine/labeling/base/labels.py`只负责标签内容、
   换行和徽标渲染。单图排版对象`LayoutItem`与`Placement`统一归`layout_engine/domain/models.py`。
 - 渲染与编码：`layout_engine/rendering/engines/pillow_renderer.py`、`layout_engine/rendering/engines/vips_renderer.py`、`layout_engine/rendering/png/`、
@@ -106,8 +106,9 @@
   不再保存后重新解压超长 TIFF；普通模式始终回到 PNG。RIIN单列/自动多列切膜即使读取到开发者旧TIFF设置，也由`layout_engine/output/output_sizes.py`继续任务并降级为PNG；TIFF仅保留给自由排版性能测试。
 - 输出安全：`layout_engine/cutting/validation/order_validation.py`、`layout_engine/cutting/validation/cut_validation.py`、
   `layout_engine/cutting/validation/marked_pixel_validation.py`、`layout_engine/cutting/geometry/printed_guides.py`、`layout_engine/output/output_file_info.py`。
-  `layout_engine/cutting/geometry/knife_change_gap.py`在开发者模式参数启用时，只对实际刀位变化边界移动后续整行，
-  保证上下左侧识别刀码至少相隔570毫米；最终刀位检查和输出报告复核同一距离事实。
+  `layout_engine/cutting/geometry/knife_change_gap.py`在开发者模式参数启用时，对实际刀位变化边界移动后续整行，
+  并在最后一枚左侧识别刀码之后补足批次结束距离；双排转旋转、旋转转双排和批次结束均至少保留
+  设定距离（机器550毫米搜索距离默认采用570毫米），最终刀位检查和输出报告复核同一距离事实。
 - 膜方案与统计：`layout_engine/planning/film/film_comparison.py` 直接复用当前实际输出行并并行计算其余方案；`layout_engine/planning/film/film_specs.py`、`layout_engine/reporting/metrics.py`、
   `layout_engine/reporting/operation_timing.py`、`layout_engine/reporting/algorithm_costs.py`。
 - 缓存：`layout_engine/planning/cache/plan_cache.py`、`layout_engine/planning/cache/normal_plan_cache.py`、`layout_engine/planning/cache/cached_planner.py`；单图测量由

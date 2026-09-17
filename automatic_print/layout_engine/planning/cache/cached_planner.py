@@ -8,7 +8,10 @@ from automatic_print.layout_engine.cutting.validation.cut_validation import vali
 
 def checked_plan(paths, settings, result, knife):
     validate_order_placements(paths, result[0])
-    validate_cut_corridor(result[0], replace(settings, cutter_knife_mm=knife), result[2])
+    validate_cut_corridor(
+        result[0], replace(settings, cutter_knife_mm=knife), result[2],
+        canvas_height=result[3],
+    )
 
 
 def plan_with_cache(make, paths, settings, progress, analysis_ready, session):

@@ -66,15 +66,22 @@ def compare_whole(paths, settings, progress, selected, prepared=None):
     maximum = mm_to_px(settings.media_width_mm, settings.dpi)
     from automatic_print.layout_engine.planning.columns.cutter_planner import cutter_output_width
     width = cutter_output_width(planned, settings, maximum)
+    candidate = planned, labels, width, rotated[2], selected[4]
+    if settings.cutter_knife_change_gap_mm > 0:
+        from automatic_print.layout_engine.cutting.geometry.knife_change_gap import apply_knife_change_gap
+        candidate, _changes = apply_knife_change_gap(candidate, settings)
+    planned, labels, width, candidate_height, _baseline = candidate
     try:
         validate_order_placements(paths, planned)
-        validate_cut_corridor(planned, settings, width)
+        validate_cut_corridor(
+            planned, settings, width, canvas_height=candidate_height,
+        )
         validate_embedded_marks(planned, settings)
     except ValueError as error:
         if progress:
             progress('比较整批旋转', len(paths),len(paths),'整批旋转不可用：'+str(error))
         return selected
-    height = marked_height(planned, settings,width,rotated[2])
+    height = marked_height(planned, settings, width, candidate_height)
     old = marked_height(selected[0],settings,width,selected[3])
     if progress:
         progress('比较整批旋转',len(paths),len(paths),
@@ -83,4 +90,4 @@ def compare_whole(paths, settings, progress, selected, prepared=None):
         return selected
     if progress:
         progress('批次刀位已确定',rotated[3],settings.dpi,'整批旋转更省膜；完整订单、双面及尺码顺序保留')
-    return planned,labels,width,rotated[2],selected[4]
+    return planned, labels, width, candidate_height, selected[4]

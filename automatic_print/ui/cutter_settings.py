@@ -46,7 +46,7 @@ class CutterSettingsPanel(QWidget):
         self.knife_change_gap = double_spinbox(
             preferences.value('cutter/knife_change_gap_mm', 570, float), 0, 2000)
         self.knife_change_gap.setToolTip(
-            '右侧纵刀位置变化时，保证上下两个左侧识别刀码至少相隔该距离；'
+            '右侧纵刀位置变化及批次结束时，保证前一枚左侧识别刀码后至少保留该距离；'
             '机器搜索距离550毫米时建议使用570毫米。0表示关闭。')
         self.knife_change_gap.valueChanged.connect(
             lambda v: preferences.setValue('cutter/knife_change_gap_mm', v))
@@ -74,7 +74,7 @@ class CutterSettingsPanel(QWidget):
             ('并排集中', self.two_zone),
             ('S–L宽度上限', self.force_small_pair),
             ('快速末尾旋转', self.tail_rotation),
-            ('刀位切换时左侧刀码距离（毫米）', self.knife_change_gap),
+            ('换刀与批次结束停止距离（毫米）', self.knife_change_gap),
             ('区域与批次提示', self.transitions),
             ('膜规格比较', self.compare_films),
             ("刀位距排版左边（毫米）", self.knife),

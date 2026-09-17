@@ -71,7 +71,7 @@ def cutting_description(result):
                 f"{change['from_zone']}→{change['to_zone']}："
                 f"左侧识别刀码 {actual:.1f} 毫米（要求至少 {required:.1f} 毫米）"
             )
-        change_text = '\n刀位切换停止距离：' + '；'.join(rows)
+        change_text = '\n换刀与批次结束停止距离：' + '；'.join(rows)
     return (
         f"{result['filename']} · {sizes} · {len(result['placements'])} 张 · "
         f"{knife or '单列 / 自由排版'}{shift}"

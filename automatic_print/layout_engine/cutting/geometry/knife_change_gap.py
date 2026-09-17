@@ -52,8 +52,20 @@ def _row_facts(row):
     return signature, min(markers) if markers else None, zone
 
 
+def _record(previous_signature, signature, previous_zone, zone, required, actual, added=0):
+    return {
+        'from_zone': previous_zone or '上一区域',
+        'to_zone': zone or '下一区域',
+        'from_knives_px': previous_signature,
+        'to_knives_px': signature,
+        'required_px': required,
+        'actual_px': actual,
+        'added_px': added,
+    }
+
+
 def apply_knife_change_gap(result, settings):
-    """Shift each later knife zone until consecutive left marks are far enough apart."""
+    """Protect knife changes and the batch end with a left-marker stop distance."""
     planned, labels, width, height, baseline = result
     required = mm_to_px(settings.cutter_knife_change_gap_mm, settings.dpi)
     if not required or settings.cutter_mode != 'dual':
@@ -71,18 +83,21 @@ def apply_knife_change_gap(result, settings):
             added = max(0, required - actual)
             cumulative += added
             marker += added
-            records.append({
-                'from_zone': previous_zone or '上一区域',
-                'to_zone': zone or '下一区域',
-                'from_knives_px': previous_signature,
-                'to_knives_px': signature,
-                'required_px': required,
-                'actual_px': marker - previous_marker,
-                'added_px': added,
-            })
+            records.append(_record(
+                previous_signature, signature, previous_zone, zone,
+                required, marker - previous_marker, added,
+            ))
         for path, placement in row:
             shifts[(str(path), placement.sequence_number)] = cumulative
         previous_signature, previous_marker, previous_zone = signature, marker, zone
+    if previous_marker is not None:
+        actual = height + cumulative - previous_marker
+        added = max(0, required - actual)
+        cumulative += added
+        records.append(_record(
+            previous_signature, (), previous_zone, '批次结束',
+            required, actual + added, added,
+        ))
     if not cumulative:
         return result, records
     shifted = []
@@ -99,7 +114,7 @@ def apply_knife_change_gap(result, settings):
     return (shifted, labels, width, height + cumulative, baseline), records
 
 
-def inspect_knife_change_gaps(planned, settings):
+def inspect_knife_change_gaps(planned, settings, canvas_height=None):
     required = mm_to_px(settings.cutter_knife_change_gap_mm, settings.dpi)
     if not required or settings.cutter_mode != 'dual':
         return []
@@ -110,14 +125,14 @@ def inspect_knife_change_gaps(planned, settings):
         if signature is None or marker is None:
             continue
         if previous_signature is not None and signature != previous_signature:
-            records.append({
-                'from_zone': previous_zone or '上一区域',
-                'to_zone': zone or '下一区域',
-                'from_knives_px': previous_signature,
-                'to_knives_px': signature,
-                'required_px': required,
-                'actual_px': marker - previous_marker,
-                'added_px': 0,
-            })
+            records.append(_record(
+                previous_signature, signature, previous_zone, zone,
+                required, marker - previous_marker,
+            ))
         previous_signature, previous_marker, previous_zone = signature, marker, zone
+    if previous_marker is not None and canvas_height is not None:
+        records.append(_record(
+            previous_signature, (), previous_zone, '批次结束',
+            required, canvas_height - previous_marker,
+        ))
     return records
