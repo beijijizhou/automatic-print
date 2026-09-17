@@ -43,7 +43,8 @@ def settings_from_window(window) -> LayoutSettings:
         output_parts=window.segmented_output.parts.value(),
         save_parallelism=window.segmented_output.workers.value(),
         save_memory_mb=window.segmented_output.memory.value(),
-        save_memory_unlimited=window.segmented_output.unlimited.isChecked(),
+        # The production UI no longer applies the legacy 512 MB concurrency budget.
+        save_memory_unlimited=True,
         transition_lines=cutting and window.cutter_settings.transitions.enabled.isChecked(),
         batch_end_block=cutting and window.cutter_settings.transitions.end_block.isChecked(),
         transition_gap_mm=window.cutter_settings.transitions.gap.value(),

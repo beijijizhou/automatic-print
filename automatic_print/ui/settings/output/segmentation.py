@@ -17,10 +17,13 @@ class SegmentedOutputSettings(QGroupBox):
         self.memory.setSingleStep(256)
         self.memory.setValue(preferences.value('output/save_memory_mb', 512, int))
         self.unlimited = QCheckBox('不限制并行内存预算（按设定段数运行）')
-        self.unlimited.setChecked(preferences.value('output/save_memory_unlimited', True, bool))
-        self.memory.setEnabled(not self.unlimited.isChecked())
-        self.unlimited.toggled.connect(lambda value: preferences.setValue('output/save_memory_unlimited', value))
-        self.unlimited.toggled.connect(lambda value: self.memory.setEnabled(not value))
+        # Production output must not silently reduce the selected parallelism because an
+        # older installation persisted the former 512 MB budget.  Keep these attributes
+        # for settings/API compatibility, but the GUI always emits unlimited mode.
+        self.unlimited.setChecked(True)
+        self.unlimited.setEnabled(False)
+        self.memory.setEnabled(False)
+        preferences.setValue('output/save_memory_unlimited', True)
         self.fast_png = QCheckBox('大图分块流式合成与保存（无损，不复制整张像素）')
         self.fast_png.setChecked(preferences.value('output/stream_png', True, bool))
         self.fast_png.toggled.connect(lambda value: preferences.setValue('output/stream_png', value))
@@ -28,12 +31,10 @@ class SegmentedOutputSettings(QGroupBox):
         for widget, key in ((self.parts, 'output/parts'), (self.workers, 'output/save_workers'),
                             (self.memory, 'output/save_memory_mb')):
             widget.valueChanged.connect(lambda value, key=key: preferences.setValue(key, value))
-        note = QLabel('文件数 1 表示完整长图，不启用多段并行。并行可选 1–8 段，实际不超过输出段数；例如同时处理 4 段，需输出至少 4 个文件。按完整订单和整行边界分段，沿用整批刀位。勾选不限制后不因预算改为串行；内存不足仍可能失败，并行更多不一定更快。完成全部检查后才能打印。')
+        note = QLabel('文件数 1 表示完整长图，不启用多段并行。并行可选 1–8 段，实际不超过输出段数；例如同时处理 4 段，需输出至少 4 个文件。按完整订单和整行边界分段，沿用整批刀位；不再使用 512 MB 预算降低并行数。完成全部检查后才能打印。')
         note.setWordWrap(True)
         layout = QFormLayout(self)
         layout.addRow('期望输出文件数', self.parts)
         layout.addRow('最多同时处理段数', self.workers)
-        layout.addRow(self.unlimited)
         layout.addRow(self.fast_png)
-        layout.addRow('并行内存预算（兆字节）', self.memory)
         layout.addRow(note)
