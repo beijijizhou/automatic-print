@@ -103,18 +103,17 @@ def test_tiff_cut_validation_uses_random_access(tmp_path, monkeypatch):
     assert accesses == ['random']
 
 
-def test_tiff_validates_rendered_canvas_without_reopening_output(
+def test_riin_tiff_request_uses_png_output_validation(
     tmp_path, monkeypatch,
 ):
     source = tmp_path / 'B1-1-T-Black-M-NO1-1.png'
     Image.new('RGBA', (80, 120), 'blue').save(
         source, dpi=(25.4, 25.4)
     )
+    validated = []
     monkeypatch.setattr(
         'automatic_print.layout_engine.pipeline.service.validate_vips_output',
-        lambda *args, **kwargs: (_ for _ in ()).throw(
-            AssertionError('TIFF must not be decoded again after saving')
-        ),
+        lambda path, *args, **kwargs: validated.append(path),
     )
 
     result = generate_layout([source], tmp_path / 'out', LayoutSettings(
@@ -124,7 +123,9 @@ def test_tiff_validates_rendered_canvas_without_reopening_output(
         cutter_knife_mm=100, cutter_auto_knife=False,
     ))
 
-    assert result['cut_corridor']['pixel_verified'] is True
+    assert result['output_format'] == 'PNG'
+    assert result['filename'].endswith('.png')
+    assert validated and validated[0].suffix == '.png'
 
 
 def test_segmented_tiff_keeps_each_parallel_output(tmp_path):
@@ -155,6 +156,14 @@ def test_tiff_output_is_developer_only(tmp_path):
     assert owner.quick_output_format_group.isVisible()
     owner.quick_output_format.setCurrentIndex(
         owner.quick_output_format.findData('tiff'))
+    assert owner.output_format.currentData() == 'png'
+    assert owner._layout_settings().output_format == 'png'
+    assert not owner.quick_output_format.model().item(
+        owner.quick_output_format.findData('tiff')).isEnabled()
+    owner.cutter_settings.mode.setCurrentIndex(
+        owner.cutter_settings.mode.findData('free'))
+    owner.quick_output_format.setCurrentIndex(
+        owner.quick_output_format.findData('tiff'))
     assert owner.output_format.currentData() == 'tiff'
     assert owner._layout_settings().output_format == 'tiff'
     owner.developer_mode_checkbox.setChecked(False)
@@ -164,3 +173,23 @@ def test_tiff_output_is_developer_only(tmp_path):
     assert owner._layout_settings().output_format == 'png'
     owner.close()
     APP.processEvents()
+
+
+def test_riin_cutter_tiff_falls_back_to_png_without_stopping(tmp_path):
+    source = tmp_path / 'B1-1-T-Black-M-NO1-1.png'
+    Image.new('RGBA', (80, 120), 'blue').save(source, dpi=(25.4, 25.4))
+    progress = []
+
+    result = generate_layout([source], tmp_path / 'out', LayoutSettings(
+        dpi=25.4, media_width_mm=200, margin_mm=0, number_images=False,
+        color_block_enabled=True, allow_rotation=False,
+        output_format='tiff', png_engine='libvips', cutter_mode='single',
+        cutter_left_marker_external=True,
+    ), lambda *row: progress.append(row))
+
+    assert result['filename'].endswith('.png')
+    assert result['output_format'] == 'PNG'
+    assert (tmp_path / 'out' / result['filename']).is_file()
+    fallback = result['analysis']['output_format_fallback']
+    assert fallback['original'] == 'TIFF' and fallback['adopted'] == 'PNG'
+    assert any(row[0] == '输出格式确认' and 'RIIN' in row[3] for row in progress)

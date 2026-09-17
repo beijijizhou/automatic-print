@@ -27,6 +27,8 @@ def generate_layout(
 ) -> dict:
     total_started = perf_counter()
     paths = list(image_paths)
+    from automatic_print.layout_engine.output.output_policy import enforce_output_compatibility
+    settings, output_format_fallback = enforce_output_compatibility(settings, progress)
     if paths:
         label_batch_name = str(batch_name or settings.label_batch_name or paths[0].parent.name).strip()
         settings = replace(settings, label_batch_name=label_batch_name)
@@ -57,6 +59,8 @@ def generate_layout(
     def analyzed(data):
         from automatic_print.layout_engine.labeling.base.header_gap import annotate_analysis
         annotate_analysis(data, gap_records, settings, progress)
+        if output_format_fallback:
+            data['output_format_fallback'] = output_format_fallback
         analysis[:] = [data]
         if analysis_ready:
             analysis_ready(data)
@@ -69,6 +73,8 @@ def generate_layout(
         planned, labels, width, height, baseline_height = prepared_plan['plan']
         effective[0] = prepared_plan['settings']
         analysis[:] = [prepared_plan['analysis']]
+        if output_format_fallback:
+            analysis[-1]['output_format_fallback'] = output_format_fallback
     if s2b_metadata:
         analysis[-1]['s2b_metadata'] = s2b_metadata
     settings = effective[0]

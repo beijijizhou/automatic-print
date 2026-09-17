@@ -62,6 +62,13 @@ def cutting_report(result):
     parts = result.get('parts') or [result]
     quality = result.get('dual_quality', {})
     review = quality.get('text', '')
+    fallback = result.get('analysis', {}).get('output_format_fallback')
+    if fallback:
+        review += (
+            f"\n输出格式兼容处理：原值 {fallback['original']} → "
+            f"采用 {fallback['adopted']}；{fallback['impact']}。"
+            f"修改位置：{fallback['edit_path']}。"
+        )
     from automatic_print.layout_engine.orders.batch_analysis import distribution_text
     review += '\n'+distribution_text(result.get('analysis', {}))
     from automatic_print.layout_engine.planning.film.film_comparison import comparison_text

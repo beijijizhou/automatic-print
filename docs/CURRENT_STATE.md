@@ -101,7 +101,7 @@
   开发者模式可在主界面“输出”参数组直接选择 PNG 或并行分块 BigTIFF，并与完整打印参数双向同步；
   BigTIFF 画布按整幅宽度和内存预算选择256至4096行 Strip 有界生成，
   tifffile/imagecodecs 多线程压缩，单一写入器登记块偏移；每个 Strip 在压缩前同步核对真实 alpha 刀位，
-  不再保存后重新解压超长 TIFF；普通模式始终回到 PNG。
+  不再保存后重新解压超长 TIFF；普通模式始终回到 PNG。RIIN单列/自动多列切膜即使读取到开发者旧TIFF设置，也由`layout_engine/output/output_policy.py`继续任务并降级为PNG；TIFF仅保留给自由排版性能测试。
 - 输出安全：`layout_engine/cutting/validation/order_validation.py`、`layout_engine/cutting/validation/cut_validation.py`、
   `layout_engine/cutting/validation/marked_pixel_validation.py`、`layout_engine/cutting/geometry/printed_guides.py`、`layout_engine/output/output_file_info.py`。
   `layout_engine/cutting/geometry/knife_change_gap.py`在开发者模式参数启用时，只对实际刀位变化边界移动后续整行，

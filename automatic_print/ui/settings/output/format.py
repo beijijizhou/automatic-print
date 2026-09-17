@@ -34,10 +34,16 @@ def build_quick_output_format(window):
     quick.setToolTip('TIFF 为开发者测试格式；PNG 仍是生产默认格式。')
     quick.setCurrentIndex(max(0, quick.findData(window.output_format.currentData())))
 
+    def riin_active():
+        return window.cutter_settings.mode.currentData() != 'free'
+
     def set_canonical(_index):
-        target = window.output_format.findData(quick.currentData())
+        selected = 'png' if riin_active() else quick.currentData()
+        target = window.output_format.findData(selected)
         if target >= 0:
             window.output_format.setCurrentIndex(target)
+        if selected != quick.currentData():
+            quick.setCurrentIndex(max(0, quick.findData(selected)))
 
     def set_quick(_index):
         target = quick.findData(window.output_format.currentData())
@@ -46,8 +52,27 @@ def build_quick_output_format(window):
 
     quick.currentIndexChanged.connect(set_canonical)
     window.output_format.currentIndexChanged.connect(set_quick)
+
+    def sync_riin_compatibility():
+        blocked = riin_active()
+        for combo in (window.output_format, quick):
+            index = combo.findData('tiff')
+            item = combo.model().item(index) if index >= 0 else None
+            if item is not None:
+                item.setEnabled(not blocked)
+            if blocked and combo.currentData() == 'tiff':
+                combo.setCurrentIndex(max(0, combo.findData('png')))
+        quick.setToolTip(
+            'RIIN切膜只支持PNG；切换到自由排版后可使用TIFF性能测试。'
+            if blocked else 'TIFF仅用于开发者自由排版性能测试；PNG是生产格式。'
+        )
+
+    window.cutter_settings.mode.currentIndexChanged.connect(
+        lambda _index: sync_riin_compatibility()
+    )
     row.addWidget(quick)
     window.quick_output_format = quick
     window.quick_output_format_group = control
+    sync_riin_compatibility()
     control.hide()
     return control

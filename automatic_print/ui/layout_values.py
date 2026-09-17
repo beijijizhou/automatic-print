@@ -33,7 +33,8 @@ def settings_from_window(window) -> LayoutSettings:
         dpi=window.dpi.value(),
         follow_source_dpi=window.follow_source_dpi.isChecked(),
         output_format=(window.output_format.currentData()
-                       if getattr(window, 'developer_mode_enabled', False) else 'png'),
+                       if getattr(window, 'developer_mode_enabled', False)
+                       and not cutting else 'png'),
         png_compression_level=window.png_compression.currentData(),
         png_engine=window.png_engine.currentData(),
         png_fast_encoding=False,
