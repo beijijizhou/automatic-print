@@ -4,7 +4,7 @@ from functools import lru_cache
 
 from automatic_print.layout_engine.cutting.geometry.cut_guide_geometry import detect_guide_band
 from automatic_print.layout_engine.domain.models import mm_to_px
-from automatic_print.layout_engine.labeling.platform.platform_space import header_space
+from automatic_print.layout_engine.labeling.platform.platform_space import card_space, header_space
 from automatic_print.layout_engine.labeling.platform.membrane_region import MembraneRegion
 from automatic_print.layout_engine.measurement.measurement_timing import measured
 from automatic_print.layout_engine.intake.metadata.source_metadata import source_size
@@ -121,10 +121,11 @@ def platform_geometry(path, settings, width, height, degrees):
         or not (settings.preserve_header_gap and degrees % 180 == 0)
     )
     fitted = (
-        _largest_header_badge(
-            path, source_region, source_width, source_height,
-            text, target, gap, degrees
-        )
+        (_largest_card_badge(
+            path, source_region, source_width, source_height, text, target, degrees)
+         if settings.platform_reuse_qr else
+         _largest_header_badge(
+            path, source_region, source_width, source_height, text, target, gap, degrees))
         if search_header else None
     )
     if fitted is not None:
@@ -140,10 +141,40 @@ def platform_geometry(path, settings, width, height, degrees):
     return x, top, badge_width, badge_height
 
 
+def _largest_card_badge(
+        path, source_region, source_width, source_height,
+        text, maximum_height, degrees):
+    """Fit in the source QR card, then rotate the whole label with the image."""
+    low, high, best = 2, maximum_height, None
+    while low <= high:
+        target = (low + high) // 2
+        try:
+            badge = platform_badge(text, target)
+        except ValueError:
+            low = target + 1
+            continue
+        badge_width, badge_height = badge.size
+        badge.close()
+        candidate = card_space(
+            path, source_region, source_width, source_height,
+            badge_width, badge_height,
+        )
+        if candidate is None:
+            high = target - 1
+        else:
+            best = _rotate_rect(
+                (candidate[0], candidate[1],
+                 badge_width, badge_height),
+                source_width, source_height, degrees,
+            )
+            low = target + 1
+    return best
+
+
 def _largest_header_badge(
         path, source_region, source_width, source_height,
         text, maximum_height, gap, degrees):
-    """Fit in the source QR card, then rotate the whole label with the image."""
+    """Compatibility path for labels intentionally placed beside the card."""
     low, high, best = 2, maximum_height, None
     while low <= high:
         target = (low + high) // 2
@@ -156,13 +187,13 @@ def _largest_header_badge(
         badge.close()
         candidate = header_space(
             path, source_region, source_width, source_height,
-            badge_width, badge_height, gap, 0
+            badge_width, badge_height, gap, 0,
         )
         if candidate is None:
             high = target - 1
         else:
             best = _rotate_rect(
-                (candidate, round(source_region.top * source_height),
+                (candidate, round(source_region.top*source_height),
                  badge_width, badge_height),
                 source_width, source_height, degrees,
             )

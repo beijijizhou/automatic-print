@@ -82,9 +82,10 @@ def _make_item(
         (block_x, block_y, block_width, block_height), (label_x, label_y, label_width, label_height), (px, py, pw, ph))
     if (settings.platform_reuse_qr and pw and ph and px < width and px+pw > 0
             and py < height and py+ph > 0):
-        if not transparent_rect(path, width, height, rotation_degrees,
-                                (px, py, pw, ph)):
-            raise ValueError(f'{path.name}：平台文字没有可复用的二维码透明空位。')
+        from automatic_print.layout_engine.labeling.platform.platform_space import card_rect_clear
+        if not card_rect_clear(path, width, height, rotation_degrees,
+                               (px, py, pw, ph)):
+            raise ValueError(f'{path.name}：平台文字没有可复用的二维码卡片空位。')
     from automatic_print.layout_engine.labeling.markers.marker_stack import header_safe_coordinates
     block, label, platform = header_safe_coordinates(
         path, settings, (width, height), rotation_degrees,

@@ -27,15 +27,22 @@ def header_safe_coordinates(
     # transparent pixels inside the rotated source header band, never the lane
     # between the marker, QR card and artwork.
     block_x = -bw if bw else 0
-    from automatic_print.layout_engine.labeling.platform.platform_space import header_space
+    from automatic_print.layout_engine.labeling.platform.platform_space import (
+        card_rect_clear, header_space,
+    )
     reserved = ()
     if pw and ph:
         if ph > bottom-top:
             raise ValueError(f'{path.name}：平台文字无法完整放入膜标签高度范围，禁止输出。')
-        px = header_space(path, region, image_size[0], height, pw, ph, 0, degrees)
-        if px is None:
-            raise ValueError(f'{path.name}：膜标签高度带内没有平台文字的透明空位，禁止输出。')
-        py = top
+        if settings.platform_reuse_qr:
+            if not card_rect_clear(path, image_size[0], height, degrees,
+                                   (px, py, pw, ph)):
+                raise ValueError(f'{path.name}：平台文字没有可复用的二维码卡片空位。')
+        else:
+            px = header_space(path, region, image_size[0], height, pw, ph, 0, degrees)
+            if px is None:
+                raise ValueError(f'{path.name}：膜标签高度带内没有平台文字的透明空位，禁止输出。')
+            py = top
         reserved = ((px, py, pw, ph),)
     label_x = header_space(
         path, region, image_size[0], height, lw, lh, 0, degrees,

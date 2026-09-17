@@ -12,7 +12,7 @@ from automatic_print.layout_engine.measurement.measurement_session import identi
 from automatic_print.layout_engine.domain.models import Placement
 
 SCHEMA = 1
-LAYOUT_ALGORITHM_REVISION = 1
+LAYOUT_ALGORITHM_REVISION = 2
 TTL_SECONDS = 24 * 60 * 60
 CACHE_LOCK_TIMEOUT_SECONDS = .25
 

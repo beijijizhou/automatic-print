@@ -101,10 +101,14 @@ def validate_embedded_marks(planned, settings=None):
                     )
                 overlaps = w and h and x < p.x_px+p.width_px and x+w > p.x_px and y < p.y_px+p.height_px and y+h > p.y_px
                 in_header = y >= header_top and y+h <= header_bottom
-                reused = (kind == '平台' and settings.platform_reuse_qr and overlaps
-                          and transparent_rect(path, p.width_px, p.height_px,
-                                               p.rotation_degrees,
-                                               (x-p.x_px,y-p.y_px,w,h)))
+                if kind == '平台' and settings.platform_reuse_qr and overlaps:
+                    from automatic_print.layout_engine.labeling.platform.platform_space import card_rect_clear
+                    reused = card_rect_clear(
+                        path, p.width_px, p.height_px, p.rotation_degrees,
+                        (x-p.x_px, y-p.y_px, w, h),
+                    )
+                else:
+                    reused = False
                 if overlaps and not in_header and not reused:
                     raise ValueError(f'{path.name}：文字进入膜标签与图案之间的禁用区域，禁止输出。')
         if p.rotation_degrees % 360:
@@ -129,14 +133,23 @@ def validate_embedded_marks(planned, settings=None):
                     or p.number_y_px < p.y_px+ceil(qr.bottom*p.height_px)
                 )):
                     raise ValueError(f'{path.name}：旋转文字未放在二维码下方，禁止输出。')
-        rectangles = [(p.color_block_x_px, p.color_block_y_px,
+        rectangles = [('刀码', p.color_block_x_px, p.color_block_y_px,
                        p.color_block_width_px, p.color_block_height_px),
-                      (p.number_x_px, p.number_y_px,
+                      ('标签', p.number_x_px, p.number_y_px,
                        p.number_width_px, p.number_height_px),
-                      (p.platform_x_px, p.platform_y_px,
+                      ('平台', p.platform_x_px, p.platform_y_px,
                        p.platform_width_px, p.platform_height_px)]
-        for x, y, w, h in rectangles:
+        for kind, x, y, w, h in rectangles:
             if w and h and x < p.x_px+p.width_px and x+w > p.x_px and y < p.y_px+p.height_px and y+h > p.y_px:
-                if not transparent_rect(path, p.width_px, p.height_px, p.rotation_degrees,
-                                        (x-p.x_px, y-p.y_px, w, h)):
+                relative = (x-p.x_px, y-p.y_px, w, h)
+                if kind == '平台' and settings and settings.platform_reuse_qr:
+                    from automatic_print.layout_engine.labeling.platform.platform_space import card_rect_clear
+                    clear = card_rect_clear(
+                        path, p.width_px, p.height_px, p.rotation_degrees, relative,
+                    )
+                else:
+                    clear = transparent_rect(
+                        path, p.width_px, p.height_px, p.rotation_degrees, relative,
+                    )
+                if not clear:
                     raise ValueError(f'{path.name}：内置刀码或文字会覆盖原图，禁止输出。')

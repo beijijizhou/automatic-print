@@ -60,7 +60,7 @@ def test_file_parameters_date_and_algorithm_revision_invalidate_cache_key(tmp_pa
     before = key()
     monkeypatch.setattr(automatic_print, '__version__', 'next-algorithm')
     assert key() == before
-    monkeypatch.setattr(plan_cache, 'LAYOUT_ALGORITHM_REVISION', 2)
+    monkeypatch.setattr(plan_cache, 'LAYOUT_ALGORITHM_REVISION', 3)
     assert key() != before
 
 

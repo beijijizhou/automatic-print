@@ -133,11 +133,18 @@ def test_source_size_badge_uses_largest_space_inside_rotated_qr_card(
     ), None)
     item = options[0][0]
     source_region = detect_guide_band(path)
+    rotated_region = source_region.rotated(degrees)
     source_height = item.width if degrees % 180 else item.height
     maximum = (round(source_region.bottom*source_height)
                - round(source_region.top*source_height))
     font_height = item.platform_width if degrees % 180 else item.platform_height
     assert 0 < font_height <= maximum
+    relative_x = item.platform_rx-item.image_rx
+    relative_y = item.platform_ry-item.image_ry
+    assert relative_x >= round(rotated_region.left*item.width)-1
+    assert relative_y >= round(rotated_region.top*item.height)-1
+    assert relative_x+item.platform_width <= round(rotated_region.right*item.width)+1
+    assert relative_y+item.platform_height <= round(rotated_region.bottom*item.height)+1
     badge = placement_badge(
         '隆丰 · 3XL', item.platform_width, item.platform_height, degrees,
     )
@@ -166,6 +173,13 @@ def test_source_size_badge_is_rendered_in_qr_card_for_each_engine(
     ))
     placement = result['placements'][0]
     assert placement['platform_width_px'] > 0
+    region = detect_guide_band(path).rotated(degrees)
+    assert placement['platform_x_px'] >= placement['x_px']+round(region.left*placement['width_px'])-1
+    assert placement['platform_y_px'] >= placement['y_px']+round(region.top*placement['height_px'])-1
+    assert (placement['platform_x_px']+placement['platform_width_px']
+            <= placement['x_px']+round(region.right*placement['width_px'])+1)
+    assert (placement['platform_y_px']+placement['platform_height_px']
+            <= placement['y_px']+round(region.bottom*placement['height_px'])+1)
     with Image.open(tmp_path/engine/result['filename']) as output:
         box = (
             placement['platform_x_px'], placement['platform_y_px'],
@@ -180,7 +194,7 @@ def test_source_size_badge_is_rendered_in_qr_card_for_each_engine(
 def test_qr_reuse_never_falls_back_to_cutter_lane(tmp_path, monkeypatch):
     from automatic_print.layout_engine.labeling.platform import platform_label
     path = qr_image(tmp_path/'B1-1-T-Black-M-NO1-1.png')
-    monkeypatch.setattr(platform_label, 'header_space', lambda *_a, **_k: None)
+    monkeypatch.setattr(platform_label, 'card_space', lambda *_a, **_k: None)
     assert platform_label.platform_geometry(
         path, settings(platform_reuse_qr=True), 180, 250, 0
     ) == (0, 0, 0, 0)
