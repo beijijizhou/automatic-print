@@ -59,6 +59,36 @@ def test_adjacent_paper_sections_join_without_inspecting_their_contents(tmp_path
     assert region.left == .02 and region.right == .38
 
 
+def test_stacked_corner_card_sections_split_by_printed_rule_are_rejoined(tmp_path):
+    source = Image.new('RGBA', (1000, 1400))
+    source.paste('white', (680, 0, 1000, 150))
+    source.paste('black', (680, 30, 1000, 32))
+    source.paste('blue', (100, 158, 900, 1400))
+    path = tmp_path/'putian-card.png'
+    source.save(path)
+
+    region = search_header(path)
+
+    assert region.left == pytest.approx(.68)
+    assert region.right == pytest.approx(1)
+    assert region.top == pytest.approx(0)
+    assert region.bottom == pytest.approx(150/1400)
+
+
+def test_tall_corner_card_is_rejoined_in_a_short_narrow_header_strip(tmp_path):
+    source = Image.new('RGBA', (800, 1500))
+    source.paste('white', (430, 0, 800, 30))
+    source.paste('white', (195, 32, 800, 295))
+    path = tmp_path/'narrow-putian-card.png'
+    source.save(path)
+
+    region = search_header(path)
+
+    assert region is not None
+    assert region.top == pytest.approx(0.0, abs=0.01)
+    assert region.bottom == pytest.approx(295/1500, abs=0.01)
+
+
 def test_component_fallback_matches_native_geometry():
     import numpy as np
     from automatic_print.layout_engine.labeling.base.header_region import _components

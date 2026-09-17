@@ -5,7 +5,7 @@ from PIL import Image
 
 
 def enabled(settings):
-    return settings.platform_name.strip().casefold() in {'haloo', 's2b', '隆丰'}
+    return settings.platform_name.strip().casefold() in {'haloo', 's2b', '莆田', '隆丰'}
 
 
 def gap_map(settings):

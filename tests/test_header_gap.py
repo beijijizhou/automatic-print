@@ -65,7 +65,7 @@ def test_existing_gap_not_shrunk_and_unknown_retained(tmp_path):
     assert records[0]['warning']
 
 
-@pytest.mark.parametrize('platform', ['Haloo', 'S2B', '隆丰'])
+@pytest.mark.parametrize('platform', ['Haloo', 'S2B', '莆田', '隆丰'])
 def test_platform_gap_is_applied_during_render_without_intermediate_copy(tmp_path, platform, monkeypatch):
     path = sample(tmp_path/'B1-1-T-Black-M-NO1-1.png')
     settings = LayoutSettings(

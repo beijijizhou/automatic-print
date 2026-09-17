@@ -112,7 +112,42 @@ def _cards(white):
                 merged[-1] = (a[0], min(a[1], box[1]), max(a[2], box[2]), max(a[3], box[3]))
                 continue
         merged.append(box)
-    return merged
+    return _merge_vertical_sections(merged, w, h)
+
+
+def _merge_vertical_sections(boxes, width, height):
+    """Rejoin one corner card split into stacked white sections by printed rules."""
+    boxes = list(boxes)
+    changed = True
+    while changed:
+        changed = False
+        for first in range(len(boxes)):
+            for second in range(first + 1, len(boxes)):
+                a, b = boxes[first], boxes[second]
+                upper, lower = (a, b) if a[1] <= b[1] else (b, a)
+                upper_width, lower_width = upper[2] - upper[0], lower[2] - lower[0]
+                narrow = min(upper_width, lower_width)
+                overlap = min(upper[2], lower[2]) - max(upper[0], lower[0])
+                gap = lower[1] - upper[3]
+                same_corner = ((upper[0] < width * .4 and lower[0] < width * .4)
+                               or (upper[2] > width * .6 and lower[2] > width * .6))
+                combined_height = max(upper[3], lower[3]) - min(upper[1], lower[1])
+                # The sampled strip is only half an image-width tall. On narrow or
+                # short artwork a normal label can occupy most of that strip, so a
+                # strip-height limit rejects the real lower half of the card. Card
+                # geometry is stable relative to image width instead.
+                if (same_corner and 0 <= gap <= max(3, round(narrow * .03))
+                        and overlap >= narrow * .6 and combined_height <= width * .4):
+                    boxes[first] = (
+                        min(a[0], b[0]), min(a[1], b[1]),
+                        max(a[2], b[2]), max(a[3], b[3]),
+                    )
+                    boxes.pop(second)
+                    changed = True
+                    break
+            if changed:
+                break
+    return boxes
 
 
 def _components(mask):
