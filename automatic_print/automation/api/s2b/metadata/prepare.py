@@ -2,8 +2,17 @@
 from collections import Counter
 
 from .batch_name import find_s2b_batch_folder
-from .client import S2BBatchInfoError, fetch_s2b_batch_info, gateway_config
 from .store import color_for_path, register_batch_records
+
+
+def gateway_config():
+    from .client import gateway_config as implementation
+    return implementation()
+
+
+def fetch_s2b_batch_info(batch_number):
+    from .client import fetch_s2b_batch_info as implementation
+    return implementation(batch_number)
 
 
 def prepare_s2b_metadata(paths, settings, progress=None):
@@ -14,6 +23,7 @@ def prepare_s2b_metadata(paths, settings, progress=None):
             grouped.setdefault(batch, []).append(path)
     if not grouped:
         return []
+    from .client import S2BBatchInfoError
     endpoint, key = gateway_config()
     if not endpoint or not key:
         message = (

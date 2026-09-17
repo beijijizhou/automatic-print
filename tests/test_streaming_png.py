@@ -4,7 +4,7 @@ import pytest
 from PIL import Image
 import pyvips
 from automatic_print.layout_engine import LayoutSettings, generate_layout
-from automatic_print.layout_engine.rendering.png.streaming import validate_final_canvas, validate_header
+from automatic_print.layout_engine.rendering.png.streaming import validate_final_canvas, validate_header, validate_chunks
 from automatic_print.layout_engine.rendering.engines.vips_renderer import _balanced_vertical_join
 
 
@@ -33,21 +33,48 @@ def test_header_checks_dimensions_crc_and_complete_file(tmp_path):
 
 
 def test_streaming_checks_saved_png_once_without_pre_rendering_canvas(tmp_path):
-    path = tmp_path/'B1-1-T-Black-M-NO1-1.png'
-    with Image.new('RGBA', (100,200)) as image:
-        image.paste('blue',(0,50,100,200))
-        image.save(path,dpi=(25.4,25.4))
+    paths = [tmp_path/f'B{index}-1-T-Black-M-NO1-1.png' for index in (1, 2)]
+    for path in paths:
+        with Image.new('RGBA', (100,200)) as image:
+            image.paste('blue',(0,50,100,200))
+            image.save(path,dpi=(25.4,25.4))
     phases = []
     settings = LayoutSettings(dpi=25.4,media_width_mm=500,cutter_mode='dual',
         cutter_auto_knife=True,png_engine='libvips',png_streaming=True)
-    result = generate_layout([path],tmp_path/'out',settings,phase_ready=phases.append)
+    result = generate_layout(paths,tmp_path/'out',settings,phase_ready=phases.append)
     assert '最终画布刀位检查' not in phases
     assert '输出文件安全复核' in phases
     assert '原生逐行流式PNG' in result['png_save_details']['encoder']
     assert result['timings_seconds']['output_validation'] >= 0
-    assert any(row['name'] == '输出PNG单次解压、完整性与全长刀位核对'
+    assert any(row['name'] == '输出PNG数据块CRC、尺寸与格式复核'
                for row in result['png_save_details']['steps'])
     assert result['cut_corridor']['pixel_verified']
+
+
+def test_chunk_validation_rejects_corrupted_saved_data(tmp_path):
+    path = tmp_path/'source.png'
+    Image.new('RGBA', (100, 200)).save(path, compress_level=1)
+    validate_chunks(path, 100, 200)
+    with path.open('r+b') as stream:
+        stream.seek(50)
+        value = stream.read(1)
+        stream.seek(50)
+        stream.write(bytes((value[0] ^ 1,)))
+    with pytest.raises(ValueError, match='校验失败'):
+        validate_chunks(path, 100, 200)
+
+
+def test_row_encoder_rejects_final_alpha_inside_corridor(tmp_path):
+    from automatic_print.layout_engine.rendering.png.row_stream import save
+    image = pyvips.Image.black(100, 10, bands=4)
+    occupied = pyvips.Image.black(1, 1, bands=4).new_from_image(
+        [1, 2, 3, 255]
+    )
+    image = image.insert(occupied, 50, 9)
+    check = {'safe_left_px': 45, 'safe_right_px': 55}
+    with pytest.raises(ValueError, match='切割安全通道'):
+        save([(0, 10, image)], tmp_path/'unsafe.png', 100, 10,
+             LayoutSettings(dpi=25.4), [], [], None, check)
 
 
 def test_saved_png_reader_rejects_alpha_inside_corridor(tmp_path):

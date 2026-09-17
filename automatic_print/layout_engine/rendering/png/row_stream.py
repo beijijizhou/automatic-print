@@ -14,7 +14,8 @@ from automatic_print.layout_engine.cutting.geometry.transition_marks import pain
 STRIP_ROWS = 1024
 
 
-def save(rows, target, width, height, settings, guide_boxes, rectangles, progress):
+def save(rows, target, width, height, settings, guide_boxes, rectangles, progress,
+         cut_check=None):
     """Render each planned layout row once, then filter/compress in Y order."""
     pending = target.with_name(target.name + '.未完成')
     started = perf_counter()
@@ -25,6 +26,15 @@ def save(rows, target, width, height, settings, guide_boxes, rectangles, progres
     ppm = round(settings.dpi / 0.0254)
     header = struct.pack('>IIBBBBB', width, height, 8, 6, 0, 0, 0)
     density = struct.pack('>IIB', ppm, ppm, 1)
+    from automatic_print.layout_engine.cutting.validation.cut_validation import corridor_checks
+    checks = corridor_checks(cut_check)
+    if checks:
+        from .corridor_reader import _allowed_shapes, _shape_events
+        shapes = _allowed_shapes(guide_boxes, rectangles)
+        starts, ends = _shape_events(shapes)
+        active = set()
+    else:
+        shapes, starts, ends, active = (), {}, {}, set()
 
     def write_chunk(stream, kind, data):
         for piece in chunk(kind, data):
@@ -36,6 +46,11 @@ def save(rows, target, width, height, settings, guide_boxes, rectangles, progres
         pixels = np.frombuffer(
             image.write_to_memory(), dtype=np.uint8
         ).reshape(image.height, width * 4)
+        if checks:
+            from .corridor_reader import _check_row
+            for local_y, alpha in enumerate(pixels[:, 3::4]):
+                _check_row(top + local_y, alpha, checks, shapes,
+                           starts, ends, active)
         if first_pixels[0] is None:
             first_pixels[0] = perf_counter()
         filtered = np.empty((image.height, width * 4 + 1), dtype=np.uint8)
@@ -99,6 +114,7 @@ def save(rows, target, width, height, settings, guide_boxes, rectangles, progres
         'production_seconds': encoded - started,
         'observed_bytes': observation.bytes_written,
         'rendered_rows': rendered_rows[0],
+        'pixel_verified_during_encoding': bool(checks),
         'timing_note': '每个排版行只解码合成一次；单一编码流保持PNG从上到下的行顺序。',
     }
 

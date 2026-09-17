@@ -44,8 +44,13 @@ def persistent_cache():
         return None
     with session.persistent_lock:
         if session.persistent is None:
-            from .measurement_cache import MeasurementCache
-            session.persistent = MeasurementCache()
+            from .measurement_cache import (
+                MeasurementCache, UnavailableMeasurementCache,
+            )
+            try:
+                session.persistent = MeasurementCache()
+            except (OSError, sqlite3.Error):
+                session.persistent = UnavailableMeasurementCache()
         return session.persistent
 
 def identity(path):

@@ -40,6 +40,8 @@ def pair_identity(path):
     match = SIDE.fullmatch(production_stem(path))
     if match:
         return match['job'], match['side']
+    if not S2B_SIDE.fullmatch(path.stem):
+        return None
     with _S2B_PAIR_LOCK:
         return _S2B_PAIRS.get(str(path.resolve()))
 
@@ -47,7 +49,6 @@ def pair_identity(path):
 def register_s2b_pairs(paths):
     """Register only complete same-product, same-size 1/2 + 2/2 pairs."""
     groups = defaultdict(list)
-    resolved_paths = [str(path.resolve()) for path in paths]
     for path in paths:
         match = S2B_SIDE.fullmatch(path.stem)
         if not match:
@@ -57,6 +58,8 @@ def register_s2b_pairs(paths):
             match['unit'], match['size'],
         )).casefold()
         groups[job].append((path, match['side']))
+    resolved_paths = [str(path.resolve()) for members in groups.values()
+                      for path, _side in members]
     registered = {}
     for job, members in groups.items():
         if len(members) == 2 and {side for _, side in members} == {'1', '2'}:

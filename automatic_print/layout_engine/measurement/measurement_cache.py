@@ -14,6 +14,22 @@ TRANSPARENT_RECT_SCHEMA = 1
 TTL_SECONDS = 24 * 60 * 60
 
 
+class UnavailableMeasurementCache:
+    """No-op batch fallback after the persistent cache fails once."""
+
+    def load(self, _kind, _key):
+        return None
+
+    def load_many(self, _kind, _keys):
+        return {}
+
+    def save(self, _kind, _key, _value):
+        return None
+
+    def close(self):
+        return None
+
+
 def cache_directory():
     from automatic_print.runtime.crash_logging import log_folder
     return log_folder()
@@ -57,7 +73,24 @@ class MeasurementCache:
                 'WHERE kind=? AND key=? AND updated>?',
                 (kind, key, time() - TTL_SECONDS),
             ).fetchone()
-        return json.loads(row[0]) if row else None
+            payload = row[0] if row else None
+        return json.loads(payload) if payload else None
+
+    def load_many(self, kind, keys):
+        keys = tuple(dict.fromkeys(keys))
+        result = {}
+        with self.lock:
+            for start in range(0, len(keys), 500):
+                chunk = keys[start:start + 500]
+                marks = ','.join('?' for _ in chunk)
+                rows = self.connection.execute(
+                    f'SELECT key, payload FROM measurements WHERE kind=? '
+                    f'AND updated>? AND key IN ({marks})',
+                    (kind, time() - TTL_SECONDS, *chunk),
+                )
+                result.update((key, json.loads(payload))
+                              for key, payload in rows)
+        return result
 
     def save(self, kind, key, value):
         payload = json.dumps(value, ensure_ascii=False, default=str)

@@ -58,3 +58,41 @@ def test_font_cache_reuses_within_thread_but_does_not_share_faces(monkeypatch):
     for thread in threads:
         thread.join()
     assert len(results) == 2 and results[0] is not results[1]
+
+
+def test_item_cache_loads_only_requested_keys_in_one_query(tmp_path, monkeypatch):
+    from automatic_print.layout_engine.measurement import measurement_cache
+    monkeypatch.setattr(measurement_cache, 'cache_directory', lambda: tmp_path)
+    cache = measurement_cache.MeasurementCache()
+    cache.save('item', 'one', {'value': 1})
+    cache.save('item', 'two', {'value': 2})
+    cache.close()
+
+    cache = measurement_cache.MeasurementCache()
+    statements = []
+    cache.connection.set_trace_callback(statements.append)
+    assert cache.load_many('item', ('one', 'two', 'missing')) == {
+        'one': {'value': 1}, 'two': {'value': 2},
+    }
+    queries = [sql for sql in statements
+               if 'SELECT key, payload FROM measurements' in sql]
+    assert len(queries) == 1 and "'missing'" in queries[0]
+    cache.close()
+
+
+def test_unavailable_persistent_cache_is_not_reopened_for_each_image(monkeypatch):
+    from automatic_print.layout_engine.measurement import measurement_cache
+    from automatic_print.layout_engine.measurement.measurement_session import (
+        measurement_session, persistent_cache,
+    )
+    attempts = []
+
+    def unavailable():
+        attempts.append(True)
+        raise OSError('cache directory unavailable')
+
+    monkeypatch.setattr(measurement_cache, 'MeasurementCache', unavailable)
+    with measurement_session():
+        assert persistent_cache().load('item', 'one') is None
+        assert persistent_cache().load('item', 'two') is None
+    assert len(attempts) == 1

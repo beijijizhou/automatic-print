@@ -88,9 +88,9 @@
   换行和徽标渲染。单图排版对象`LayoutItem`与`Placement`统一归`layout_engine/domain/models.py`。
 - 渲染与编码：`layout_engine/rendering/engines/pillow_renderer.py`、`layout_engine/rendering/engines/vips_renderer.py`、`layout_engine/rendering/png/`、
   `layout_engine/rendering/storage/segmented_output.py`、`layout_engine/rendering/storage/atomic_png.py`、`layout_engine/rendering/storage/atomic_tiff.py`。超长 PNG 由 `layout_engine/rendering/png/row_stream.py`
-  按排版行依次解码、合成、固定 UP 滤波、压缩和写入，每行只求值一次且不生成中间图片；PNG 保存后由
-  独立读取器一次顺序解压，同时核对全部刀位的全长实际 alpha 像素、
-  数据块 CRC、尺寸、RGBA 格式和像素行完整性；不再为每条刀位重复触发超长延迟画布合成，
+  按排版行依次解码、合成、固定 UP 滤波、压缩和写入，每行只求值一次且不生成中间图片；同一行的最终
+  alpha 像素在压缩前同步核对全部刀位，PNG 发布后顺序读取数据块并核对 CRC、尺寸和 RGBA 格式，
+  不再完整解压刚刚验证并编码的超长像素流；不再为每条刀位重复触发超长延迟画布合成，
   也不依赖 libvips 二次打开大图，
   避免超长PNG二次解码触发原生库崩溃。保存计时包含 libvips 延迟合成、编码与写入，不能解释成纯磁盘耗时。多个 Python
   工作线程的 libvips 外层延迟任务由共享门禁协调，原生库内部仍保留并行，并在正常退出时完成清理。
@@ -102,7 +102,7 @@
 - 膜方案与统计：`layout_engine/planning/film/film_comparison.py` 直接复用当前实际输出行并并行计算其余方案；`layout_engine/planning/film/film_specs.py`、`layout_engine/reporting/metrics.py`、
   `layout_engine/reporting/operation_timing.py`、`layout_engine/reporting/algorithm_costs.py`。
 - 缓存：`layout_engine/planning/cache/plan_cache.py`、`layout_engine/planning/cache/normal_plan_cache.py`、`layout_engine/planning/cache/cached_planner.py`；单图测量由
-  `layout_engine/measurement/measurement_cache.py` 持久化，并由 `layout_engine/measurement/measurement_session.py` 在任务内共享连接；
+  `layout_engine/measurement/measurement_cache.py` 持久化，并由 `layout_engine/measurement/measurement_session.py` 在任务内共享连接；单图占位记录首次查询时一次装入任务快照，后续工作线程不再逐条争用 SQLite；
   `layout_engine/measurement/cutter_measurements.py` 保存本批正常/旋转刀码几何；后续方案即使改变路径顺序，也按文件身份重组并复用，生产方案、整批旋转和膜规格比较不再重复逐图测量。
   内置刀码和文字的透明矩形像素结论也按文件身份、方向和精确矩形持久化；单图缓存24小时，
   重新组批、膜宽变化和普通版本更新不触发源图重新测量。整批排版缓存使用独立排版算法版本而非
@@ -119,9 +119,9 @@
 - 进度、停止和线程生命周期：`ui/busy_spinner.py`、`layout_activity.py`、
   `layout_engine/reporting/operation_timing.py`、`stop_actions.py`、`thread_lifecycle.py`、`worker_bridge.py`。
 - 保存耗时：`layout_engine/rendering/storage/save_progress.py`记录首批PNG数据、持续文件增长、编码收尾和原子发布；
-  `layout_engine/rendering/storage/atomic_png.py`与输出报告复用该事实，不把libvips重叠流水线伪装成互斥CPU步骤。流式PNG完成后，
-  `layout_engine/cutting/validation/cut_validation.py`把全部区域刀位映射到一个连续窄条需求图，一次从上到下复核真实输出像素；失败文件
-  仍改名为“禁止打印”，同时避免保存前重复求值整幅延迟画布。
+  `layout_engine/rendering/storage/atomic_png.py`与输出报告复用该事实，不把libvips重叠流水线伪装成互斥CPU步骤。流式PNG编码每行时，
+  `layout_engine/cutting/validation/cut_validation.py`的全部区域刀位同步核对最终 alpha；发布后只顺序复核全部数据块 CRC、尺寸和格式。失败文件
+  仍改名为“禁止打印”，同时避免再次解压整幅超长PNG。
 - 预览：异步任务、快照生成、加载和缩放控件集中在`ui/previews/runtime/`；“刀码四种情况”页签的视图、
   数据、渲染与标注集中在`ui/previews/markers/`。`layout_engine/reporting/preview_result.py` 形成不落地打印图片的
   完整报告数据，`ui/batch_summary.py` 显示可复制的刀位、单排原因和耗时报告。

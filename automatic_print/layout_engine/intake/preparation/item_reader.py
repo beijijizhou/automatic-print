@@ -1,6 +1,7 @@
 """Read source metadata once and produce normal/rotated layout choices."""
 
 from datetime import datetime
+import sqlite3
 
 from automatic_print.layout_engine.intake.metadata.images import print_dimensions
 from automatic_print.layout_engine.measurement.measurement_session import (
@@ -16,6 +17,8 @@ from automatic_print.layout_engine.labeling.markers.qr_placement import signed_m
 def read_items(paths, settings, progress, make_item, detect_qr_location):
     from automatic_print.layout_engine.measurement.parallel_measurement import read_parallel
 
+    _preload_cached_items(paths, settings)
+
     def read_source(source_paths, source_settings, source_progress):
         return _read_items(
             source_paths,
@@ -28,6 +31,62 @@ def read_items(paths, settings, progress, make_item, detect_qr_location):
     return read_parallel(
         read_source, paths, settings, progress
     )
+
+
+def _preload_cached_items(paths, settings):
+    """Load only this batch's normal/rotated item records in one SQL query."""
+    session = SESSION.get()
+    if session is None:
+        return
+    from automatic_print.layout_engine.measurement.measurement_cache import (
+        decode_item, item_key, item_settings,
+    )
+    from automatic_print.layout_engine.measurement.measurement_session import (
+        identity, persistent_cache,
+    )
+    normalized = item_settings(settings)
+    numbers = dict(settings.sequence_numbers)
+    manual_rotations = dict(settings.manual_rotations)
+    overrides = dict(settings.dimension_overrides)
+    requested = []
+    try:
+        for position, path in enumerate(paths, 1):
+            name = resolved_name(path)
+            number = numbers.get(name, position)
+            size = print_dimensions(path, settings.dpi)
+            width_mm, height_mm = overrides.get(
+                name, (size.width_mm, size.height_mm)
+            )
+            width = max(1, mm_to_px(width_mm, settings.dpi))
+            height = max(1, mm_to_px(height_mm, settings.dpi))
+            manual = manual_rotations.get(name, 0)
+            if manual % 180:
+                width, height = height, width
+            variants = [(width, height, manual)]
+            if settings.allow_rotation and not manual and width != height:
+                degree = 90 if settings.rotation_direction == 'left' else -90
+                variants.append((height, width, degree))
+            file_identity = identity(path)
+            for item_width, item_height, degree in variants:
+                memory_key = (file_identity, number, item_width, item_height,
+                              normalized, degree)
+                if memory_key in session.items:
+                    continue
+                persistent_key = item_key(
+                    file_identity, number, item_width, item_height,
+                    normalized, degree, session.created_at,
+                )
+                requested.append((persistent_key, memory_key))
+        values = persistent_cache().load_many(
+            'item', [persistent_key for persistent_key, _ in requested]
+        )
+        for persistent_key, memory_key in requested:
+            value = values.get(persistent_key)
+            if value is not None:
+                session.items[memory_key] = decode_item(value)
+                session.timing.cache_item(True)
+    except (OSError, ValueError, TypeError, KeyError, sqlite3.Error):
+        return
 
 
 def _read_items(paths, settings, progress, make_item, detect_qr_location):

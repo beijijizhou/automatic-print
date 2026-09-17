@@ -152,7 +152,7 @@ def generate_layout(
             from automatic_print.layout_engine.rendering.png.row_stream import save as save_rows
             save_details = save_rows(
                 rows, output_path, width, height, settings,
-                guide_boxes, transitions, progress,
+                guide_boxes, transitions, progress, cut_check,
             )
         else:
             save_details = save_output(
