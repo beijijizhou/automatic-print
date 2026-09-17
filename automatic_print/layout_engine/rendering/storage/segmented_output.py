@@ -76,8 +76,11 @@ def generate_segments(paths, output_dir, settings, progress, plan_ready,
     generate_layout(paths, output_dir, base, progress, ready, preview_only=True,
                     analysis_ready=analysis_ready, phase_ready=phase_ready, batch_name=batch_name)
     payload = snapshots[0]
-    if payload['warning']:
-        raise ValueError(payload['warning'])
+    # API/metadata warnings remain visible but are recoverable.  Only a real
+    # geometry or cutter-safety failure may block segmented production output.
+    blocking_warning = payload.get('blocking_warning', payload['warning'])
+    if blocking_warning:
+        raise ValueError(blocking_warning)
     base = payload['settings']
     if settings.batch_footer_enabled:
         from automatic_print.layout_engine.output.batch_footer import footer_text

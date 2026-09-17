@@ -103,7 +103,9 @@ def generate_layout(
         plan_ready({"planned": planned, "labels": labels, "settings": settings, "order_check": order_check, "analysis": analysis[-1], "dual_quality": quality,
                     "saved_meters": max(0,baseline_height-height)*25.4/settings.dpi/1000,
                     "canvas": (width, height, baseline_height),
-                    "warning": visible_warning})
+                    "warning": visible_warning,
+                    "blocking_warning": warning,
+                    "metadata_warning": metadata_warning})
     if preview_only:
         from automatic_print.layout_engine.reporting.preview_result import build_preview_result
         return build_preview_result(
