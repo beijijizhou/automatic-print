@@ -33,7 +33,10 @@ def generate_layout(
         label_batch_name = str(batch_name or settings.label_batch_name or paths[0].parent.name).strip()
         settings = replace(settings, label_batch_name=label_batch_name)
     from automatic_print.automation.api.s2b.metadata.prepare import prepare_s2b_metadata
-    s2b_metadata = prepare_s2b_metadata(paths, settings, progress)
+    # A verified global plan already carries the batch metadata.  Segment
+    # renderers must not re-query the same S2B batch once per output file.
+    inherited_analysis = (prepared_plan or {}).get('analysis') or {}
+    s2b_metadata = inherited_analysis.get('s2b_metadata') or []
     from automatic_print.layout_engine.labeling.base.header_gap import prepare_paths
     if phase_ready and settings.membrane_gap_mm > 0:
         phase_ready('补足膜标签间距')
@@ -44,6 +47,8 @@ def generate_layout(
         from automatic_print.layout_engine.rendering.storage.segmented_output import generate_segments
         return generate_segments(paths, output_dir, settings, progress,
                                  plan_ready, analysis_ready, batch_name, phase_ready)
+    if not s2b_metadata and prepared_plan is None:
+        s2b_metadata = prepare_s2b_metadata(paths, settings, progress)
     if not preview_only:
         output_dir.mkdir(parents=True, exist_ok=True)
     reading_started = perf_counter()

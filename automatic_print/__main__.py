@@ -1,4 +1,5 @@
 from .runtime.crash_logging import run_with_crash_logging
+from multiprocessing import freeze_support
 
 
 def _load_and_run() -> int:
@@ -9,6 +10,7 @@ def _load_and_run() -> int:
 
 
 def main() -> int:
+    freeze_support()
     return run_with_crash_logging(_load_and_run)
 
 

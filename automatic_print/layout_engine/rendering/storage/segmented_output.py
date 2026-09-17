@@ -1,12 +1,12 @@
 """Partition one verified global plan, never independently re-plan orders."""
-from concurrent.futures import ThreadPoolExecutor, as_completed
+from concurrent.futures import ProcessPoolExecutor, ThreadPoolExecutor, as_completed
 from dataclasses import replace
+from multiprocessing import get_context
 from threading import RLock
 from time import perf_counter
 
 from automatic_print.layout_engine.domain.models import mm_to_px, MAX_SAVE_PARALLELISM
 from automatic_print.layout_engine.orders.order_groups import order_key
-from automatic_print.layout_engine.reporting.operation_timing import OperationTiming
 from automatic_print.layout_engine.reporting.metrics import saving_metrics
 from automatic_print.layout_engine.output.output_sizes import size_range_label
 from automatic_print.layout_engine.output.output_name import production_quantity
@@ -56,10 +56,21 @@ def shift_part(members, margin):
 
 def save_concurrency(settings, width, plans, planned):
     parallel = min(max(1, settings.save_parallelism), MAX_SAVE_PARALLELISM, len(plans))
-    buffers = settings.worker_threads*max(p.width_px*p.height_px*4 for _, p in planned)
-    estimate = sum(sorted((width*height*4 for _, height in plans), reverse=True)[:parallel])+buffers
-    if not settings.save_memory_unlimited and estimate > max(128, settings.save_memory_mb)*1024*1024:
-        parallel = 1
+    largest_source = max(p.width_px*p.height_px*4 for _, p in planned)
+    if settings.png_streaming and settings.output_format.lower() == 'png':
+        row_buffers = sorted((
+            width * max(p.footprint_height_px for _, p in members) * 4
+            for members, _height in plans
+        ), reverse=True)
+        estimate_for = lambda count: sum(row_buffers[:count]) + count * largest_source
+    else:
+        canvases = sorted((width*height*4 for _, height in plans), reverse=True)
+        estimate_for = lambda count: sum(canvases[:count]) + settings.worker_threads * largest_source
+    budget = max(128, settings.save_memory_mb)*1024*1024
+    if not settings.save_memory_unlimited:
+        while parallel > 1 and estimate_for(parallel) > budget:
+            parallel -= 1
+    estimate = estimate_for(parallel)
     return parallel, estimate
 
 
@@ -103,12 +114,21 @@ def generate_segments(paths, output_dir, settings, progress, plan_ready,
     reading = perf_counter()-started
     rendering = perf_counter()
     batch_quantity = production_quantity(paths, payload['analysis'])
-    def render(index):
+    from .segment_worker import render_segment_job, segment_settings
+    def spec(index):
         members, height = plans[index]
         end_notice = '批次结束' if index == len(parts)-1 else '分段结束'
         if index < len(parts)-1 and members[-1][1].cut_zone != plans[index+1][0][0][1].cut_zone:
             end_notice += ' / 下一段进入旋转区换刀'
-        timer = OperationTiming()
+        config = segment_settings(
+            base, settings.worker_threads // parallel, index == len(parts)-1,
+        )
+        return (
+            index, len(parts), members, height, output_dir, config, batch_name,
+            payload['labels'], width, payload['analysis'], end_notice, batch_quantity,
+        )
+    def render(index):
+        job = spec(index)
         def report(stage, current, total, filename):
             if progress:
                 with lock:
@@ -117,23 +137,32 @@ def generate_segments(paths, output_dir, settings, progress, plan_ready,
                         progress(stage, sum(counts.values()), len(paths), filename)
                     else:
                         progress(stage, current, total, f'第{index+1:03d}段 · {filename}')
-        result = generate_layout([path for path, _ in members], output_dir,
-            replace(base, worker_threads=max(1, settings.worker_threads//parallel),
-                    batch_end_block=base.batch_end_block and index == len(parts)-1), report,
-            batch_name=batch_name, phase_ready=timer.phase,
-            filename_suffix=f' 第{index+1:03d}段', prepared_plan={
-                'plan': (members, payload['labels'], width, height, height),
-                'settings': replace(base, worker_threads=max(1, settings.worker_threads//parallel),
-                                    batch_end_block=base.batch_end_block and index == len(parts)-1),
-                'analysis': payload['analysis'], 'end_notice': end_notice,
-                'batch_quantity': batch_quantity})
-        result['operation_timings'] = timer.finish()
-        result['segment_index'] = index+1
-        return result
+        return render_segment_job(*job, progress=report)
     try:
+        platform = settings.platform_name.strip().casefold()
+        process_safe = (
+            parallel > 1
+            and settings.png_streaming
+            and settings.output_format.lower() == 'png'
+            and (platform == 's2b'
+                 or (platform == 'haloo'
+                     and bool(getattr(settings, 'header_gap_overrides', ()))))
+        )
         if parallel == 1:
             for index in range(len(parts)):
                 results[index] = render(index)
+        elif process_safe:
+            with ProcessPoolExecutor(
+                max_workers=parallel, mp_context=get_context('spawn')
+            ) as pool:
+                futures = {pool.submit(render_segment_job, *spec(index)): index
+                           for index in range(len(parts))}
+                for future in as_completed(futures):
+                    index = futures[future]
+                    results[index] = future.result()
+                    if progress:
+                        progress('保存图片', index + 1, len(parts),
+                                 f'第{index + 1:03d}段保存完成')
         else:
             with ThreadPoolExecutor(max_workers=parallel, thread_name_prefix='segment-save') as pool:
                 futures = {pool.submit(render, index): index for index in range(len(parts))}
@@ -156,9 +185,12 @@ def generate_segments(paths, output_dir, settings, progress, plan_ready,
     result.update(parts=ordered, files=[r['filename'] for r in ordered],
         segment_count=len(parts), actual_save_parallelism=parallel,
         save_memory_unlimited=settings.save_memory_unlimited,
+        save_execution=('独立进程并行' if process_safe else
+                        '单进程' if parallel == 1 else '线程并行'),
         estimated_parallel_memory_mb=round(estimate/1024/1024, 1),
         placements=[dict(p, output_filename=r['filename'], segment_index=r['segment_index'])
                     for r in ordered for p in r['placements']],
+        header_gap=[record for part in ordered for record in part.get('header_gap', ())],
         analysis=payload['analysis'], order_check=payload['order_check'],
         size_range=size_range_label([path for path, p in sorted(payload['planned'], key=lambda entry: (entry[1].row_y_px, entry[1].x_px))]),
         height_px=total_height, height_mm=round(total_height*25.4/settings.dpi, 1),
