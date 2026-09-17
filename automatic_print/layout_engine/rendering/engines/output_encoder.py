@@ -1,6 +1,5 @@
 """Select and invoke one output encoder without leaking format branches into service."""
 from automatic_print.layout_engine.rendering.storage.atomic_png import save_png
-from automatic_print.layout_engine.rendering.storage.atomic_tiff import save_tiff
 from automatic_print.layout_engine.rendering.engines.vips_renderer import available
 
 
@@ -18,5 +17,8 @@ def encoder_plan(settings, width, height):
 
 def save_output(canvas, target, settings, use_vips, progress=None):
     if settings.output_format.lower() == 'tiff':
+        # TIFF is an optional developer output.  Its native codec must not be
+        # loaded while ordinary PNG users are starting the application.
+        from automatic_print.layout_engine.rendering.storage.atomic_tiff import save_tiff
         return save_tiff(canvas, target, settings, progress)
     return save_png(canvas, target, settings, use_vips, progress)

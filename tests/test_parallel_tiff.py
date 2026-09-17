@@ -9,6 +9,15 @@ from automatic_print.layout_engine.cutting.validation import cut_validation
 from automatic_print.layout_engine.rendering.storage.atomic_tiff import strip_height
 
 
+def test_png_encoder_does_not_eagerly_import_tiff_native_codec():
+    source = (
+        Path(__file__).parents[1]
+        / 'automatic_print/layout_engine/rendering/engines/output_encoder.py'
+    ).read_text(encoding='utf-8')
+    prefix = source[:source.index('def save_output')]
+    assert 'atomic_tiff' not in prefix
+
+
 def test_parallel_tiff_preserves_rgba_dpi_and_strips(tmp_path):
     source = tmp_path / 'B1-1-T-Black-M-NO1-1.png'
     Image.new('RGBA', (513, 777), (10, 20, 30, 128)).save(

@@ -4,7 +4,6 @@ from time import perf_counter
 from concurrent.futures import ThreadPoolExecutor
 
 import numpy as np
-from imagecodecs import deflate_encode
 
 from automatic_print.layout_engine.rendering.storage.save_progress import monitor_save
 
@@ -23,6 +22,7 @@ def strip_height(width, settings, workers):
 
 
 def _compress_strip(strip, level):
+    from imagecodecs import deflate_encode
     # TIFF horizontal predictor; uint8 arithmetic intentionally wraps.
     strip[:, 1:] = strip[:, 1:] - strip[:, :-1]
     return deflate_encode(strip, level=level)

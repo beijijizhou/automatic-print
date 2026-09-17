@@ -60,7 +60,17 @@ def test_desktop_entry_points_follow_runtime_module_moves():
     import run_app
 
     assert callable(dev.main)
+    assert callable(run_app.main)
     assert callable(run_app.run_with_crash_logging)
+
+
+def test_packaged_entry_point_loads_ui_inside_crash_guard():
+    source = (ROOT/'run_app.py').read_text(encoding='utf-8')
+    guard_import, ui_import = (
+        source.index('from automatic_print.runtime.crash_logging'),
+        source.index('from automatic_print.app import run'),
+    )
+    assert guard_import < ui_import
 
 
 def test_automation_root_is_only_a_public_facade():
