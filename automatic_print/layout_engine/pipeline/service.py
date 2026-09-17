@@ -7,9 +7,7 @@ from typing import Iterable
 from ..domain.models import LayoutSettings, ProgressCallback, mm_to_px
 from automatic_print.layout_engine.output.output_name import planned_output_path
 from ..diagnostics.dual_quality import dual_quality
-from automatic_print.layout_engine.labeling.markers.marker_space import validate_embedded_marks
-from automatic_print.layout_engine.cutting.validation.cut_validation import validate_cut_corridor, validate_canvas_pixels, validate_vips_output
-from automatic_print.layout_engine.cutting.validation.order_validation import validate_order_placements
+from automatic_print.layout_engine.cutting.validation.cut_validation import validate_canvas_pixels, validate_vips_output
 from automatic_print.layout_engine.rendering.engines.pillow_renderer import build_pillow_canvas
 from automatic_print.layout_engine.cutting.geometry.printed_guides import collect_guides, dot_boxes, paint_guides, validate_vips_canvas
 from automatic_print.layout_engine.planning.base.planner import plan_layout
@@ -88,33 +86,20 @@ def generate_layout(
     height = marked_height(planned, settings, width, height,
                            (prepared_plan or {}).get('end_notice', '批次结束'))
     phase('坐标与订单安全检查')
-    warning, order_check = "", {}
-    try:
-        order_check = validate_order_placements(paths, planned)
-        cut_check = validate_cut_corridor(
-            planned, settings, width, canvas_height=height,
-        )
-        if settings.cutter_mode != 'free':
-            validate_embedded_marks(planned, settings)
-    except ValueError as error:
-        if not preview_only:
-            raise
-        warning = f"仅供检查，禁止输出：{error}"
+    from .validation import validate_plan
+    warning, order_check, cut_check = validate_plan(
+        paths, planned, settings, width, height, preview_only,
+    )
     output_path, sizes = planned_output_path(
         output_dir, paths, planned, labels, settings, analysis[-1], batch_name,
         prepared_plan, filename_suffix,
     )
     quality = dual_quality(planned, settings, analysis[-1])
-    if plan_ready:
-        from automatic_print.automation.api.s2b.metadata.prepare import metadata_warning_text
-        metadata_warning = metadata_warning_text(s2b_metadata)
-        visible_warning = "\n".join(filter(None, (warning, metadata_warning)))
-        plan_ready({"planned": planned, "labels": labels, "settings": settings, "order_check": order_check, "analysis": analysis[-1], "dual_quality": quality,
-                    "saved_meters": max(0,baseline_height-height)*25.4/settings.dpi/1000,
-                    "canvas": (width, height, baseline_height),
-                    "warning": visible_warning,
-                    "blocking_warning": warning,
-                    "metadata_warning": metadata_warning})
+    from .analysis import emit_plan_ready
+    emit_plan_ready(
+        plan_ready, planned, labels, settings, order_check, analysis[-1],
+        quality, baseline_height, height, width, warning, s2b_metadata,
+    )
     if preview_only:
         from automatic_print.layout_engine.reporting.preview_result import build_preview_result
         return build_preview_result(

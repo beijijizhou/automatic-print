@@ -79,7 +79,7 @@ def plan_adaptive_knife_zones(paths, settings, progress, prepared=None):
     if missing:
         raise ValueError('剩余图片旋转后仍超宽，需要进入等比缩小恢复：'+'、'.join(missing))
     if base.developer_compact_cutter_layout:
-        from .choice_cutter import plan_choice_cutter_layout
+        from .choice.planner import plan_choice_cutter_layout
         choice_items = [[items[path], *(
             [rotated_items[path]] if path in rotated_items else [])]
             for path in rotated_paths]

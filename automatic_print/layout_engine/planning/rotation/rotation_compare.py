@@ -22,7 +22,7 @@ def compare_rotation(paths, settings, progress, analysis, analysis_ready):
     )
     from automatic_print.layout_engine.domain.models import mm_to_px
     from automatic_print.layout_engine.labeling.markers.left_marker import head_margin
-    from automatic_print.layout_engine.planning.columns.choice_cutter import riin_sequence_height
+    from automatic_print.layout_engine.planning.columns.choice.planner import riin_sequence_height
     riin_height = riin_sequence_height(
         [row[0] for row in options],
         mm_to_px(settings.media_width_mm, settings.dpi),
@@ -90,7 +90,7 @@ def compare_rotation(paths, settings, progress, analysis, analysis_ready):
     else:
         adaptive = (None, None, 0, '“多数并排集中在一起”未启用')
     if settings.developer_compact_cutter_layout:
-        from automatic_print.layout_engine.planning.columns.choice_cutter import plan_choice_cutter_layout
+        from automatic_print.layout_engine.planning.columns.choice.planner import plan_choice_cutter_layout
 
         normal_by_path = {row[0].path: row[0] for row in options}
         choice_items = [[normal_by_path[path], *(

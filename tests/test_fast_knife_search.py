@@ -12,7 +12,7 @@ from automatic_print.layout_engine.orders.single_order_sequence import (
     horizontal_savings,
 )
 from automatic_print.layout_engine.planning.columns.dynamic_columns import select_columns
-from automatic_print.layout_engine.planning.columns.choice_cutter import riin_sequence_height
+from automatic_print.layout_engine.planning.columns.choice.planner import riin_sequence_height
 
 
 def item(i, width, height, offset=0):
