@@ -47,10 +47,9 @@ jobs:
       - name: Create isolated Python 3.12 environment
         shell: powershell
         run: |
-          $python = Get-ChildItem "C:\Users\*\AppData\Local\Programs\Python\Python312\python.exe" `
-            -ErrorAction SilentlyContinue | Select-Object -First 1 -ExpandProperty FullName
-          if (-not $python) {
-            throw "Python 3.12 is not installed on this Windows test machine."
+          $python = "C:\actions-runner\externals\python\python.exe"
+          if (-not (Test-Path -LiteralPath $python)) {
+            throw "Runner Python is missing. Run windows/prepare-runner-python.ps1 as Administrator."
           }
           & $python -m venv .runner-venv
           if ($LASTEXITCODE -ne 0) { throw "Failed to create the runner virtual environment." }
