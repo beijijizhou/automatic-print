@@ -3,7 +3,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from pathlib import Path
-from urllib.parse import urlsplit
+from urllib.parse import quote, urlsplit, urlunsplit
 from urllib.request import Request, urlopen
 from zipfile import ZipFile
 
@@ -177,21 +177,51 @@ def _download_archive(record, output_root, index, total, progress):
     folder.mkdir(parents=True, exist_ok=True)
     target = folder / f"{record.batch_number}_{record.archive_name}"
     partial = target.with_suffix(target.suffix + ".未完成")
-    request = Request(record.download_url, headers={"User-Agent": "AutomaticPrint/1"})
+    request = Request(
+        _encoded_download_url(record.download_url),
+        headers={"User-Agent": "AutomaticPrint/1"},
+    )
     try:
         with urlopen(request, timeout=120) as response, partial.open("wb") as stream:
             expected = int(response.headers.get("Content-Length") or 0)
             written = 0
+            last_percent = -1
+            last_reported_bytes = 0
             while chunk := response.read(1024 * 1024):
                 stream.write(chunk)
                 written += len(chunk)
-                percent = f" · {written / expected:.0%}" if expected else ""
-                _report(progress, f"[{index}/{total}] 正在下载 S2B / {record.batch_number}{percent}")
+                if expected:
+                    percent = min(100, int(written * 100 / expected))
+                    if percent == last_percent:
+                        continue
+                    last_percent = percent
+                    detail = f" · {percent}%"
+                else:
+                    if written - last_reported_bytes < 8 * 1024 * 1024:
+                        continue
+                    last_reported_bytes = written
+                    detail = f" · {written / 1024 / 1024:.0f} MiB"
+                _report(
+                    progress,
+                    f"[{index}/{total}] 正在下载 S2B / "
+                    f"{record.batch_number}{detail}",
+                )
         partial.replace(target)
     except BaseException:
         partial.unlink(missing_ok=True)
         raise
     return target
+
+
+def _encoded_download_url(value):
+    parts = urlsplit(value)
+    return urlunsplit((
+        parts.scheme,
+        parts.netloc,
+        quote(parts.path, safe="/%:@"),
+        quote(parts.query, safe="=&%+/:;,@"),
+        quote(parts.fragment, safe="%"),
+    ))
 
 
 def _extract_archive(archive, output_root, batch_number):

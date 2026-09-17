@@ -2,6 +2,7 @@ from zipfile import ZipFile
 
 from automatic_print.automation.api.s2b.production.downloads import (
     S2BExportRecord,
+    _encoded_download_url,
     _extract_archive,
     parse_export_rows,
 )
@@ -28,6 +29,16 @@ def test_export_rows_keep_only_generated_production_images():
         9, "22UJ9KT4VCZA", 40, "2026-09-17 01:44:06", True,
         "https://accelerate.s2bdiy.com/file.zip", "AS2B_22UJ9KT4VCZA.zip",
     )]
+
+
+def test_download_url_encodes_unicode_archive_name_without_changing_signature():
+    result = _encoded_download_url(
+        "https://accelerate.s2bdiy.com/生产图/补单.zip?token=a+b%2Fc="
+    )
+    assert result == (
+        "https://accelerate.s2bdiy.com/%E7%94%9F%E4%BA%A7%E5%9B%BE/"
+        "%E8%A1%A5%E5%8D%95.zip?token=a+b%2Fc="
+    )
 
 
 def test_s2b_dispatch_reuses_shared_batch_record(monkeypatch):

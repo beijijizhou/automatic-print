@@ -9,6 +9,10 @@ S2B_BATCH = re.compile(
     r"(?P<batch>[A-Z0-9]{12})_(?P<date>\d{8})_"
     r"(?P<time>\d{6})_(?P<suffix>[A-Za-z0-9]+)$"
 )
+S2B_BATCH_WITHOUT_COUNT = re.compile(
+    r"^(?P<prefix>.+)_(?P<batch>[A-Z0-9]{12})_"
+    r"(?P<date>\d{8})_(?P<time>\d{6})_(?P<suffix>[A-Za-z0-9]+)$"
+)
 
 
 @dataclass(frozen=True)
@@ -25,12 +29,17 @@ class S2BBatchFolder:
 def parse_s2b_batch_name(path_or_name):
     path = Path(path_or_name)
     match = S2B_BATCH.fullmatch(path.name)
-    if not match or "S2B" not in match["prefix"].upper():
-        return None
+    if match and "S2B" in match["prefix"].upper():
+        count = int(match["count"])
+    else:
+        match = S2B_BATCH_WITHOUT_COUNT.fullmatch(path.name)
+        if not match:
+            return None
+        count = 0
     return S2BBatchFolder(
         path=path,
         prefix=match["prefix"],
-        expected_count=int(match["count"]),
+        expected_count=count,
         batch_number=match["batch"],
         exported_date=match["date"],
         exported_time=match["time"],

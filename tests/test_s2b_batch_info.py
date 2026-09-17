@@ -29,6 +29,14 @@ def test_batch_name_is_parsed_from_stable_right_hand_fields():
     assert parsed.exported_date == "20260913"
 
 
+def test_supplement_batch_without_count_uses_right_hand_batch_identity():
+    parsed = parse_s2b_batch_name(
+        "【补单】202608300008_IW6J3TIZUQ8K_20260831_035112_rpkaxw42"
+    )
+    assert parsed.batch_number == "IW6J3TIZUQ8K"
+    assert parsed.expected_count == 0
+
+
 def test_batch_folder_is_found_above_size_and_image(tmp_path):
     root = tmp_path / "LNS2B017Sg_b__SP___222_26OP3LGLUEUV_20260916_010042_5unwyr1p"
     image = root / "S" / "26OP3LGLUEUV-1-1-2TB3P5-1-1-1-222-棉-S.png"
