@@ -70,7 +70,7 @@
   `layout_engine/orders/single_order_sequence.py`、`layout_engine/orders/color_policy.py`、`layout_engine/orders/size_policy.py`。
 - 行、刀位和区域规划：`layout_engine/planning/base/planner.py`、`layout_engine/planning/base/row_optimizer.py`、`layout_engine/planning/columns/cutter_planner.py`、`layout_engine/planning/columns/dynamic_columns.py`、
   `layout_engine/planning/columns/knife_optimizer.py`、`layout_engine/planning/columns/adaptive_knife.py`、`layout_engine/planning/zones/zone_optimizer.py`、`layout_engine/planning/rotation/rotation_zones.py`。列数由膜宽与真实占位
-  动态形成，`layout_engine/planning/columns/adaptive_knife.py` 唯一组装“并排区 + 剩余旋转区”，旋转仍超宽时复用 `layout_engine/planning/zones/width_fit.py` 缩小缓存。
+  动态形成；物理上无法容纳整批或无法实际使用全部列的候选在进入排版动态规划前淘汰，列分配使用有记忆匹配而非全排列。`layout_engine/planning/columns/adaptive_knife.py` 唯一组装“并排区 + 剩余旋转区”，旋转仍超宽时复用 `layout_engine/planning/zones/width_fit.py` 缩小缓存。
   混色订单不参与单色区域边界比较，避免错误清空已经成立的多数并排区。
 - 主界面默认开启的 S–L 并排宽度上限由 `layout_engine/planning/zones/pair_width.py` 唯一计算；通过单图尺寸覆盖交给既有
   测量、刀位、预览和渲染链路，不生成或修改源图片副本。

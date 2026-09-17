@@ -55,8 +55,10 @@ def select_columns(groups, settings, spacing, progress=None):
         knives = equal_knives(width, columns)
         try:
             lanes = lanes_for_knives(settings, width, knives)
-            result = solve_groups(groups, lanes, spacing,
-                                  settings.cutter_majority_two_zone)
+            result = (solve_groups(groups, lanes, spacing,
+                                   settings.cutter_majority_two_zone)
+                      if columns == 1 or _can_fill_columns(groups, lanes)
+                      else None)
         except ValueError:
             result = None
         if result is not None:
@@ -73,6 +75,30 @@ def select_columns(groups, settings, spacing, progress=None):
                        cutter_knife_mm=(knives[0] * 25.4 / settings.dpi
                                         if knives else settings.cutter_knife_mm))
     return selected, lanes, knives
+
+
+def _can_fill_columns(groups, lanes):
+    """Reject N-column candidates unless N distinct items can fill all lanes."""
+    from .column_solver import member
+
+    full = (1 << len(lanes)) - 1
+    reachable = {0}
+    for item in (item for group in groups for item in group):
+        fitting = 0
+        for lane_index, lane in enumerate(lanes):
+            if member(item, lane) is not None:
+                fitting |= 1 << lane_index
+        if not fitting:
+            return False
+        expanded = set(reachable)
+        for used in reachable:
+            available = fitting & ~used
+            while available:
+                bit = available & -available
+                expanded.add(used | bit)
+                available ^= bit
+        reachable = expanded
+    return full in reachable
 
 
 def _used_columns(solution):

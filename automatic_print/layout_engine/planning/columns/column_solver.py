@@ -1,7 +1,6 @@
 """Ordered dynamic programming for one or more cutter lanes."""
 from collections import Counter
 from dataclasses import replace
-from itertools import permutations
 
 from automatic_print.layout_engine.orders.order_groups import order_key
 from automatic_print.layout_engine.orders.size_policy import same_single_size
@@ -55,16 +54,37 @@ def row(members):
 def horizontal(group, lanes):
     if len(group) > len(lanes) or len(group) < 2:
         return None
-    members = None
-    for assigned in permutations(lanes[:len(group)]):
-        candidate = [member(item, lane) for item, lane in zip(group, assigned)]
-        if not any(value is None for value in candidate):
-            members = candidate
-            break
+    members = _first_lane_assignment(group, lanes[:len(group)])
     if members is None:
         return None
     anchor_y = max(value.item.image_ry for value in members)
     return row([replace(value, y=anchor_y-value.item.image_ry) for value in members])
+
+
+def _first_lane_assignment(group, lanes):
+    """Return the former permutation-first match without factorial rescans."""
+    failed = set()
+
+    def assign(item_index, used):
+        state = item_index, used
+        if state in failed:
+            return None
+        if item_index == len(group):
+            return []
+        for lane_index, lane in enumerate(lanes):
+            bit = 1 << lane_index
+            if used & bit:
+                continue
+            value = member(group[item_index], lane)
+            if value is None:
+                continue
+            remaining = assign(item_index + 1, used | bit)
+            if remaining is not None:
+                return [value, *remaining]
+        failed.add(state)
+        return None
+
+    return assign(0, 0)
 
 
 def group_rows(group, lanes, spacing):
