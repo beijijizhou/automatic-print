@@ -67,5 +67,9 @@ def saving_detail(window) -> str:
     folder = getattr(window, "active_staging_output", window.job_path.text())
     filename = getattr(window, "active_output_filename", "")
     path = Path(folder) / filename
-    size = path.stat().st_size if path.is_file() else 0
+    try:
+        size = path.stat().st_size
+    except OSError:
+        # Network output can be atomically renamed between existence and stat.
+        size = 0
     return f" · 已写入 {file_size_text(size)}"

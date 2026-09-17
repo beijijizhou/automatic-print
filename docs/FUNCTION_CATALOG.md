@@ -58,7 +58,7 @@
 | 自动化批次规则与本地身份 | `automation/batches/classification.py`, `local.py`, `naming.py`, `rules.py` | 分类、扫描、命名和生成规则按批次域集中；界面只调用这些共享能力，不自行解析或改名。 |
 | 自动化浏览器、传输与平台 | `automation/browser/`, `automation/transfer/`, `automation/providers/`, `automation/workflows/` | 登录会话、批次页面、导出下载、平台配置和端到端流程分别归档；`automation/`根目录只公开稳定入口。 |
 | 源码更新 | `updates/source.py`, `updates/release.py`, `updates/versioning.py`, `updates/worker.py` | 源码安装更新、发布包检查、版本展示和后台执行按职责分离；检查、应用和重启保持同一状态机。 |
-| 协作取消 | `runtime/cancellation.py`, `controllers/thread_lifecycle.py`, `ui/stop_actions.py` | 控制器拥有线程释放，UI只路由用户停止意图；长循环定期检查，停止不关闭应用，关闭可立即退出。 |
+| 协作取消与安全关闭 | `runtime/cancellation.py`, `controllers/thread_lifecycle.py`, `ui/stop_actions.py`, `ui/immediate_exit.py` | 控制器拥有线程释放，UI只路由用户停止意图；任务运行时拒绝关闭并继续处理，空闲时由 Qt 正常退出，禁止强杀进程。 |
 | 应用运行时 | `runtime/branding.py`, `runtime/resources.py`, `runtime/crash_logging.py`, `runtime/restart.py`, `runtime/cancellation.py` | 品牌、资源、故障日志、重启和任务取消归运行时层；包根目录只保留启动入口。 |
 
 ## 新增能力检查

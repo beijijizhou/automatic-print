@@ -70,6 +70,5 @@ class MainWindow(
                     self.automation_home.thread is not None, developer_task_active(self),
                     getattr(getattr(self, 'bulk_controller', None), 'thread', None) is not None))
     def closeEvent(self, event) -> None:
-        from .immediate_exit import exit_now
-        exit_now(self)
-        event.accept()
+        from .immediate_exit import close_safely
+        close_safely(self, event)

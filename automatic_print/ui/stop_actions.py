@@ -1,4 +1,4 @@
-"""Cooperative pause routing; closing the window remains the explicit hard exit."""
+"""Route cooperative pause requests without closing or killing the application."""
 
 
 def stop_active_layout(window):

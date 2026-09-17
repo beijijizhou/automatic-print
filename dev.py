@@ -35,24 +35,19 @@ def main() -> int:
         environment = dict(os.environ, AUTOMATIC_PRINT_DEV='1')
         process = subprocess.Popen([sys.executable, "-m", "automatic_print"], env=environment)
         restart = False
+        restart_requested = False
 
         while process.poll() is None:
             time.sleep(0.5)
-            if UPDATE_GUARD.exists():
+            if UPDATE_GUARD.exists() or restart_requested:
                 continue
             new_state = snapshot()
             if new_state != state or RESTART_REQUEST.exists():
                 state = new_state
                 restart = True
+                restart_requested = True
                 print("Code changed. Requesting a safe restart…")
                 RESTART_REQUEST.touch()
-                try:
-                    process.wait(timeout=120)
-                except subprocess.TimeoutExpired:
-                    print("Safe restart timed out. Stopping the process.")
-                    process.kill()
-                    process.wait()
-                break
 
         if RESTART_REQUEST.exists() and not UPDATE_GUARD.exists():
             restart = True

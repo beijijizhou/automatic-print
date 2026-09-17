@@ -17,7 +17,10 @@ class SaveObservation:
     lock: Lock = field(default_factory=Lock)
 
     def sample(self, path: Path) -> None:
-        size = path.stat().st_size if path.is_file() else 0
+        try:
+            size = path.stat().st_size
+        except OSError:
+            size = 0
         now = perf_counter()
         with self.lock:
             if size > 0 and self.first_write is None:
