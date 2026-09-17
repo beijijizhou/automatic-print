@@ -111,8 +111,13 @@ def item_key(file_identity, index, width, height, settings, degrees, created_at)
     date = created_at.strftime(settings.label_date_format) if (
         '{日期}' in template or '{date' in template
     ) else ''
+    settings_data = asdict(settings)
+    # This switch changes only whole-batch packing.  Keeping it out of the
+    # per-image geometry key preserves measurements made by earlier releases
+    # and avoids decoding every source again when developer mode changes.
+    settings_data.pop('developer_compact_cutter_layout', None)
     return MeasurementCache.key(ITEM_SCHEMA, (
-        file_identity, index, width, height, asdict(settings), degrees, date,
+        file_identity, index, width, height, settings_data, degrees, date,
     ))
 
 

@@ -15,8 +15,12 @@ from automatic_print.layout_engine.labeling.markers.qr_placement import signed_m
 
 
 def read_items(paths, settings, progress, make_item, detect_qr_location):
-    from automatic_print.layout_engine.measurement.parallel_measurement import read_parallel
+    from automatic_print.layout_engine.measurement.parallel_measurement import (
+        preload_dimensions,
+        read_parallel,
+    )
 
+    preload_dimensions(paths, settings)
     _preload_cached_items(paths, settings)
 
     def read_source(source_paths, source_settings, source_progress):

@@ -14,41 +14,64 @@ def card_space(path, card, width, height, badge_width, badge_height, reserved=()
     """Find unprinted white/transparent pixels strictly inside the label card."""
     if badge_width <= 0 or badge_height <= 0:
         return 0, 0
+    source_width, source_height, left, top, right, bottom, integral = (
+        _card_integral(path, card)
+    )
+    box_width = max(1, ceil(badge_width*source_width/width))
+    box_height = max(1, ceil(badge_height*source_height/height))
+    if right-left < box_width or bottom-top < box_height:
+        return None
+    source_reserved = tuple(
+        (floor(x*source_width/width)-left, floor(y*source_height/height)-top,
+         ceil((x+w)*source_width/width)-left, ceil((y+h)*source_height/height)-top)
+        for x, y, w, h in reserved if w and h
+    )
+    for y in range(0, bottom-top-box_height+1):
+        for x in range(0, right-left-box_width+1):
+            if any(x < rx2 and x+box_width > rx1 and y < ry2
+                   and y+box_height > ry1
+                   for rx1, ry1, rx2, ry2 in source_reserved):
+                continue
+            occupied = (integral[y+box_height, x+box_width]
+                        - integral[y, x+box_width]
+                        - integral[y+box_height, x] + integral[y, x])
+            if not occupied:
+                return (round((x+left)*width/source_width),
+                        round((y+top)*height/source_height))
+    return None
+
+
+def _card_integral(path, card):
+    """Extract one source card once; badge-size probes reuse its integral image."""
+    from automatic_print.layout_engine.measurement.measurement_session import (
+        SESSION,
+        identity,
+    )
+    session = SESSION.get()
+    key = ('card-integral', identity(path), card) if session else None
+    if session and key in session.bands:
+        return session.bands[key]
     with source_pixels(path) as source:
         source_width, source_height = source.size
         left = max(0, ceil(card.left*source_width)+1)
         top = max(0, ceil(card.top*source_height)+1)
         right = min(source_width, floor(card.right*source_width)-1)
         bottom = min(source_height, floor(card.bottom*source_height)-1)
-        box_width = max(1, ceil(badge_width*source_width/width))
-        box_height = max(1, ceil(badge_height*source_height/height))
-        if right-left < box_width or bottom-top < box_height:
-            return None
         with source.crop((left, top, right, bottom)) as card_image:
             with card_image.convert('RGBA') as rgba:
                 pixels = np.asarray(rgba).copy()
-        alpha = pixels[:, :, 3]
-        blank = (alpha <= 15) | ((alpha >= 240) & (pixels[:, :, :3].min(axis=2) >= 235))
-        blocked = (~blank).astype(np.int32)
-        integral = np.pad(blocked, ((1, 0), (1, 0))).cumsum(0).cumsum(1)
-        source_reserved = tuple(
-            (floor(x*source_width/width)-left, floor(y*source_height/height)-top,
-             ceil((x+w)*source_width/width)-left, ceil((y+h)*source_height/height)-top)
-            for x, y, w, h in reserved if w and h
-        )
-        for y in range(0, bottom-top-box_height+1):
-            for x in range(0, right-left-box_width+1):
-                if any(x < rx2 and x+box_width > rx1 and y < ry2
-                       and y+box_height > ry1
-                       for rx1, ry1, rx2, ry2 in source_reserved):
-                    continue
-                occupied = (integral[y+box_height, x+box_width]
-                            - integral[y, x+box_width]
-                            - integral[y+box_height, x] + integral[y, x])
-                if not occupied:
-                    return (round((x+left)*width/source_width),
-                            round((y+top)*height/source_height))
-    return None
+    alpha = pixels[:, :, 3]
+    blank = (alpha <= 15) | (
+        (alpha >= 240) & (pixels[:, :, :3].min(axis=2) >= 235)
+    )
+    blocked = (~blank).astype(np.int32)
+    result = (
+        source_width, source_height, left, top, right, bottom,
+        np.pad(blocked, ((1, 0), (1, 0))).cumsum(0).cumsum(1),
+    )
+    if session:
+        session.bands[key] = result
+    return result
 
 
 def card_rect_clear(path, width, height, degrees, rect):
