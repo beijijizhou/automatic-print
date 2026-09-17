@@ -10,7 +10,10 @@ def dual_quality(planned, settings, analysis=None):
     for _, placement in planned:
         p = asdict(placement)
         rows[(p['cut_zone'], p['row_y_px'])].append(p)
-    column_rows, singles, rotated, embedded = Counter(), [], 0, 0
+    column_rows, singles, rotation_zone_images, embedded = Counter(), [], 0, 0
+    actual_rotated_images = sum(
+        bool(placement.rotation_degrees) for _, placement in planned
+    )
     reasons = _analysis_reasons(analysis)
     for members in rows.values():
         embedded += sum(bool(p['color_block_width_px'] and p['x_px'] <= p['color_block_x_px']
@@ -18,7 +21,7 @@ def dual_quality(planned, settings, analysis=None):
     for (zone, _), members in rows.items():
         columns = len({p['x_px'] for p in members})
         if zone == '旋转区' or any(p['rotation_degrees'] for p in members):
-            rotated += len(members)
+            rotation_zone_images += len(members)
             if columns >= 2:
                 column_rows[columns] += 1
         elif columns >= 2:
@@ -36,14 +39,19 @@ def dual_quality(planned, settings, analysis=None):
                         '当前相邻订单、尺码及固定刀位条件下没有安全搭档')})
     parallel = '、'.join(f'{columns}排 {count} 行' for columns, count
                         in sorted(column_rows.items())) or '无并排'
-    text = f'{parallel} · 常规单排 {len(singles)} 张 · 旋转区 {rotated} 张'
+    text = (
+        f'{parallel} · 常规单排 {len(singles)} 张'
+        f' · 旋转区 {rotation_zone_images} 张'
+        f'（实际旋转 {actual_rotated_images} 张）'
+    )
     text += f' · 刀码内置 {embedded} 张（复用透明空位）'
     if singles:
         text += ' · 未达到全双排预期，请核对单排明细；不通过缩图或跨刀位强行双排'
     return {'paired_rows': column_rows.get(2, 0),
             'column_rows': dict(sorted(column_rows.items())),
             'parallel_text': parallel, 'single_images': singles,
-            'rotated_images': rotated, 'embedded_marks': embedded,
+            'rotation_zone_images': rotation_zone_images,
+            'rotated_images': actual_rotated_images, 'embedded_marks': embedded,
             'needs_review': bool(singles), 'text': text}
 
 

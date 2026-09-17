@@ -26,7 +26,9 @@ def production_summary_text(result):
         pairs = quality.get('paired_rows', 0)
         parallel = f'双排 {pairs} 行 / {pairs*2} 张' if pairs else '无并排'
     singles = len(quality.get('single_images', ()))
-    rotation_zone = quality.get('rotated_images', 0)
+    rotation_zone = quality.get(
+        'rotation_zone_images', quality.get('rotated_images', 0)
+    )
     rotations = result.get('rotation_count', 0)
     mode = {'free': '正常排版', 'single': '单排切膜', 'dual': '自动多列切膜'}.get(
         result.get('cutter_mode'), result.get('cutter_mode', '未记录'))
