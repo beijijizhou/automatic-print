@@ -98,9 +98,13 @@ jobs:
           if (-not $env:S2B_BATCH_INFO_KEY) {
             throw "Missing AUTOMATIC_PRINT_S2B_BATCH_INFO_KEY repository secret"
           }
-          $escaped = $env:S2B_BATCH_INFO_KEY.Replace('\\', '\\\\').Replace('"', '\\"')
+          $pythonLiteral = & $env:PYTHON_EXE -c `
+            "import os; print(repr(os.environ['S2B_BATCH_INFO_KEY']))"
+          if ($LASTEXITCODE -ne 0 -or -not $pythonLiteral) {
+            throw "Failed to encode AUTOMATIC_PRINT_S2B_BATCH_INFO_KEY"
+          }
           Set-Content -Encoding UTF8 automatic_print/automation/api/s2b/deployment.py `
-            "S2B_BATCH_INFO_KEY = \"$escaped\""
+            "S2B_BATCH_INFO_KEY = $pythonLiteral"
 
       - name: Build application
         if: env.BUILD_INSTALLER == 'true'
