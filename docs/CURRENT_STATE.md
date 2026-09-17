@@ -19,7 +19,7 @@
   完成结果、方案耗时与总结，不重复放置当前进度条、当前文件和状态文字。文件夹队列表仅显示
   “文件夹、图片数、尺码群/订单群”，详细阶段保留在行提示中。
 - 普通模式显示生产排版规则、45/60厘米方案、批次处理记录、膜标签间距和额外损耗。补足膜间距
-  由 `ui/header_gap.py` 的独立开关控制，保存的毫米数值本身不会自动启用；`layout_engine/labeling/base/header_gap.py`会越过Haloo标签不属于白色卡片连通域的彩色底栏，再从真实透明分界补足40毫米，批次预览和最终报告显示总数、实际扩充、原本已满足、未能扩充及新增毫米范围。开发者模式显示算法
+  由 `ui/header_gap.py` 的独立开关控制，保存的毫米数值本身不会自动启用；`layout_engine/labeling/base/header_gap.py`负责缓存和批次编排，`layout_engine/labeling/gap/preparation.py`负责有限条带测量和流式补距，会越过Haloo标签不属于白色卡片连通域的彩色底栏，再从真实透明分界补足40毫米。批次预览和最终报告显示总数、实际扩充、原本已满足、未能扩充及新增毫米范围。开发者模式显示算法
   诊断、排版历史、批量膜分析和批次顺序标注；主界面底部的功能列表按分类展示全部开发者功能
   及当前开启状态；膜规格比较固定为45/60厘米四套方案。
 - 开发者模式主界面“刀码与标签”参数组同时提供切膜刀码和平台尺码标签开关。前者在正常排版与上次
@@ -81,7 +81,7 @@
   测量、刀位、预览和渲染链路，不生成或修改源图片副本。
 - 旋转与超宽恢复：`layout_engine/planning/rotation/rotation_compare.py`、`layout_engine/planning/rotation/whole_rotation.py`、`layout_engine/planning/rotation/tail_rotation.py`、
   `layout_engine/planning/rotation/single_rotation.py`、`layout_engine/planning/zones/width_fit.py`、`layout_engine/planning/zones/gap_fallback.py`。
-  旋转区的竖图保持横向旋转，超出当前动态安全宽度时再等比缩小；整批旋转被个别超宽图阻断时，
+  单件批次以完整尺码后缀比较多排区与旋转区分界；已有末尾旋转区时，可把交界前的完整尺码组整体并入旋转区，但同尺码绝不跨区。旋转区的竖图保持横向旋转，超出当前动态安全宽度时再等比缩小；整批旋转被个别超宽图阻断时，
   `layout_engine/planning/zones/gap_fallback.py` 用虚拟尺寸覆盖重跑完整订单局部比较，双面同倍率且整批仍最多只有并排区和旋转区两个区域。
 - 标签与刀码：`layout_engine/labeling/base/labels.py`、`layout_engine/labeling/base/dynamic_label.py`、`layout_engine/labeling/markers/marker_stack.py`、`layout_engine/labeling/markers/left_marker.py`、
   `layout_engine/labeling/platform/platform_label.py`、`layout_engine/labeling/base/header_region.py`、`layout_engine/labeling/platform/transparent_search.py`。平台尺码文字只放入原图二维码卡片内部
@@ -89,7 +89,7 @@
   图片自身的透明空位并互相避让；二维码卡片没有经过最终像素验证的安全空位时，仅跳过该图的平台尺码文字、记录异常并继续，不阻断整批。外置刀码紧贴图片边缘；整批复用透明带失败时由`layout_engine/planning/zones/gap_fallback.py`
   改用外置标签真实占位、重算刀位并记录完整恢复诊断。最终坐标越界等不可恢复安全冲突仍不得猜值绕过，
   不能回退到刀码与二维码之间或膜标签与图案之间。
-- 开发者排版隔离：刀位变化570毫米停止距离只有开发者模式显式传入正数时才进入规划、候选比较和缓存版本4；普通模式不调用该逻辑，继续使用算法缓存版本2，缓存键也不包含该新增字段。
+- 开发者排版隔离：刀位变化570毫米停止距离只有开发者模式显式传入正数时才进入规划、候选比较和缓存版本5；普通模式不调用该逻辑，使用算法缓存版本4，缓存键也不包含该新增字段。
 - 标签字体加载与线程内有界缓存由`layout_engine/labeling/text/fonts.py`唯一拥有；`layout_engine/labeling/base/labels.py`只负责标签内容、
   换行和徽标渲染。单图排版对象`LayoutItem`与`Placement`统一归`layout_engine/domain/models.py`。
 - 渲染与编码：`layout_engine/rendering/engines/pillow_renderer.py`、`layout_engine/rendering/engines/vips_renderer.py`、`layout_engine/rendering/png/`、

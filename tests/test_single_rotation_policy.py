@@ -51,6 +51,33 @@ def test_pairable_slender_double_stays_normal_even_if_rotation_could_be_shorter(
     assert plan_layout(paths, config(), None) == normal
 
 
+def test_rotation_boundary_moves_before_adjacent_complete_size_block(tmp_path):
+    paths = []
+    for side in (1, 2):
+        path = tmp_path/f'B0-1-T-Black-S-NO1-{side}.png'
+        Image.new('RGBA', (280, 100), 'blue').save(path, dpi=(25.4, 25.4))
+        paths.append(path)
+    for order in range(2):
+        for side in (1, 2):
+            path = tmp_path/f'B{order + 1}-1-T-Black-M-NO1-{side}.png'
+            Image.new('RGBA', (80, 330), 'blue').save(path, dpi=(25.4, 25.4))
+            paths.append(path)
+    tail = tmp_path/'B3-1-T-Black-L-NO1-1.png'
+    Image.new('RGBA', (340, 500), 'blue').save(tail, dpi=(25.4, 25.4))
+    paths.append(tail)
+
+    normal = plan_layout(paths, replace(config(), cutter_rotation_zone=False), None)
+    result = plan_layout(paths, config(), None)
+
+    assert result[3] < normal[3]
+    assert [placement.cut_zone for _path, placement in result[0]] == [
+        '常规区', '常规区', '旋转区', '旋转区', '旋转区', '旋转区', '旋转区',
+    ]
+    assert [placement.rotation_degrees for _path, placement in result[0]] == [
+        0, 0, 90, 90, 90, 90, 90,
+    ]
+
+
 def test_one_paired_row_protects_whole_size_block_and_size_order():
     _, planned = data(8)
     # Unpaired small-size rows cannot migrate past a protected later-size block.

@@ -60,7 +60,8 @@ def test_file_parameters_date_and_algorithm_revision_invalidate_cache_key(tmp_pa
     before = key()
     monkeypatch.setattr(automatic_print, '__version__', 'next-algorithm')
     assert key() == before
-    monkeypatch.setattr(plan_cache, 'LAYOUT_ALGORITHM_REVISION', 4)
+    next_revision = plan_cache.LAYOUT_ALGORITHM_REVISION + 1
+    monkeypatch.setattr(plan_cache, 'LAYOUT_ALGORITHM_REVISION', next_revision)
     assert key() != before
 
 
@@ -82,9 +83,9 @@ def test_developer_knife_gap_has_separate_cache_revision_and_production_key(tmp_
         developer_key = plan_cache.cache_key([path], config(cutter_knife_change_gap_mm=570), now)
 
     production, developer = captured
-    assert production['algorithm'] == plan_cache.LAYOUT_ALGORITHM_REVISION == 3
+    assert production['algorithm'] == plan_cache.LAYOUT_ALGORITHM_REVISION == 4
     assert 'cutter_knife_change_gap_mm' not in production['settings']
-    assert developer['algorithm'] == plan_cache.DEVELOPER_LAYOUT_ALGORITHM_REVISION == 4
+    assert developer['algorithm'] == plan_cache.DEVELOPER_LAYOUT_ALGORITHM_REVISION == 5
     assert developer['settings']['cutter_knife_change_gap_mm'] == 570
     assert production_key != developer_key
 
