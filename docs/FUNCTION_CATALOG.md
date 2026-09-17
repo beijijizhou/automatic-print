@@ -47,7 +47,7 @@
 | 输出参数界面 | `ui/settings/output/dpi.py`, `location.py`, `format.py`, `segmentation.py` | 设置页输出区域按用户可见参数分离，统一向工作台和生成入口提供控件与保存位置解析。 |
 | 通用数值参数控件 | `ui/spinbox_style.py` | 所有毫米、尺寸和偏移浮点输入复用`double_spinbox`，不在页面内复制范围、精度和初始值构造代码。 |
 | 参数联动刷新门禁 | `ui/parameter_refresh.py` | 平台和模式一次更新多个控件时取消旧预览并抑制新批次读取；不用多个信号重复触发排版。 |
-| 应用重启 | `runtime/restart.py` | 源码更新和恢复出厂设置共用同一安全重启入口；开发环境使用重载请求，安装环境启动新进程。 |
+| 应用重启 | `runtime/restart.py` | 源码更新和恢复出厂设置共用同一安全重启入口；仅 `dev.py` 子进程监听重载标记，普通快捷方式启动会清理过期标记，安装环境启动新进程。 |
 | 批次及膜历史 | `history/store.py`, `history/batch_queue.py`, `history/bulk_analysis.py` | 历史格式由存储模块维护，UI不直接写日志文件。 |
 | ERP生产批次读取与下载 | `automation/browser/batches.py`, `automation/api/erp/records.py`, `automation/transfer/downloads.py` | 浏览器流程、文件传输与响应映射分离；外层工厂页面与内嵌生产模块共用一个批次内容定位入口，列表、搜索、就绪状态和下载不得各自假设表格位于顶层页面。 |
 | 生产平台下载入口 | `ui/erp_download_entry.py`, `batch_ui/dialog.py`, `batch_ui/platform/`, `batch_ui/task/` | 多选平台后分别显示独立工作区；平台页面与后台任务分层，仅下载、解压已生成批次，绝不自动启动排版。 |

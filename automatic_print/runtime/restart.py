@@ -26,6 +26,15 @@ def install_restart_monitor(application, window) -> QTimer:
     timer = QTimer(application)
     timer.setInterval(250)
 
+    if os.environ.get('AUTOMATIC_PRINT_DEV') != '1':
+        # A source checkout is often launched directly from a desktop shortcut.
+        # Only dev.py has a parent process capable of honoring this marker and
+        # starting the child again.  A stale marker must never close a normal
+        # launch and leave the user with what looks like a startup crash.
+        RESTART_REQUEST.unlink(missing_ok=True)
+        application.automatic_print_restart_timer = timer
+        return timer
+
     def check() -> None:
         if not RESTART_REQUEST.exists():
             return

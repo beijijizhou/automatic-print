@@ -8,10 +8,26 @@ from PySide6.QtWidgets import QApplication, QMessageBox
 from automatic_print.ui.main_window import MainWindow
 from automatic_print.ui import update_actions
 from automatic_print.updates.source import SourceUpdater, SourceUpdateInfo
+from automatic_print.runtime import restart
 
 APP = QApplication.instance() or QApplication([])
 APP.setQuitOnLastWindowClosed(False)
 WINDOWS = []  # Keep Qt owners alive across event dispatch in consecutive tests.
+
+
+def test_normal_launch_discards_stale_development_restart_marker(
+    tmp_path, monkeypatch,
+):
+    marker = tmp_path / '.restart-request'
+    marker.touch()
+    monkeypatch.setattr(restart, 'RESTART_REQUEST', marker)
+    monkeypatch.delenv('AUTOMATIC_PRINT_DEV', raising=False)
+    owner = object()
+
+    timer = restart.install_restart_monitor(APP, owner)
+
+    assert not marker.exists()
+    assert not timer.isActive()
 
 
 def wait_until(predicate):
