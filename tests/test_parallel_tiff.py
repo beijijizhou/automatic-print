@@ -2,9 +2,11 @@ from pathlib import Path
 
 from PIL import Image
 import tifffile
+import numpy as np
 
 from automatic_print.layout_engine import LayoutSettings, generate_layout
 from automatic_print.layout_engine.cutting.validation import cut_validation
+from automatic_print.layout_engine.rendering.storage.atomic_tiff import strip_height
 
 
 def test_parallel_tiff_preserves_rgba_dpi_and_strips(tmp_path):
@@ -27,7 +29,9 @@ def test_parallel_tiff_preserves_rgba_dpi_and_strips(tmp_path):
     with tifffile.TiffFile(output) as tif:
         page = tif.pages[0]
         assert page.shape == (777, 513, 4)
-        assert not page.is_tiled and page.rowsperstrip == min(1024, page.imagelength)
+        assert not page.is_tiled and page.rowsperstrip == min(
+            strip_height(513, LayoutSettings(), 4), page.imagelength
+        )
         assert page.extrasamples[0].name == 'UNASSALPHA'
         numerator, denominator = page.tags['XResolution'].value
         assert numerator / denominator == 25.4
@@ -36,10 +40,39 @@ def test_parallel_tiff_preserves_rgba_dpi_and_strips(tmp_path):
     assert pixels[-1, -1].tolist() == [10, 20, 30, 128]
 
 
+def test_parallel_tiff_preserves_pixels_across_multiple_large_strips(tmp_path):
+    source = tmp_path / 'B1-1-T-Black-M-NO1-1.png'
+    pixels = np.zeros((5000, 513, 4), dtype=np.uint8)
+    pixels[:, :, 3] = 255
+    pixels[:2500, :, :3] = (10, 20, 30)
+    pixels[2500:, :, :3] = (200, 150, 100)
+    Image.fromarray(pixels).save(source, dpi=(25.4, 25.4))
+    settings = LayoutSettings(
+        dpi=25.4, media_width_mm=600, margin_mm=0, spacing_mm=0,
+        number_images=False, color_block_enabled=False,
+        allow_rotation=False, output_format='tiff', png_engine='libvips',
+        worker_threads=4, png_compression_level=1,
+    )
+
+    result = generate_layout([source], tmp_path / 'out', settings)
+
+    with tifffile.TiffFile(tmp_path / 'out' / result['filename']) as tif:
+        page = tif.pages[0]
+        assert page.rowsperstrip == strip_height(513, settings, 4)
+        actual = page.asarray(maxworkers=4)
+    assert np.array_equal(actual, pixels)
+
+
 def test_tiff_names_keep_extension_when_deduplicated(tmp_path):
     from automatic_print.layout_engine.output.output_name import unused_output_path
     (tmp_path / 'batch.tif').touch()
     assert unused_output_path(tmp_path, 'batch.tif').name == 'batch (2).tif'
+
+
+def test_tiff_strip_height_respects_memory_budget_for_wide_canvas():
+    settings = LayoutSettings(save_memory_mb=512)
+    assert strip_height(4029, settings, 4) == 4096
+    assert strip_height(6850, settings, 4) == 2048
 
 
 def test_tiff_cut_validation_uses_random_access(tmp_path, monkeypatch):

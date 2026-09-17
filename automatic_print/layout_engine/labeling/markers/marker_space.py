@@ -1,7 +1,10 @@
 """Keep cutter marks on lane origins while reusing verified transparent pixels."""
 from math import floor, ceil
+import sqlite3
 from automatic_print.layout_engine.labeling.platform.membrane_region import MembraneRegion
-from automatic_print.layout_engine.measurement.measurement_session import SESSION, identity, source_pixels
+from automatic_print.layout_engine.measurement.measurement_session import (
+    SESSION, identity, persistent_cache, source_pixels,
+)
 from automatic_print.layout_engine.measurement.measurement_timing import measured
 
 
@@ -18,6 +21,21 @@ def transparent_rect(path, width, height, degrees, rect):
     key = (identity(path), width, height, degrees, tuple(rect)) if session else None
     if session and key in session.rectangles:
         return session.rectangles[key]
+    persistent = persistent_key = None
+    if session:
+        try:
+            from automatic_print.layout_engine.measurement.measurement_cache import (
+                transparent_rect_key,
+            )
+            persistent = persistent_cache()
+            persistent_key = transparent_rect_key(*key)
+            cached = persistent.load('transparent_rect', persistent_key)
+            if cached is not None:
+                result = bool(cached['transparent'])
+                session.rectangles[key] = result
+                return result
+        except (OSError, ValueError, TypeError, KeyError, sqlite3.Error):
+            persistent = persistent_key = None
     with source_pixels(path) as source:
         if 'A' not in source.getbands():
             return False
@@ -29,6 +47,14 @@ def transparent_rect(path, width, height, degrees, rect):
             result = crop.getchannel('A').getextrema()[1] == 0
     if session:
         session.rectangles[key] = result
+        if persistent is not None and persistent_key is not None:
+            try:
+                persistent.save(
+                    'transparent_rect', persistent_key,
+                    {'transparent': result},
+                )
+            except (OSError, ValueError, TypeError, sqlite3.Error):
+                pass
     return result
 
 

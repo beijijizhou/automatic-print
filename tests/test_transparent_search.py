@@ -1,5 +1,6 @@
 import numpy as np
 import pytest
+from contextlib import contextmanager
 from PIL import Image, ImageFile
 
 from automatic_print.layout_engine.labeling.markers.marker_space import transparent_rect
@@ -47,6 +48,38 @@ def test_non_alpha_sources_remain_unsafe(tmp_path):
     Image.new('RGB', (100, 100), 'white').save(path)
     assert clear_rectangles(path, 100, 100, 0,
                             [(0, 0, 20, 20), (0, 0, 0, 20)]) == (False, True)
+
+
+def test_transparent_rectangle_persists_across_batch_sessions(
+    tmp_path, monkeypatch,
+):
+    from automatic_print.layout_engine.labeling.markers import marker_space
+    from automatic_print.layout_engine.measurement import measurement_cache
+    from automatic_print.layout_engine.measurement.measurement_session import measurement_session
+
+    path = tmp_path / 'source.png'
+    Image.new('RGBA', (100, 100)).save(path)
+    monkeypatch.setattr(measurement_cache, 'cache_directory', lambda: tmp_path)
+    original = marker_space.source_pixels
+    reads = []
+
+    @contextmanager
+    def counted(source):
+        reads.append(source)
+        with original(source) as image:
+            yield image
+
+    monkeypatch.setattr(marker_space, 'source_pixels', counted)
+    with measurement_session():
+        assert marker_space.transparent_rect(
+            path, 100, 100, 0, (0, 0, 20, 20)
+        )
+    with measurement_session():
+        assert marker_space.transparent_rect(
+            path, 100, 100, 0, (0, 0, 20, 20)
+        )
+
+    assert reads == [path]
 
 
 def test_normal_rotation_decode_once_and_cached_comparison_opens_nothing(tmp_path, monkeypatch):

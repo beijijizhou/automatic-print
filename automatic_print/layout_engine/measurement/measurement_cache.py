@@ -10,6 +10,7 @@ from time import time
 
 ITEM_SCHEMA = 1
 DIMENSION_SCHEMA = 2
+TRANSPARENT_RECT_SCHEMA = 1
 TTL_SECONDS = 24 * 60 * 60
 
 
@@ -104,6 +105,15 @@ def item_settings(settings):
 def dimension_key(file_identity, fallback_dpi):
     return MeasurementCache.key(
         DIMENSION_SCHEMA, (file_identity, fallback_dpi)
+    )
+
+
+def transparent_rect_key(
+    file_identity, width, height, degrees, rectangle,
+):
+    return MeasurementCache.key(
+        TRANSPARENT_RECT_SCHEMA,
+        (file_identity, width, height, degrees, tuple(rectangle)),
     )
 
 

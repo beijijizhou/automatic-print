@@ -9,7 +9,17 @@ from imagecodecs import deflate_encode
 from automatic_print.layout_engine.rendering.storage.save_progress import monitor_save
 
 
-STRIP_HEIGHT = 1024
+MAX_STRIP_HEIGHT = 4096
+MIN_STRIP_HEIGHT = 256
+
+
+def strip_height(width, settings, workers):
+    if settings.save_memory_unlimited:
+        return MAX_STRIP_HEIGHT
+    budget = max(1, settings.save_memory_mb) * 1024 * 1024
+    rows = budget // max(1, width * 4 * (workers + 1))
+    height = 1 << max(0, int(rows).bit_length() - 1)
+    return max(MIN_STRIP_HEIGHT, min(MAX_STRIP_HEIGHT, height))
 
 
 def _compress_strip(strip, level):
@@ -19,12 +29,15 @@ def _compress_strip(strip, level):
 
 
 class StripSource:
-    def __init__(self, canvas, level, workers, progress=None):
+    def __init__(
+        self, canvas, level, workers, rows_per_strip, progress=None,
+    ):
         self.canvas = canvas
         self.level = level
         self.workers = max(1, workers)
         self.progress = progress
-        self.total = ceil(canvas.height / STRIP_HEIGHT)
+        self.rows_per_strip = rows_per_strip
+        self.total = ceil(canvas.height / rows_per_strip)
         self.started = perf_counter()
         self.first_ready = None
         self.exhausted = None
@@ -35,8 +48,8 @@ class StripSource:
         with ThreadPoolExecutor(
             max_workers=self.workers, thread_name_prefix='tiff-deflate'
         ) as pool:
-            for y in range(0, self.canvas.height, STRIP_HEIGHT):
-                height = min(STRIP_HEIGHT, self.canvas.height - y)
+            for y in range(0, self.canvas.height, self.rows_per_strip):
+                height = min(self.rows_per_strip, self.canvas.height - y)
                 region = self.canvas.crop(0, y, self.canvas.width, height)
                 pixels = np.frombuffer(
                     region.write_to_memory(), dtype=np.uint8
@@ -73,8 +86,11 @@ def save_tiff(canvas, target, settings, progress=None):
 
     pending = target.with_name(target.name + '.未完成')
     workers = max(1, settings.worker_threads)
+    rows_per_strip = strip_height(canvas.width, settings, workers)
     source = StripSource(
-        canvas, settings.png_compression_level, workers, progress)
+        canvas, settings.png_compression_level, workers, rows_per_strip,
+        progress,
+    )
     started = perf_counter()
     with monitor_save(pending, progress) as observation:
         tifffile.imwrite(
@@ -84,7 +100,7 @@ def save_tiff(canvas, target, settings, progress=None):
             dtype=np.uint8,
             photometric='rgb',
             extrasamples=('unassalpha',),
-            rowsperstrip=STRIP_HEIGHT,
+            rowsperstrip=rows_per_strip,
             compression='deflate',
             predictor=True,
             bigtiff=True,
@@ -108,7 +124,7 @@ def save_tiff(canvas, target, settings, progress=None):
         ],
         'production_seconds': encoded - started,
         'observed_bytes': observation.bytes_written,
-        'rows_per_strip': STRIP_HEIGHT,
+        'rows_per_strip': rows_per_strip,
         'strip_count': source.total,
         'worker_threads': workers,
         'timing_note': (
