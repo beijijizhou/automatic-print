@@ -61,6 +61,31 @@ def test_missing_side_is_explicit_diagram_not_mirrored_production(tmp_path):
     assert all(not r['source'] for r in rows if not r['production'])
 
 
+def test_fallback_diagrams_keep_transparent_label_space_with_everyday_settings():
+    config = replace(
+        settings(),
+        dpi=300,
+        follow_source_dpi=True,
+        cutter_left_marker_external=True,
+        preserve_header_gap=True,
+        membrane_gap_mm=40,
+        platform_below_marker=True,
+        platform_reuse_qr=True,
+        label_position='block_below',
+        label_fit_height=True,
+        label_reference_height_mm=10,
+        label_source_order_enabled=True,
+        label_machine_enabled=True,
+        machine_number='M8',
+        platform_name='S2B',
+        platform_font_height_mm=6,
+    )
+    rows = build_examples([], config)
+    assert len(rows) == 4
+    assert all(not row['production'] for row in rows)
+    assert all(row['item'].label_width > 0 for row in rows)
+
+
 def test_main_page_examples_start_after_show_and_refresh_on_parameters(tmp_path, monkeypatch):
     window = MainWindow(QSettings(str(tmp_path/'prefs.ini'), QSettings.IniFormat))
     window.startup_update_timer.stop()

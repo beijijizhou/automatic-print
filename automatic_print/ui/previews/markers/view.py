@@ -94,9 +94,17 @@ class MarkerExamples(QGroupBox):
         self.status.setText('正在后台更新四种刀码/标签位置…')
         self.worker = ExampleWorker(list(self.paths), settings, self)
         self.worker.ready.connect(self.receive, Qt.QueuedConnection)
-        self.worker.failed.connect(lambda text: self.status.setText(f'示例读取失败：{text}'), Qt.QueuedConnection)
+        self.worker.failed.connect(self.failed, Qt.QueuedConnection)
         self.worker.finished.connect(self.finished)
         self.worker.start()
+
+    def failed(self, text):
+        self.status.setText(f'示例读取失败：{text}')
+        if self.results:
+            return  # Keep the last valid diagrams visible during a failed refresh.
+        for picture, caption in self.cards:
+            picture.setText('示意图暂不可用')
+            caption.setText(text)
 
     def receive(self, results):
         if self.pending:

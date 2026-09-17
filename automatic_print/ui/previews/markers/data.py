@@ -15,17 +15,26 @@ CASES = (("left", 0), ("right", 0), ("left", 90), ("right", 90))
 
 def diagram_source(path, side):
     """Fallback is explicitly a diagram, never a claimed production photograph."""
-    image = Image.new('RGBA', (270, 300))
+    image = Image.new('RGBA', (420, 360))
     draw = ImageDraw.Draw(image)
-    x = 0 if side == 'left' else 160
-    draw.rectangle((x, 0, x+109, 44), fill='white')
+    x = 0 if side == 'left' else 190
+    # Header detection deliberately finds an opaque light card, while label
+    # placement accepts both light paper and transparency as unused space.  A
+    # transparent outline is mistaken for the small white holes in the QR
+    # symbol and collapses the detected band to only a few pixels.  Keep a
+    # realistically sized light card so every ordinary label setting can use
+    # the same production geometry without reading an old batch.
+    draw.rectangle((x, 0, x+229, 119), fill='white', outline='black', width=1)
     draw.text((x+4, 7), 'M / NO1', fill='black')
     draw.text((x+4, 23), 'LABEL', fill='black')
-    for dx, dy in ((0, 0), (18, 0), (0, 18)):
-        draw.rectangle((x+70+dx, 5+dy, x+83+dx, 18+dy), fill='black')
-        draw.rectangle((x+73+dx, 8+dy, x+80+dx, 15+dy), fill='white')
-    draw.ellipse((45, 90, 225, 265), fill='#135e86')
-    draw.polygon(((60, 220), (135, 105), (210, 220)), fill='#efbf44')
+    for dx, dy in ((0, 0), (28, 0), (0, 28)):
+        draw.rectangle((x+168+dx, 8+dy, x+189+dx, 29+dy), fill='black')
+        draw.rectangle((x+173+dx, 13+dy, x+184+dx, 24+dy), fill='white')
+    # Leave the same clear strip below the card that a production image needs.
+    # After a 90-degree rotation this strip becomes the horizontal home for the
+    # batch label, so artwork must not intrude into it.
+    draw.ellipse((95, 190, 325, 350), fill='#135e86')
+    draw.polygon(((115, 330), (210, 210), (305, 330)), fill='#efbf44')
     image.save(path, dpi=(25.4, 25.4))
     image.close()
 
@@ -48,9 +57,16 @@ def build_examples(paths, settings):
             fallback[side] = path
         results = []
         for side, degrees in CASES:
+            production = side in samples
             path = samples.get(side, fallback[side])
             from ....layout_engine.labeling.base.header_gap import prepare_paths
-            prepared, example_settings, _ = prepare_paths([path], settings)
+            # A generated sample has no real batch folder.  Giving it the
+            # temporary directory name produces a long, meaningless label and
+            # can make the rotated diagram fail despite valid user settings.
+            source_settings = settings if production else replace(
+                settings, label_batch_name='示意批次', label_sequence_total=1,
+            )
+            prepared, example_settings, _ = prepare_paths([path], source_settings)
             path = prepared[0]
             config = replace(example_settings, allow_rotation=False,
                 manual_rotations=((str(path.resolve()), degrees),),
@@ -64,7 +80,7 @@ def build_examples(paths, settings):
                 item = external_left_item(item)
             pixels, size = render_example(path, item, labels, config)
             region = detect_guide_band(path).rotated(degrees)
-            results.append({'side': side, 'degrees': degrees, 'production': side in samples,
+            results.append({'side': side, 'degrees': degrees, 'production': production,
                 'dpi': config.dpi, 'mode': config.cutter_mode,
                 'source': str(path) if side in samples else '', 'item': item,
                 'region': region, 'pixels': pixels, 'size': size,
