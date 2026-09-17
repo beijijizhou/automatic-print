@@ -45,6 +45,35 @@ def gap_geometry(source, region, minimum_px):
     return split, max(0, minimum_px - existing)
 
 
+def gap_geometry_file(path, region, minimum_px):
+    """Measure only the bounded seam strip; avoid decoding the complete PNG."""
+    try:
+        import pyvips
+        from automatic_print.layout_engine.rendering.engines.vips_renderer import demand_lock
+        with demand_lock:
+            source = pyvips.Image.new_from_file(str(path), access='sequential')
+            bottom = min(source.height, max(0, round(region.bottom * source.height)))
+            tolerance = max(96, round(source.width * .08))
+            end = min(source.height, bottom + tolerance + minimum_px + 1)
+            strip = source.crop(0, bottom, source.width, end-bottom)
+            if strip.bands >= 4:
+                alpha = strip[3]
+                occupied = np.frombuffer((alpha > 0).write_to_memory(), dtype=np.uint8)
+                occupied = occupied.reshape(strip.height, strip.width).max(axis=1) > 0
+            else:
+                occupied = np.ones(strip.height, dtype=bool)
+            empty = np.flatnonzero(~occupied[:tolerance+1])
+            if not len(empty):
+                raise ValueError('膜标签下方没有可确认的透明分界，保留原图，请人工核对')
+            split = bottom + int(empty[0])
+            following = np.flatnonzero(occupied[int(empty[0]):])
+            existing = int(following[0]) if len(following) else end - split
+            return split, max(0, minimum_px - existing)
+    except (ImportError, OSError):
+        with Image.open(path) as opened, opened.convert('RGBA') as source:
+            return gap_geometry(source, region, minimum_px)
+
+
 def insert_gap(source, split, added):
     canvas = Image.new('RGBA', (source.width, source.height + added))
     with source.crop((0, 0, source.width, split)) as top:
@@ -52,6 +81,33 @@ def insert_gap(source, split, added):
     with source.crop((0, split, source.width, source.height)) as body:
         canvas.paste(body, (0, split + added))
     return canvas
+
+
+def save_gap_copy(path, target, split, added, dimensions):
+    """Stream the expanded PNG with libvips, retaining Pillow as a fallback."""
+    try:
+        import pyvips
+        from automatic_print.layout_engine.rendering.engines.vips_renderer import demand_lock
+        with demand_lock:
+            source = pyvips.Image.new_from_file(str(path), access='sequential')
+            if source.format != 'uchar' or source.bands != 4:
+                raise ValueError('需要兼容像素路径')
+            top = source.crop(0, 0, source.width, split)
+            body = source.crop(0, split, source.width, source.height-split)
+            blank = pyvips.Image.black(source.width, added, bands=4).cast('uchar')
+            expanded = top.join(blank, 'vertical').join(body, 'vertical').copy(
+                interpretation='srgb',
+                xres=dimensions.x_dpi/25.4,
+                yres=dimensions.y_dpi/25.4,
+            )
+            expanded.pngsave(str(target), compression=1, strip=True)
+        return 'libvips流式补距'
+    except (ImportError, OSError, ValueError):
+        with Image.open(path) as opened, opened.convert('RGBA') as source:
+            with insert_gap(source, split, added) as canvas:
+                canvas.save(target, format='PNG', dpi=(dimensions.x_dpi, dimensions.y_dpi),
+                            icc_profile=opened.info.get('icc_profile'), compress_level=1)
+        return 'Pillow兼容补距'
 
 
 def prepare_one(path, settings):
@@ -93,33 +149,34 @@ def prepare_one(path, settings):
     if region is None:
         record['warning'] = '未找到可靠膜标签分界，未补足间距'
         return path, record
-    with Image.open(path) as opened, opened.convert('RGBA') as source:
+    try:
+        split, added = gap_geometry_file(
+            path, region, round(settings.membrane_gap_mm * dimensions.y_dpi / 25.4),
+        )
+    except ValueError as exc:
+        record['warning'] = str(exc)
+        return path, record
+    if not added:
+        return path, record
+    record.update(added_px=added, split_px=split, added_mm=added*25.4/dimensions.y_dpi,
+                  source_identity=fingerprint[:3], prepared=str(target))
+    target.parent.mkdir(parents=True, exist_ok=True)
+    temporary = target.with_name(target.name + '.' + uuid4().hex + '.未完成')
+    try:
+        record['preparation_engine'] = save_gap_copy(
+            path, temporary, split, added, dimensions,
+        )
+        if (path.stat().st_mtime_ns, path.stat().st_size) != (stat.st_mtime_ns, stat.st_size):
+            raise ValueError(f'{path.name}：补足间距期间源文件发生变化')
+        temporary.replace(target)
+        metadata = info.with_name(info.name + '.' + uuid4().hex + '.未完成')
         try:
-            split, added = gap_geometry(source, region, round(settings.membrane_gap_mm * dimensions.y_dpi / 25.4))
-        except ValueError as exc:
-            record['warning'] = str(exc)
-            return path, record
-        if not added:
-            return path, record
-        record.update(added_px=added, split_px=split, added_mm=added*25.4/dimensions.y_dpi,
-                      source_identity=fingerprint[:3], prepared=str(target))
-        target.parent.mkdir(parents=True, exist_ok=True)
-        temporary = target.with_name(target.name + '.' + uuid4().hex + '.未完成')
-        try:
-            with insert_gap(source, split, added) as canvas:
-                canvas.save(temporary, format='PNG', dpi=(dimensions.x_dpi, dimensions.y_dpi),
-                            icc_profile=opened.info.get('icc_profile'), compress_level=1)
-            if (path.stat().st_mtime_ns, path.stat().st_size) != (stat.st_mtime_ns, stat.st_size):
-                raise ValueError(f'{path.name}：补足间距期间源文件发生变化')
-            temporary.replace(target)
-            metadata = info.with_name(info.name + '.' + uuid4().hex + '.未完成')
-            try:
-                metadata.write_text(json.dumps(record, ensure_ascii=False), encoding='utf-8')
-                metadata.replace(info)
-            finally:
-                metadata.unlink(missing_ok=True)
+            metadata.write_text(json.dumps(record, ensure_ascii=False), encoding='utf-8')
+            metadata.replace(info)
         finally:
-            temporary.unlink(missing_ok=True)
+            metadata.unlink(missing_ok=True)
+    finally:
+        temporary.unlink(missing_ok=True)
     return target, record
 
 

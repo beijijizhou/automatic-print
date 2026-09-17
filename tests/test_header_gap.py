@@ -41,6 +41,7 @@ def test_source_gap_copy_is_lossless_and_cached(tmp_path, side, monkeypatch):
     assert adjusted.manual_rotations[0][0] == str(paths[0].resolve())
     record = records[0]
     assert record['added_px'] == 32
+    assert record['preparation_engine'] in {'libvips流式补距', 'Pillow兼容补距'}
     with Image.open(path) as source, Image.open(paths[0]) as prepared:
         split, added = record['split_px'], record['added_px']
         assert prepared.height == source.height+added
