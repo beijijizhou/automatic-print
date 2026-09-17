@@ -42,6 +42,26 @@ def test_platform_and_sequence_default_and_persist(tmp_path):
     reopened.close()
 
 
+def test_platform_label_can_be_disabled_without_disabling_cutter_marks(tmp_path):
+    prefs = QSettings(str(tmp_path/'platform-toggle.ini'), QSettings.IniFormat)
+    prefs.setValue('developer/enabled', True)
+    window = MainWindow(prefs)
+    WINDOWS.append(window)
+    window.startup_update_timer.stop()
+    mode = window.cutter_settings.mode.findData('dual')
+    window.cutter_settings.mode.setCurrentIndex(mode)
+
+    panel = window.automation_home.label_quick_panel
+    assert panel.platform_enabled.isVisibleTo(window)
+    panel.platform_enabled.setChecked(False)
+    settings = window._layout_settings()
+
+    assert settings.platform_name == ''
+    assert settings.color_block_enabled
+    assert settings.cutter_left_marker_external
+    window.close()
+
+
 def test_old_erp_selection_is_corrected_and_new_manual_label_starts_empty(tmp_path):
     prefs = QSettings(str(tmp_path/'old.ini'), QSettings.IniFormat)
     prefs.setValue('label/platform_name', '蜂鸟')

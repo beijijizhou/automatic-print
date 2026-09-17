@@ -29,8 +29,11 @@ class LabelSettingsDialog(QDialog):
         self.platform.setEditable(True)
         self.platform.addItem('隆丰')
         self.platform.addItem('S2B')
-        self.platform_enabled = QCheckBox('在刀码下方打印平台名称，与标签纵向排列')
+        self.platform_enabled = QCheckBox('显示平台＋尺码标签（关闭后仍保留切膜刀码）')
         self.platform_enabled.setChecked(True)
+        self.platform_enabled.setToolTip(
+            '只控制程序新增的平台和尺码文字；不会关闭左侧识别刀码、纵向刀位或原图二维码。'
+        )
         self.platform_font_height = double_spinbox(6, 0, 50)
         self.platform_font_height.setSuffix(' 毫米')
         self.platform_font_height.setSpecialValueText('自动：膜标签等高')
@@ -93,7 +96,7 @@ class LabelSettingsDialog(QDialog):
             ('图片序号', self.sequence),
             ('批次顺序标注', self.source_order),
             ('生产平台', self.platform),
-            ('平台标记', self.platform_enabled),
+            ('平台尺码标签', self.platform_enabled),
             ('平台文字高度', self.platform_font_height),
             ("机器号", self.machine),
             ("膜标签区域定位", self.follow_qr),
