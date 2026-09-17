@@ -28,8 +28,10 @@ def gap_geometry(source, region, minimum_px):
     Only insert rows: never crop, scale or remove any original pixels.
     """
     bottom = min(source.height, max(0, round(region.bottom * source.height)))
-    # Card detection is thumbnail based. Search only a short tolerance below it.
-    tolerance = max(4, round(source.width / 1000 * 3))
+    # Card detection follows the connected white paper. Haloo cards can end in
+    # an opaque coloured footer which is not connected to that white component;
+    # search a bounded width-relative distance for the real transparent seam.
+    tolerance = max(96, round(source.width * .08))
     end = min(source.height, bottom + tolerance + minimum_px + 1)
     with source.crop((0, bottom, source.width, end)) as strip:
         with strip.getchannel('A') as alpha:
@@ -60,7 +62,7 @@ def prepare_one(path, settings):
         verify_records([record])
         return path, record
     stat = path.stat()
-    fingerprint = [str(path.resolve()), stat.st_mtime_ns, stat.st_size, settings.membrane_gap_mm, 1]
+    fingerprint = [str(path.resolve()), stat.st_mtime_ns, stat.st_size, settings.membrane_gap_mm, 3]
     target = root / sha256(json.dumps(fingerprint).encode()).hexdigest() / path.name
     info = target.with_suffix('.json')
     if target.is_file() and info.is_file() and time() - info.stat().st_mtime < TTL:

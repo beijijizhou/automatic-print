@@ -9,6 +9,7 @@ from PIL import Image, ImageDraw
 
 from automatic_print.layout_engine import LayoutSettings, generate_layout
 from automatic_print.layout_engine.labeling.base import header_gap
+from automatic_print.layout_engine.labeling.platform.membrane_region import MembraneRegion
 
 
 def sample(path, gap=8, side='right'):
@@ -63,6 +64,23 @@ def test_existing_gap_not_shrunk_and_unknown_retained(tmp_path):
     paths, _, records = header_gap.prepare_paths([unknown], LayoutSettings(membrane_gap_mm=40))
     assert paths == [unknown]
     assert records[0]['warning']
+
+
+def test_coloured_haloo_card_footer_is_included_before_gap(tmp_path):
+    image = Image.new('RGBA', (1000, 700))
+    draw = ImageDraw.Draw(image)
+    draw.rectangle((600, 0, 999, 99), fill='white')
+    draw.rectangle((600, 100, 999, 149), fill=(20, 80, 160, 255))
+    draw.rectangle((100, 160, 899, 699), fill=(10, 20, 30, 255))
+
+    split, added = header_gap.gap_geometry(
+        image,
+        MembraneRegion(.6, 0, 1, 100 / 700),
+        200,
+    )
+
+    assert split == 150
+    assert added == 190
 
 
 def test_cache_expiry_parameter_change_and_original_freshness(tmp_path, monkeypatch):
