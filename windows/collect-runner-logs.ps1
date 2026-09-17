@@ -23,4 +23,5 @@ foreach ($location in $locations) {
 
 Get-ComputerInfo -Property WindowsProductName, WindowsVersion, OsBuildNumber, OsArchitecture |
     Format-List | Out-File -Encoding UTF8 (Join-Path $target "windows-info.txt")
-python --version 2>&1 | Out-File -Encoding UTF8 (Join-Path $target "python-version.txt")
+$python = if ($env:PYTHON_EXE) { $env:PYTHON_EXE } else { "python" }
+& $python --version 2>&1 | Out-File -Encoding UTF8 (Join-Path $target "python-version.txt")

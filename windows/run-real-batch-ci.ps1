@@ -7,6 +7,7 @@ param(
 $ErrorActionPreference = "Stop"
 $root = (Resolve-Path (Join-Path $PSScriptRoot "..")).Path
 $artifactPath = Join-Path $root $ArtifactRoot
+$python = if ($env:PYTHON_EXE) { $env:PYTHON_EXE } else { "python" }
 New-Item -ItemType Directory -Force $artifactPath | Out-Null
 
 $batches = $BatchPaths.Split(";", [System.StringSplitOptions]::RemoveEmptyEntries) |
@@ -29,7 +30,7 @@ foreach ($batch in $batches) {
     New-Item -ItemType Directory -Force $output, $cache | Out-Null
 
     $stopwatch = [System.Diagnostics.Stopwatch]::StartNew()
-    & python (Join-Path $root "scripts\benchmark_header_gap.py") `
+    & $python (Join-Path $root "scripts\benchmark_header_gap.py") `
         --source $source --output $output --cache $cache --workers 4 --parallel 4 `
         *>&1 | Tee-Object -FilePath (Join-Path $runRoot "run.log")
     $exitCode = $LASTEXITCODE
