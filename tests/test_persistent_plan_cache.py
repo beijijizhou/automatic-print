@@ -64,6 +64,31 @@ def test_file_parameters_date_and_algorithm_revision_invalidate_cache_key(tmp_pa
     assert key() != before
 
 
+def test_developer_knife_gap_has_separate_cache_revision_and_production_key(tmp_path, monkeypatch):
+    path = tmp_path/'B1-1-T-Black-M-NO1-1.png'
+    path.write_bytes(b'original')
+    now = datetime(2026, 9, 17)
+    captured = []
+    real_dumps = plan_cache.json.dumps
+
+    def recording(value, *args, **kwargs):
+        if isinstance(value, dict) and 'algorithm' in value and 'settings' in value:
+            captured.append(value)
+        return real_dumps(value, *args, **kwargs)
+
+    monkeypatch.setattr(plan_cache.json, 'dumps', recording)
+    with measurement_session():
+        production_key = plan_cache.cache_key([path], config(cutter_knife_change_gap_mm=0), now)
+        developer_key = plan_cache.cache_key([path], config(cutter_knife_change_gap_mm=570), now)
+
+    production, developer = captured
+    assert production['algorithm'] == plan_cache.LAYOUT_ALGORITHM_REVISION == 2
+    assert 'cutter_knife_change_gap_mm' not in production['settings']
+    assert developer['algorithm'] == plan_cache.DEVELOPER_LAYOUT_ALGORITHM_REVISION == 4
+    assert developer['settings']['cutter_knife_change_gap_mm'] == 570
+    assert production_key != developer_key
+
+
 def test_cache_key_reads_file_identities_once_and_in_parallel(tmp_path, monkeypatch):
     from threading import Barrier
     from automatic_print.layout_engine.measurement import measurement_session as measurements

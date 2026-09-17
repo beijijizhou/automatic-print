@@ -37,8 +37,10 @@ def _measured_plan(paths, settings, progress, analysis_ready):
         result = recover_normal_width(paths,settings,progress,error)
         analysis['rotation_recovery']={'reason':str(error),'action':'常规方案无解，采用原尺寸整批旋转单排；未缩小图片'}
     if settings.cutter_mode in {'single', 'dual'}:
-        from automatic_print.layout_engine.cutting.geometry.knife_change_gap import apply_knife_change_gap
-        result, _changes = apply_knife_change_gap(result, settings)
+        developer_knife_gap = settings.cutter_knife_change_gap_mm > 0
+        if developer_knife_gap:
+            from automatic_print.layout_engine.cutting.geometry.knife_change_gap import apply_knife_change_gap
+            result, _changes = apply_knife_change_gap(result, settings)
         from automatic_print.layout_engine.planning.rotation.whole_rotation import compare_whole
         previously_selected = result
         comparison = analysis.get('rotation_comparison')
@@ -47,9 +49,10 @@ def _measured_plan(paths, settings, progress, analysis_ready):
         from automatic_print.layout_engine.planning.rotation.rotation_compare import update_selected_comparison
         update_selected_comparison(comparison, result, settings,
                                    result is not previously_selected)
-        result, knife_changes = apply_knife_change_gap(result, settings)
-        if knife_changes:
-            analysis['knife_change_gap'] = knife_changes
+        if developer_knife_gap:
+            result, knife_changes = apply_knife_change_gap(result, settings)
+            if knife_changes:
+                analysis['knife_change_gap'] = knife_changes
     planned, labels, width, height, baseline = result
     if settings.batch_end_block:
         width = mm_to_px(settings.media_width_mm,settings.dpi)

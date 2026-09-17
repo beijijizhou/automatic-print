@@ -12,7 +12,8 @@ from automatic_print.layout_engine.measurement.measurement_session import identi
 from automatic_print.layout_engine.domain.models import Placement
 
 SCHEMA = 1
-LAYOUT_ALGORITHM_REVISION = 3
+LAYOUT_ALGORITHM_REVISION = 2
+DEVELOPER_LAYOUT_ALGORITHM_REVISION = 4
 TTL_SECONDS = 24 * 60 * 60
 CACHE_LOCK_TIMEOUT_SECONDS = .25
 
@@ -43,8 +44,17 @@ def cache_key(paths, settings, created_at, progress=None):
     if progress:
         progress('读取排版缓存', len(paths), len(paths),
                  f'已一次读取{len(paths)}个文件状态（{identity_workers}路并行）')
-    data = {'schema': SCHEMA, 'algorithm': LAYOUT_ALGORITHM_REVISION, 'files': files,
-            'settings': asdict(settings), 'date': date}
+    settings_data = asdict(settings)
+    developer_knife_gap = settings.cutter_knife_change_gap_mm > 0
+    # This feature is strictly isolated from production mode.  In particular,
+    # the added field must not perturb the legacy production cache key merely
+    # because a newer binary contains it.
+    if not developer_knife_gap:
+        settings_data.pop('cutter_knife_change_gap_mm', None)
+    algorithm_revision = (DEVELOPER_LAYOUT_ALGORITHM_REVISION
+                          if developer_knife_gap else LAYOUT_ALGORITHM_REVISION)
+    data = {'schema': SCHEMA, 'algorithm': algorithm_revision, 'files': files,
+            'settings': settings_data, 'date': date}
     return sha256(json.dumps(data, sort_keys=True, ensure_ascii=False).encode()).hexdigest()
 
 
