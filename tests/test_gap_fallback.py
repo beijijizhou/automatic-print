@@ -118,6 +118,47 @@ def test_missing_header_space_retries_with_external_label_footprint(monkeypatch)
     assert progress[-1][0] == '膜标签透明空位恢复'
 
 
+def test_header_space_recovery_still_compares_rotated_overflow(monkeypatch):
+    from dataclasses import replace
+    from automatic_print.layout_engine.planning.zones import width_fit
+
+    calls = []
+
+    def plan(_paths, settings, _progress, ready):
+        calls.append(settings)
+        if len(calls) == 1:
+            raise ValueError(
+                'image.png：膜标签高度带内没有批次标签的透明空位，禁止输出。'
+            )
+        ready({'image_anomalies': [], 'rotation_comparison': {
+            'selected_strategy': '旋转区域',
+            'normal_m': 5.2,
+        }})
+        height = 300 if settings.dimension_overrides else 500
+        return [], {}, 580, height, height
+
+    def fitted(_paths, settings, _progress):
+        return replace(settings, dimension_overrides=(('/tmp/image.png', (270, 400)),))
+
+    monkeypatch.setattr(gap_fallback, 'plan_layout', plan)
+    monkeypatch.setattr(width_fit, 'fit_rotation_overflow', fitted)
+
+    _paths, settings, result = gap_fallback.plan_with_gap_fallback(
+        [Path('/tmp/image.png')],
+        LayoutSettings(
+            preserve_header_gap=True,
+            cutter_mode='dual',
+            auto_fit_width=True,
+            cutter_compare_whole_rotation=True,
+        ),
+        [],
+    )
+
+    assert [row.preserve_header_gap for row in calls] == [True, False, False]
+    assert settings.dimension_overrides
+    assert result[3] == 300
+
+
 def test_header_space_fallback_does_not_hide_second_safety_error(monkeypatch):
     calls = []
 

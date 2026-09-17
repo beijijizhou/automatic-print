@@ -57,13 +57,19 @@ def recover_header_space(paths, settings, error, progress, analysis_ready):
             '膜标签透明空位恢复', 0, 1,
             f'{source} · 透明空位不足，改用整批外置标签占位并继续',
         )
-    result = plan_layout(paths, adopted, progress, analyzed)
+    # Re-enter the complete planning chain after adopting external labels.
+    # Calling plan_layout directly here used to skip the post-plan rotated
+    # overflow comparison, so one nearly-overwide face could silently remove
+    # an otherwise shorter whole-order rotation candidate.
+    recovered_paths, adopted, result = plan_with_gap_fallback(
+        paths, adopted, [], progress, analyzed,
+    )
     if progress:
         progress(
             '膜标签透明空位恢复', 1, 1,
             '外置标签占位排版完成；订单、刀位和像素安全检查继续执行',
         )
-    return paths, adopted, result
+    return recovered_paths, adopted, result
 
 
 def recover_width(paths,settings,error,progress,analysis_ready):
