@@ -39,13 +39,8 @@ def download_production_images(
         _search_batches(page, [task.batch_number for task in group])
         active = _start_parallel_downloads(page, group, progress)
         for task, download in active:
-            suggested = (
-                download.suggested_filename or "production-images.zip"
-            )
-            destination = (
-                task.group_dir / f"{task.batch_number}_{suggested}"
-            )
-            download.save_as(destination)
+            destination = task.group_dir / f"{task.batch_number}_生产图.zip"
+            _save_download(download, destination, task, progress)
             saved.append(destination)
             archives.append(destination)
             if progress:
@@ -55,6 +50,23 @@ def download_production_images(
     if extract:
         extract_production_archives(archives, progress)
     return saved
+
+
+def _save_download(download, destination, task, progress):
+    """Keep one deterministic archive and remove Chrome's UUID copy."""
+    download.save_as(destination)
+    if not destination.is_file() or destination.stat().st_size <= 0:
+        raise RuntimeError(
+            f"生产批次 {task.batch_number} 的下载文件没有完整保存。"
+        )
+    try:
+        download.delete()
+    except Exception as error:
+        if progress:
+            progress(
+                f"批次 {task.batch_number} 已保存；浏览器临时下载清理失败："
+                f"{error}。可在浏览器下载目录手动删除 UUID 文件。"
+            )
 
 
 def _classify_batches(batch_groups, output_root, progress):
