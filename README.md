@@ -57,6 +57,25 @@ python dev.py
 并由 Windows 工作流构建安装包。GitHub `main` 分支应要求 `Quality Gate` 通过，避免未经完整测试的
 代码进入测试电脑更新来源。
 
+## Windows 自托管测试机
+
+专用 Windows 测试机使用 `codex/windows-test` 分支和 `Windows test machine` 工作流，执行完整
+自动测试、可选真实批次排版、Windows 安装包构建，并上传测试报告、耗时、闪退日志和 EXE。
+Runner 仅绑定本仓库，标签为 `automatic-print`；工作流不接受 `pull_request` 触发，避免在持久化
+生产测试电脑上运行不可信分支代码。
+
+在仓库的 `Settings > Actions > Runners > New self-hosted runner` 生成一小时有效的注册令牌后，
+以管理员 PowerShell 运行：
+
+```powershell
+.\windows\setup-actions-runner.ps1
+```
+
+脚本会以隐藏输入方式读取一次性令牌，避免令牌进入 PowerShell 命令历史。
+
+在 Actions 仓库变量 `AUTOMATIC_PRINT_REAL_BATCH_PATHS` 中保存这台机器上的真实批次绝对路径，
+多个目录用分号分隔。也可以手动触发工作流时临时指定批次目录和要测试的提交 SHA。
+
 ## 输出
 
 默认在输入批次同级的 `切膜机文件` 下创建以批次命名的任务目录，保存 PNG、`排版报告.txt`
