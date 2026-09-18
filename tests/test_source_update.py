@@ -78,6 +78,25 @@ def test_local_changes_and_wrong_branch_are_protected(repositories):
         updater.check()
 
 
+def test_untracked_local_files_do_not_block_or_get_removed(repositories, monkeypatch):
+    seed, client = repositories
+    publish(seed)
+    untracked = client/'.tmp-local-acceptance'/'result.txt'
+    untracked.parent.mkdir()
+    untracked.write_text('keep me')
+    updater = source.SourceUpdater(client)
+    info = updater.check()
+    original = updater.run
+    monkeypatch.setattr(
+        updater, 'run',
+        lambda args, **kwargs: ''
+        if args[:3] == [sys.executable, '-m', 'pip']
+        else original(args, **kwargs))
+    updater.apply(info)
+    assert untracked.read_text() == 'keep me'
+    assert git(client, 'rev-parse', 'HEAD') == info.target
+
+
 def test_dependency_failure_keeps_guard_and_can_be_retried(repositories, monkeypatch):
     seed, client = repositories
     publish(seed)

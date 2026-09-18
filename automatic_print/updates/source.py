@@ -78,8 +78,8 @@ class SourceUpdater:
             raise ValueError('更新来源不是本项目官方仓库，更新已停止。')
         if self.git_run('branch', '--show-current') != 'main':
             raise ValueError('当前不在主分支，更新已停止以保护本地开发代码。')
-        if self.git_run('status', '--porcelain'):
-            raise ValueError('发现本地代码修改，更新已停止，不会覆盖。')
+        if self.git_run('status', '--porcelain', '--untracked-files=no'):
+            raise ValueError('发现本地代码修改（已跟踪文件），更新已停止，不会覆盖。')
 
     def check(self):
         self.progress('正在检查安装目录及本地代码…')
