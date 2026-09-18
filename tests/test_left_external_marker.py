@@ -83,6 +83,39 @@ def test_external_item_is_idempotent_and_validation_rejects_embedded_left(tmp_pa
         validate_cut_corridor([(path,replace(p,x_px=0))],settings,600)
 
 
+@pytest.mark.parametrize('degrees', [0, 90, -90, 180])
+@pytest.mark.parametrize('engine', ['pillow', 'libvips'])
+def test_marker_leads_rotated_artwork_and_qr_in_final_canvas(
+    tmp_path, degrees, engine,
+):
+    """RIIN scans top-down, so lift is always final-canvas Y, never rotated X."""
+    path = sources(tmp_path)[0]
+    settings = LayoutSettings(
+        dpi=25.4, media_width_mm=580, cutter_mode='dual',
+        cutter_auto_knife=True, cutter_left_marker_external=True,
+        cutter_left_marker_lift_mm=1.5, preserve_header_gap=True,
+        platform_name='隆丰', platform_font_height_mm=6,
+        manual_rotations=((str(path.resolve()), degrees),),
+        allow_rotation=False, png_engine=engine,
+    )
+
+    result = generate_layout([path], tmp_path/f'out-{engine}-{degrees}', settings)
+    placement = result['placements'][0]
+    lift = mm_to_px(settings.cutter_left_marker_lift_mm, settings.dpi)
+    assert placement['rotation_degrees'] == degrees
+    assert placement['color_block_y_px'] == placement['y_px'] - lift
+    assert placement['color_block_y_px'] < placement['y_px']
+    if placement['platform_height_px']:
+        assert placement['color_block_y_px'] < placement['platform_y_px']
+    if placement['number_height_px']:
+        assert placement['color_block_y_px'] < placement['number_y_px']
+    output = tmp_path/f'out-{engine}-{degrees}'/result['filename']
+    with Image.open(output) as image:
+        assert image.convert('RGBA').getpixel(
+            (placement['color_block_x_px'], placement['color_block_y_px'])
+        ) == (255, 0, 0, 255)
+
+
 def test_lift_reuses_row_spacing_and_is_persistent(tmp_path):
     from PySide6.QtCore import QSettings
     from PySide6.QtWidgets import QApplication, QDoubleSpinBox, QCheckBox, QComboBox

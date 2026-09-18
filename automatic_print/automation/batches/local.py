@@ -16,6 +16,19 @@ class LocalBatch:
     modified_at: str
 
 
+def discover_batch_folders(platform_root: Path) -> list[Path]:
+    """Keep an archive's outer batch folder once, including its nested images."""
+    folders = [folder for folder in platform_root.rglob('*')
+               if folder.is_dir() and len(folder.name) == 12
+               and folder.name.isdigit()
+               and not {'PROCESSED', 'TEST_SAMPLE', 'PREVIEW'}.intersection(folder.parts)]
+    candidates = set(folders)
+    return [folder for folder in folders
+            if not any(parent in candidates and parent.name == folder.name
+                       for parent in folder.parents)
+            and discover_images(folder)]
+
+
 def discover_local_batches(
     output_root: Path, platform_name: str
 ) -> list[LocalBatch]:
@@ -23,14 +36,7 @@ def discover_local_batches(
     if not platform_root.is_dir():
         return []
     batches = []
-    for folder in platform_root.rglob("*"):
-        if (
-            not folder.is_dir()
-            or len(folder.name) != 12
-            or not folder.name.isdigit()
-            or {"PROCESSED", "TEST_SAMPLE"}.intersection(folder.parts)
-        ):
-            continue
+    for folder in discover_batch_folders(platform_root):
         images = discover_images(folder)
         if not images:
             continue

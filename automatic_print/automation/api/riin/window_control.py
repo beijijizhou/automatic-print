@@ -86,7 +86,7 @@ def _inspect(user32, hwnd, activate):
     user32.GetWindowRect.restype = wintypes.BOOL
     user32.SendMessageTimeoutW.argtypes = (
         wintypes.HWND, wintypes.UINT, wintypes.WPARAM, wintypes.LPARAM,
-        wintypes.UINT, wintypes.UINT, ctypes.POINTER(wintypes.DWORD_PTR),
+        wintypes.UINT, wintypes.UINT, ctypes.POINTER(ctypes.c_size_t),
     )
     user32.SendMessageTimeoutW.restype = wintypes.LPARAM
     user32.ShowWindowAsync.argtypes = (wintypes.HWND, ctypes.c_int)
@@ -100,7 +100,7 @@ def _inspect(user32, hwnd, activate):
     user32.GetWindowThreadProcessId(hwnd, ctypes.byref(process_id))
     rect = wintypes.RECT()
     user32.GetWindowRect(hwnd, ctypes.byref(rect))
-    response = wintypes.DWORD_PTR()
+    response = ctypes.c_size_t()
     responsive = bool(user32.SendMessageTimeoutW(
         hwnd, WM_NULL, 0, 0, SMTO_ABORTIFHUNG, 1000, ctypes.byref(response)))
     activated = False

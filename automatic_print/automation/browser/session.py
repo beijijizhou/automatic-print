@@ -103,6 +103,7 @@ def open_authenticated_page(
     ready_selector: str,
     login_timeout_ms: int = 180_000,
     progress=None,
+    ready_state="visible",
 ):
     """Open an ERP route, waiting for the user to finish login if required."""
     report = progress or (lambda _message: None)
@@ -158,7 +159,7 @@ def open_authenticated_page(
     report(f"页面已打开，正在等待 ERP 数据区域：{page.url}")
     try:
         page.locator(ready_selector).first.wait_for(
-            state="visible", timeout=30_000
+            state=ready_state, timeout=30_000
         )
     except Exception as error:
         raise RuntimeError(

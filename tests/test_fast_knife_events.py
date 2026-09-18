@@ -2,8 +2,12 @@ from dataclasses import replace
 from random import Random
 
 from automatic_print.layout_engine import LayoutSettings
-from automatic_print.layout_engine.orders.single_order_sequence import arrange_groups, lane_fits
-from automatic_print.layout_engine.planning.columns.cutter_planner import _lanes, solve_groups
+from automatic_print.layout_engine.orders.single_order_sequence import (
+    arrange_groups, lane_fits,
+)
+from automatic_print.layout_engine.planning.columns.cutter_planner import (
+    _lanes, solve_groups,
+)
 from automatic_print.layout_engine.planning.knife.optimizer import (
     distinct_knife_candidates, knife_candidates, select_batch_knife,
 )

@@ -180,11 +180,10 @@ def generate_segments(paths, output_dir, settings, progress, plan_ready,
         raise
     wall = perf_counter()-rendering
     ordered = [results[i] for i in range(len(parts))]
-    from .segment_worker import combine_segment_results
-    payload['gap_records'] = gap_records
-    result = combine_segment_results(
-        ordered, payload, paths, settings, baseline, parallel, estimate,
-        process_safe, reading, wall, started,
+    from automatic_print.layout_engine.rendering.segment_result import build_segment_result
+    result = build_segment_result(
+        ordered, payload, settings, gap_records, parallel, process_safe,
+        estimate, wall, reading, started,
     )
     from automatic_print.layout_engine.labeling.base.header_gap import verify_records
     verify_records(gap_records)

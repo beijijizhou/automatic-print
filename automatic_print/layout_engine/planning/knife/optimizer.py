@@ -8,7 +8,7 @@ from automatic_print.layout_engine.labeling.markers.left_marker import external_
 
 
 def select_batch_knife(groups, settings, spacing, progress=None):
-    from .cutter_planner import _lanes, solve_groups
+    from automatic_print.layout_engine.planning.columns.cutter_planner import _lanes, solve_groups
     width = mm_to_px(settings.media_width_mm, settings.dpi)
     candidates = distinct_knife_candidates(groups, settings)
     best = None

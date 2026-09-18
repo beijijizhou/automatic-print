@@ -71,7 +71,7 @@ def test_platform_download_is_multi_select_and_preview_only(tmp_path):
     owner.close()
 
 
-def test_haloo_workbench_uses_its_platform_and_forty_mm_gap(tmp_path):
+def test_haloo_workbench_preserves_visible_gap_settings(tmp_path):
     owner = MainWindow(QSettings(str(tmp_path / "prefs.ini"), QSettings.IniFormat))
     owner.startup_update_timer.stop()
     owner.developer_mode_checkbox.setChecked(True)
@@ -85,7 +85,10 @@ def test_haloo_workbench_uses_its_platform_and_forty_mm_gap(tmp_path):
     settings = page.workbenches["Haloo"]._current_layout_settings()
 
     assert settings.platform_name == "Haloo"
-    assert settings.membrane_gap_mm == 40
+    assert settings.membrane_gap_mm == 0
+    owner.membrane_gap_enabled.setChecked(True)
+    owner.membrane_gap.setValue(45)
+    assert page.workbenches["Haloo"]._current_layout_settings().membrane_gap_mm == 45
     owner.close()
 
 

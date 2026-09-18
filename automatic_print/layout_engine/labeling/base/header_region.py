@@ -8,6 +8,7 @@ from PIL import Image
 from automatic_print.layout_engine.labeling.platform.membrane_region import MembraneRegion
 from automatic_print.layout_engine.measurement.measurement_timing import measured, substep
 from .header.components import connected_components as _components, merge_vertical_sections
+from .header.components import connected_components as _components, merge_vertical_sections
 
 
 def search_header(path):

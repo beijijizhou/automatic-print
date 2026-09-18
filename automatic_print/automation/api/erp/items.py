@@ -49,6 +49,15 @@ def list_production_items(page, payload: dict[str, Any]) -> dict[str, Any]:
         page, PRODUCT_ITEM_MODULE, "a", payload, "productItemManage-BvTyos5U.js"
     )
 
+def production_item_images(page, item_id: str) -> dict[str, Any]:
+    return call_module(
+        page,
+        PRODUCT_ITEM_MODULE,
+        "g",
+        {"production_order_item_id": str(item_id)},
+        "productItemManage-BvTyos5U.js",
+    )
+
 
 def production_item_count(page, status: str) -> int:
     result = list_production_items(

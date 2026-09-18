@@ -10,7 +10,7 @@ from automatic_print.layout_engine.planning.packing.units import build_units
 
 from ..column_solver import solve_group_choices
 from ..cutter_planner import _lanes, cutter_output_width
-from ..knife_optimizer import knife_candidates
+from automatic_print.layout_engine.planning.knife.optimizer import knife_candidates
 
 
 def riin_sequence_height(items, width, spacing, margin=0):

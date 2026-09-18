@@ -65,11 +65,12 @@ def test_film_comparison_includes_whole_rotation_not_only_tail(tmp_path):
 
 
 @pytest.mark.parametrize('engine',['pillow','libvips'])
-def test_unsafe_double_order_rotation_falls_back_and_saved_parts_are_safe(tmp_path,engine):
+def test_safe_double_order_rotation_keeps_pairs_and_saved_parts_safe(tmp_path,engine):
     paths=sources(tmp_path,double=True)
     settings=replace(config(),png_engine=engine,output_parts=3,save_memory_unlimited=True)
     result=generate_layout(paths,tmp_path/'out',settings)
     assert all(p['rotation_degrees']==90 for p in result['placements'])
+    assert result['order_check']['double_pairs']==4
     for part in result.get('parts') or [result]:
         assert part['printed_guides']['dot_count']==0
         assert all(p['color_block_x_px'] in (0, 293) for p in part['placements'])

@@ -18,6 +18,9 @@ def repositories(tmp_path, monkeypatch):
     git(seed, 'init', '-b', 'main')
     git(seed, 'config', 'user.email', 'test@example.com')
     git(seed, 'config', 'user.name', 'Test')
+    # Tests own this disposable repository; do not inherit workstation hooks
+    # that protect a real checkout's main branch.
+    git(seed, 'config', 'core.hooksPath', '')
     (seed/'automatic_print').mkdir()
     (seed/'automatic_print/__init__.py').write_text('__version__ = "0.1.1"\n__release_date__ = "2026-09-13"\n')
     (seed/'requirements.txt').write_text('')

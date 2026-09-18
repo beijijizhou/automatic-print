@@ -75,7 +75,7 @@
 - 订单、双面、颜色与尺码：`layout_engine/orders/order_groups.py`、`layout_engine/orders/batch_analysis.py`、
   `layout_engine/orders/single_order_sequence.py`、`layout_engine/orders/color_policy.py`、`layout_engine/orders/size_policy.py`。
 - 行、刀位和区域规划：`layout_engine/planning/base/planner.py`、`layout_engine/planning/base/row_optimizer.py`、`layout_engine/planning/columns/cutter_planner.py`、`layout_engine/planning/columns/dynamic_columns.py`、
-  `layout_engine/planning/columns/knife_optimizer.py`、`layout_engine/planning/columns/adaptive_knife.py`、`layout_engine/planning/zones/zone_optimizer.py`、`layout_engine/planning/rotation/rotation_zones.py`。列数由膜宽与真实占位
+  `layout_engine/planning/knife/optimizer.py`、`layout_engine/planning/columns/adaptive_knife.py`、`layout_engine/planning/zones/zone_optimizer.py`、`layout_engine/planning/rotation/rotation_zones.py`。列数由膜宽与真实占位
   动态形成；物理上无法容纳整批或无法实际使用全部列的候选在进入排版动态规划前淘汰，列分配使用有记忆匹配而非全排列。`layout_engine/planning/columns/adaptive_knife.py` 唯一组装“并排区 + 剩余旋转区”，旋转仍超宽时复用 `layout_engine/planning/zones/width_fit.py` 缩小缓存。
   混色订单不参与单色区域边界比较，避免错误清空已经成立的多数并排区。
 - 主界面默认开启的 S–L 并排宽度上限由 `layout_engine/planning/zones/pair_width.py` 唯一计算；通过单图尺寸覆盖交给既有
@@ -150,6 +150,13 @@
 
 ## 外部自动化
 
+- Haloo 下载工作区提供已生产分类只读预览，展示样本范围、物流、底款、颜色、面别、尺码档、来源批次及未纳入数量；不提交生成、不声称跨页整单完整。`batch_ui/task/reads.py`复用现有工作线程，`local/scanning.py`后台读取目录并按来源范围丢弃旧结果。批次排版复用界面补距开关及数值，不再强制40毫米。
+
+- ERP批次页允许等待隐藏微前端iframe挂载，再由批次入口验证实际表格。`automation/batches/local.py`统一发现本地批次；同批次号的嵌套解压目录保留外层一次，包含其全部图片，避免重复排版；预览输出目录不参与来源发现。
+- Haloo已生产测试批次由`automation/batches/completed.py`只读规划：状态9、实际生产图面别、整单、物流、订单组成、主底款、黑白和尺码档均须明确；已生产项目已有来源批次且生成接口无预演参数，当前安全门禁禁止写入，避免重开生产或扰动队列。接口证据见`docs/HALOO_BATCH_GENERATION.md`。
+
+- `automation/api/riin/__main__.py`提供独立管理员命令入口，`elevation.py`通过Windows正常UAC授权启动一次指定操作；不要求主工作台或Codex提权。`desktop.py`拥有原生/UIA控件发现、导入文件选择框与导入设置操作，来源目录递归读取PNG并按文件选择框容量分段。报告区分“提交导入”和实际加载完成，失败保留RIIN界面供用户继续处理；文件输出由output.py负责。旧版MFC导入按钮使用已核验的工具栏相对位置，工具栏高度不符时拒绝点击并要求重新校准。
+- `automation/api/riin/output.py`新增文件输出和PrintExp加载命令，扩展上述导入入口。RIIN发送方式必须是“文件”，输出路径不可覆盖；PrintExp仅提交已有PRN，不启动物理打印。加载报告与实际预览核验分开。
 - 开发者模式提供独立“RIIN代码控制测试”：`automation/api/riin/window_control.py`在已登录的Windows
   交互桌面按标题发现RIIN顶层窗口、发送`WM_NULL`响应探测并请求恢复/置前，`ui/riin_diagnostic.py`
   显示PID、窗口类、坐标、响应与置前结果。该诊断不导入文件、不点击打印、不修改RIIN队列；
