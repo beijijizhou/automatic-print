@@ -36,6 +36,8 @@ def test_test_computer_setup_accepts_python_without_launcher_and_ignores_untrack
 
     assert "function Find-Python312" in script
     assert "Python312\\python.exe" in script
+    assert "PythonCore\\3.12\\InstallPath" in script
+    assert '"--force"' in script
     assert "@pythonArguments -m venv" in script
     assert "status --porcelain --untracked-files=no" in script
 
