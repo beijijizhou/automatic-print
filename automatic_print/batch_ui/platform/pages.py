@@ -96,7 +96,7 @@ def build_production_page(owner, output_row: QHBoxLayout) -> QWidget:
         "查看已经生成的生产批次，下载并解压生产图；下载不会自动启动排版。"
         if getattr(owner, "download_only", False)
         else "查看已经生成且正在生产的批次，并下载生产图。"
-             "下载完成后自动解压和排版。"
+             "下载完成后仅解压；请手动启动排版。"
     )
     intro.setWordWrap(True)
     owner.summary = QLabel("尚未读取已生成批次。")

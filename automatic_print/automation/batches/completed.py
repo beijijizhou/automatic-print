@@ -33,17 +33,18 @@ class CompletedBatchGroup:
 
 
 def load_completed_haloo_snapshot(
-    page, *, page_size: int = 200
+    page, *, page_size: int = 200, progress=None
 ) -> tuple[list[dict], dict[str, dict]]:
     """Read a bounded, newest-first completed snapshot plus exact face data."""
     if page_size < 1 or page_size > 200:
         raise ValueError("已生产测试快照每次只允许读取 1–200 项。")
     payload = production_item_payload(status=("9",), page_size=page_size)
     rows = list(list_production_items(page, payload).get("list") or [])
-    details = {
-        str(row["id"]): production_item_images(page, str(row["id"]))
-        for row in rows
-    }
+    details = {}
+    for index, row in enumerate(rows, start=1):
+        if progress:
+            progress(f"[{index}/{len(rows)}] 正在读取实际生产图面别")
+        details[str(row["id"])] = production_item_images(page, str(row["id"]))
     return rows, details
 
 
@@ -53,7 +54,7 @@ def plan_completed_haloo_batches(
     """Group an immutable completed snapshot; never calls a write endpoint."""
     _validate_completed_snapshot(rows, image_details)
     singles = [row for row in rows if int(row["order_composition"]) == 1]
-    dominant_style = _dominant_style(singles)
+    dominant_style = _dominant_style(singles) if singles else ""
     grouped: dict[tuple[str, ...], list[dict]] = defaultdict(list)
     order_rows: dict[str, list[dict]] = defaultdict(list)
     for row in rows:

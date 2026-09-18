@@ -85,7 +85,12 @@ class AutomationDialog(
             self.main_tabs.addTab(
                 build_production_page(self, self.output_row), "生产批次"
             )
-            self.main_tabs.tabBar().hide()
+            if self.platform_names == ('Haloo',):
+                from .platform.completed import CompletedHalooPage
+                self.completed_haloo_page = CompletedHalooPage(self)
+                self.main_tabs.addTab(self.completed_haloo_page, '已生产分类预览')
+            else:
+                self.main_tabs.tabBar().hide()
             return
         self.main_tabs.addTab(build_local_page(self), "本地排版")
         self.main_tabs.addTab(build_accepted_page(self), "已接单")
@@ -150,11 +155,4 @@ class AutomationDialog(
         else:
             settings = settings_from_window(window)
         platform = self.platform.currentData()
-        updates = {"platform_name": platform}
-        # Haloo and Putian production images have a short source label gap.
-        # Bind their documented 40 mm default to the selected ERP workbench,
-        # rather than relying on whichever platform happens to be selected in
-        # the main window.
-        if platform in {"Haloo", "莆田"}:
-            updates["membrane_gap_mm"] = 40
-        return replace(settings, **updates)
+        return replace(settings, platform_name=platform)

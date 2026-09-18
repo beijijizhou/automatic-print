@@ -1,5 +1,5 @@
 import re
-from PySide6.QtCore import QThread, Qt, Slot
+from PySide6.QtCore import QThread, Qt, Slot, QTimer
 from PySide6.QtWidgets import QMessageBox
 
 from .worker import AutomationWorker
@@ -35,6 +35,7 @@ class ThreadActionsMixin:
         worker.failed.connect(bridge.failed, queued)
         worker.cancelled.connect(bridge.cancelled, queued)
         terminal = {
+            "read": worker.completed,
             "list": worker.batches_loaded,
             "list_range": worker.batches_loaded,
             "status": worker.status_loaded,
@@ -91,6 +92,12 @@ class ThreadActionsMixin:
 
     @Slot(object)
     def action_finished(self, result: dict) -> None:
+        if result.get('type') == 'read':
+            if result['kind'] == 'completed_haloo':
+                self.completed_haloo_page.show_result(result)
+            else:
+                self.local_read_finished(result)
+            return
         from ..shell.results import present_action_result
         present_action_result(self, result)
 
@@ -139,3 +146,5 @@ class ThreadActionsMixin:
         self.stop_button.setEnabled(False)
         self._set_actions_enabled(True)
         defer_finished_thread_cleanup(self, "thread", "worker")
+        if getattr(self, 'pending_local_read', None) is not None:
+            QTimer.singleShot(0, self._start_pending_local_read)
