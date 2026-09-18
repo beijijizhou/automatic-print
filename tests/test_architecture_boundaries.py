@@ -130,13 +130,13 @@ def test_batch_workbench_matches_navigation_and_task_boundaries():
         '__init__.py', 'dialog.py'
     }
     assert {path.name for path in (package/'local').glob('*.py')} == {
-        '__init__.py', 'actions.py', 'page.py', 'processing.py'
+        '__init__.py', 'actions.py', 'page.py', 'processing.py', 'scanning.py'
     }
     assert {path.name for path in (package/'platform').glob('*.py')} == {
-        '__init__.py', 'actions.py', 'cache.py', 'generation.py', 'pages.py'
+        '__init__.py', 'actions.py', 'cache.py', 'generation.py', 'pages.py', 'completed.py'
     }
     assert {path.name for path in (package/'task').glob('*.py')} == {
-        '__init__.py', 'actions.py', 'worker.py'
+        '__init__.py', 'actions.py', 'worker.py', 'reads.py'
     }
 
 

@@ -60,6 +60,7 @@ RIIN要求管理员权限时，在已登录的Windows桌面运行以下命令，
 `load-printexp --output 文件.prn`提交已有文件；报告`load_requested`仅表示提交，
 需要核对PrintExp预览或任务列表确认加载成功。以上命令均需要`--report`，可加`--elevate`。
 使用`select-document --document 文档标题`明确选择输出文档。已在本机完成单图PRN生成和PrintExp预览加载验证；跨子目录批量导入仍需逐批核验，尚未接入主界面一键流程。
+`new-document`创建空白RIIN文档，适用于新批次输出，避免与已有测试图片混合。
 
 针对性测试用于开发反馈：
 
