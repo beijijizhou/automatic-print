@@ -3,6 +3,7 @@ from threading import RLock
 from time import perf_counter
 
 PROGRESS_PHASES = {
+    '共享盘本地副本': '共享盘本地副本校验',
     '补足膜标签间距': '补足膜标签间距',
     '读取原图DPI': '输出DPI确认',
     '读取排版缓存': '排版缓存读取', '保存排版缓存': '排版缓存保存',

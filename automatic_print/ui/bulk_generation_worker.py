@@ -20,12 +20,13 @@ class BulkGenerationWorker(QObject):
     source_progress = Signal(int, str, str, object, object, str)
 
     def __init__(self, folders, settings, parallelism, custom_base=None, preview_only=False,
-                 source_root=None, combine_batches=False):
+                 source_root=None, combine_batches=False, local_mirror_root=None):
         super().__init__()
         self.folders, self.custom_base = folders, custom_base
         self.preview_only = preview_only
         self.source_root, self.inventory = source_root, {}
         self.combine_batches = combine_batches
+        self.local_mirror_root = local_mirror_root
         self.image_sources,self.source_totals,self.source_done={},{},{}
         # Output grouping follows the scanned source structure. Choosing a
         # platform in the UI must never change single/multi-batch semantics.
@@ -50,7 +51,8 @@ class BulkGenerationWorker(QObject):
         output = batch_output_directory(base, batch_name, job)
         images = self.inventory[folder]['images'] if folder in self.inventory else None
         worker = GenerateWorker(images, folder, output, job, self.settings,
-                                preview_only=self.preview_only,batch_name=batch_name)
+                                preview_only=self.preview_only,batch_name=batch_name,
+                                local_mirror_root=self.local_mirror_root)
         worker.cancellation = self.cancellation
         results, errors, stopped = [], [], []
         direct = Qt.DirectConnection

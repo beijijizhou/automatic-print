@@ -44,6 +44,9 @@
   `ui/thread_lifecycle.py`仅保留旧调用方兼容导入。
 - 单批生成、仅预览及批量分析的每个批次均由 `layout_engine/measurement/measurement_session.py` 建立一份数据
   快照；DPI、尺寸、膜标签位置和各方向刀码占位在后续方案与报告中直接复用。
+- 主工作台处理共享盘批次时，若平台下载目录中存在同批本地副本且图片数量、文件名和字节数全部一致，
+  `automation/transfer/local_mirror.py` 会让后台任务复用本地图片完成像素测量、排版与合成；任何不一致都回退
+  用户选择的共享盘来源，输出目录和历史来源不随镜像切换。
 - 生成完成弹窗由 `layout_engine/output/output_file_info.py` 汇总最终生产结果；膜规格表把当前膜行替换为
   同一最终计划的真实统计，输出名由 `layout_engine/output/output_name.py` 同时写入订单数和件数。
 - `layout_engine/output/output_name.py` 统一管理输出落点：生成期间写入 `排版日志/.处理中` 隔离目录，
