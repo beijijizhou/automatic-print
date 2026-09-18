@@ -22,6 +22,50 @@ function Find-CommandPath {
     return $null
 }
 
+function Test-Python312 {
+    param(
+        [string]$Executable,
+        [string[]]$PrefixArguments = @()
+    )
+
+    if (-not $Executable -or -not (Test-Path $Executable)) {
+        return $false
+    }
+    try {
+        $version = & $Executable @PrefixArguments -c `
+            "import sys; print(f'{sys.version_info.major}.{sys.version_info.minor}')" `
+            2>$null
+        return $LASTEXITCODE -eq 0 -and "$version".Trim() -eq "3.12"
+    }
+    catch {
+        return $false
+    }
+}
+
+function Find-Python312 {
+    $launcher = Find-CommandPath "py" @(
+        "$env:LOCALAPPDATA\Programs\Python\Launcher\py.exe",
+        "$env:SystemRoot\py.exe"
+    )
+    if (Test-Python312 $launcher @("-3.12")) {
+        return @{ Executable = $launcher; PrefixArguments = @("-3.12") }
+    }
+
+    $command = Get-Command python -ErrorAction SilentlyContinue
+    $candidates = @(
+        $(if ($command) { $command.Source }),
+        "$env:LOCALAPPDATA\Programs\Python\Python312\python.exe",
+        "$env:ProgramFiles\Python312\python.exe",
+        "${env:ProgramFiles(x86)}\Python312\python.exe"
+    ) | Where-Object { $_ } | Select-Object -Unique
+    foreach ($candidate in $candidates) {
+        if (Test-Python312 $candidate) {
+            return @{ Executable = $candidate; PrefixArguments = @() }
+        }
+    }
+    return $null
+}
+
 function Install-WithWinget {
     param(
         [string]$PackageId,
@@ -61,20 +105,15 @@ if (-not $git) {
     throw "Git was installed but could not be located. Restart Windows and run this script again."
 }
 
-$pythonLauncher = Find-CommandPath "py" @(
-    "$env:LOCALAPPDATA\Programs\Python\Launcher\py.exe",
-    "$env:SystemRoot\py.exe"
-)
-if (-not $pythonLauncher) {
+$python312 = Find-Python312
+if (-not $python312) {
     Install-WithWinget "Python.Python.3.12" "Python 3.12"
-    $pythonLauncher = Find-CommandPath "py" @(
-        "$env:LOCALAPPDATA\Programs\Python\Launcher\py.exe",
-        "$env:SystemRoot\py.exe"
-    )
+    $python312 = Find-Python312
 }
-if (-not $pythonLauncher) {
+if (-not $python312) {
     throw "Python was installed but could not be located. Restart Windows and run this script again."
 }
+Write-Host "Using Python 3.12: $($python312.Executable)"
 
 $chrome = Find-CommandPath "chrome" @(
     "$env:ProgramFiles\Google\Chrome\Application\chrome.exe",
@@ -106,7 +145,7 @@ if ($runningProjectProcesses) {
 if (Test-Path (Join-Path $installRoot ".git")) {
     Push-Location $installRoot
     try {
-        $changes = & $git status --porcelain
+        $changes = & $git status --porcelain --untracked-files=no
         if ($changes) {
             throw "Local code changes were found. Update stopped to avoid overwriting them."
         }
@@ -134,7 +173,8 @@ else {
 $venvPython = Join-Path $installRoot ".venv\Scripts\python.exe"
 if (-not (Test-Path $venvPython)) {
     Write-Host "Creating the project Python environment..."
-    & $pythonLauncher -3.12 -m venv (Join-Path $installRoot ".venv")
+    $pythonArguments = @($python312.PrefixArguments)
+    & $python312.Executable @pythonArguments -m venv (Join-Path $installRoot ".venv")
     if ($LASTEXITCODE -ne 0) {
         throw "Python environment creation failed."
     }

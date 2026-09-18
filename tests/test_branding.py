@@ -29,6 +29,17 @@ def test_test_computer_setup_creates_desktop_shortcut() -> None:
     assert "$shortcut.Save()" in script
 
 
+def test_test_computer_setup_accepts_python_without_launcher_and_ignores_untracked_files() -> None:
+    script = (
+        Path(__file__).parents[1] / "windows" / "bootstrap-test-computer.ps1"
+    ).read_text(encoding="utf-8")
+
+    assert "function Find-Python312" in script
+    assert "Python312\\python.exe" in script
+    assert "@pythonArguments -m venv" in script
+    assert "status --porcelain --untracked-files=no" in script
+
+
 def test_windows_identity_is_explicit_and_stable(monkeypatch):
     calls = []
     class Setter:
