@@ -71,3 +71,26 @@ def test_single_choice_updates_shared_start_and_cancel_does_not(tmp_path, monkey
     window.preferences.setValue(KEY, str(tmp_path/'missing'))
     assert image_dialog_start(window) == str(second)
     window.close()
+
+
+def test_layout_entry_passes_checked_batch_scan_and_honors_cancel(tmp_path, monkeypatch):
+    window, dialog, parent, first, second = setup(tmp_path)
+    scan = {'batches': [{'folder': first, 'images': [], 'image_count': 0}],
+            'errors': [], 'directories': 2, 'platform': ''}
+    starts = []
+    monkeypatch.setattr(window, 'choose_folder', lambda: True)
+    monkeypatch.setattr(
+        'automatic_print.ui.batch_folder_selection.choose_batch_folders',
+        lambda *_args: scan)
+    monkeypatch.setattr(
+        'automatic_print.ui.bulk_workbench.start_bulk',
+        lambda owner, root, prepared: starts.append((owner, root, prepared)))
+    window.choose_and_generate()
+    assert starts == [(window, str(first), scan)]
+    monkeypatch.setattr(
+        'automatic_print.ui.batch_folder_selection.choose_batch_folders',
+        lambda *_args: None)
+    window.choose_and_generate()
+    assert len(starts) == 1
+    assert window.status.text() == '已取消排版，文件夹选择保持不变。'
+    window.close()

@@ -52,9 +52,10 @@
 - `layout_engine/output/output_name.py` 统一管理输出落点：生成期间写入 `排版日志/.处理中` 隔离目录，
   安全检查完成后把最终PNG扁平移入 `切膜机文件`；文本报告保存在平级 `排版日志`，不写输出JSON。
 - 多批次生成控制：`automatic_print/controllers/bulk_generation.py` 管理线程、取消和释放；
-  `ui/bulk_workbench.py`、`bulk_generation_worker.py`、`batch_status_board.py`分别负责展示编排、任务执行和状态视图。
-  主界面以一个“开始排版”入口统一处理
-  单批次目录和多批次上级目录，批次扫描结果决定实际队列数量。
+  `ui/batch_folder_selection.py`在后台扫描并提供批次勾选，`ui/bulk_workbench.py`、
+  `bulk_generation_worker.py`、`batch_status_board.py`分别负责展示编排、任务执行和状态视图。
+  主界面以一个“开始排版”入口统一处理单批次目录和多批次上级目录；扫描层跳过“切膜机文件”，
+  用户勾选后的批次清单决定实际队列及“合并所有子文件夹”的输入范围。
 
 ## 排版核心
 

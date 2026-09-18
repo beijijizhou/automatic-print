@@ -15,14 +15,17 @@ def open_bulk(window):
     if not directory:
         return
     start_bulk(window,Path(directory))
-def start_bulk(window,directory):
+def start_bulk(window,directory,prepared_scan=None):
     directory = Path(directory)
     remember_image_directory(window, str(directory))
     from .quick_fields import show_selected_source
     show_selected_source(window.automation_home.label_quick_panel, str(directory), 'layout', window)
     if not hasattr(window, 'bulk_controller'):
         window.bulk_controller = BulkWorkbench(window)
-    window.bulk_controller.begin(Path(directory))
+    if prepared_scan is None:
+        window.bulk_controller.begin(Path(directory))
+    else:
+        window.bulk_controller.begin(Path(directory), prepared_scan)
 
 class BulkWorkbench(QObject):
     def __init__(self, window):
@@ -36,11 +39,13 @@ class BulkWorkbench(QObject):
         self.selector.setToolTip('切换当前批次，查看同一主界面的进度、耗时、预览与总结。')
         self.panel.summary.layout().insertWidget(0, self.selector)
         self.selector.currentIndexChanged.connect(self.select)
-    def begin(self, parent):
+    def begin(self, parent, prepared_scan=None):
         self.root, self.folders, self.inventory = parent, [], {}
         self.payloads, self.records, self.stages, self.timing_data = {}, {}, {}, {}
         self.window.run_log.clear()
-        self.window.run_log.appendPlainText(f'多批次任务：{parent}')
+        selected = len(prepared_scan['batches']) if prepared_scan else 0
+        self.window.run_log.appendPlainText(
+            f'多批次任务：{parent}' + (f' · 已选{selected}个文件夹' if selected else ''))
         self.selector.reset(self.folders)
         self.selector.show()
         try:
@@ -69,7 +74,8 @@ class BulkWorkbench(QObject):
             self.folders, settings, self.window.bulk_parallelism.value(), custom,
             self.window.automation_home.preview_only.isChecked(), parent,
             self.window.combine_bulk_batches.isChecked(),
-            self.window.preferences.value('automation/output_location', '', str))
+            self.window.preferences.value('automation/output_location', '', str),
+            prepared_scan)
         bindings = ((worker.discovered, self.discovered),
                     (worker.progress, self.progress), (worker.preview, self.preview),
                     (worker.completed, self.completed), (worker.timings, self.timings),

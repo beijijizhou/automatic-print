@@ -49,6 +49,58 @@ def test_scan_lists_direct_images_once_and_skips_outputs_and_symlink_loops(tmp_p
     board.close()
 
 
+def test_folder_picker_lists_real_batches_and_skips_cutter_output(tmp_path):
+    from time import monotonic
+    from automatic_print.ui.batch_folder_selection import BatchFolderSelectionDialog
+
+    root = tmp_path/'HL'
+    folders = tree(root)
+    dialog = BatchFolderSelectionDialog(None, root)
+    deadline = monotonic()+5
+    while dialog.scan_result is None and monotonic() < deadline:
+        APP.processEvents()
+    assert dialog.scan_result is not None
+    assert dialog.folders.topLevelItemCount() == 3
+    assert {batch['folder'] for batch in dialog.selected_batches()} == set(folders)
+    assert all('切膜机文件' not in dialog.folders.topLevelItem(index).toolTip(0)
+               for index in range(dialog.folders.topLevelItemCount()))
+    dialog.folders.topLevelItem(0).setCheckState(0, Qt.Unchecked)
+    assert len(dialog.selected_scan()['batches']) == 2
+    dialog.reject()
+
+
+def test_prepared_folder_selection_controls_worker_queue(tmp_path, monkeypatch):
+    import automatic_print.ui.bulk_generation_worker as bulk_worker
+
+    root = tmp_path/'HL'
+    folders = tree(root)
+    scanned = scan_batches(root)
+    chosen = [batch for batch in scanned['batches']
+              if batch['folder'] == folders[1]]
+    prepared = dict(scanned, batches=chosen, selected_batch_count=1)
+    queued = []
+    monkeypatch.setattr(
+        bulk_worker, 'run_queue',
+        lambda folders, *_args, **_kwargs: queued.extend(folders) or {
+            'records': [], 'errors': [], 'stopped': False})
+    worker = BulkGenerationWorker(
+        [], settings(), 2, preview_only=True, source_root=root,
+        prepared_scan=prepared)
+    worker.run()
+    assert queued == folders[1:2]
+    queued.clear()
+    discovered = []
+    combined = BulkGenerationWorker(
+        [], settings(), 2, preview_only=True, source_root=root,
+        combine_batches=True, prepared_scan=prepared)
+    combined.discovered.connect(discovered.append, Qt.DirectConnection)
+    combined.run()
+    assert queued == [root]
+    assert discovered[0]['combined_batch_count'] == 1
+    assert discovered[0]['batches'][0]['image_count'] == 12
+    assert discovered[0]['batches'][0]['source_batches'] == chosen
+
+
 @pytest.mark.parametrize('engine', ['pillow', 'libvips'])
 @pytest.mark.parametrize('custom', [False, True])
 def test_nested_outputs_preserve_source_tree_and_do_not_merge_parent_images(tmp_path, monkeypatch, engine, custom):

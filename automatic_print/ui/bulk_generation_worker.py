@@ -20,13 +20,15 @@ class BulkGenerationWorker(QObject):
     source_progress = Signal(int, str, str, object, object, str)
 
     def __init__(self, folders, settings, parallelism, custom_base=None, preview_only=False,
-                 source_root=None, combine_batches=False, local_mirror_root=None):
+                 source_root=None, combine_batches=False, local_mirror_root=None,
+                 prepared_scan=None):
         super().__init__()
         self.folders, self.custom_base = folders, custom_base
         self.preview_only = preview_only
         self.source_root, self.inventory = source_root, {}
         self.combine_batches = combine_batches
         self.local_mirror_root = local_mirror_root
+        self.prepared_scan = prepared_scan
         self.image_sources,self.source_totals,self.source_done={},{},{}
         # Output grouping follows the scanned source structure. Choosing a
         # platform in the UI must never change single/multi-batch semantics.
@@ -100,9 +102,14 @@ class BulkGenerationWorker(QObject):
         try:
             scan_errors = []
             if self.source_root is not None:
-                from ..layout_engine.intake.discovery.batch_discovery import scan_batches
-                scan = scan_batches(self.source_root, lambda *a: self.progress.emit(-1, str(self.source_root), *a),
-                                    self.cancellation)
+                if self.prepared_scan is None:
+                    from ..layout_engine.intake.discovery.batch_discovery import scan_batches
+                    scan = scan_batches(
+                        self.source_root,
+                        lambda *a: self.progress.emit(-1, str(self.source_root), *a),
+                        self.cancellation)
+                else:
+                    scan = self.prepared_scan
                 self.inventory = {b['folder']: b for b in scan['batches']}
                 if scan.get('platform')=='S2B':
                     self.group_outputs=True
