@@ -10,7 +10,10 @@ $entries = @(
     @{ Id="haloo-random-white-2x-609171338053"; Source="0917\HL\单面白2x-5x\609171338053"; Count=36 },
     @{ Id="longfeng-complete-609172109019"; Source="0917\LF\609172109019"; Count=4 },
     @{ Id="putian-complete-609172046008"; Source="0917\PT\609172046008"; Count=4 },
+    @{ Id="longfeng-complete-609172110023"; Source="0917\LF\609172110023"; Count=10 },
+    @{ Id="putian-complete-609172046009"; Source="0917\PT\609172046009"; Count=4 },
     @{ Id="s2b-complete-CYS2B002"; Destination="s2b\CYS2B002Mr______34_L9IGO772NMBP_20260917_185422_7te7qo5c"; Source="S2B\0917\CYS2B002Mr______34_L9IGO772NMBP_20260917_185422_7te7qo5c"; Count=34 },
+    @{ Id="s2b-complete-HS2B011"; Destination="s2b\HS2B011Sg______14_CZ8ZTGIUO6XS_20260917_004608_jfttdkea"; Source="S2B\0916\HS2B011Sg______14_CZ8ZTGIUO6XS_20260917_004608_jfttdkea"; Count=14 },
     @{ Id="longfeng-performance-609172109020"; Source="0917\LF\609172109020"; Count=200 }
 )
 

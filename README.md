@@ -77,8 +77,8 @@ Runner 仅绑定本仓库，标签为 `automatic-print`；工作流不接受 `pu
 如需替换或扩充样本，可在 Actions 仓库变量 `AUTOMATIC_PRINT_REAL_BATCH_PATHS` 中保存真实批次
 绝对路径，多个目录用分号分隔。也可以手动触发工作流时临时指定批次目录和要测试的提交 SHA。
 真实图片回归会在单元测试失败时继续执行，确保报告同时包含代码测试和生产数据兼容性结果。
-`windows/real-batch-suite.json` 另行固定多批次验收矩阵：三个由固定种子选出的 Haloo 批次、隆丰、
-莆田和 S2B 完整批次，以及隆丰 `609172109020` 的 200 PNG 冷/热缓存性能门禁。先运行
+`windows/real-batch-suite.json` 另行固定至少十个独立批次文件夹的验收矩阵：三个由固定种子选出的
+Haloo 批次、各两个隆丰、莆田和 S2B 完整批次，以及隆丰 `609172109020` 的 200 PNG 冷/热缓存性能门禁。先运行
 `windows/stage-real-batch-suite.ps1`，把 NAS 源图只读复制到 `C:\actions-runner\real-batches\acceptance`；
 Runner 服务不直接依赖映射盘。每批使用独立进程、缓存状态和输出目录，单批失败后仍继续其余批次，
 最终统一判定；报告核对源文件未变化、补距像素、保存后刀道和订单完整性。200 PNG 使用8段并行输出，

@@ -37,10 +37,31 @@
       "passes": ["cold"]
     },
     {
+      "id": "longfeng-complete-609172110023",
+      "platform": "隆丰",
+      "path": "C:\\actions-runner\\real-batches\\acceptance\\longfeng-complete-609172110023",
+      "expected_images": 10,
+      "passes": ["cold"]
+    },
+    {
+      "id": "putian-complete-609172046009",
+      "platform": "莆田",
+      "path": "C:\\actions-runner\\real-batches\\acceptance\\putian-complete-609172046009",
+      "expected_images": 4,
+      "passes": ["cold"]
+    },
+    {
       "id": "s2b-complete-CYS2B002",
       "platform": "S2B",
       "path": "C:\\actions-runner\\real-batches\\acceptance\\s2b\\CYS2B002Mr______34_L9IGO772NMBP_20260917_185422_7te7qo5c",
       "expected_images": 34,
+      "passes": ["cold"]
+    },
+    {
+      "id": "s2b-complete-HS2B011",
+      "platform": "S2B",
+      "path": "C:\\actions-runner\\real-batches\\acceptance\\s2b\\HS2B011Sg______14_CZ8ZTGIUO6XS_20260917_004608_jfttdkea",
+      "expected_images": 14,
       "passes": ["cold"]
     },
     {

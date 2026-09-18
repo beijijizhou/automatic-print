@@ -44,6 +44,7 @@ def test_self_hosted_acceptance_is_pinned_and_keeps_batch_failures_independent()
     assert performance['max_generation_seconds'] == 30
     assert performance['output_parts'] == 8
     assert performance['save_parallelism'] == 8
+    assert len(manifest['batches']) >= 10
     assert sum(row['platform'] == 'Haloo' for row in manifest['batches']) >= 3
     assert {'Haloo', '隆丰', '莆田', 'S2B'} <= {
         row['platform'] for row in manifest['batches']
