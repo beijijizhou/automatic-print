@@ -13,9 +13,20 @@ def ready_production_image_codes(page, rows: list[dict]) -> set[str]:
     codes = [str(row.get("code") or "") for row in rows if row.get("code")]
     if not codes:
         return set()
-    created_values = [
-        int(row.get("created") or 0) for row in rows if row.get("created")
-    ]
+    records = production_image_export_records(
+        page, codes,
+        [int(row.get("created") or 0) for row in rows if row.get("created")],
+    )
+    return set(records)
+
+
+def production_image_export_records(
+    page, codes: list[str], created_values: list[int] | None = None,
+) -> dict[str, dict]:
+    """Return the newest completed production-image export for each batch."""
+    if not codes:
+        return {}
+    created_values = created_values or []
     day_ms = 86_400_000
     date_from = max(0, min(created_values, default=0) - day_ms)
     date_to = max(
@@ -35,10 +46,18 @@ def ready_production_image_codes(page, rows: list[dict]) -> set[str]:
         },
         "processBatchManage-Dv3c2kZY.js",
     )
-    return {
-        str(record.get("biz_no") or "")
-        for record in records or []
-        if int(record.get("export_type") or 0)
-        == PRODUCTION_IMAGE_EXPORT_TYPE
-        and int(record.get("status") or 0) == EXPORT_READY_STATUS
-    }
+    completed = {}
+    for record in records or []:
+        code = str(record.get("biz_no") or "")
+        if (code not in codes
+                or int(record.get("export_type") or 0) != PRODUCTION_IMAGE_EXPORT_TYPE
+                or int(record.get("status") or 0) != EXPORT_READY_STATUS
+                or not str(record.get("file_path") or "").strip()):
+            continue
+        current = completed.get(code)
+        stamp = int(record.get("finish_time") or record.get("created") or 0)
+        current_stamp = int((current or {}).get("finish_time")
+                            or (current or {}).get("created") or 0)
+        if current is None or stamp >= current_stamp:
+            completed[code] = record
+    return completed

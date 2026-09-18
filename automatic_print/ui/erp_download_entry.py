@@ -12,6 +12,7 @@ from PySide6.QtWidgets import (
 
 from ..automation.providers.registry import ERP_PLATFORMS
 from ..batch_ui.dialog import AutomationDialog
+from .developer_mode import bind_developer_tab_visibility
 
 
 PLATFORM_ORDER = ("隆丰", "莆田", "S2B", "Haloo")
@@ -99,14 +100,7 @@ def install_production_platform_tab(
         "从一个或多个生产平台读取并下载已经生成的生产批次。",
     )
 
-    def sync(_enabled: bool) -> None:
-        enabled = window.developer_mode_checkbox.isChecked()
-        if not enabled and tabs.currentWidget() is page:
-            tabs.setCurrentIndex(0)
-        tabs.setTabVisible(index, enabled)
-
-    window.developer_mode_checkbox.toggled.connect(sync)
-    sync(window.developer_mode_checkbox.isChecked())
+    bind_developer_tab_visibility(window, tabs, page, index)
     window.production_platform_download_page = page
     window.production_platform_tab_index = index
     window.longfeng_erp_dialog = page  # Active-task compatibility.

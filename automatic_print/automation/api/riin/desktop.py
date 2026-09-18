@@ -37,9 +37,11 @@ def import_chunks(paths, limit=3800):
     return chunks
 
 
-def submit_import(process_id, source, chunk_index=0):
+def submit_import_paths(process_id, paths, chunk_index=0):
     from pywinauto import Desktop
-    all_paths, _selection = png_import_paths(source)
+    all_paths = [Path(path).resolve(strict=True) for path in paths]
+    if not all_paths or any(path.suffix.lower() != '.png' for path in all_paths):
+        raise ValueError('导入清单必须包含至少一个现有PNG文件。')
     chunks = import_chunks(all_paths)
     if not 0 <= chunk_index < len(chunks):
         raise ValueError('导入分段索引超出范围。')
@@ -56,10 +58,16 @@ def submit_import(process_id, source, chunk_index=0):
     if actual != selection:
         raise RuntimeError(f'文件选择框未完整接收图片清单，尚未执行导入。'
                            f'预期{len(selection)}字符，实际{len(actual)}字符：{actual[:120]!r}')
-    dialog.child_window(auto_id='1', control_type='Button').invoke()
+    native_dialog = Desktop(backend='win32').window(handle=dialogs[0].handle)
+    native_dialog.child_window(control_id=1, class_name='Button').click()
     return dict(submitted_count=len(paths), files=[str(p) for p in paths],
                 chunk_index=chunk_index, chunk_count=len(chunks), total_count=len(all_paths),
                 state='submitted', message='已提交导入；需在RIIN核对加载完成后的图片数量。')
+
+
+def submit_import(process_id, source, chunk_index=0):
+    paths, _selection = png_import_paths(source)
+    return submit_import_paths(process_id, paths, chunk_index)
 
 
 def open_import(handle):
@@ -96,14 +104,6 @@ def dialog_inventory(process_id):
             if w.class_name() == '#32770' and w.is_visible() and w.window_text()]
 
 
-def confirm_import(process_id):
-    from pywinauto import Desktop
-    dialog = Desktop(backend='win32').window(process=process_id, title='导入图像设置', class_name='#32770')
-    dialog.wait('visible', timeout=5)
-    dialog.child_window(title='确定', class_name='Button').click()
-    return {'state': 'import_settings_accepted', 'parameters': '沿用当前导入参数'}
-
-
 def import_menu(handle):
     from pywinauto import Desktop
     window = Desktop(backend='win32').window(handle=handle)
@@ -113,27 +113,6 @@ def import_menu(handle):
         raise RuntimeError('工具栏布局改变，需要重新校准。')
     ribbon.click_input(coords=(187, 96))
     return {'state': 'import_menu_requested'}
-
-
-def acknowledge_import_errors(process_id):
-    from pywinauto import Desktop
-    errors = []
-    deadline = time.monotonic() + 30
-    while time.monotonic() < deadline and len(errors) < 60:
-        dialogs = [w for w in Desktop(backend='win32').windows(process=process_id)
-                   if w.class_name() == '#32770' and w.window_text() == 'RIIN']
-        if not dialogs:
-            time.sleep(0.5)
-            continue
-        dialog = dialogs[0]
-        text = '\n'.join(w.window_text() for w in dialog.descendants())
-        if '暂不支持该文件格式' not in text:
-            break
-        errors.append(text)
-        Desktop(backend='win32').window(handle=dialog.handle).child_window(
-            title='确定', class_name='Button').click()
-        time.sleep(0.2)
-    return {'acknowledged_errors': errors}
 
 
 def select_document(handle, title):
@@ -148,11 +127,15 @@ def select_document(handle, title):
 def open_output(handle):
     from pywinauto import Desktop
     window = Desktop(backend='win32').window(handle=handle)
-    ribbon = window.child_window(control_id=59398).wrapper_object()
-    if ribbon.rectangle().height() != 107:
-        raise RuntimeError('工具栏布局改变，需要重新校准。')
-    ribbon.click(coords=(136, 58))
-    return {'state': 'output_dialog_requested'}
+    window.restore()
+    window.wait('enabled ready', timeout=60)
+    window.set_focus()
+    # RIIN's first ribbon row also contains the print-management center.  A
+    # coordinate click is therefore unsafe across saved ribbon states.  Ctrl+P
+    # invokes the document print command and the next step still refuses to
+    # continue unless the confirmation dialog explicitly reports file output.
+    window.type_keys('^p')
+    return {'state': 'output_dialog_requested', 'entry': 'Ctrl+P'}
 
 
 def accessible_inventory(handle):

@@ -6,18 +6,21 @@ from pathlib import Path
 import sys
 
 from .desktop import (
-    accessible_inventory, acknowledge_import_errors, confirm_import, dialog_inventory, import_menu,
-    open_import, open_output, select_document, submit_import, window_inventory,
+    accessible_inventory, dialog_inventory, import_menu, open_import, open_output,
+    select_document, submit_import, window_inventory,
 )
+from .dialogs import acknowledge_import_errors, cancel_import, confirm_import
 from .elevation import is_administrator, launch_elevated
 from .window_control import probe_riin
 from .output import begin_file_output, inspect_printexp, load_printexp, new_document, save_print_file
+from .workflow import automate_layout_to_prn
 
 
 def main(argv=None):
     parser = argparse.ArgumentParser(description='RIIN独立管理员控制入口')
-    parser.add_argument('operation', choices=('inspect', 'open-import', 'import', 'confirm-import', 'import-menu', 'acknowledge-import-errors', 'select-document', 'open-output', 'begin-file-output', 'save-print-file', 'inspect-printexp', 'load-printexp', 'new-document'))
+    parser.add_argument('operation', choices=('automate-layout', 'inspect', 'open-import', 'import', 'confirm-import', 'cancel-import', 'import-menu', 'acknowledge-import-errors', 'select-document', 'open-output', 'begin-file-output', 'save-print-file', 'inspect-printexp', 'load-printexp', 'new-document'))
     parser.add_argument('--document')
+    parser.add_argument('--manifest', type=Path)
     parser.add_argument('--output', type=Path)
     parser.add_argument('--report', type=Path, required=True)
     parser.add_argument('--source', type=Path)
@@ -26,11 +29,17 @@ def main(argv=None):
     args = parser.parse_args(argv)
     report_path = args.report.resolve()
     if args.operation == 'import' and not args.source:
-        parser.error('import需要--source来源目录。')
+        parser.error(f'{args.operation}需要--source来源目录。')
+    if args.operation == 'automate-layout' and not (args.source or args.manifest):
+        parser.error('automate-layout需要--source或--manifest。')
+    if args.operation == 'automate-layout' and not args.output:
+        parser.error('automate-layout需要--output输出文件。')
     if args.elevate and not is_administrator():
         forwarded = [args.operation, '--report', str(report_path)]
         if args.source:
             forwarded += ['--source', str(args.source.resolve())]
+        if args.manifest:
+            forwarded += ['--manifest', str(args.manifest.resolve())]
         if args.chunk_index:
             forwarded += ['--chunk-index', str(args.chunk_index)]
         if args.document:
@@ -53,12 +62,21 @@ def main(argv=None):
         if len(windows) != 1:
             raise RuntimeError(f'应找到一个RIIN主窗口，实际找到{len(windows)}个。')
         result.update(window=asdict(windows[0]), controls=window_inventory(windows[0].handle))
-        if args.operation == 'open-import':
+        if args.operation == 'automate-layout':
+            files = None
+            if args.manifest:
+                files = json.loads(args.manifest.read_text(encoding='utf-8'))
+            source = args.source or args.manifest.parent
+            result['automation'] = automate_layout_to_prn(
+                windows[0].handle, windows[0].process_id, source, args.output, files)
+        elif args.operation == 'open-import':
             result['dialogs'] = open_import(windows[0].handle)
         elif args.operation == 'import':
             result['import'] = submit_import(windows[0].process_id, args.source, args.chunk_index)
         elif args.operation == 'confirm-import':
             result['action'] = confirm_import(windows[0].process_id)
+        elif args.operation == 'cancel-import':
+            result['action'] = cancel_import(windows[0].process_id)
         elif args.operation == 'import-menu':
             result['action'] = import_menu(windows[0].handle)
         elif args.operation == 'acknowledge-import-errors':

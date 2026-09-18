@@ -41,6 +41,24 @@ def test_measurement_honors_eight_worker_setting(tmp_path):
     assert len(observed)==8 and len(items)==len(paths)
 
 
+def test_parallel_measurement_reports_pixel_safety_stage_before_workers_finish(tmp_path):
+    paths = qr_sources(tmp_path)[:4]
+    barrier = Barrier(4)
+    progress = []
+
+    def measure(paths, config, callback):
+        barrier.wait(5)
+        return [[paths[0].name]], {}
+
+    read_parallel(
+        measure, paths, replace(settings(), worker_threads=4),
+        lambda *values: progress.append(values),
+    )
+
+    assert progress[0][:3] == ('测量标签与刀码', 0, 4)
+    assert '解压原图' in progress[0][3]
+
+
 def test_measurement_stop_does_not_enqueue_whole_batch(tmp_path):
     paths = qr_sources(tmp_path)
     visited = []
