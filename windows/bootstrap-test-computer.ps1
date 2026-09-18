@@ -51,9 +51,42 @@ function Find-Python312 {
         return @{ Executable = $launcher; PrefixArguments = @("-3.12") }
     }
 
-    $command = Get-Command python -ErrorAction SilentlyContinue
+    $commands = @(
+        Get-Command python -ErrorAction SilentlyContinue
+        Get-Command python3.12 -ErrorAction SilentlyContinue
+    )
+    $registryCandidates = foreach ($key in @(
+        "Registry::HKEY_CURRENT_USER\Software\Python\PythonCore\3.12\InstallPath",
+        "Registry::HKEY_LOCAL_MACHINE\Software\Python\PythonCore\3.12\InstallPath",
+        "Registry::HKEY_LOCAL_MACHINE\Software\WOW6432Node\Python\PythonCore\3.12\InstallPath"
+    )) {
+        if (Test-Path $key) {
+            $properties = Get-ItemProperty $key -ErrorAction SilentlyContinue
+            if ($properties.ExecutablePath) {
+                $properties.ExecutablePath
+            }
+            $installPath = (Get-Item $key -ErrorAction SilentlyContinue).GetValue("")
+            if ($installPath) {
+                Join-Path $installPath "python.exe"
+            }
+        }
+    }
+    $directoryCandidates = foreach ($base in @(
+        "$env:LOCALAPPDATA\Programs\Python",
+        "$env:ProgramFiles",
+        "${env:ProgramFiles(x86)}"
+    )) {
+        if (Test-Path $base) {
+            Get-ChildItem -Path (Join-Path $base "Python*\python.exe") `
+                -File -ErrorAction SilentlyContinue |
+                Select-Object -ExpandProperty FullName
+        }
+    }
     $candidates = @(
-        $(if ($command) { $command.Source }),
+        $($commands | Where-Object { $_ } | Select-Object -ExpandProperty Source),
+        $registryCandidates,
+        $directoryCandidates,
+        "$env:LOCALAPPDATA\Microsoft\WindowsApps\python3.12.exe",
         "$env:LOCALAPPDATA\Programs\Python\Python312\python.exe",
         "$env:ProgramFiles\Python312\python.exe",
         "${env:ProgramFiles(x86)}\Python312\python.exe"
@@ -69,7 +102,8 @@ function Find-Python312 {
 function Install-WithWinget {
     param(
         [string]$PackageId,
-        [string]$DisplayName
+        [string]$DisplayName,
+        [switch]$Force
     )
 
     $winget = Get-Command winget -ErrorAction SilentlyContinue
@@ -77,8 +111,14 @@ function Install-WithWinget {
         throw "Cannot install $DisplayName automatically because winget is unavailable."
     }
     Write-Host "Installing $DisplayName..."
-    & $winget.Source install --id $PackageId --exact --silent `
-        --accept-package-agreements --accept-source-agreements
+    $arguments = @(
+        "install", "--id", $PackageId, "--exact", "--silent",
+        "--accept-package-agreements", "--accept-source-agreements"
+    )
+    if ($Force) {
+        $arguments += "--force"
+    }
+    & $winget.Source @arguments
     if ($LASTEXITCODE -ne 0) {
         throw "$DisplayName installation failed."
     }
@@ -107,8 +147,17 @@ if (-not $git) {
 
 $python312 = Find-Python312
 if (-not $python312) {
-    Install-WithWinget "Python.Python.3.12" "Python 3.12"
+    $pythonInstallError = $null
+    try {
+        Install-WithWinget "Python.Python.3.12" "Python 3.12" -Force
+    }
+    catch {
+        $pythonInstallError = $_
+    }
     $python312 = Find-Python312
+    if (-not $python312 -and $pythonInstallError) {
+        throw $pythonInstallError
+    }
 }
 if (-not $python312) {
     throw "Python was installed but could not be located. Restart Windows and run this script again."
