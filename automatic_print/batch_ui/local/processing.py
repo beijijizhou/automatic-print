@@ -12,6 +12,7 @@ from ...automation.batches.naming import (
 )
 from ...layout_engine import discover_images, generate_layout
 from ...layout_engine.output.output_name import batch_directory_name
+from ...automation.batches.local import discover_batch_folders
 
 
 def process_local_batches(
@@ -75,15 +76,7 @@ def process_local_batches(
 
 
 def _batch_folders(root: Path, selected: list[str]) -> list[Path]:
-    folders = [
-        folder
-        for folder in root.rglob("*")
-        if folder.is_dir()
-        and len(folder.name) == 12
-        and folder.name.isdigit()
-        and not {"PROCESSED", "TEST_SAMPLE"}.intersection(folder.parts)
-        and discover_images(folder)
-    ]
+    folders = discover_batch_folders(root)
     if not selected:
         return sorted(folders)
     positions = {number: index for index, number in enumerate(selected)}

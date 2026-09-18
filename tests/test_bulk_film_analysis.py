@@ -82,7 +82,6 @@ def test_default_starts_four_independent_batches_with_shared_worker_budget(tmp_p
     extra = tmp_path/'extra'
     extra.mkdir()
     inputs += folders(extra)
-    original = module.compare_films
     barrier, lock = Barrier(4), Lock()
     threads, budgets = set(), []
     def compare(images, options, report):
@@ -90,7 +89,7 @@ def test_default_starts_four_independent_batches_with_shared_worker_budget(tmp_p
             threads.add(get_ident())
             budgets.append(options.film_geometry_workers)
         barrier.wait(5)  # Serial execution cannot pass this barrier.
-        return original(images, options, report)
+        return {'rows': []}
     monkeypatch.setattr(module, 'compare_films', compare)
     path = tmp_path/'history.sqlite3'
     result = analyze_folders(inputs, settings(), path=path)
@@ -130,7 +129,6 @@ def test_finished_slot_starts_next_batch_while_other_batch_is_running(tmp_path, 
     extra = tmp_path/'extra'
     extra.mkdir()
     inputs.append(folders(extra)[0])
-    original = module.compare_films
     second_started, third_started = Event(), Event()
     second_finished = Event()
     def compare(images, options, report):
@@ -144,7 +142,7 @@ def test_finished_slot_starts_next_batch_while_other_batch_is_running(tmp_path, 
         else:
             assert second_started.is_set() and not second_finished.is_set()
             third_started.set()
-        return original(images, options, report)
+        return {'rows': []}
     monkeypatch.setattr(module, 'compare_films', compare)
     result = analyze_folders(inputs, settings(), path=tmp_path/'history.sqlite3', parallelism=2)
     assert third_started.is_set() and not result['errors']

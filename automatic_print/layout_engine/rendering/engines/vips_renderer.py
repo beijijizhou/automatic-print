@@ -5,9 +5,10 @@ from pathlib import Path
 from threading import RLock
 from PIL import ImageColor
 from automatic_print.layout_engine.labeling.base.dynamic_label import source_label_badge
-from automatic_print.layout_engine.domain.models import LayoutSettings, Placement, ProgressCallback, mm_to_px
+from automatic_print.layout_engine.domain.models import LayoutSettings, Placement, ProgressCallback
 from automatic_print.layout_engine.labeling.platform.platform_label import placement_badge, platform_text
 from .vips_join import balanced_vertical_join as _balanced_vertical_join
+from .row_bounds import streamed_row_bounds
 try:
     import pyvips
 except (ImportError, OSError):
@@ -19,15 +20,11 @@ else:
         pyvips.cache_set_max(0)
         pyvips.shutdown()
     atexit.register(_shutdown_vips)
-# This Homebrew libvips build can crash when independent Python worker pools
-# start several demand evaluations at once. libvips still uses its own native
-# worker threads inside each evaluation; only the outer evaluations are gated.
+# Gate outer evaluations; libvips still uses its own native worker threads.
 demand_lock = RLock()
 def available() -> bool:
     return pyvips is not None
 def _rgba(path: Path, width: int, height: int, rotation_degrees: int, settings):
-    # Pixel validation can evaluate a source before PNG saving re-reads it.
-    # A forward-only decoder fails on that second pass, especially after rotation.
     image = pyvips.Image.new_from_file(str(path), access="random")
     from automatic_print.layout_engine.labeling.gap.virtual import expand_vips
     image = expand_vips(image, path, settings, pyvips)
@@ -70,11 +67,12 @@ def build_vips_rows(
 ):
     rows = []
     completed = 0
-    for row_y, items_iter in groupby(
+    for plan_row_y, items_iter in groupby(
         planned, key=lambda item: item[1].row_y_px
     ):
         items = list(items_iter)
-        row_height = max(p.footprint_height_px for _, p in items)
+        # Keep final-canvas decorations lifted above the packing baseline.
+        row_y, row_height = streamed_row_bounds(plan_row_y, items)
         row_canvas = pyvips.Image.black(
             width, row_height, bands=4
         ).copy(interpretation="srgb")
@@ -162,7 +160,6 @@ def build_vips_canvas(
     progress: ProgressCallback | None,
 ):
     width, height = canvas_size
-    top_margin = mm_to_px(settings.margin_mm, settings.dpi)
     rows = build_vips_rows(planned, labels, width, settings, progress)
     pieces = [rows[0][2]]
     previous_y, previous_height = rows[0][:2]
@@ -180,7 +177,7 @@ def build_vips_canvas(
     pixels_per_mm = settings.dpi / 25.4
     return canvas.embed(
         0,
-        top_margin,
+        rows[0][0],
         width,
         height,
         extend="background",

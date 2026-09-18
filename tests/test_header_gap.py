@@ -242,3 +242,18 @@ def test_segmented_output_prepares_header_gap_once_for_the_whole_batch(tmp_path,
 
     assert calls == [tuple(paths)]
     assert len(result['header_gap']) == len(paths)
+
+
+def test_setting_default_and_persistence(tmp_path):
+    from PySide6.QtCore import QSettings
+    from PySide6.QtWidgets import QApplication
+    from automatic_print.ui.header_gap import build_header_gap
+    from types import SimpleNamespace
+    app = QApplication.instance() or QApplication([])
+    prefs = QSettings(str(tmp_path/'prefs.ini'), QSettings.IniFormat)
+    window = SimpleNamespace(preferences=prefs)
+    field = build_header_gap(window)
+    assert field.value() == 40
+    field.setValue(35)
+    assert build_header_gap(window).value() == 35
+    assert app

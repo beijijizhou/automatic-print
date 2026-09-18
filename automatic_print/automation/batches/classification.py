@@ -9,6 +9,34 @@ BASE_COMPOSITIONS = {
 SINGLE_FACE = "单项单件（单面）"
 DOUBLE_FACE = "单项单件（双面）"
 UNKNOWN_FACE = "单项单件（单双面未知）"
+FRONT_FACE = "正面"
+BACK_FACE = "反面"
+DOUBLE_FACE_DETAIL = "双面"
+UNKNOWN_FACE_DETAIL = "面别未知"
+
+
+def classify_production_face(detail: dict) -> str:
+    names = {
+        str(image.get("name") or "").strip()
+        for image in detail.get("production_images") or []
+    }
+    names.discard("")
+    if names == {"A面"}:
+        return FRONT_FACE
+    if names == {"B面"}:
+        return BACK_FACE
+    if names == {"A面", "B面"}:
+        return DOUBLE_FACE_DETAIL
+    return UNKNOWN_FACE_DETAIL
+
+
+def size_band(size: str) -> str:
+    normalized = str(size).strip().upper().replace("XXL", "2XL")
+    if normalized in {"S", "M", "L", "XL"}:
+        return "S-XL"
+    if normalized in {"2XL", "3XL", "4XL", "5XL"}:
+        return "2XL-5XL"
+    return f"其他尺码:{normalized or '未知'}"
 
 
 def detailed_compositions(compositions) -> tuple[str, ...]:

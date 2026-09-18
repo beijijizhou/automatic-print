@@ -14,7 +14,6 @@ from automatic_print.layout_engine.orders.single_order_sequence import (
 from automatic_print.layout_engine.planning.columns.dynamic_columns import select_columns
 from automatic_print.layout_engine.planning.columns.choice.planner import riin_sequence_height
 
-
 def item(i, width, height, offset=0):
     return LayoutItem(Path(f'B{i}-1-T-Black-M-NO1-1.png'), i, width-15, height,
         15, offset, 0, 15, 0, 0, width, height+offset, 0, 0, 0, 10, 10)
@@ -246,3 +245,4 @@ def test_auto_columns_reject_narrow_lanes_when_any_item_cannot_fit(monkeypatch):
     )
     select_columns(groups, settings, 5)
     assert 3 not in attempted
+# Event-order regressions continue in test_fast_knife_events.py.

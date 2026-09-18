@@ -58,6 +58,7 @@ class MeasurementCache:
                 'DELETE FROM measurements WHERE updated <= ?',
                 (time() - TTL_SECONDS,),
             )
+        self.pending = {}
 
     @staticmethod
     def key(schema, values):
@@ -69,6 +70,9 @@ class MeasurementCache:
 
     def load(self, kind, key):
         with self.lock:
+            pending = self.pending.get((kind, key))
+            if pending is not None:
+                return pending
             row = self.connection.execute(
                 'SELECT payload FROM measurements '
                 'WHERE kind=? AND key=? AND updated>?',
@@ -81,6 +85,11 @@ class MeasurementCache:
         keys = tuple(dict.fromkeys(keys))
         result = {}
         with self.lock:
+            result.update(
+                (key, self.pending[(kind, key)])
+                for key in keys if (kind, key) in self.pending
+            )
+            keys = tuple(key for key in keys if key not in result)
             for start in range(0, len(keys), 500):
                 chunk = keys[start:start + 500]
                 marks = ','.join('?' for _ in chunk)
@@ -95,14 +104,25 @@ class MeasurementCache:
 
     def save(self, kind, key, value):
         payload = json.dumps(value, ensure_ascii=False, default=str)
-        with self.lock, self.connection:
-            self.connection.execute(
-                'INSERT OR REPLACE INTO measurements VALUES (?, ?, ?, ?)',
-                (kind, key, payload, time()),
-            )
+        # Do not begin a SQLite write transaction while a batch is measuring.
+        # Several independent batches may run concurrently; holding a database
+        # writer lock for the whole image pass would serialize or time them out.
+        # The in-memory overlay keeps this session coherent and close() writes
+        # the optional cache in one short transaction.
+        with self.lock:
+            self.pending[(kind, key)] = json.loads(payload)
 
     def close(self):
         with self.lock:
+            if self.pending:
+                now = time()
+                with self.connection:
+                    self.connection.executemany(
+                        'INSERT OR REPLACE INTO measurements VALUES (?, ?, ?, ?)',
+                        ((kind, key, json.dumps(value, ensure_ascii=False,
+                                                default=str), now)
+                         for (kind, key), value in self.pending.items()),
+                    )
             self.connection.close()
 
 

@@ -141,7 +141,7 @@ def _batch_page(browser, url: str):
         and host in page.url
     ]
     page = pages[-1] if pages else open_authenticated_page(
-        browser, url, "iframe"
+        browser, url, "iframe", ready_state="attached"
     )
     if "/productionBatch/index" not in page.url:
         production = page.get_by_text("生产", exact=True)

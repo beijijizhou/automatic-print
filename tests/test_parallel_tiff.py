@@ -112,7 +112,7 @@ def test_riin_tiff_request_uses_png_output_validation(
     )
     validated = []
     monkeypatch.setattr(
-        'automatic_print.layout_engine.pipeline.service.validate_vips_output',
+        'automatic_print.layout_engine.cutting.validation.cut_validation.validate_vips_output',
         lambda path, *args, **kwargs: validated.append(path),
     )
 
