@@ -1,19 +1,20 @@
 """Resolve one reliable output grid per batch from lightweight source headers."""
 from dataclasses import replace
 from collections import defaultdict
-from automatic_print.layout_engine.intake.metadata.images import print_dimensions
 
 
 def resolve_output_dpi(paths, settings, progress=None):
     if not settings.follow_source_dpi:
         return settings
+    from automatic_print.layout_engine.measurement.parallel_measurement import (
+        preload_dimensions,
+    )
+    dimensions_by_path = preload_dimensions(
+        paths, settings, progress, '读取原图DPI')
     groups = defaultdict(list)
     failures = []
     actual_dpi = {}
-    for index, path in enumerate(paths, 1):
-        if progress:
-            progress('读取原图DPI', index-1, len(paths), path.name)
-        dimensions = print_dimensions(path, settings.dpi)
+    for path, dimensions in zip(paths, dimensions_by_path, strict=True):
         if not dimensions.embedded_dpi:
             failures.append(path.name+'：缺少可靠DPI')
         elif round(dimensions.x_dpi) != round(dimensions.y_dpi):

@@ -66,7 +66,11 @@ class MainWindow(
         bridge.update_progress.connect(self.show_update_progress)
     def has_active_tasks(self) -> bool:
         from .developer_mode import developer_task_active
-        return any((self.layout_generation.active, self.update_thread is not None,
+        update_applying = (
+            self.update_thread is not None
+            and getattr(self, 'source_update_applying', False)
+        )
+        return any((self.layout_generation.active, update_applying,
                     self.automation_home.thread is not None, developer_task_active(self),
                     getattr(getattr(self, 'bulk_controller', None), 'thread', None) is not None))
     def closeEvent(self, event) -> None:

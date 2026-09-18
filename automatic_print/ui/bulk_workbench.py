@@ -7,7 +7,6 @@ from .batch_status_board import BatchStatusBoard
 from .folder_dialog_paths import image_dialog_start, remember_image_directory
 from .bulk_generation_worker import BulkGenerationWorker
 from .busy_spinner import show_busy, show_progress
-
 def open_bulk(window):
     if window.has_active_tasks():
         return
@@ -16,7 +15,6 @@ def open_bulk(window):
     if not directory:
         return
     start_bulk(window,Path(directory))
-
 def start_bulk(window,directory):
     directory = Path(directory)
     remember_image_directory(window, str(directory))
@@ -52,6 +50,10 @@ class BulkWorkbench(QObject):
                 raise ValueError('自定义保存位置不存在')
         except ValueError as error:
             self.window.status.setText(str(error))
+            automated = getattr(self.window, 'automated_layout_page', None)
+            if automated is not None:
+                automated.local_layout_finished({
+                    'records': [], 'errors': [{'error': str(error)}], 'stopped': False})
             return
         self.window.generation_preview.start('multiple')
         self.selector.show()
@@ -185,6 +187,9 @@ class BulkWorkbench(QObject):
         if result['errors']:
             self.panel.summary.show_failure('\n'.join(
                 f"{e['folder']}：{e['error']}" for e in result['errors']))
+        automated = getattr(self.window, 'automated_layout_page', None)
+        if automated is not None:
+            automated.local_layout_finished(result)
     def cancel(self):
         if not self.task_control.request_cancel():
             return

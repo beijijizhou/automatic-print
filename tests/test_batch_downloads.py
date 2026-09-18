@@ -1,9 +1,47 @@
 from pathlib import Path
 from automatic_print.automation.transfer.downloads import (
+    ExportRecordDownload,
     RemoteBatch,
     _start_parallel_downloads,
     download_production_images,
 )
+
+
+def test_incomplete_page_links_use_completed_export_record(tmp_path, monkeypatch):
+    class Links:
+        def count(self): return 2
+        def nth(self, _index): return self
+        def wait_for(self, **_kwargs): pass
+
+    class Row:
+        first = None
+        def __init__(self): self.first = self
+        def count(self): return 1
+        def inner_text(self): return "生成成功 下载 下载"
+        def get_by_text(self, *_args, **_kwargs): return Links()
+
+    class Rows:
+        def filter(self, **_kwargs): return Row()
+
+    class Frame:
+        def locator(self, selector):
+            assert selector == "tbody tr"
+            return Rows()
+
+    from automatic_print.automation.transfer import downloads, exports
+    monkeypatch.setattr(downloads, "production_batch_frame", lambda _page: Frame())
+    monkeypatch.setattr(
+        exports, "production_image_export_records",
+        lambda *_args: {"609180613013": {
+            "file_path": "https://files.hihumbird.com/batch.zip"}},
+    )
+    active = _start_parallel_downloads(
+        object(), [RemoteBatch("BATCHES", "609180613013", tmp_path)],
+        lambda _message: None,
+    )
+
+    assert len(active) == 1
+    assert isinstance(active[0][1], ExportRecordDownload)
 
 
 def test_empty_batch_plan_creates_no_downloads(tmp_path: Path) -> None:

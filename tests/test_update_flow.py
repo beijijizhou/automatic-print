@@ -132,6 +132,20 @@ def test_silent_check_only_displays_available_code(tmp_path, monkeypatch):
     window.close()
 
 
+def test_passive_update_check_does_not_block_layout(tmp_path, monkeypatch):
+    window, _info = window_for_test(tmp_path, monkeypatch)
+    window.update_thread = object()
+
+    window.source_update_applying = False
+    assert not window.has_active_tasks()
+
+    window.source_update_applying = True
+    assert window.has_active_tasks()
+    window.update_thread = None
+    window.source_update_applying = False
+    window.close()
+
+
 def test_failed_apply_restores_controls_and_shows_retry(tmp_path, monkeypatch):
     window, _info = window_for_test(tmp_path, monkeypatch)
     warnings = []

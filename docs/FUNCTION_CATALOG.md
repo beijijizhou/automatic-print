@@ -43,14 +43,15 @@
 | 主工作台批次总览 | `ui/workbench/overview/panel.py`, `label_controls.py`, `preview.py`, `bindings.py` | 目录直接对应快捷标签、批次数据、真实预览和参数联动；根目录兼容模块不拥有控件或业务逻辑。 |
 | 刀码方向预览 | `ui/previews/markers/view.py`, `data.py`, `render.py`, `annotations.py` | 页签、示例数据、像素渲染和尺寸标注分别拥有唯一职责；预览复用生产排版对象和真实坐标。 |
 | 真实排版预览运行时 | `ui/previews/runtime/task.py`, `loader.py`, `inventory.py`, `snapshot.py`, `viewport.py` | 后台计算、结果加载、文件名轻量清单、轻量快照和视口交互分离；耗时计算不进入GUI线程，快速模式只读取清单而不启动排版。 |
+| 批次图片元数据预读 | `layout_engine/measurement/parallel_measurement.py`, `intake/metadata/output_dpi.py`, `intake/metadata/images.py` | 尺寸与DPI按用户线程上限有界并行读取，保持输入顺序并复用批次测量缓存；跟随原图DPI时显示真实完成数，不在网络盘逐张串行后再次读取。 |
 | 错误上下文与复制 | `layout_engine/diagnostics/error_context.py`, `layout_engine/diagnostics/error_parameters.py`, `ui/failure_panel.py` | 所有失败复用完整订单/参数诊断，不散落拼字符串。 |
-| 参数持久化与模式可见性 | `ui/workbench/preferences/`, `ui/preference_autosave.py`, `layout_values.py`, `developer_mode.py` | 读取、保存和文件夹/设置窗口动作按状态方向分离；稳定生产控件对普通用户开放，新实验功能默认只在开发者模式显示并生效。 |
+| 参数持久化与模式可见性 | `ui/workbench/preferences/`, `ui/preference_autosave.py`, `layout_values.py`, `developer_mode.py` | 读取、保存和文件夹/设置窗口动作按状态方向分离；稳定生产控件对普通用户开放，新实验功能默认只在开发者模式显示并生效；开发者工作区页签统一由共享可见性绑定装配。 |
 | 输出参数界面 | `ui/settings/output/dpi.py`, `location.py`, `format.py`, `segmentation.py` | 设置页输出区域按用户可见参数分离，统一向工作台和生成入口提供控件与保存位置解析。 |
 | 通用数值参数控件 | `ui/spinbox_style.py` | 所有毫米、尺寸和偏移浮点输入复用`double_spinbox`，不在页面内复制范围、精度和初始值构造代码。 |
 | 参数联动刷新门禁 | `ui/parameter_refresh.py` | 平台和模式一次更新多个控件时取消旧预览并抑制新批次读取；不用多个信号重复触发排版。 |
 | 应用重启 | `runtime/restart.py` | 源码更新和恢复出厂设置共用同一安全重启入口；仅 `dev.py` 子进程监听重载标记，普通快捷方式启动会清理过期标记，安装环境启动新进程。 |
 | 批次及膜历史 | `history/store.py`, `history/batch_queue.py`, `history/bulk_analysis.py` | 历史格式由存储模块维护，UI不直接写日志文件。 |
-| ERP生产批次读取与下载 | `automation/browser/batches.py`, `automation/api/erp/records.py`, `automation/transfer/downloads.py` | 浏览器流程、文件传输与响应映射分离；外层工厂页面与内嵌生产模块共用一个批次内容定位入口，列表、搜索、就绪状态和下载不得各自假设表格位于顶层页面。 |
+| ERP生产批次读取与下载 | `automation/browser/batches.py`, `automation/api/erp/records.py`, `automation/transfer/exports.py`, `automation/transfer/downloads.py`, `automation/transfer/export_record.py` | 浏览器流程、导出记录定位、文件传输与响应映射分离；页面缺少旧批次下载入口时复用最新已完成导出记录中的受信任 ZIP 地址，仍由公共安全解压入口处理。外层工厂页面与内嵌生产模块共用一个批次内容定位入口。 |
 | 生产平台下载入口 | `ui/erp_download_entry.py`, `batch_ui/dialog.py`, `batch_ui/platform/`, `batch_ui/task/`, `batch_ui/shell/results.py` | 多选平台后分别显示独立工作区；平台页面与后台任务分层，仅下载、解压已生成批次，绝不自动启动排版；默认按页面选项在完成提示后打开对应平台文件夹。 |
 | 后台只读任务 | `batch_ui/task/reads.py`, `batch_ui/local/scanning.py` | 复用现有Worker线程和取消信号；目录和图片名称在后台读取，界面按来源范围及选中批次核对返回数据，过期结果不得覆盖当前选择。 |
 | ERP工作台壳层 | `batch_ui/local/`, `platform/`, `task/`, `shell/` | 目录直接对应本地排版、平台批次、任务执行和公共窗口外壳；根对话框只装配，控件构造、结果展示和批次表映射各有唯一所有者。 |
@@ -60,7 +61,7 @@
 | S2B生产图下载 | `automation/api/s2b/production/gateway.py`, `downloads.py`, `archive_io.py`, `automation/browser/batches.py` | 优先由Supabase服务端代理生产批次、导出和记录查询，用户选择后按实际件数补发缺失导出，轮询真实下载地址；`archive_io.py`唯一负责下载、ZIP路径校验与解压，网关不可用才回退已登录页面，下载标记接口不承担文件传输。 |
 | 自动化批次规则与本地身份 | `automation/batches/classification.py`, `local.py`, `naming.py`, `rules.py` | 分类、扫描、命名和生成规则按批次域集中；界面只调用这些共享能力，不自行解析或改名。 |
 | 自动化浏览器、传输与平台 | `automation/browser/`, `automation/transfer/`, `automation/providers/`, `automation/workflows/` | 登录会话、批次页面、导出下载、平台配置和端到端流程分别归档；`automation/`根目录只公开稳定入口。 |
-| RIIN桌面控制与管理员入口 | `automation/api/riin/window_control.py`, `desktop.py`, `output.py`, `elevation.py`, `__main__.py`, `ui/riin_diagnostic.py` | 诊断窗口继续只探测响应和置前；独立命令入口经Windows UAC授权后执行指定的读取或导入操作。目录清单、分段和原生/UIA控件操作集中在desktop.py；output.py负责仅文件模式的PRN输出和PrintExp加载，拒绝覆盖输出，不启动物理打印；不提供任意命令执行接口，不由Runner服务会话操作桌面。 |
+| 本地排版后自动生成RIIN PRN | `ui/bulk_workbench.py`, `ui/automated_layout.py`, `ui/automated_layout_files.py`, `automation/api/riin/window_control.py`, `desktop.py`, `dialogs.py`, `workflow.py`, `output.py`, `elevation.py`, `__main__.py` | 入口位于本地排版顶部开发者功能行，复用同一进度、预览、耗时、总结和批次记录。选择原始批次时先复用统一本地排版和安全校验，只把本次最终PNG清单交给受限管理员任务；等待RIIN时显示文件数、已用时和PRN实际写入大小。明确选择已有“切膜机文件”目录时，只枚举直接PNG子项并不解压、不二次排版，直接交给RIIN。不覆盖已有PRN，只有非空文件停止增长后才报告完成；成功后加入已打开的PrintExp，不启动物理打印。 |
 | 源码更新 | `updates/source.py`, `updates/release.py`, `updates/versioning.py`, `updates/worker.py` | 源码安装更新、发布包检查、版本展示和后台执行按职责分离；检查、应用和重启保持同一状态机。 |
 | 协作取消与安全关闭 | `runtime/cancellation.py`, `controllers/thread_lifecycle.py`, `ui/stop_actions.py`, `ui/immediate_exit.py` | 控制器拥有线程释放，UI只路由用户停止意图；任务运行时拒绝关闭并继续处理，空闲时由 Qt 正常退出，禁止强杀进程。 |
 | 应用运行时 | `runtime/branding.py`, `runtime/resources.py`, `runtime/crash_logging.py`, `runtime/restart.py`, `runtime/cancellation.py` | 品牌、资源、故障日志、重启和任务取消归运行时层；包根目录只保留启动入口。 |

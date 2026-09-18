@@ -67,13 +67,14 @@ def test_default_shows_production_layout_but_hides_diagnostic_tools(tmp_path, mo
     assert features == [
         '排版历史', '批量分析文件夹', '算法诊断',
         '切膜刀码开关', '平台＋尺码标签开关', '批次顺序标注',
-        'S2B 批次信息查询', 'RIIN代码控制测试', '隆丰 ERP 下载', 'S2B 生产图下载',
+        'S2B 批次信息查询', '自动化排版', '隆丰 ERP 下载', 'S2B 生产图下载',
         '莆田平台', 'Haloo平台', '并行分块 TIFF',
         '换刀与批次结束停止距离',
     ]
     assert feature_dialog.grab().save(str(tmp_path/'developer-feature-list.png'))
     feature_dialog.close()
-    assert not owner.riin_diagnostic_button.isVisible()
+    assert not hasattr(owner, 'riin_diagnostic_button')
+    assert not hasattr(owner, 'riin_diagnostic_dialog')
     settings_button = owner.automation_home.settings_button
     assert settings_button.parentWidget() is owner.centralWidget()
     from PySide6.QtWidgets import QPushButton
@@ -108,7 +109,7 @@ def test_two_zone_layout_stays_visible_and_active_outside_developer_mode(tmp_pat
     owner = window(tmp_path/'two-zone.ini')
     control = owner.cutter_settings.two_zone
     owner.developer_mode_checkbox.setChecked(True)
-    assert owner.riin_diagnostic_button.isVisible()
+    assert not hasattr(owner, 'riin_diagnostic_button')
     assert not owner.cutter_settings.force_small_pair.isHidden()
     assert not owner.cutter_settings.knife_change_gap.isHidden()
     assert owner._layout_settings().cutter_knife_change_gap_mm == 570

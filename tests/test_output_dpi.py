@@ -5,6 +5,7 @@ import pytest
 from PIL import Image
 from automatic_print.layout_engine import LayoutSettings, generate_layout
 from automatic_print.layout_engine.intake.metadata.output_dpi import resolve_output_dpi
+from automatic_print.layout_engine.intake.metadata.images import PrintDimensions
 
 
 def source(path, dpi=(180,180)):
@@ -66,6 +67,32 @@ def test_manual_dpi_does_not_rescan_source_headers(monkeypatch):
     monkeypatch.setattr(Image,'open',forbidden)
     settings=LayoutSettings(dpi=150)
     assert resolve_output_dpi([Path('unread.png')],settings) is settings
+
+
+def test_follow_source_dpi_reads_network_headers_in_parallel(monkeypatch):
+    from threading import Barrier, get_ident
+    from automatic_print.layout_engine.measurement import parallel_measurement
+
+    paths = [Path(f'network-{index}.png') for index in range(8)]
+    barrier, threads, progress = Barrier(8), set(), []
+
+    def read_dimension(_path, _fallback):
+        threads.add(get_ident())
+        barrier.wait(5)
+        return PrintDimensions(10, 20, 180, 180, True)
+
+    monkeypatch.setattr(parallel_measurement, 'print_dimensions', read_dimension)
+    settings = LayoutSettings(follow_source_dpi=True, worker_threads=8)
+    resolved = resolve_output_dpi(
+        paths, settings,
+        lambda stage, current, total, detail: progress.append(
+            (stage, current, total, detail)),
+    )
+
+    assert len(threads) == 8
+    assert resolved.dpi == 180
+    assert progress[-2][0:3] == ('读取原图DPI', 8, 8)
+    assert '8线程并行读取' in progress[-2][3]
 
 
 def test_gui_defaults_follow_and_retains_manual_setting(tmp_path):

@@ -81,7 +81,7 @@ RIIN要求管理员权限时，在已登录的Windows桌面运行以下命令，
 ## Windows 自托管测试机
 
 专用 Windows 测试机使用 `codex/windows-test` 分支和 `Windows test machine` 工作流，执行完整
-自动测试、可选真实批次排版、Windows 安装包构建，并上传测试报告、耗时、闪退日志和 EXE。
+自动测试、真实批次排版验收、Windows 安装包构建，并上传测试报告、耗时、闪退日志和 EXE。
 Runner 仅绑定本仓库，标签为 `automatic-print`；工作流不接受 `pull_request` 触发，避免在持久化
 生产测试电脑上运行不可信分支代码。
 
@@ -98,6 +98,12 @@ Runner 仅绑定本仓库，标签为 `automatic-print`；工作流不接受 `pu
 如需替换或扩充样本，可在 Actions 仓库变量 `AUTOMATIC_PRINT_REAL_BATCH_PATHS` 中保存真实批次
 绝对路径，多个目录用分号分隔。也可以手动触发工作流时临时指定批次目录和要测试的提交 SHA。
 真实图片回归会在单元测试失败时继续执行，确保报告同时包含代码测试和生产数据兼容性结果。
+`windows/real-batch-suite.json` 另行固定至少十个独立批次文件夹的验收矩阵：三个由固定种子选出的
+Haloo 批次、各两个隆丰、莆田和 S2B 完整批次，以及隆丰 `609172109020` 的 200 PNG 冷/热缓存性能门禁。先运行
+`windows/stage-real-batch-suite.ps1`，把 NAS 源图只读复制到 `C:\actions-runner\real-batches\acceptance`；
+Runner 服务不直接依赖映射盘。每批使用独立进程、缓存状态和输出目录，单批失败后仍继续其余批次，
+最终统一判定；报告核对源文件未变化、补距像素、保存后刀道和订单完整性。200 PNG 使用8段并行输出，
+冷、热缓存生成时间都必须不超过30秒。生成图仅保留在测试机，不上传生产队列，也不触发物理打印。
 
 ## 输出
 

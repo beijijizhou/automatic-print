@@ -1,6 +1,7 @@
 """Independent production-file benchmark; verification is outside generation time."""
 import argparse
 from dataclasses import asdict
+from hashlib import sha256
 from pathlib import Path
 from random import Random
 from math import ceil
@@ -13,7 +14,7 @@ import numpy as np
 from PIL import Image
 import pyvips
 from automatic_print import __version__
-from automatic_print.layout_engine import LayoutSettings, generate_layout
+from automatic_print.layout_engine import LayoutSettings, discover_images, generate_layout
 from automatic_print.layout_engine.labeling.base import header_gap
 from automatic_print.layout_engine.cutting.geometry.printed_guides import vips_corridor_is_clear
 from automatic_print.layout_engine.reporting.operation_timing import OperationTiming, PROGRESS_PHASES
@@ -57,13 +58,23 @@ def run(
     source, output, cache, stack_platform=False, output_format='png',
     independent_checks=True, workers=4, limit=None, seed=20260917,
     output_parts=1, unlimited_memory=True,
-    save_parallelism=4,
+    save_parallelism=4, platform='Haloo', expected_images=None,
+    tested_commit='', cache_state='single', report_name='独立基准测试.json',
 ):
-    paths = sorted(source.glob('*.png'))
+    paths = discover_images(source)
     if not paths:
-        raise ValueError('源目录没有PNG')
+        raise ValueError('源目录没有可支持的图片')
     if limit and len(paths) > limit:
         paths = sorted(Random(seed).sample(paths, limit))
+    if expected_images is not None and len(paths) != expected_images:
+        raise ValueError(f'图片数量不一致：预期 {expected_images}，实际 {len(paths)}')
+    source_snapshot = {
+        str(path.relative_to(source)): (path.stat().st_size, path.stat().st_mtime_ns)
+        for path in paths
+    }
+    manifest_hash = sha256(json.dumps(
+        source_snapshot, ensure_ascii=False, sort_keys=True,
+    ).encode('utf-8')).hexdigest()
     header_gap.cache_root = lambda: cache
     from automatic_print.layout_engine.planning.cache import plan_cache
     from automatic_print.layout_engine.measurement import measurement_cache
@@ -73,7 +84,7 @@ def run(
         follow_source_dpi=True, membrane_gap_mm=40, png_streaming=True,
         cutter_left_marker_external=True, cutter_left_marker_lift_mm=1.5,
         cutter_knife_dots=False, preserve_header_gap=True, cutter_compare_whole_rotation=True,
-        cutter_tail_rotation=True, png_engine='libvips', platform_name='Haloo',
+        cutter_tail_rotation=True, png_engine='libvips', platform_name=platform,
         output_format=output_format,
         worker_threads=workers, output_parts=output_parts,
         save_memory_unlimited=unlimited_memory,
@@ -117,7 +128,16 @@ def run(
                 if not vips_corridor_is_clear(image, item):
                     raise ValueError(f"{part['filename']}：保存后刀位通道不透明")
         corridor = perf_counter()-started
-    report = dict(batch=source.name, version=__version__, images=len(paths),
+    final_snapshot = {
+        str(path.relative_to(source)): (path.stat().st_size, path.stat().st_mtime_ns)
+        for path in paths
+    }
+    source_unchanged = final_snapshot == source_snapshot
+    if not source_unchanged:
+        raise ValueError('验收期间源图片发生变化')
+    report = dict(batch=source.name, platform=platform, version=__version__,
+        tested_commit=tested_commit, cache_state=cache_state,
+        input_manifest_sha256=manifest_hash, images=len(paths),
         changed_images=changed, unchanged_images=len(paths)-changed,
         forty_mm_verified_images=gap_verified,
         gap_warning_images=sum(bool(record.get('warning')) for record in records),
@@ -132,9 +152,12 @@ def run(
         generation_includes_independent_checks=False,
         independent_checks_run=independent_checks,
         source_copy_pixels_exact=independent_checks,
-        saved_corridors_clear=independent_checks)
+        saved_corridors_clear=independent_checks,
+        source_files_unchanged=source_unchanged,
+        order_integrity=result['order_check'])
     print(json.dumps(report, ensure_ascii=False, indent=2), flush=True)
-    (output/'独立基准测试.json').write_text(json.dumps(report, ensure_ascii=False, indent=2), encoding='utf-8')
+    (output/report_name).write_text(
+        json.dumps(report, ensure_ascii=False, indent=2), encoding='utf-8')
     return report
 
 
@@ -151,12 +174,22 @@ if __name__ == '__main__':
     parser.add_argument('--seed', type=int, default=20260917)
     parser.add_argument('--parts', type=int, default=1)
     parser.add_argument('--parallel', type=int, default=4)
+    parser.add_argument('--platform', default='Haloo')
+    parser.add_argument('--expected-images', type=int)
+    parser.add_argument('--tested-commit', default='')
+    parser.add_argument('--cache-state', default='single')
+    parser.add_argument('--report-name', default='独立基准测试.json')
+    parser.add_argument('--max-seconds', type=float)
     parser.add_argument('--limit-memory', dest='unlimited_memory', action='store_false')
     parser.add_argument('--unlimited-memory', dest='unlimited_memory', action='store_true')
     parser.set_defaults(unlimited_memory=True)
     args = parser.parse_args()
-    run(
+    report = run(
         args.source, args.output, args.cache, args.stack_platform, args.format,
         not args.quick, args.workers, args.limit, args.seed, args.parts,
-        args.unlimited_memory, args.parallel,
+        args.unlimited_memory, args.parallel, args.platform, args.expected_images,
+        args.tested_commit, args.cache_state, args.report_name,
     )
+    if args.max_seconds is not None and report['generation_seconds'] > args.max_seconds:
+        raise SystemExit(
+            f"生成耗时 {report['generation_seconds']:.3f} 秒，超过 {args.max_seconds:g} 秒门槛")

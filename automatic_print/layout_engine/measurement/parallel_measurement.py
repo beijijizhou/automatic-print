@@ -1,5 +1,5 @@
 """Bounded, ordered per-image measurements with thread-local decoded sources."""
-from concurrent.futures import ThreadPoolExecutor,wait,FIRST_COMPLETED
+from concurrent.futures import ThreadPoolExecutor, wait, FIRST_COMPLETED, as_completed
 from contextvars import copy_context
 from dataclasses import replace
 from automatic_print.layout_engine.measurement.measurement_session import measurement_session
@@ -19,7 +19,14 @@ def read_parallel(read_one, paths, settings, progress):
     results=[None]*len(paths)
     source = iter(enumerate(paths))
     if progress:
-        progress('读取图片尺寸', 0, len(paths), f'尺寸、膜标签与刀码最多{workers}路并行测量')
+        # Dimensions have already been preloaded before this worker pool starts.
+        # The expensive work below opens/decompresses source pixels and measures
+        # the real label/marker geometry, so do not leave the UI claiming that
+        # it is still reading lightweight dimensions until the first future ends.
+        progress(
+            '测量标签与刀码', 0, len(paths),
+            f'正在解压原图并检查标签、刀码透明区域 · 最多{workers}路并行',
+        )
     with measurement_session(), ThreadPoolExecutor(max_workers=workers, thread_name_prefix='image-measure') as pool:
         def submit():
             entry = next(source, None)
@@ -52,22 +59,42 @@ def read_parallel(read_one, paths, settings, progress):
     return items, labels
 
 
-def preload_dimensions(paths, settings):
-    """Warm cold PNG metadata in parallel before the one-query item preload."""
+def preload_dimensions(paths, settings, progress=None, stage='读取图片尺寸'):
+    """Read ordered image metadata in parallel and optionally report completions."""
     workers = measurement_workers(settings.worker_threads, len(paths))
     if workers == 1 or len(paths) < 4:
-        for path in paths:
-            print_dimensions(path, settings.dpi)
-        return
+        results = []
+        for index, path in enumerate(paths, 1):
+            results.append(print_dimensions(path, settings.dpi))
+            if progress:
+                progress(stage, index, len(paths), path.name)
+        return results
+    results = [None] * len(paths)
     with ThreadPoolExecutor(
         max_workers=workers, thread_name_prefix='dimension-read'
     ) as pool:
-        futures = [
-            pool.submit(copy_context().run, print_dimensions, path, settings.dpi)
-            for path in paths
-        ]
-        for future in futures:
-            future.result()
+        futures = {
+            pool.submit(copy_context().run, print_dimensions, path, settings.dpi):
+            (index, path)
+            for index, path in enumerate(paths)
+        }
+        completed = 0
+        for future in as_completed(futures):
+            index, path = futures[future]
+            try:
+                results[index] = future.result()
+            except Exception as error:
+                results[index] = error
+            completed += 1
+            if progress:
+                progress(
+                    stage, completed, len(paths),
+                    f'{workers}线程并行读取 · {path.name}',
+                )
+    for result in results:
+        if isinstance(result, Exception):
+            raise result
+    return results
 
 
 def measurement_workers(configured,total):

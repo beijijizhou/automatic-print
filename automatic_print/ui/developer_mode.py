@@ -11,9 +11,6 @@ from PySide6.QtWidgets import (
     QVBoxLayout,
 )
 
-from .riin_diagnostic import RiinDiagnosticDialog
-
-
 EXPERIMENTAL_PLATFORMS = ('莆田', 'Haloo')
 
 DEVELOPER_FEATURES = (
@@ -29,7 +26,7 @@ DEVELOPER_FEATURES = (
         ('S2B 批次信息查询', '通过共享服务读取颜色、尺码等批次资料'),
     )),
     ('实验平台与输出', (
-        ('RIIN代码控制测试', '发现RIIN窗口、探测响应并请求置前，不执行打印'),
+        ('自动化排版', '选择批次后先执行本地排版，再把最终PNG交给RIIN生成PRN'),
         ('隆丰 ERP 下载', '下载已生成批次并仅计算排版数据'),
         ('S2B 生产图下载', '读取已生成导出记录并下载、校验和解压生产图'),
         ('莆田平台', '显示尚在验证中的莆田本地排版入口'),
@@ -111,11 +108,25 @@ def developer_task_active(window):
     dialog = getattr(details, 'bulk_dialog', None)
     production = getattr(details, 'production_bulk_dialog', None)
     erp = getattr(window, 'longfeng_erp_dialog', None)
+    automated = getattr(window, 'automated_layout_page', None)
     return bool(
         (dialog and dialog.thread is not None)
         or (production and production.thread is not None)
         or (erp and erp.thread is not None)
+        or (automated and automated.busy)
     )
+
+
+def bind_developer_tab_visibility(window, tabs, page, index):
+    """Keep one developer-only workspace tab synchronized with the mode toggle."""
+    def sync(_enabled=False):
+        enabled = window.developer_mode_checkbox.isChecked()
+        if not enabled and tabs.currentWidget() is page:
+            tabs.setCurrentIndex(0)
+        tabs.setTabVisible(index, enabled)
+
+    window.developer_mode_checkbox.toggled.connect(sync)
+    sync()
 
 
 def build_developer_mode(window, footer):
@@ -125,12 +136,6 @@ def build_developer_mode(window, footer):
     feature_list.clicked.connect(lambda: show_developer_features(window))
     window.developer_features_button = feature_list
     footer.addWidget(feature_list)
-    window.riin_diagnostic_dialog = RiinDiagnosticDialog(window)
-    riin_test = QPushButton('测试RIIN控制')
-    riin_test.setToolTip('非破坏性测试程序能否发现、探测并置前RIIN窗口。')
-    riin_test.clicked.connect(window.riin_diagnostic_dialog.show)
-    window.riin_diagnostic_button = riin_test
-    footer.addWidget(riin_test)
     checkbox = QCheckBox('开发者模式')
     checkbox.setToolTip('显示算法开销、排版历史和尚未开放给普通用户的实验排版功能。')
     window.developer_mode_checkbox = checkbox
@@ -146,7 +151,6 @@ def build_developer_mode(window, footer):
         from .parameter_refresh import defer_parameter_refresh
         with defer_parameter_refresh(window):
             window.developer_mode_enabled = enabled
-            window.riin_diagnostic_button.setVisible(enabled)
             sync_experimental_platforms(window, enabled)
             window.apply_platform_defaults(window.label_settings.platform.currentText())
             window.quick_header_gap_group.setVisible(True)

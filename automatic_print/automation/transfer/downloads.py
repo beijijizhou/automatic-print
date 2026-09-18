@@ -1,11 +1,11 @@
 from __future__ import annotations
 
 from collections.abc import Callable, Mapping, Sequence
-from dataclasses import dataclass
 from pathlib import Path
 from zipfile import ZipFile
 
 from ..api.erp import production_batch_frame
+from .export_record import ExportRecordDownload, RemoteBatch
 
 
 ProgressCallback = Callable[[str], None]
@@ -13,13 +13,6 @@ PRODUCTION_IMAGE_EXTENSIONS = {
     ".png", ".tif", ".tiff", ".jpg", ".jpeg", ".jfif", ".webp", ".bmp"
 }
 DOWNLOAD_CONCURRENCY = 3
-
-
-@dataclass(frozen=True)
-class RemoteBatch:
-    group_name: str
-    batch_number: str
-    group_dir: Path
 
 
 def download_production_images(
@@ -153,9 +146,22 @@ def _start_parallel_downloads(page, tasks, progress):
         except Exception:
             pass
         if links.count() != 3:
-            raise RuntimeError(
-                f"生产批次 {task.batch_number} 的三个下载入口不完整。"
-            )
+            from .exports import production_image_export_records
+            record = production_image_export_records(
+                page, [task.batch_number]
+            ).get(task.batch_number)
+            if record is None:
+                raise RuntimeError(
+                    f"生产批次 {task.batch_number} 的页面下载入口不完整，"
+                    "且没有找到已完成的生产图导出记录。"
+                )
+            if progress:
+                progress(
+                    f"页面下载入口不完整；改用已完成导出记录 "
+                    f"{task.group_name} / {task.batch_number}"
+                )
+            active.append((task, ExportRecordDownload(str(record["file_path"]))))
+            continue
         if progress:
             progress(
                 f"并行下载已启动 {task.group_name} / {task.batch_number}"
