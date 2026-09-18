@@ -39,6 +39,7 @@ class PreviewLoader(QObject):
         self.pending = None
         task = self.active
         task.signals.progress.connect(self.progress, Qt.QueuedConnection)
+        task.signals.timings.connect(self.timings, Qt.QueuedConnection)
         task.signals.sources.connect(self.sources, Qt.QueuedConnection)
         task.signals.analysis.connect(self.analysis, Qt.QueuedConnection)
         task.signals.finished.connect(self.finished, Qt.QueuedConnection)
@@ -63,6 +64,11 @@ class PreviewLoader(QObject):
             self.preview._schematic_report = None
             self.preview.analysis_ready.emit(report)
 
+    @Slot(object, object)
+    def timings(self, token, data):
+        if token == self.token and not self.closed:
+            self.preview.timings_ready.emit(data)
+
     @Slot(object, object, str)
     def finished(self, token, payload, error):
         self.active = None
@@ -83,7 +89,9 @@ class PreviewLoader(QObject):
                     knives = knife_caption(payload['planned'], settings.dpi, ' / ')
                     p.detail = f"{'整批轻量结构图' if p.overview else '当前订单真实图片'} · 整批 {len(payload['planned'])} 张 · 节省 {payload['saved_meters']:.3f} 米 · {knives}"
                     p.plan_loaded.emit(payload)
-                    self.status(payload['warning'] or '整批预览完成 · 尚未生成输出文件')
+                    seconds = payload.get('operation_timings', {}).get('total_seconds')
+                    elapsed = f' · 耗时 {seconds:.2f} 秒' if seconds is not None else ''
+                    self.status(payload['warning'] or f'整批预览完成{elapsed} · 尚未生成输出文件')
                 except (ValueError, OSError) as exc:
                     p.analysis_failed.emit(str(exc))
                     self.status(f'预览图片读取失败：{exc}')

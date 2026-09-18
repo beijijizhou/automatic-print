@@ -49,12 +49,17 @@ def build_batch_input(owner, panel):
     owner.preview_only.setToolTip('对自动识别出的全部批次生效；计算真实排版，不生成打印文件。')
     for button, text, icon in (
         (owner.start_layout_button, '开始排版…', 'batch_multiple'),
+        (QPushButton(), '测试预览耗时', 'more'),
         (owner.window().stop_generation_button, '暂停批次', 'stop'),
     ):
         button.setText(text)
         button.setMinimumHeight(40)
         button.setIcon(action_icon(icon))
         row.addWidget(button, 1)
+        if text == '测试预览耗时':
+            owner.preview_timing_button = button
+            button.setToolTip('只计算当前批次的真实排版，不生成文件；完成后显示总耗时和各阶段耗时。')
+            button.clicked.connect(lambda: owner.window().generate(preview_only=True))
     owner.recent_output_button = QPushButton('打开最近生成的批次')
     owner.recent_output_button.setObjectName('recentOutputButton')
     owner.recent_output_button.setMinimumHeight(40)

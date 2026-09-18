@@ -21,6 +21,7 @@ class PairProductionPreview(ProductionPreview):
     analysis_failed = Signal(str)
     analysis_started = Signal()
     loading_status = Signal(str)
+    timings_ready = Signal(object)
     sources_ready = Signal(object)
     plan_loaded = Signal(object)
     def __init__(self, settings_getter, parent=None):

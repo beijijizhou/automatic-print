@@ -12,10 +12,12 @@ from ....layout_engine.cutting.validation.cut_validation import validate_cut_cor
 from ...preview_diagnostics import diagnostic_layout
 from ....layout_engine.intake.preparation.batch_snapshot import batch_measurements
 from ....layout_engine.orders.batch_analysis import batch_inventory
+from ....layout_engine.reporting.operation_timing import OperationTiming, PROGRESS_PHASES
 
 
 class PreviewSignals(QObject):
     progress = Signal(object, str)
+    timings = Signal(object, object)
     sources = Signal(object, object)
     analysis = Signal(object, object)
     finished = Signal(object, object, str)
@@ -38,18 +40,33 @@ class PreviewTask(QRunnable):
     @batch_measurements
     def run(self):
         payload, error = None, ''
+        timer = OperationTiming()
+
+        def phase(name):
+            if timer.phase(name):
+                self.emit(self.signals.timings, timer.snapshot())
+
+        def report_progress(stage, current, total, name):
+            mapped = PROGRESS_PHASES.get(stage)
+            if mapped:
+                phase(mapped)
+            self.emit(self.signals.progress, f'{stage} · {current}/{total} · {name}')
+
         try:
+            phase('扫描文件名')
             self.emit(self.signals.progress, '正在扫描文件夹并读取图片文件名…')
             paths = discover_images(self.folder) if self.folder and self.folder.is_dir() else []
             self.emit(self.signals.sources, paths)
             if not paths:
                 raise ValueError('所选文件夹没有可读取的图片，请重新选择。')
+            phase('订单与尺码分析')
             inventory = batch_inventory(paths)
             from ....automation.api.s2b.metadata.batch_name import find_s2b_batch_folder
             has_s2b = any(find_s2b_batch_folder(path) for path in paths)
             if has_s2b:
                 inventory['s2b_metadata_pending'] = True
             self.emit(self.signals.analysis, inventory)
+            phase('批次资料查询')
             from ....automation.api.s2b.metadata.prepare import prepare_s2b_metadata
             s2b_metadata = prepare_s2b_metadata(paths, self.settings,
                 lambda stage, current, total, name: self.emit(
@@ -60,26 +77,24 @@ class PreviewTask(QRunnable):
             if s2b_metadata:
                 inventory['s2b_metadata'] = s2b_metadata
             self.emit(self.signals.analysis, inventory)
+            phase('补足膜标签间距')
             from ....layout_engine.labeling.base.header_gap import prepare_paths
-            paths, self.settings, gap_records = prepare_paths(paths, self.settings,
-                lambda stage, current, total, name: self.emit(self.signals.progress,
-                    f'{stage} · {current}/{total} · {name}'))
+            paths, self.settings, gap_records = prepare_paths(
+                paths, self.settings, report_progress)
+            phase('输出DPI确认')
             from ....layout_engine.intake.metadata.output_dpi import resolve_output_dpi
-            self.settings = resolve_output_dpi(paths, self.settings,
-                lambda stage, current, total, name: self.emit(self.signals.progress,
-                    f'{stage} · {current}/{total} · {name}'))
+            self.settings = resolve_output_dpi(paths, self.settings, report_progress)
             effective, reports = [self.settings], []
 
             def progress(stage, current, total, filename):
                 if stage == '批次刀位已确定':
                     effective[0] = replace(self.settings, cutter_knife_mm=current*25.4/total)
-                self.emit(self.signals.progress, f'{stage} · {current}/{total} · {filename}')
+                report_progress(stage, current, total, filename)
 
             def analysis(report):
                 from ....layout_engine.labeling.base.header_gap import annotate_analysis
-                annotate_analysis(report, gap_records, self.settings,
-                    lambda stage, current, total, name: self.emit(self.signals.progress,
-                        f'{stage} · {current}/{total} · {name}'))
+                annotate_analysis(
+                    report, gap_records, self.settings, report_progress)
                 if s2b_metadata:
                     report['s2b_metadata'] = s2b_metadata
                 reports[:] = [report]
@@ -89,10 +104,12 @@ class PreviewTask(QRunnable):
             from ....automation.api.s2b.metadata.prepare import metadata_warning_text
             warning = metadata_warning_text(s2b_metadata)
             try:
+                phase('刀位与排版计算')
                 from ....layout_engine.planning.zones.gap_fallback import plan_with_gap_fallback
                 paths, self.settings, result = plan_with_gap_fallback(paths, self.settings, gap_records, progress, analysis)
                 planned, labels, _, height, baseline = result
                 effective[0] = replace(self.settings, cutter_knife_mm=effective[0].cutter_knife_mm)
+                phase('坐标与订单安全检查')
                 order_check = validate_order_placements(paths, planned)
                 validate_cut_corridor(
                     planned, effective[0],
@@ -106,6 +123,7 @@ class PreviewTask(QRunnable):
                 self.emit(self.signals.progress, '参数不安全，正在准备仅供检查的图片预览…')
                 planned, labels, height, overflow = diagnostic_layout(paths, effective[0], progress)
                 baseline = height
+            phase('批次信息整理')
             payload = {'planned': planned, 'labels': labels, 'settings': effective[0],
                        'warning': warning, 'overflow': overflow, 'order_check': order_check,
                        'analysis': reports[-1] if reports else {}, 'header_gap': gap_records,
@@ -116,7 +134,12 @@ class PreviewTask(QRunnable):
         except Exception as exc:
             from ....layout_engine.diagnostics.error_context import error_context
             error = error_context(exc, locals().get('paths', []), self.folder, settings=self.settings)
+        timings = timer.finish('已停止' if isinstance(error, str) and error == '预览任务已停止。'
+                               else '失败' if error else '已完成')
+        if payload is not None:
+            payload['operation_timings'] = timings
         try:
+            self.signals.timings.emit(self.token, timings)
             self.signals.finished.emit(self.token, payload, error)
         except RuntimeError:
             pass  # Closed window: its disposable preview result is no longer needed.

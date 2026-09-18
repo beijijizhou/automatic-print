@@ -20,6 +20,8 @@ def test_preview_does_not_build_canvas_or_create_output(tmp_path, monkeypatch):
     assert result['preview_only']
     assert result['filename'].endswith('.png')
     assert len(result['placements']) == 1
+    assert result['operation_timings']['status'] == '已完成'
+    assert result['operation_timings']['total_seconds'] >= 0
     assert '单列 / 自由排版' in cutting_report(result)
     assert len(payloads[0]['planned']) == 1
     assert not (tmp_path/'absent').exists()

@@ -20,7 +20,7 @@ from ...recent_output import remember_recent_output
 def generation_finished(window, output, result) -> None:
     window.clock.stop()
     if result.get("preview_only"):
-        _show_preview_result(window)
+        _show_preview_result(window, result)
         return
     timings = result["timings_seconds"]
     window.job_path.setText(output)
@@ -61,13 +61,18 @@ def generation_finished(window, output, result) -> None:
         QDesktopServices.openUrl(QUrl.fromLocalFile(str(Path(output).resolve())))
 
 
-def _show_preview_result(window) -> None:
+def _show_preview_result(window, result) -> None:
     show_progress(window)
     window.progress.setRange(0, 100)
     window.progress.setValue(100)
     window.progress.setFormat("预览完成")
-    window.status.setText("整批预览完成，未生成最终文件；尚未进行输出像素验收。")
-    window.run_log.appendPlainText("仅预览完成：未生成打印文件。")
+    timings = result.get('operation_timings', {})
+    seconds = timings.get('total_seconds')
+    slowest = max(timings.get('steps', ()), key=lambda row: row['seconds'], default=None)
+    elapsed = f" · 总耗时 {duration_text(seconds)}" if seconds is not None else ''
+    window.status.setText(f"整批预览完成{elapsed}，未生成最终文件；尚未进行输出像素验收。")
+    detail = f"；最耗时：{slowest['name']} {duration_text(slowest['seconds'])}" if slowest else ''
+    window.run_log.appendPlainText(f"仅预览完成{elapsed}{detail}；未生成打印文件。")
     window.job_path.clear()
     _set_idle(window)
 

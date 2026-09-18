@@ -19,6 +19,31 @@ def generate_layout(
     prepared_plan=None, filename_suffix="", prepared_gap_records=None,
 ) -> dict:
     total_started = perf_counter()
+    preview_timer = None
+    if preview_only:
+        from automatic_print.layout_engine.reporting.operation_timing import (
+            OperationTiming, PROGRESS_PHASES,
+        )
+        preview_timer = OperationTiming()
+        original_progress = progress
+
+        def preview_progress(stage, current, total, name):
+            mapped = PROGRESS_PHASES.get(stage)
+            if mapped:
+                preview_timer.phase(mapped)
+            if original_progress:
+                original_progress(stage, current, total, name)
+
+        progress = preview_progress
+
+        original_phase_ready = phase_ready
+
+        def notify_phase(name):
+            preview_timer.phase(name)
+            if original_phase_ready:
+                original_phase_ready(name)
+
+        phase_ready = notify_phase
     paths = list(image_paths)
     from automatic_print.layout_engine.output.output_sizes import enforce_output_compatibility
     settings, output_format_fallback = enforce_output_compatibility(settings, progress)
@@ -127,10 +152,13 @@ def generate_layout(
                     "metadata_warning": metadata_warning})
     if preview_only:
         from automatic_print.layout_engine.reporting.preview_result import build_preview_result
-        return build_preview_result(
+        phase('批次信息整理')
+        result = build_preview_result(
             output_path.name, planned, quality, sizes, settings, analysis[-1],
             gap_records, cut_check, order_check, width, height, baseline_height,
         )
+        result['operation_timings'] = preview_timer.finish()
+        return result
     reading_seconds = perf_counter() - reading_started
     from .render_output import render_output
     rendered = render_output(

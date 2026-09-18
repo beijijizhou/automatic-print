@@ -35,14 +35,14 @@
 | 订单与刀位安全 | `layout_engine/cutting/validation/order_validation.py`, `layout_engine/cutting/validation/cut_validation.py`, `layout_engine/cutting/validation/marked_pixel_validation.py` | 规划后和真实像素阶段分别核验，不能由 UI 绕过。 |
 | 计划和测量缓存 | `layout_engine/planning/cache/plan_cache.py`, `layout_engine/measurement/measurement_cache.py`, `layout_engine/measurement/measurement_session.py`, `layout_engine/measurement/cutter_measurements.py`, `layout_engine/planning/cache/normal_plan_cache.py`, `layout_engine/planning/cache/cached_planner.py` | 整批计划、切膜几何与单图测量分层缓存；PNG/TIFF及压缩参数不改变几何，跨输出格式复用同一缓存；单图占位和标签卡片区域按文件指纹持久化，安全复核不重复解码顶部条带；单图占位记录首次查询时批量装入任务快照，工作线程不逐条争用SQLite；生产方案、整批旋转和膜规格比较即使重排同一批路径，也按文件身份重组并复用同一批刀码几何，不重复进入逐图测量；整批缓存使用独立排版算法版本，普通软件发布不失效；文件状态一次并发读取后由批次会话复用；缓存使用文件指纹和24小时绝对失效策略，锁冲突短等待后跳过，不阻塞生产。 |
 | 单图读取与排版对象 | `layout_engine/intake/preparation/item_reader.py`, `layout_engine/intake/preparation/item_factory.py` | 读取层一次收集尺寸、DPI、旋转候选和膜标签位置；构造层只计算标签、刀码、平台文字与最终占位，不重复打开源图。 |
-| 仅预览报告 | `layout_engine/reporting/preview_result.py`, `layout_engine/output/output_sizes.py`, `ui/batch_summary.py` | 不渲染、不写打印图片；仍返回完整排版、刀位、单排原因和耗时报告供界面复制。 |
+| 仅预览报告 | `layout_engine/reporting/preview_result.py`, `layout_engine/output/output_sizes.py`, `ui/batch_summary.py`, `ui/previews/runtime/task.py`, `ui/operation_timing.py` | 不渲染、不写打印图片；正式仅预览和自动真实预览均返回完整排版及分阶段实测耗时，界面提供“测试预览耗时”入口并显示总耗时、最慢阶段、刀位和单排原因。 |
 | 单批次后台编排 | `controllers/layout_generation.py`, `controllers/generation_progress.py`, `ui/workbench/generation/`, `ui/workers.py` | 控制器唯一拥有工作线程生命周期和纯进度计算；UI按启动、实时进度、结果展示分离，只收集参数、构造Worker并展示不可变结果。 |
 | 统一批次排版入口与滚动编排 | `ui/preference_actions.py`, `controllers/bulk_generation.py`, `ui/bulk_workbench.py`, `bulk_generation_worker.py` | 同一入口扫描单批次或多批次目录；控制器拥有任务线程和取消，UI展示状态；外层线程池有空位立即补批次，合并批次复用内部图片线程。 |
 | 主界面进度展示 | `ui/busy_spinner.py`, `ui/layout_activity.py`, `ui/operation_timing.py`, `layout_engine/reporting/operation_timing.py`, `generation_panel.py` | 未知总量用旋转指示，已知总量用真实进度条；顶部活动按钮同步显示当前步骤耗时和整次总耗时，TIFF 保存显示已完成 Strip 数及真实高度进度，耗时占比仅保留在提示和耗时表。 |
 | 主窗口可见页面装配 | `ui/main_window.py`, `ui/workbench/home.py`, `activity.py`, `settings.py` | 主窗口只连接应用状态和控制器；首页、任务状态与打印参数按实际UI区域各自拥有控件树，新增可见区域不得重新堆回主窗口。 |
 | 主工作台批次总览 | `ui/workbench/overview/panel.py`, `label_controls.py`, `preview.py`, `bindings.py` | 目录直接对应快捷标签、批次数据、真实预览和参数联动；根目录兼容模块不拥有控件或业务逻辑。 |
 | 刀码方向预览 | `ui/previews/markers/view.py`, `data.py`, `render.py`, `annotations.py` | 页签、示例数据、像素渲染和尺寸标注分别拥有唯一职责；预览复用生产排版对象和真实坐标。 |
-| 真实排版预览运行时 | `ui/previews/runtime/task.py`, `loader.py`, `inventory.py`, `snapshot.py`, `viewport.py` | 后台计算、结果加载、文件名轻量清单、轻量快照和视口交互分离；耗时计算不进入GUI线程，快速模式只读取清单而不启动排版。 |
+| 真实排版预览运行时 | `ui/previews/runtime/task.py`, `loader.py`, `inventory.py`, `snapshot.py`, `viewport.py` | 后台计算、分阶段计时、结果加载、文件名轻量清单、轻量快照和视口交互分离；耗时计算不进入GUI线程，每次真实预览把计时附在结果中，快速模式只读取清单而不启动排版。 |
 | 错误上下文与复制 | `layout_engine/diagnostics/error_context.py`, `layout_engine/diagnostics/error_parameters.py`, `ui/failure_panel.py` | 所有失败复用完整订单/参数诊断，不散落拼字符串。 |
 | 参数持久化与模式可见性 | `ui/workbench/preferences/`, `ui/preference_autosave.py`, `layout_values.py`, `developer_mode.py` | 读取、保存和文件夹/设置窗口动作按状态方向分离；稳定生产控件对普通用户开放，新实验功能默认只在开发者模式显示并生效。 |
 | 输出参数界面 | `ui/settings/output/dpi.py`, `location.py`, `format.py`, `segmentation.py` | 设置页输出区域按用户可见参数分离，统一向工作台和生成入口提供控件与保存位置解析。 |

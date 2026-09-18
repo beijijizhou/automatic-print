@@ -30,6 +30,8 @@ def build_preview(panel, window, label, block):
     panel.summary = BatchSummaryPanel(panel)
     panel.timings = OperationTimingPanel(window.worker_bridge, panel)
     panel.timings.save_report_provider = lambda: panel.summary.save_report
+    panel.preview.timings_ready.connect(panel.timings.receive)
+    panel.preview.analysis_started.connect(panel.timings.reset)
     panel.batch_distribution = BatchDistributionLabel(panel)
 
     group = QGroupBox("预览检查 · 标签刀码与批次排版相互独立")

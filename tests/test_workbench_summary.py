@@ -9,6 +9,20 @@ from automatic_print.layout_engine import LayoutSettings, generate_layout
 from automatic_print.ui.main_window import MainWindow
 
 
+def test_user_can_start_timed_preview_from_primary_batch_actions(tmp_path):
+    app = QApplication.instance() or QApplication([])
+    window = MainWindow(QSettings(str(tmp_path/'timed-preview.ini'), QSettings.IniFormat))
+    window.startup_update_timer.stop()
+    calls = []
+    window.generate = lambda *_args, **kwargs: calls.append(kwargs)
+    button = window.automation_home.preview_timing_button
+    assert button.text() == '测试预览耗时'
+    assert '不生成文件' in button.toolTip()
+    button.click()
+    assert calls == [{'preview_only': True}]
+    window.close()
+
+
 def test_current_batch_preview_and_summary_are_visible_and_retained(tmp_path):
     app = QApplication.instance() or QApplication([])
     source = tmp_path/'TEST_BATCH'

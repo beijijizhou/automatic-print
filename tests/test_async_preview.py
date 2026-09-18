@@ -75,6 +75,9 @@ def test_saved_folder_does_not_block_startup_and_stale_results_are_ignored(tmp_p
         assert all(path.parent == second for path, _ in panel.preview.planned)
         assert 'second' in panel.summary.info.text()
         assert '预览完成' in panel.summary.progress.text()
+        assert '耗时' in panel.summary.progress.text()
+        assert panel.preview.batch_payload['operation_timings']['status'] == '已完成'
+        assert panel.timings.data == panel.preview.batch_payload['operation_timings']
         assert calls.count(second) == 1
         # Selection uses the existing plan, never another whole-batch calculation.
         count = len(calls)

@@ -137,7 +137,7 @@
   `layout_engine/rendering/storage/atomic_png.py`与输出报告复用该事实，不把libvips重叠流水线伪装成互斥CPU步骤。流式PNG编码每行时，
   `layout_engine/cutting/validation/cut_validation.py`的全部区域刀位同步核对最终 alpha；发布后只顺序复核全部数据块 CRC、尺寸和格式。失败文件
   改名为“生成未完成”并保留诊断，等待用户选择后续处理，同时避免再次解压整幅超长PNG。
-- 预览：异步任务、快照生成、加载和缩放控件集中在`ui/previews/runtime/`；“刀码四种情况”页签的视图、
+- 预览：异步任务、快照生成、加载和缩放控件集中在`ui/previews/runtime/`；自动真实预览和用户主动运行的“测试预览耗时”都会显示从扫描、补距/标签测量、旋转比较到安全检查的分阶段实测耗时，并把计时保存在预览结果中；“刀码四种情况”页签的视图、
   数据、渲染与标注集中在`ui/previews/markers/`。`layout_engine/reporting/preview_result.py` 形成不落地打印图片的
   完整报告数据，`ui/batch_summary.py` 显示可复制的刀位、单排原因和耗时报告。
 - 错误诊断：`ui/failure_panel.py`、`failure_dialog.py`、
