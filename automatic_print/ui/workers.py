@@ -30,6 +30,7 @@ class GenerateWorker(QObject):
         settings: LayoutSettings,
         preview_only=False,
         batch_name=None,
+        local_mirror_root=None,
     ) -> None:
         super().__init__()
         self.images = images
@@ -39,6 +40,8 @@ class GenerateWorker(QObject):
         self.settings = settings
         self.preview_only = preview_only
         self.batch_name = batch_name or self.source.resolve().name
+        self.local_mirror_root = local_mirror_root
+        self.image_aliases = {}
         self.cancellation = Cancellation()
         self.timing = None
         self.failure_stage = '开始读取批次'
@@ -64,7 +67,22 @@ class GenerateWorker(QObject):
         self.cancellation.check()
         if stage in PROGRESS_PHASES:
             self._phase(PROGRESS_PHASES[stage])
+        token, separator, detail = filename.partition('\t')
+        if separator and token in self.image_aliases:
+            filename = self.image_aliases[token] + '\t' + detail
         self.progress.emit(stage, current, total, filename)
+
+    def _prefer_local_mirror(self):
+        from ..automation.transfer.local_mirror import prefer_downloaded_batch
+        selected = prefer_downloaded_batch(
+            self.images, self.source, self.local_mirror_root,
+            self.settings.platform_name,
+        )
+        if not selected.used:
+            return
+        self.images = list(selected.images)
+        self.image_aliases = selected.aliases
+        self._progress('共享盘本地副本', len(self.images), len(self.images), selected.detail)
 
     @Slot()
     def run(self) -> None:
@@ -83,6 +101,7 @@ class GenerateWorker(QObject):
                 if not self.images:
                     types = '、'.join(discovered_extensions(self.source)[:15]) or '没有文件'
                     raise ValueError(f'所选文件夹没有支持的图片。实际文件类型：{types}')
+            self._prefer_local_mirror()
             self.sources_ready.emit(self.images)
             self.cancellation.check()
             result = generate_layout(

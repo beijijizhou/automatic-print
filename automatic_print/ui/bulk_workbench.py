@@ -68,7 +68,8 @@ class BulkWorkbench(QObject):
         worker = BulkGenerationWorker(
             self.folders, settings, self.window.bulk_parallelism.value(), custom,
             self.window.automation_home.preview_only.isChecked(), parent,
-            self.window.combine_bulk_batches.isChecked())
+            self.window.combine_bulk_batches.isChecked(),
+            self.window.preferences.value('automation/output_location', '', str))
         bindings = ((worker.discovered, self.discovered),
                     (worker.progress, self.progress), (worker.preview, self.preview),
                     (worker.completed, self.completed), (worker.timings, self.timings),

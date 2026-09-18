@@ -57,6 +57,8 @@ def start_generation(window, *, preview_only=False) -> None:
     window.active_png_engine = settings.png_engine
     window.clock.start()
     worker = GenerateWorker(
-        None, source, output, job_id, settings, preview_only=preview_only
+        None, source, output, job_id, settings, preview_only=preview_only,
+        local_mirror_root=window.preferences.value(
+            'automation/output_location', '', str),
     )
     window.layout_generation.start(worker, window.worker_bridge)

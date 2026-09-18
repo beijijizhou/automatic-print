@@ -52,6 +52,7 @@
 | 应用重启 | `runtime/restart.py` | 源码更新和恢复出厂设置共用同一安全重启入口；仅 `dev.py` 子进程监听重载标记，普通快捷方式启动会清理过期标记，安装环境启动新进程。 |
 | 批次及膜历史 | `history/store.py`, `history/batch_queue.py`, `history/bulk_analysis.py` | 历史格式由存储模块维护，UI不直接写日志文件。 |
 | ERP生产批次读取与下载 | `automation/browser/batches.py`, `automation/api/erp/records.py`, `automation/transfer/exports.py`, `automation/transfer/downloads.py`, `automation/transfer/export_record.py` | 浏览器流程、导出记录定位、文件传输与响应映射分离；页面缺少旧批次下载入口时复用最新已完成导出记录中的受信任 ZIP 地址，仍由公共安全解压入口处理。外层工厂页面与内嵌生产模块共用一个批次内容定位入口。 |
+| 共享盘批次本地镜像 | `automation/transfer/local_mirror.py`, `ui/workers.py` | 共享盘批次存在平台下载目录中的同批本地副本时，按批次号、图片数量、文件名和字节数完整核对后复用本地图片完成尺寸、标签、刀码、排版和合成；任何缺失、重名或大小不一致都回退原共享盘，不猜测映射。输出目录和历史来源仍保留用户选择的位置。 |
 | 生产平台下载入口 | `ui/erp_download_entry.py`, `batch_ui/dialog.py`, `batch_ui/platform/`, `batch_ui/task/`, `batch_ui/shell/results.py` | 多选平台后分别显示独立工作区；平台页面与后台任务分层，仅下载、解压已生成批次，绝不自动启动排版；默认按页面选项在完成提示后打开对应平台文件夹。 |
 | 后台只读任务 | `batch_ui/task/reads.py`, `batch_ui/local/scanning.py` | 复用现有Worker线程和取消信号；目录和图片名称在后台读取，界面按来源范围及选中批次核对返回数据，过期结果不得覆盖当前选择。 |
 | ERP工作台壳层 | `batch_ui/local/`, `platform/`, `task/`, `shell/` | 目录直接对应本地排版、平台批次、任务执行和公共窗口外壳；根对话框只装配，控件构造、结果展示和批次表映射各有唯一所有者。 |
