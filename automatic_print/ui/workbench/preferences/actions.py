@@ -8,8 +8,14 @@ class PreferenceActionsMixin:
         if self.has_active_tasks():
             return
         if self.choose_folder():
+            from pathlib import Path
+            from ...batch_folder_selection import choose_batch_folders
+            scan = choose_batch_folders(self, Path(self.folder.text()))
+            if scan is None:
+                self.status.setText('已取消排版，文件夹选择保持不变。')
+                return
             from ...bulk_workbench import start_bulk
-            start_bulk(self, self.folder.text())
+            start_bulk(self, self.folder.text(), scan)
 
     def build_reset_button(self):
         from ...settings_reset import reset_button

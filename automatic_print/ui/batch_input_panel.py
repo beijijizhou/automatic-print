@@ -95,7 +95,7 @@ def build_batch_input(owner, panel):
     layout.addLayout(parameters)
     layout.addLayout(row)
     owner.start_layout_button.setToolTip(
-        '选择图片文件夹或上级目录；自动识别一个或多个批次，再按“合并所有子文件夹”设置排版。')
+        '选择图片文件夹或上级目录，再勾选其中需要排版的批次；“切膜机文件”会自动跳过。')
     panel.bulk_generation_button.hide()  # Compatibility handle; the primary action now covers both modes.
     owner.window().stop_generation_button.setToolTip(
         '停止当前排版，保留已完成文件；不会关闭软件。')

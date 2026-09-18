@@ -37,7 +37,7 @@
 | 单图读取与排版对象 | `layout_engine/intake/preparation/item_reader.py`, `layout_engine/intake/preparation/item_factory.py` | 读取层一次收集尺寸、DPI、旋转候选和膜标签位置；构造层只计算标签、刀码、平台文字与最终占位，不重复打开源图。 |
 | 仅预览报告 | `layout_engine/reporting/preview_result.py`, `layout_engine/output/output_sizes.py`, `ui/batch_summary.py` | 不渲染、不写打印图片；仍返回完整排版、刀位、单排原因和耗时报告供界面复制。 |
 | 单批次后台编排 | `controllers/layout_generation.py`, `controllers/generation_progress.py`, `ui/workbench/generation/`, `ui/workers.py` | 控制器唯一拥有工作线程生命周期和纯进度计算；UI按启动、实时进度、结果展示分离，只收集参数、构造Worker并展示不可变结果。 |
-| 统一批次排版入口与滚动编排 | `ui/preference_actions.py`, `controllers/bulk_generation.py`, `ui/bulk_workbench.py`, `bulk_generation_worker.py` | 同一入口扫描单批次或多批次目录；控制器拥有任务线程和取消，UI展示状态；外层线程池有空位立即补批次，合并批次复用内部图片线程。 |
+| 统一批次排版入口与滚动编排 | `ui/preference_actions.py`, `ui/batch_folder_selection.py`, `controllers/bulk_generation.py`, `ui/bulk_workbench.py`, `bulk_generation_worker.py` | 同一入口在后台扫描单批次或多批次目录，排除“切膜机文件”后允许勾选参与排版的批次；控制器拥有任务线程和取消，UI展示状态；外层线程池有空位立即补批次，合并批次复用内部图片线程。 |
 | 主界面进度展示 | `ui/busy_spinner.py`, `ui/layout_activity.py`, `ui/operation_timing.py`, `layout_engine/reporting/operation_timing.py`, `generation_panel.py` | 未知总量用旋转指示，已知总量用真实进度条；顶部活动按钮同步显示当前步骤耗时和整次总耗时，TIFF 保存显示已完成 Strip 数及真实高度进度，耗时占比仅保留在提示和耗时表。 |
 | 主窗口可见页面装配 | `ui/main_window.py`, `ui/workbench/home.py`, `activity.py`, `settings.py` | 主窗口只连接应用状态和控制器；首页、任务状态与打印参数按实际UI区域各自拥有控件树，新增可见区域不得重新堆回主窗口。 |
 | 主工作台批次总览 | `ui/workbench/overview/panel.py`, `label_controls.py`, `preview.py`, `bindings.py` | 目录直接对应快捷标签、批次数据、真实预览和参数联动；根目录兼容模块不拥有控件或业务逻辑。 |
