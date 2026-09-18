@@ -1,4 +1,5 @@
 import os
+import json
 os.environ.setdefault('QT_QPA_PLATFORM', 'offscreen')
 from dataclasses import replace
 import numpy as np
@@ -191,10 +192,9 @@ def test_stale_prepared_copy_is_regenerated_from_recorded_source(tmp_path):
     settings = LayoutSettings(dpi=25.4, membrane_gap_mm=40)
     prepared, _, _ = header_gap.prepare_paths([source], settings)
     prepared = prepared[0]
-    prepared.with_suffix('.json').write_text(
-        '{"source": "' + str(source) + '", "source_identity": ["missing", 0, 0]}',
-        encoding='utf-8',
-    )
+    prepared.with_suffix('.json').write_text(json.dumps({
+        'source': str(source), 'source_identity': ['missing', 0, 0],
+    }), encoding='utf-8')
 
     actual, record = header_gap.prepare_one(prepared, settings)
 
@@ -245,55 +245,4 @@ def test_setting_default_and_persistence(tmp_path):
     assert build_header_gap(window).value() == 35
     assert app
 
-
-@pytest.mark.parametrize('mode', ['single', 'dual'])
-@pytest.mark.parametrize('engine', ['pillow', 'libvips'])
-def test_complete_double_orders_segmented_with_safe_corridors(tmp_path, mode, engine):
-    paths = [sample(tmp_path/f'B{order}-1-T-Black-M-NO1-{face}.png', side='left' if order % 2 else 'right')
-             for order in range(4) for face in (1, 2)]
-    settings = LayoutSettings(dpi=25.4, membrane_gap_mm=40, cutter_mode=mode,
-        cutter_auto_knife=True, cutter_single_row_rotation=True, cutter_compare_whole_rotation=True,
-        cutter_left_marker_external=True, preserve_header_gap=True, cutter_knife_dots=False,
-        png_engine=engine, output_parts=3, save_memory_unlimited=True)
-    result = generate_layout(paths, tmp_path/'out', settings)
-    assert result['order_check']['orders'] == 4
-    assert result['order_check']['double_pairs'] == 4
-    assert len(result['header_gap']) == len(paths)
-    for part in result['parts']:
-        assert len(part['placements']) % 2 == 0
-        with Image.open(tmp_path/'out'/part['filename']) as output:
-            for p in part['placements']:
-                original = next(path for path in paths if path.name == p['source'])
-                prepared = header_gap.prepare_one(original, settings)[0]
-                with Image.open(prepared) as source, source.rotate(p['rotation_degrees'], expand=True) as rotated:
-                    crop = output.crop((p['x_px'], p['y_px'], p['x_px']+rotated.width, p['y_px']+rotated.height))
-                    expected = np.asarray(rotated)
-                    actual = np.asarray(crop)
-                    # Added labels may occupy verified transparent header-card
-                    # pixels, but original printed pixels must remain exact.
-                    opaque = expected[:, :, 3] == 255
-                    assert np.array_equal(actual[opaque], expected[opaque])
-            if mode == 'dual':
-                for zone in part['cut_corridor'].get('zones', [part['cut_corridor']]):
-                    assert output.crop((zone['safe_left_px'], zone.get('start_y_px', 0),
-                        zone['safe_right_px'], zone.get('end_y_px', output.height))).getchannel('A').getextrema()[1] == 0
-
-
-def test_segmented_output_prepares_header_gap_once_for_the_whole_batch(tmp_path, monkeypatch):
-    paths = [sample(tmp_path/f'B{index}-1-T-Black-M-NO1-1.png') for index in range(4)]
-    calls = []
-    original = header_gap.prepare_paths
-
-    def counted(*args, **kwargs):
-        calls.append(tuple(args[0]))
-        return original(*args, **kwargs)
-
-    monkeypatch.setattr(header_gap, 'prepare_paths', counted)
-    result = generate_layout(paths, tmp_path/'out', LayoutSettings(
-        dpi=25.4, media_width_mm=580, membrane_gap_mm=40,
-        cutter_mode='dual', output_parts=2, save_parallelism=1,
-        number_images=False, png_engine='libvips',
-    ))
-
-    assert calls == [tuple(paths)]
-    assert len(result['header_gap']) == len(paths)
+# Segmented-output regressions continue in test_header_gap_segments.py.

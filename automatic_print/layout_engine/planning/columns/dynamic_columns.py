@@ -39,7 +39,7 @@ def select_columns(groups, settings, spacing, progress=None):
     # left and a small companion on the right). Preserve that exact optimizer.
     if maximum >= 2:
         try:
-            from .knife_optimizer import select_batch_knife
+            from automatic_print.layout_engine.planning.knife.optimizer import select_batch_knife
             from .cutter_planner import _lanes
             asymmetric = select_batch_knife(groups, settings, spacing)
             lanes = _lanes(asymmetric, width)

@@ -2,7 +2,7 @@
 from dataclasses import replace
 
 from automatic_print.layout_engine.planning.columns.cutter_planner import _horizontal, _lanes, solve_groups
-from automatic_print.layout_engine.planning.columns.knife_optimizer import distinct_knife_candidates
+from automatic_print.layout_engine.planning.knife.optimizer import distinct_knife_candidates
 from automatic_print.layout_engine.domain.models import mm_to_px
 from automatic_print.layout_engine.planning.packing.units import build_units
 from automatic_print.layout_engine.orders.size_policy import coalesced_size, same_single_size

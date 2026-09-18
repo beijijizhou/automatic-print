@@ -2,6 +2,7 @@ from PIL import Image
 
 from automatic_print.layout_engine import LayoutSettings
 from automatic_print.layout_engine.pipeline import service
+from automatic_print.layout_engine.pipeline import render_output
 from automatic_print.layout_engine.planning.base.planner import plan_layout
 from automatic_print.layout_engine.output.output_sizes import cutting_report
 
@@ -11,8 +12,7 @@ def test_preview_does_not_build_canvas_or_create_output(tmp_path, monkeypatch):
     Image.new('RGBA', (80, 120), 'blue').save(path, dpi=(25.4, 25.4))
     def forbidden(*args, **kwargs):
         raise AssertionError('Preview must not render final canvas')
-    monkeypatch.setattr(service, 'build_pillow_canvas', forbidden)
-    monkeypatch.setattr(service, 'build_vips_canvas', forbidden)
+    monkeypatch.setattr(render_output, 'render_output', forbidden)
     payloads = []
     result = service.generate_layout([path], tmp_path/'absent',
         LayoutSettings(dpi=25.4, number_images=False),
