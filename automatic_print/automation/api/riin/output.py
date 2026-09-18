@@ -2,6 +2,16 @@
 from pathlib import Path
 
 
+def new_document(handle):
+    from pywinauto import Desktop
+    window = Desktop(backend='win32').window(handle=handle)
+    ribbon = window.child_window(control_id=59398).wrapper_object()
+    if ribbon.rectangle().height() != 107:
+        raise RuntimeError('RIIN工具栏布局改变，需要重新校准。')
+    ribbon.click(coords=(36, 58))
+    return {'state': 'new_document_requested'}
+
+
 def begin_file_output(process_id):
     from pywinauto import Desktop
     dialog = Desktop(backend='win32').window(

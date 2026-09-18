@@ -11,12 +11,12 @@ from .desktop import (
 )
 from .elevation import is_administrator, launch_elevated
 from .window_control import probe_riin
-from .output import begin_file_output, inspect_printexp, load_printexp, save_print_file
+from .output import begin_file_output, inspect_printexp, load_printexp, new_document, save_print_file
 
 
 def main(argv=None):
     parser = argparse.ArgumentParser(description='RIIN独立管理员控制入口')
-    parser.add_argument('operation', choices=('inspect', 'open-import', 'import', 'confirm-import', 'import-menu', 'acknowledge-import-errors', 'select-document', 'open-output', 'begin-file-output', 'save-print-file', 'inspect-printexp', 'load-printexp'))
+    parser.add_argument('operation', choices=('inspect', 'open-import', 'import', 'confirm-import', 'import-menu', 'acknowledge-import-errors', 'select-document', 'open-output', 'begin-file-output', 'save-print-file', 'inspect-printexp', 'load-printexp', 'new-document'))
     parser.add_argument('--document')
     parser.add_argument('--output', type=Path)
     parser.add_argument('--report', type=Path, required=True)
@@ -73,6 +73,8 @@ def main(argv=None):
             result['action'] = save_print_file(windows[0].process_id, args.output)
         elif args.operation == 'inspect-printexp':
             result['printexp'] = inspect_printexp()
+        elif args.operation == 'new-document':
+            result['action'] = new_document(windows[0].handle)
         elif args.operation == 'load-printexp':
             result['action'] = load_printexp(args.output)
         else:

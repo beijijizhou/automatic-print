@@ -74,7 +74,7 @@ def open_import(handle):
     if rect.height() != 107 or rect.width() < 1000:
         raise RuntimeError('RIIN工具栏布局与已验证版本不同，请重新校准导入位置。')
     # This legacy MFC ribbon exposes no named buttons through UI Automation.
-    ribbon.click_input(coords=(187, 58))
+    ribbon.click(coords=(187, 58))
     deadline = time.monotonic() + 8
     while time.monotonic() < deadline:
         dialogs = [w for w in desktop.windows(process=window.process_id())
