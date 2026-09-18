@@ -52,7 +52,8 @@ def _row_facts(row):
     return signature, min(markers) if markers else None, zone
 
 
-def _record(previous_signature, signature, previous_zone, zone, required, actual, added=0):
+def _record(previous_signature, signature, previous_zone, zone, required, actual,
+            added=0, removed=0):
     return {
         'from_zone': previous_zone or '上一区域',
         'to_zone': zone or '下一区域',
@@ -61,6 +62,7 @@ def _record(previous_signature, signature, previous_zone, zone, required, actual
         'required_px': required,
         'actual_px': actual,
         'added_px': added,
+        'removed_px': removed,
     }
 
 
@@ -72,33 +74,47 @@ def apply_knife_change_gap(result, settings):
         return result, []
     shifts, records = {}, []
     cumulative = 0
+    shifted_any = False
     previous_signature = previous_marker = previous_zone = None
+    previous_bottom = None
+    spacing = mm_to_px(settings.spacing_mm, settings.dpi)
     for row in _rows(planned):
         signature, marker, zone = _row_facts(row)
         if signature is None or marker is None:
             continue
+        row_top = min(placement.row_y_px for _path, placement in row) + cumulative
+        row_bottom = max(placement.row_y_px + placement.footprint_height_px
+                         for _path, placement in row) + cumulative
         marker += cumulative
         if previous_signature is not None and signature != previous_signature:
             actual = marker - previous_marker
-            added = max(0, required - actual)
-            cumulative += added
-            marker += added
+            adjustment = required - actual
+            if adjustment < 0 and previous_bottom is not None:
+                adjustment = max(adjustment, previous_bottom + spacing - row_top)
+            cumulative += adjustment
+            marker += adjustment
+            row_top += adjustment
+            row_bottom += adjustment
+            shifted_any = shifted_any or bool(adjustment)
             records.append(_record(
                 previous_signature, signature, previous_zone, zone,
-                required, marker - previous_marker, added,
+                required, marker - previous_marker,
+                max(0, adjustment), max(0, -adjustment),
             ))
         for path, placement in row:
             shifts[(str(path), placement.sequence_number)] = cumulative
         previous_signature, previous_marker, previous_zone = signature, marker, zone
+        previous_bottom = row_bottom
     if previous_marker is not None:
         actual = height + cumulative - previous_marker
         added = max(0, required - actual)
         cumulative += added
+        shifted_any = shifted_any or bool(added)
         records.append(_record(
             previous_signature, (), previous_zone, '批次结束',
             required, actual + added, added,
         ))
-    if not cumulative:
+    if not shifted_any:
         return result, records
     shifted = []
     for path, placement in planned:

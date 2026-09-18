@@ -1,4 +1,5 @@
 from pathlib import Path
+from dataclasses import replace
 from PIL import Image
 
 from automatic_print.layout_engine import LayoutSettings, Placement, generate_layout
@@ -75,6 +76,47 @@ def test_same_knife_only_adds_batch_end_stop_distance():
     assert changes[0]['from_zone'] == '并排区'
     assert changes[0]['to_zone'] == '批次结束'
     assert changes[0]['actual_px'] == changes[0]['required_px'] == 570
+
+
+def test_knife_change_removes_excess_blank_space_to_exact_570_mm():
+    paths = [Path('1.png'), Path('2.png')]
+    planned = [
+        (paths[0], placement(1, 0, 0, (100,), '并排区')),
+        (paths[1], placement(2, 900, 0, (), '旋转区')),
+    ]
+    settings = LayoutSettings(
+        dpi=25.4, spacing_mm=8, cutter_mode='dual',
+        cutter_knife_change_gap_mm=570)
+
+    result, changes = apply_knife_change_gap(
+        (planned, {}, 580, 1000, 1000), settings)
+
+    shifted = result[0]
+    assert shifted[1][1].row_y_px == 570
+    assert changes[0]['actual_px'] == changes[0]['required_px'] == 570
+    assert changes[0]['added_px'] == 0
+    assert changes[0]['removed_px'] == 330
+    assert inspect_knife_change_gaps(shifted, settings, result[3])[0]['actual_px'] == 570
+
+
+def test_knife_change_does_not_compact_through_previous_content():
+    paths = [Path('1.png'), Path('2.png')]
+    first = replace(placement(1, 0, 0, (100,), '并排区'),
+                    footprint_height_px=700)
+    planned = [
+        (paths[0], first),
+        (paths[1], placement(2, 900, 0, (), '旋转区')),
+    ]
+    settings = LayoutSettings(
+        dpi=25.4, spacing_mm=8, cutter_mode='dual',
+        cutter_knife_change_gap_mm=570)
+
+    result, changes = apply_knife_change_gap(
+        (planned, {}, 580, 1000, 1000), settings)
+
+    assert result[0][1][1].row_y_px == 708
+    assert changes[0]['actual_px'] == 708
+    assert changes[0]['removed_px'] == 192
 
 
 def test_both_knife_change_directions_and_batch_end_are_protected():
