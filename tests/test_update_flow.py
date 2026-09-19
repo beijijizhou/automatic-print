@@ -21,6 +21,7 @@ def test_normal_launch_discards_stale_development_restart_marker(
     marker = tmp_path / '.restart-request'
     marker.touch()
     monkeypatch.setattr(restart, 'RESTART_REQUEST', marker)
+    monkeypatch.setattr(restart, 'SOURCE_VERSION_FILE', tmp_path/'missing-version.py')
     monkeypatch.delenv('AUTOMATIC_PRINT_DEV', raising=False)
     owner = object()
 
@@ -28,6 +29,88 @@ def test_normal_launch_discards_stale_development_restart_marker(
 
     assert not marker.exists()
     assert not timer.isActive()
+
+
+def test_external_source_update_waits_for_active_job_then_restarts(tmp_path, monkeypatch):
+    marker = tmp_path/'.restart-request'
+    version_file = tmp_path/'__init__.py'
+    version_file.write_text(f'__version__ = "{restart.__version__}"\n', encoding='utf-8')
+    monkeypatch.setattr(restart, 'RESTART_REQUEST', marker)
+    monkeypatch.setattr(restart, 'SOURCE_VERSION_FILE', version_file)
+    monkeypatch.setattr(restart, 'UPDATE_GUARD', tmp_path/'.update-in-progress')
+    monkeypatch.delenv('AUTOMATIC_PRINT_DEV', raising=False)
+    calls = []
+
+    class Owner:
+        active = True
+        update_thread = None
+
+        def has_active_tasks(self):
+            return self.active
+
+        def source_update_busy(self):
+            return False
+
+        def show_update_progress(self, message):
+            calls.append(message)
+
+    owner = Owner()
+    monkeypatch.setattr(restart, 'request_application_restart',
+                        lambda window: calls.append('restart') or True)
+    timer = restart.install_restart_monitor(APP, owner)
+    try:
+        assert timer.isActive()
+        version_file.write_text('__version__ = "0.1.999"\n', encoding='utf-8')
+        timer.timeout.emit()  # first observation is deliberately not actionable
+        assert not calls
+        timer.timeout.emit()
+        assert calls == ['源码已更新；当前任务完成后自动安全重启…']
+        owner.active = False
+        timer.timeout.emit()
+        assert calls[-2:] == ['源码已更新；正在安全重启以加载新版本…', 'restart']
+        assert not timer.isActive()
+    finally:
+        timer.stop()
+
+
+def test_external_source_update_waits_for_update_guard(tmp_path, monkeypatch):
+    marker = tmp_path/'.restart-request'
+    version_file = tmp_path/'__init__.py'
+    version_file.write_text('__version__ = "0.1.999"\n', encoding='utf-8')
+    guard = tmp_path/'.update-in-progress'
+    guard.touch()
+    monkeypatch.setattr(restart, 'RESTART_REQUEST', marker)
+    monkeypatch.setattr(restart, 'SOURCE_VERSION_FILE', version_file)
+    monkeypatch.setattr(restart, 'UPDATE_GUARD', guard)
+    monkeypatch.delenv('AUTOMATIC_PRINT_DEV', raising=False)
+    calls = []
+
+    class Owner:
+        update_thread = None
+
+        def has_active_tasks(self):
+            return False
+
+        def source_update_busy(self):
+            return False
+
+        def show_update_progress(self, message):
+            calls.append(message)
+
+    monkeypatch.setattr(restart, 'request_application_restart',
+                        lambda window: calls.append('restart') or True)
+    timer = restart.install_restart_monitor(APP, Owner())
+    try:
+        timer.timeout.emit()
+        timer.timeout.emit()
+        assert not calls
+        guard.unlink()
+        timer.timeout.emit()
+        assert not calls
+        timer.timeout.emit()
+        assert calls[-1] == 'restart'
+    finally:
+        timer.stop()
 
 
 def test_runtime_and_development_launcher_share_restart_marker():
@@ -129,6 +212,19 @@ def test_silent_check_only_displays_available_code(tmp_path, monkeypatch):
     wait_until(lambda: window.update_thread is None)
     assert '2026-09-14' in window.update_status_label.text()
     assert window.pending_source_update is None
+    window.close()
+
+
+def test_checkout_latest_is_not_reported_as_loaded_version(tmp_path, monkeypatch):
+    window, _info = window_for_test(tmp_path, monkeypatch)
+    monkeypatch.setattr(update_actions, 'source_code_changed', lambda: True)
+    current = SourceUpdateInfo('same', 'same', '0.1.999', '2026-09-19', 0,
+                               release_iteration=8)
+    window.update_check_finished(current)
+    assert '自动安全重启' in window.update_status_label.text()
+    assert '源码已是最新' not in window.update_status_label.text()
+    window.confirm_source_check(current)
+    assert '自动安全重启' in window.update_status_label.text()
     window.close()
 
 

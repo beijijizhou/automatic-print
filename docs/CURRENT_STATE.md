@@ -37,7 +37,8 @@
 - `ui/current_film.py` 的当前膜卡片可直接修改膜规格、排版模式和自定义膜宽，修改结果与打印参数设置使用同一数据源。
 - `ui/parameter_refresh.py` 统一抑制开发者模式和平台默认值联动期间的预览请求；参数更新后
   保留明确提示，只有用户重新启动排版才会读取批次。应用重启由 `runtime/restart.py` 统一拥有，
-  源码更新和恢复出厂设置共用同一启动策略。
+  源码更新和恢复出厂设置共用同一启动策略。普通源码启动在运行期间发现磁盘版本变化时，
+  等待更新写入完成和当前任务结束，再自动安全重启；“源码已是最新”不冒充运行进程版本。
 - 单批次生成控制：`automatic_print/controllers/layout_generation.py` 独立拥有工作线程、Worker信号接线、
   取消和释放；`controllers/generation_progress.py` 提供纯进度计算。界面启动、实时进度和最终结果分别位于
   `ui/workbench/generation/start.py`、`progress.py`和`results.py`；`ui/generation_actions.py`与
