@@ -11,7 +11,7 @@ def test_selected_film_and_current_child_are_highlighted_without_reading(tmp_pat
     badge = panel.current_film
     calls = []
     monkeypatch.setattr(panel.preview, 'use_folder', lambda *a: calls.append(a))
-    assert '580 毫米' in badge.text()
+    assert '570 毫米' in badge.text()
     assert '当前选用膜' not in badge.text()
     assert owner.automation_home.batch_input_panel.isAncestorOf(badge)
     assert owner.automation_home.batch_input_panel.isAncestorOf(panel.selected_source)
@@ -28,10 +28,10 @@ def test_selected_film_and_current_child_are_highlighted_without_reading(tmp_pat
     assert owner.cutter_settings.width_control.value() == 525
     assert badge.custom_width.value() == 52.5
     owner.cutter_settings.film.setCurrentIndex(0)
-    assert '430 毫米' in badge.text()
+    assert '420 毫米' in badge.text()
     assert '自动多列' in badge.mode.currentText()
-    owner.cutter_settings.printable.left.setValue(15)
-    assert '425 毫米' in badge.text()
+    owner.cutter_settings.printable.left.setValue(20)
+    assert '415 毫米' in badge.text()
     assert '#dce4ef' in badge.styleSheet()
     assert badge.textInteractionFlags() & Qt.TextSelectableByMouse
     from automatic_print.ui.quick_fields import show_selected_source

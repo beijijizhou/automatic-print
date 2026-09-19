@@ -80,12 +80,12 @@ def test_film_parent_clears_stale_mode_and_knife_on_first_change(tmp_path):
     panel.film.setCurrentIndex(panel.film.findData(600))
     assert width.value() == 600
     assert panel.mode.currentData() == "dual"
-    assert panel.knife.value() == 290
+    assert panel.knife.value() == 285
     assert not rotation.isEnabled()
     panel.knife.setValue(310)
     panel.film.setCurrentIndex(panel.film.findData(450))
     assert panel.mode.currentData() == "dual"
-    assert panel.knife.value() == 215
+    assert panel.knife.value() == 210
     assert not panel.knife.isEnabled()
     panel.save()
     assert preferences.value("cutter/film_mm", type=int) == 450
@@ -100,7 +100,7 @@ def test_home_hides_online_workflows_and_keeps_local_logs():
     assert window.windowTitle() == "本地排版工作台"
     assert window.cutter_settings.film.currentData() == 600
     assert window.cutter_settings.mode.currentData() == "dual"
-    assert window.cutter_settings.knife.value() == 290
+    assert window.cutter_settings.knife.value() == 285
     assert home.main_tabs.isTabVisible(0)
     assert not home.main_tabs.isTabVisible(1)
     assert not home.main_tabs.isTabVisible(2)

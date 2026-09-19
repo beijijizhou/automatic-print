@@ -50,6 +50,7 @@ class CurrentFilmLabel(QWidget):
             self.cutter.custom_film.value.valueChanged,
             self.cutter.printable.left.valueChanged,
             self.cutter.printable.right.valueChanged,
+            self.cutter.printable.output_width.valueChanged,
         ):
             signal.connect(self.refresh)
         self.refresh()
@@ -64,12 +65,13 @@ class CurrentFilmLabel(QWidget):
         self._sync_controls()
         film = self.cutter.width_control.value()
         usable = self.cutter.printable.usable_width()
-        self.summary.setText(f"可打印宽度：{usable:g} 毫米")
+        self.summary.setText(f"输出画布：{usable:g} 毫米")
         self.setToolTip(
             "当前打印参数，不是自动选用面积最省方案。\n"
             f"物理膜宽 {film:g} 毫米 − RIIN左预留 "
             f"{self.cutter.printable.left.value():g} 毫米 − 右预留 "
-            f"{self.cutter.printable.right.value():g} 毫米。"
+            f"{self.cutter.printable.right.value():g} 毫米。\n"
+            f"最终输出画布固定为 {usable:g} 毫米。"
         )
         invalid = usable <= 0
         background = "#fee2e2" if invalid else "#f8fafc"

@@ -66,6 +66,30 @@ def test_one_large_order_cannot_be_split(tmp_path):
     assert '批次1单 4件 本段1单 4件' in result['filename']
 
 
+def test_fixed_570_mm_canvas_is_kept_in_every_segment(tmp_path):
+    paths = []
+    for order in range(4):
+        for face in (1, 2):
+            path = tmp_path/f'B{order}-1-T-Black-M-NO1-{face}.png'
+            Image.new('RGBA', (100, 140), 'blue').save(path, dpi=(25.4, 25.4))
+            paths.append(path)
+    settings = LayoutSettings(
+        dpi=25.4, media_width_mm=570, fixed_output_width_mm=570,
+        riin_left_mm=15, riin_right_mm=15, cutter_mode='dual',
+        cutter_auto_knife=True, number_images=False, output_parts=2,
+        save_parallelism=1,
+    )
+    result = generate_layout(paths, tmp_path/'out', settings)
+    assert result['segment_count'] == 2
+    for part in result['parts']:
+        assert part['film_width_mm'] == 600
+        assert part['maximum_width_mm'] == 570
+        assert part['width_px'] == 570
+        assert part['cut_corridor']['pixel_verified']
+        with Image.open(tmp_path/'out'/part['filename']) as image:
+            assert image.width == 570
+
+
 @pytest.mark.parametrize('platform', ['Haloo', 'S2B', '莆田', '隆丰'])
 def test_virtual_gap_platforms_use_isolated_png_processes(platform):
     settings = LayoutSettings(

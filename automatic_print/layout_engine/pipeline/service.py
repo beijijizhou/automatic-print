@@ -80,6 +80,13 @@ def generate_layout(
         analysis[-1]['knife_change_gap'] = knife_changes
     if settings.batch_end_block:
         width = mm_to_px(settings.media_width_mm,settings.dpi)
+    if settings.fixed_output_width_mm > 0:
+        fixed_width = mm_to_px(settings.fixed_output_width_mm, settings.dpi)
+        if fixed_width > mm_to_px(settings.media_width_mm, settings.dpi):
+            raise ValueError('输出画布宽度不能超过当前可排版宽度。')
+        if width > fixed_width:
+            raise ValueError('排版内容超过输出画布宽度，请增大画布宽度后重试。')
+        width = fixed_width
     height = marked_height(planned, settings, width, height,
                            (prepared_plan or {}).get('end_notice', '批次结束'))
     phase('坐标与订单安全检查')

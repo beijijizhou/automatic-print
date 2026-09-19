@@ -60,6 +60,7 @@ def test_everyday_parameters_are_grouped_and_marker_preview_is_default(tmp_path)
     assert {'批次', '输出', '排版', '刀码与标签'} <= titles
     assert home.batch_input_panel.isAncestorOf(owner.quick_header_gap_group)
     assert home.batch_input_panel.isAncestorOf(owner.quick_force_small_pair)
+    assert home.batch_input_panel.isAncestorOf(owner.quick_output_width)
     assert home.batch_input_panel.isAncestorOf(panel.source_order)
     assert panel.source_order.isChecked()
     assert panel.source_order_label.text() == '批次文件夹名＋正序/倒序'

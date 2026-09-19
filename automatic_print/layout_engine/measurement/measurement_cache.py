@@ -144,7 +144,7 @@ def item_key(file_identity, index, width, height, settings, degrees, created_at)
 def item_settings(settings):
     """Keep only fields that affect one source image's cached geometry."""
     return replace(
-        settings, media_width_mm=600,
+        settings, media_width_mm=600, fixed_output_width_mm=0,
         label_batch_name=(settings.label_batch_name
                           if settings.label_source_order_enabled else ''),
         worker_threads=1, output_parts=1,

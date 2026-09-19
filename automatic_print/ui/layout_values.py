@@ -24,6 +24,7 @@ def settings_from_window(window) -> LayoutSettings:
             raise ValueError('蜂鸟是 ERP，不是生产平台；请填写实际平台名称。')
     return LayoutSettings(
         media_width_mm=window.cutter_settings.printable.effective_width(),
+        fixed_output_width_mm=window.cutter_settings.printable.effective_width(),
         compare_film_sizes=window.cutter_settings.compare_films.isChecked(),
         compare_reference_films=getattr(window, 'developer_mode_enabled', False),
         riin_left_mm=window.cutter_settings.printable.left.value(),

@@ -42,6 +42,7 @@ class LayoutItem:
 @dataclass(frozen=True)
 class LayoutSettings:
     media_width_mm: float = 600
+    fixed_output_width_mm: float = 0  # Zero keeps content-based right trimming.
     spacing_mm: float = 8  # Vertical only in cutter modes; both axes in free mode.
     margin_mm: float = 3
     dpi: float = 300
