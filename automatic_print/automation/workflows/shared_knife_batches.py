@@ -5,7 +5,9 @@ from pathlib import Path
 from uuid import uuid4
 
 from ...layout_engine import generate_layout
-from .shared_knife import continuous_print_eligibility, locked_knife_settings
+from .shared_knife import (
+    actual_knife_signatures, continuous_print_eligibility, locked_knife_settings,
+)
 
 
 def _layout_progress(progress, batch):
@@ -15,14 +17,14 @@ def _layout_progress(progress, batch):
     return report
 
 
-def _promote_files(staged, target, result):
-    """Move only this batch's verified output files; undo a partial promotion."""
-    names = result.get('files') or [result['filename']]
-    moves = [(staged / name, target / name) for name in names]
+def _promote_files(staged, destinations):
+    """Move only verified files; undo a partial promotion across both folders."""
+    moves = [(staged / name, target / name) for name, target in destinations]
     for source, destination in moves:
         if not source.is_file() or destination.exists():
             raise OSError(f'输出文件缺失或目标已存在：{source} -> {destination}')
-    target.mkdir(parents=True, exist_ok=True)
+    for _source, destination in moves:
+        destination.parent.mkdir(parents=True, exist_ok=True)
     moved = []
     try:
         for source, destination in moves:
@@ -35,9 +37,33 @@ def _promote_files(staged, target, result):
         raise
 
 
+def _route_parts(result, locked, root, run_name):
+    """Route each independently verified PNG by its actual complete knife signature."""
+    parts = result.get('parts') or [result]
+    routes, destinations = [], []
+    for part in parts:
+        eligible, reason = continuous_print_eligibility(part, locked)
+        if not eligible and not reason.startswith('实际纵刀位'):
+            raise ValueError(f'{part.get("filename", "输出文件")} 未通过安全复核：{reason}')
+        signatures = actual_knife_signatures(part)
+        if len(signatures) != 1:
+            raise ValueError(f'{part.get("filename", "输出文件")} 含不同实际刀位，不能合并打印。')
+        category = '常规' if eligible else '旋转'
+        folder = root / category / run_name
+        routes.append({
+            'filename': part['filename'], 'folder': str(Path(category) / run_name),
+            'unattended': eligible, 'reason': reason,
+            'knife_signature': next(iter(signatures)),
+        })
+        destinations.append((part['filename'], folder))
+    return routes, destinations
+
+
 def render_shared_knife_batches(platform_root, platform_name, prepared, settings, progress):
     """Keep batches separate while all unattended files inherit one knife setting."""
-    settings = replace(settings, output_format='png')  # RIIN file import accepts PNG only.
+    # This operator workflow prioritizes unchanged knife setup and fast output,
+    # not a second four-film optimization pass.
+    settings = replace(settings, output_format='png', compare_film_sizes=False)
     locked = locked_knife_settings(settings)
     token = datetime.now().strftime('%m%d%H%M') + '_' + uuid4().hex[:6]
     root = Path(platform_root) / '切膜机文件'
@@ -67,36 +93,33 @@ def render_shared_knife_batches(platform_root, platform_name, prepared, settings
                 fallback_stage = root / '旋转' / run_name / f'待检验_{index}'
                 fallback_stage.mkdir(parents=True, exist_ok=False)
                 result = generate_layout(images, fallback_stage, settings,
-                                         _layout_progress(progress, batch), batch_name=batch)
-                eligible, fallback_reason = continuous_print_eligibility(result, locked)
-                if not eligible and not fallback_reason.startswith('实际纵刀位'):
-                    raise ValueError(f'原策略输出未通过安全复核：{fallback_reason}')
-                category = '常规' if eligible else '旋转'
-                reason += f'；原策略复核：{fallback_reason}'
-                target = root / category / run_name
-                _promote_files(fallback_stage, target, result)
+                                         _layout_progress(progress, batch), batch_name=batch,
+                                         split_by_knife=True)
+                part_routes, destinations = _route_parts(result, locked, root, run_name)
+                _promote_files(fallback_stage, destinations)
+                reason += ('；原策略按实际刀位分文件复核：' + '；'.join(
+                    dict.fromkeys(route['reason'] for route in part_routes)))
             except Exception as fallback_error:
                 errors.append({'batch': batch, 'error': str(fallback_error),
                                'fixed_error': reason})
                 progress(f'{batch}：原排版策略也失败，保留诊断并继续下一批 · {fallback_error}')
                 continue
         else:
-            if not eligible and not reason.startswith('实际纵刀位'):
-                errors.append({'batch': batch, 'error': f'固定刀位输出未通过安全复核：{reason}'})
-                progress(f'{batch}：安全复核未通过，输出保留在待检验区，不生成PRN · {reason}')
-                continue
-            category = '常规' if eligible else '旋转'
-            target = root / category / run_name
             try:
-                _promote_files(staged, target, result)
-            except OSError as error:
+                part_routes, destinations = _route_parts(result, locked, root, run_name)
+                _promote_files(staged, destinations)
+            except (OSError, ValueError) as error:
                 errors.append({'batch': batch, 'error': f'输出归档失败：{error}'})
                 progress(f'{batch}：输出仍保留在待检验区，继续下一批 · {error}')
                 continue
-        routes[batch] = {'folder': str(Path(category) / run_name),
-                         'unattended': eligible, 'reason': reason}
+        categories = {route['folder'] for route in part_routes}
+        routes[batch] = {'folder': next(iter(categories)) if len(categories) == 1 else '',
+                         'unattended': all(route['unattended'] for route in part_routes),
+                         'reason': reason, 'parts': part_routes}
         completed.append((batch, result))
-        progress(f'[{index}/{total}] {batch}：已归入{category} · {reason}')
+        normal = sum(route['unattended'] for route in part_routes)
+        progress(f'[{index}/{total}] {batch}：固定刀位 {normal} 文件，需换刀 '
+                 f'{len(part_routes)-normal} 文件 · {reason}')
     return {'type': 'processed', 'platform': platform_name, 'batches': completed,
             'batch_routes': routes, 'layout_errors': errors, 'merged_batches': [],
             'test': False, 'preview_only': False, 'shared_knife_mm': locked.cutter_knife_mm,

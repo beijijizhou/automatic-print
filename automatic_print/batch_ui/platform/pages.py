@@ -134,7 +134,7 @@ def build_production_page(owner, output_row: QHBoxLayout) -> QWidget:
     )
     owner.shared_knife_button = QPushButton('多批次共用刀位生成PRN')
     owner.shared_knife_button.clicked.connect(lambda: owner._download_selected(auto_print='shared_knife'))
-    owner.shared_knife_button.setToolTip('一次读取所选批次，按当前固定刀位分别排版；刀位变化的批次归入旋转文件夹并标明需换刀。生成PRN但不启动物理打印。')
+    owner.shared_knife_button.setToolTip('一次读取所选批次，优先使用当前固定刀位；同批次不同刀位的输出文件分别归入常规和旋转文件夹，按实际刀位分别生成PRN。不比较四种膜规格，也不启动物理打印。')
     owner.shared_knife_button.setVisible(owner.platform_names == ('隆丰',))
     owner.open_download_folder = QCheckBox("下载完成后打开文件夹")
     owner.open_download_folder.setChecked(True)

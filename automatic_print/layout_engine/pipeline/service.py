@@ -14,6 +14,7 @@ def generate_layout(
     progress: ProgressCallback | None = None, plan_ready=None, preview_only=False,
     analysis_ready=None, batch_name="", phase_ready=None,
     prepared_plan=None, filename_suffix="", prepared_gap_records=None,
+    split_by_knife=False,
 ) -> dict:
     total_started = perf_counter()
     paths = list(image_paths)
@@ -40,11 +41,11 @@ def generate_layout(
         )
     else:
         gap_records = list(prepared_gap_records)
-    if settings.output_parts > 1 and not preview_only and prepared_plan is None:
+    if (settings.output_parts > 1 or split_by_knife) and not preview_only and prepared_plan is None:
         from automatic_print.layout_engine.rendering.storage.segmented_output import generate_segments
         return generate_segments(paths, output_dir, settings, progress,
                                  plan_ready, analysis_ready, batch_name, phase_ready,
-                                 gap_records)
+                                 gap_records, split_by_knife=split_by_knife)
     if not s2b_metadata and prepared_plan is None:
         s2b_metadata = prepare_s2b_metadata(paths, settings, progress)
     if not preview_only:

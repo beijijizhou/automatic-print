@@ -9,7 +9,9 @@ from automatic_print.layout_engine.intake.metadata.images import print_dimension
 from automatic_print.automation.workflows.shared_knife_batches import render_shared_knife_batches
 from pathlib import Path
 from collections import Counter
+from types import SimpleNamespace
 from PIL import Image
+import pytest
 
 
 def _result(*signatures):
@@ -23,7 +25,8 @@ def test_locked_settings_disable_per_batch_knife_and_rotation_search():
     source = LayoutSettings(cutter_mode='dual', media_width_mm=450,
                             cutter_knife_mm=225, cutter_auto_knife=True,
                             cutter_majority_two_zone=True, cutter_rotation_zone=True,
-                            cutter_compare_whole_rotation=True)
+                            cutter_compare_whole_rotation=True,
+                            compare_film_sizes=True)
     locked = locked_knife_settings(source)
     assert locked.cutter_knife_mm == 225
     assert not locked.cutter_auto_knife
@@ -32,6 +35,7 @@ def test_locked_settings_disable_per_batch_knife_and_rotation_search():
     assert not locked.cutter_majority_two_zone
     assert not locked.cutter_rotation_zone
     assert not locked.cutter_compare_whole_rotation
+    assert not locked.compare_film_sizes
     assert source.cutter_auto_knife
 
 
@@ -44,6 +48,9 @@ def test_only_same_one_knife_and_verified_pixels_are_unattended():
     unsafe = _result((knife,))
     unsafe['cut_corridor'] = {'pixel_verified': False}
     assert not continuous_print_eligibility(unsafe, settings)[0]
+    unsafe_changed = _result((knife + 100,))
+    unsafe_changed['cut_corridor'] = {'pixel_verified': False}
+    assert '实际输出像素' in continuous_print_eligibility(unsafe_changed, settings)[1]
 
 
 def test_different_film_reservation_is_not_continuous():
@@ -262,3 +269,106 @@ def test_single_unpaired_row_still_routes_to_fixed_knife_normal(tmp_path):
     result = report['batches'][0][1]
     assert len(result['placements']) == 1
     assert actual_knife_signatures(result) == {(300,)}
+
+
+def test_partition_by_actual_knife_even_when_only_one_output_part_requested():
+    from automatic_print.layout_engine.rendering.storage.segmented_output import partition_plan
+    planned = []
+    for index, knife in enumerate((300, 300, 420, 420), 1):
+        path = Path(f'B{index}-1-T-Black-M-NO1-1.png')
+        placement = SimpleNamespace(row_y_px=index * 100, footprint_height_px=80,
+                                    cut_knife_xs_px=(knife,), cut_knife_x_px=knife)
+        planned.append((path, placement))
+    parts = partition_plan(planned, 1, split_by_knife=True)
+    assert [[path for path, _p in part] for part in parts] == [
+        [planned[0][0], planned[1][0]], [planned[2][0], planned[3][0]],
+    ]
+    same_order = [(Path('B1-1-T-Black-M-NO1-1.png'), planned[0][1]),
+                  (Path('B1-1-T-Black-M-NO1-2.png'), planned[2][1])]
+    with pytest.raises(ValueError, match='完整订单'):
+        partition_plan(same_order, 1, split_by_knife=True)
+
+
+def test_one_batch_mixed_knife_files_use_two_folders_and_separate_prns(tmp_path, monkeypatch):
+    from automatic_print.automation.workflows import shared_knife_batches
+    from automatic_print.automation.api.riin import jobs
+    source = tmp_path / '批次混合'
+    source.mkdir()
+    locked = mm_to_px(300, 300)
+    filenames = ['fixed-1.png', 'fixed-2.png', 'changed.png']
+    parts = []
+    for name, knife in zip(filenames, (locked, locked, locked + 100)):
+        part = _result((knife,))
+        part['filename'] = name
+        parts.append(part)
+
+    def fake_generate(_images, output, _settings, *_args, **kwargs):
+        if not kwargs.get('split_by_knife'):
+            raise ValueError('固定刀位容纳不了全部图片')
+        for name in filenames:
+            (output / name).write_bytes(b'PNG')
+        return {'filename': filenames[0], 'files': filenames, 'parts': parts}
+
+    monkeypatch.setattr(shared_knife_batches, 'generate_layout', fake_generate)
+    settings = LayoutSettings(cutter_mode='dual', media_width_mm=600,
+                              cutter_knife_mm=300)
+    report = render_shared_knife_batches(tmp_path / '隆丰', '隆丰',
+                                         [(source, [source / 'image.png'])], settings,
+                                         lambda _message: None)
+    assert not report['layout_errors']
+    route = report['batch_routes']['批次混合']
+    assert not route['unattended']
+    assert [Path(part['folder']).parts[0] for part in route['parts']] == [
+        '常规', '常规', '旋转',
+    ]
+    for part in route['parts']:
+        assert (Path(report['output_folder']) / part['folder'] / part['filename']).is_file()
+    sent = []
+    monkeypatch.setattr(jobs, 'generate_prn', lambda files, output, progress:
+                        sent.append((files, output)) or {'state': 'completed'})
+    printed, errors, skipped = jobs.generate_batch_prns(report, lambda _message: None)
+    assert len(printed) == len(sent) == 2 and not errors and not skipped
+    assert [[path.name for path in files] for files, _output in sent] == [
+        filenames[:2], filenames[2:],
+    ]
+    assert [output.parent.parent.name for _files, output in sent] == ['常规', '旋转']
+    def first_group_fails(files, output, _progress):
+        if output.parent.parent.name == '常规':
+            raise RuntimeError('固定刀位导入失败')
+        return {'state': 'completed'}
+    monkeypatch.setattr(jobs, 'generate_prn', first_group_fails)
+    printed, errors, skipped = jobs.generate_batch_prns(report, lambda _message: None)
+    assert len(printed) == len(errors) == 1 and not skipped
+    assert printed[0]['folder'].startswith('旋转')
+
+
+def test_real_fallback_splits_one_batch_at_actual_knife_change(tmp_path):
+    source = tmp_path / '批次混合真实'
+    source.mkdir()
+    paths = []
+    for index, (width, height) in enumerate(((180, 300), (180, 310),
+                                             (180, 320), (450, 200)), 1):
+        path = source / f'B{index}-1-T-Black-M-NO1-1.png'
+        Image.new('RGB', (width, height), 'blue').save(path, dpi=(25.4, 25.4))
+        paths.append(path)
+    settings = LayoutSettings(
+        dpi=25.4, media_width_mm=600, cutter_mode='dual',
+        cutter_knife_mm=300, cutter_auto_knife=True,
+        cutter_majority_two_zone=True, cutter_rotation_zone=True,
+        force_small_pair_width_mm=0, number_images=False, margin_mm=0,
+        color_block_gap_mm=5, compare_film_sizes=True, output_parts=1,
+    )
+    report = render_shared_knife_batches(tmp_path / '隆丰', '隆丰',
+                                         [(source, paths)], settings,
+                                         lambda _message: None)
+    assert not report['layout_errors']
+    route = report['batch_routes'][source.name]
+    assert {Path(part['folder']).parts[0] for part in route['parts']} == {'常规', '旋转'}
+    assert len({part['knife_signature'] for part in route['parts']}) == 2
+    result = report['batches'][0][1]
+    assert sum(len(part['placements']) for part in result['parts']) == len(paths)
+    assert all(part['cut_corridor']['pixel_verified'] for part in result['parts'])
+    assert 'film_comparison' not in result['analysis']
+    for part in route['parts']:
+        with Image.open(Path(report['output_folder']) / part['folder'] / part['filename']) as output:
+            assert output.mode == 'RGBA' and output.width > 0 and output.height > 0

@@ -6,39 +6,8 @@ from threading import RLock
 from time import perf_counter
 
 from automatic_print.layout_engine.domain.models import mm_to_px, MAX_SAVE_PARALLELISM
-from automatic_print.layout_engine.orders.order_groups import order_key
 from automatic_print.layout_engine.output.output_name import production_quantity
-
-
-def partition_plan(planned, count):
-    orders = {}
-    for path, p in planned:
-        orders.setdefault(order_key(path), []).append((path, p))
-    blocks = []
-    for members in orders.values():
-        start = min(p.row_y_px for _, p in members)
-        end = max(p.row_y_px+p.footprint_height_px for _, p in members)
-        if blocks and start < blocks[-1][1]:
-            old_start, old_end, old_members = blocks[-1]
-            blocks[-1] = old_start, max(end, old_end), old_members+members
-        else:
-            blocks.append((start, end, members))
-    count = min(max(1, count), len(blocks))
-    partitions, index = [], 0
-    for part in range(count):
-        remaining = count-part
-        target = sum(b[1]-b[0] for b in blocks[index:])/remaining
-        end, weight = index+1, blocks[index][1]-blocks[index][0]
-        while end < len(blocks)-(remaining-1):
-            next_weight = blocks[end][1]-blocks[end][0]
-            if abs(weight+next_weight-target) >= abs(weight-target):
-                break
-            weight += next_weight
-            end += 1
-        members = {path for b in blocks[index:end] for path, _ in b[2]}
-        partitions.append([(path, p) for path, p in planned if path in members])
-        index = end
-    return partitions
+from .plan_partition import partition_plan
 
 
 def shift_part(members, margin):
@@ -83,7 +52,8 @@ def use_process_pool(settings, parallel):
 
 
 def generate_segments(paths, output_dir, settings, progress, plan_ready,
-                      analysis_ready, batch_name, phase_ready, gap_records):
+                      analysis_ready, batch_name, phase_ready, gap_records,
+                      split_by_knife=False):
     from automatic_print.layout_engine.pipeline.service import generate_layout
     started = perf_counter()
     snapshots = []
@@ -106,7 +76,7 @@ def generate_segments(paths, output_dir, settings, progress, plan_ready,
         from automatic_print.layout_engine.output.batch_footer import footer_text
         base = replace(base, batch_footer_context=footer_text(payload['planned'], base, '整批信息'))
     width, _, baseline = payload['canvas']
-    parts = partition_plan(payload['planned'], settings.output_parts)
+    parts = partition_plan(payload['planned'], settings.output_parts, split_by_knife)
     from automatic_print.layout_engine.labeling.markers.left_marker import head_margin
     margin = head_margin(settings)
     plans = [shift_part(members, margin) for members in parts]
