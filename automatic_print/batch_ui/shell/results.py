@@ -48,10 +48,17 @@ def present_action_result(owner, result: dict) -> None:
                 f"{item['batch']}：{item['error']}" for item in errors
             )
         if routes:
-            unattended = [name for name, route in routes.items() if route['unattended']]
-            attended = [name for name, route in routes.items() if not route['unattended']]
+            fixed_files = sum(sum(part['unattended'] for part in route.get('parts', ()))
+                              if route.get('parts') else int(route['unattended'])
+                              for route in routes.values())
+            changed_files = sum(sum(not part['unattended'] for part in route.get('parts', ()))
+                                if route.get('parts') else int(not route['unattended'])
+                                for route in routes.values())
+            attended = [name for name, route in routes.items()
+                        if any(not part['unattended'] for part in route.get('parts', ()))
+                        or not route['unattended']]
             text += (f'\n共用刀位 {result["shared_knife_mm"]:g} 毫米：'
-                     f'常规（固定刀位）{len(unattended)} 批，旋转（需换刀）{len(attended)} 批。'
+                     f'常规（固定刀位）{fixed_files} 个文件，旋转（其他刀位）{changed_files} 个文件。'
                      '\n仅生成并加载PRN，尚未启动物理打印。')
             if attended:
                 text += '\n旋转区需换刀：' + '；'.join(

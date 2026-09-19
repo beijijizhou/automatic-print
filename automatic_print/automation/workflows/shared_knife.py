@@ -18,6 +18,7 @@ def locked_knife_settings(settings: LayoutSettings) -> LayoutSettings:
         cutter_rotation_zone=False,
         cutter_majority_two_zone=False, cutter_tail_rotation=False,
         cutter_compare_whole_rotation=False, allow_rotation=False,
+        compare_film_sizes=False,
         developer_compact_cutter_layout=False,
     )
 
@@ -48,12 +49,12 @@ def continuous_print_eligibility(result: dict, settings: LayoutSettings) -> tupl
     if not isinstance(dpi, (int, float)) or dpi <= 0:
         return False, '最终输出缺少有效DPI，不能确认物理刀位'
     expected = (mm_to_px(settings.cutter_knife_mm, dpi),)
-    signatures = actual_knife_signatures(result)
-    if signatures != {expected}:
-        return False, f'实际纵刀位 {sorted(signatures)} 与锁定刀位 {expected} 不一致'
     corridor = result.get('cut_corridor') or {}
     if not corridor.get('pixel_verified'):
         return False, '没有完成实际输出像素刀位复核'
+    signatures = actual_knife_signatures(result)
+    if signatures != {expected}:
+        return False, f'实际纵刀位 {sorted(signatures)} 与锁定刀位 {expected} 不一致'
     return True, f'整批共用固定刀位 {settings.cutter_knife_mm:g} 毫米'
 
 

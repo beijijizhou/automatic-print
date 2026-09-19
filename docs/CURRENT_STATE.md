@@ -58,12 +58,13 @@
   用户勾选后的批次清单决定实际队列及“合并所有子文件夹”的输入范围。
 - 隆丰生产平台页的“多批次共用刀位生成PRN”独立入口一次下载、读取所选批次，再用当前固定纵刀
   分别排版；`automation/workflows/shared_knife.py`逐张检查刀位、订单、膜宽和最终像素安全通道，
-  `shared_knife_batches.py`把固定刀位候选与刀位变化批次分别存入`切膜机文件/常规`和
-  `切膜机文件/旋转`，各区按任务归档避免同名批次覆盖；单行未配成双排但固定刀位不变的文件
+  `shared_knife_batches.py`把同批次的固定刀位PNG与刀位变化PNG分别存入`切膜机文件/常规`和
+  `切膜机文件/旋转`，各区按任务归档避免同名批次覆盖；切分沿完整订单和排版行边界，
+  不同刀位分别生成PRN，且该入口跳过四种膜规格省膜比较；单行未配成双排但固定刀位不变的文件
   仍归常规。严格固定刀位模式禁止
   原有超宽恢复分支改刀；共刀入口复用 `planning/zones/pair_width.py` 的虚拟尺寸覆盖，
   对超过刀位两侧安全上限的图等比缩小、双面同倍率，并在报告记录原/采用尺寸；仍放不下时
-  复用原排版策略重排到旋转区；失败任务保留诊断并继续处理其他批次。RIIN按各批真实路径生成
+  复用原排版策略并按实际刀位分文件归档；失败任务保留诊断并继续处理其他批次。RIIN按各文件真实路径生成
   PRN并加入PrinterExp，但当前入口不启动实体打印，“常规”仅表示刀位兼容候选。
 
 ## 排版核心
@@ -107,7 +108,8 @@
 - 标签字体加载与线程内有界缓存由`layout_engine/labeling/text/fonts.py`唯一拥有；`layout_engine/labeling/base/labels.py`只负责标签内容、
   换行和徽标渲染。单图排版对象`LayoutItem`与`Placement`统一归`layout_engine/domain/models.py`。
 - 渲染与编码：`layout_engine/rendering/engines/pillow_renderer.py`、`layout_engine/rendering/engines/vips_renderer.py`、`layout_engine/rendering/png/`、
-  `layout_engine/rendering/storage/segmented_output.py`、`layout_engine/rendering/storage/atomic_png.py`、`layout_engine/rendering/storage/atomic_tiff.py`。超长 PNG 由 `layout_engine/rendering/png/row_stream.py`
+  `layout_engine/rendering/storage/plan_partition.py`、`layout_engine/rendering/storage/segmented_output.py`、
+  `layout_engine/rendering/storage/atomic_png.py`、`layout_engine/rendering/storage/atomic_tiff.py`。分段边界由`plan_partition.py`按完整订单和排版行计算，共刀回退额外强制不同实际刀位分文件。超长 PNG 由 `layout_engine/rendering/png/row_stream.py`
   按排版行依次解码、合成、固定 UP 滤波、无损 RLE 压缩和写入，每行只求值一次且不生成中间图片；同一行的最终
   alpha 像素在压缩前同步核对全部刀位，PNG 发布后顺序读取数据块并核对 CRC、尺寸和 RGBA 格式，
   不再完整解压刚刚验证并编码的超长像素流；不再为每条刀位重复触发超长延迟画布合成，

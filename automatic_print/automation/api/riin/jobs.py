@@ -34,6 +34,22 @@ def generated_pngs(folder, result):
     return files
 
 
+def _print_groups(result, route):
+    parts = route.get('parts') or []
+    if not parts:
+        return [(route.get('folder', ''), result.get('files') or [result['filename']])]
+    names = result.get('files') or [result['filename']]
+    if [part['filename'] for part in parts] != names:
+        raise ValueError('分区归档清单与实际输出文件顺序不一致，禁止导入RIIN。')
+    groups = []
+    for part in parts:
+        key = (part['folder'], tuple(part['knife_signature']))
+        if not groups or groups[-1][0] != key:
+            groups.append((key, []))
+        groups[-1][1].append(part['filename'])
+    return [(key[0], files) for key, files in groups]
+
+
 def generate_prn(files, output, progress):
     paths = [Path(path).resolve(strict=True) for path in files]
     target = Path(output).resolve()
@@ -102,20 +118,30 @@ def generate_batch_prns(processed, progress, stop_requested=lambda: False):
         if stop_requested():
             skipped.extend(name for name, _result in batches[index - 1:])
             break
-        folder = output_root / routes.get(batch, {}).get('folder', batch)
         try:
-            files = generated_pngs(folder, result)
-            output = available_prn_path(folder, batch)
-            progress(f"[{index}/{len(batches)}] {batch}：正在交给RIIN生成PRN")
-            automation = generate_prn(
-                files, output,
-                lambda message: progress(
-                    f"[{index}/{len(batches)}] {batch} · {message}"
-                ),
-            )
-            completed.append({"batch": batch, **automation})
-            progress(f"[{index}/{len(batches)}] {batch}：PRN已生成并加入PrinterExp")
+            groups = _print_groups(result, routes.get(batch, {'folder': batch}))
         except Exception as error:
             errors.append({"batch": batch, "error": str(error)})
-            progress(f"{batch}：PRN生成失败，继续处理其他批次 · {error}")
+            progress(f"{batch}：分区清单不安全，未导入RIIN · {error}")
+            continue
+        for segment, (relative, names) in enumerate(groups, 1):
+            try:
+                folder = output_root / relative
+                files = generated_pngs(folder, {'files': names})
+                output = available_prn_path(folder, batch)
+                progress(f"[{index}/{len(batches)}] {batch} · 第{segment}/{len(groups)}组：正在交给RIIN生成PRN")
+                automation = generate_prn(
+                    files, output,
+                    lambda message: progress(
+                        f"[{index}/{len(batches)}] {batch} · {message}"
+                    ),
+                )
+                completed.append({"batch": batch, "folder": relative,
+                                  "files": names, **automation})
+                progress(f"[{index}/{len(batches)}] {batch} · 第{segment}/{len(groups)}组：PRN已生成并加入PrinterExp")
+            except Exception as error:
+                detail = (f'第{segment}/{len(groups)}组 {relative}：{error}'
+                          if len(groups) > 1 else str(error))
+                errors.append({"batch": batch, "error": detail})
+                progress(f"{batch}：PRN生成失败，继续处理其他安全分区 · {detail}")
     return completed, errors, skipped

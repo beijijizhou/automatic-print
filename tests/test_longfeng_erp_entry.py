@@ -43,7 +43,8 @@ def test_platform_download_is_multi_select_and_preview_only(tmp_path):
     assert longfeng.automated_print_button.text() == "下载、排版并生成打印文件"
     assert not longfeng.automated_print_button.isHidden()
     assert longfeng.shared_knife_button.text() == '多批次共用刀位生成PRN'
-    assert '归入旋转文件夹' in longfeng.shared_knife_button.toolTip()
+    assert '分别归入常规和旋转文件夹' in longfeng.shared_knife_button.toolTip()
+    assert '不比较四种膜规格' in longfeng.shared_knife_button.toolTip()
     assert not longfeng.shared_knife_button.isHidden()
     assert longfeng.open_download_folder.text() == "下载完成后打开文件夹"
     assert longfeng.open_download_folder.isChecked()
