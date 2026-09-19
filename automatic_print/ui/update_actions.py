@@ -7,6 +7,7 @@ from .. import __version__, __version_display__
 from ..updates.release import version_tuple
 from ..updates.source import source_install, SourceUpdateInfo
 from ..updates.worker import SourceUpdateWorker
+from ..runtime.restart import source_code_changed
 from .workers import UpdateWorker
 from .thread_lifecycle import defer_finished_thread_cleanup, discard_stopped_thread
 from .update_restart import restart_updated_app
@@ -92,7 +93,9 @@ class UpdateActionsMixin:
                 return
             self.completed_source_check = update
             if not update.needs_update:
-                self.show_update_progress(f'源码已是最新 · {update.display_version}')
+                self.show_update_progress(
+                    '源码已更新；当前任务完成后自动安全重启…' if source_code_changed()
+                    else f'源码已是最新 · {update.display_version}')
             elif not self.update_is_silent and self.source_update_busy():
                 self.show_update_progress('发现新代码；请等待排版/保存完成，或停止后台预览，再点击检查更新。')
             else:
@@ -109,7 +112,9 @@ class UpdateActionsMixin:
 
     def confirm_source_check(self, update):
         if not update.needs_update:
-            self.show_update_progress(f'源码已是最新 · {update.display_version}')
+            self.show_update_progress(
+                '源码已更新；当前任务完成后自动安全重启…' if source_code_changed()
+                else f'源码已是最新 · {update.display_version}')
             return
         self.show_update_progress(f'发现源码更新：{update.display_version} · {update.commits} 个新提交')
         if self.update_is_silent:

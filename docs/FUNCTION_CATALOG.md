@@ -50,7 +50,7 @@
 | 输出参数界面 | `ui/settings/output/dpi.py`, `location.py`, `format.py`, `segmentation.py` | 设置页输出区域按用户可见参数分离，统一向工作台和生成入口提供控件与保存位置解析。 |
 | 通用数值参数控件 | `ui/spinbox_style.py` | 所有毫米、尺寸和偏移浮点输入复用`double_spinbox`，不在页面内复制范围、精度和初始值构造代码。 |
 | 参数联动刷新门禁 | `ui/parameter_refresh.py` | 平台和模式一次更新多个控件时取消旧预览并抑制新批次读取；不用多个信号重复触发排版。 |
-| 应用重启 | `runtime/restart.py` | 源码更新和恢复出厂设置共用同一安全重启入口；仅 `dev.py` 子进程监听重载标记，普通快捷方式启动会清理过期标记，安装环境启动新进程。 |
+| 应用重启 | `runtime/restart.py` | 源码更新和恢复出厂设置共用同一安全重启入口；`dev.py`子进程监听重载标记，普通源码启动清理过期标记并轻量监测磁盘版本，发现外部源码更新后等待完整版本稳定、更新锁解除及全部当前任务结束才自动重启，安装环境沿用既有启动策略。 |
 | 批次及膜历史 | `history/store.py`, `history/batch_queue.py`, `history/bulk_analysis.py` | 历史格式由存储模块维护，UI不直接写日志文件。 |
 | ERP生产批次读取与下载 | `automation/browser/batches.py`, `automation/api/erp/records.py`, `automation/transfer/exports.py`, `automation/transfer/downloads.py`, `automation/transfer/export_record.py` | 浏览器流程、导出记录定位、文件传输与响应映射分离；批次列表时间只映射平台批次的 `created`/`created_at` 生成时间，不使用导出完成或下载时间。页面缺少旧批次下载入口时复用最新已完成导出记录中的受信任 ZIP 地址，仍由公共安全解压入口处理。外层工厂页面与内嵌生产模块共用一个批次内容定位入口。 |
 | 共享盘批次本地镜像 | `automation/transfer/local_mirror.py`, `ui/workers.py` | 共享盘批次存在平台下载目录中的同批本地副本时，按批次号、图片数量、文件名和字节数完整核对后复用本地图片完成尺寸、标签、刀码、排版和合成；任何缺失、重名或大小不一致都回退原共享盘，不猜测映射。输出目录和历史来源仍保留用户选择的位置。 |
