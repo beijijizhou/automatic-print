@@ -36,6 +36,8 @@ def generation_finished(window, output, result) -> None:
         f" · 总计 {duration_text(timings['total'])}"
     )
     window.current_file.setText(f"当前文件：{result['filename']}")
+    for name in result.get('files') or [result['filename']]:
+        window.run_log.appendPlainText(f'已生成文件：{Path(output) / name}')
     window.run_log.appendPlainText(
         f"输出：{result['width_px']} × {result['height_px']} 像素"
         f" | 文件大小 {file_size_text(result['file_size_bytes'])}"

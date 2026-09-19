@@ -61,7 +61,9 @@ def test_normal_bulk_generates_independent_complete_batches(tmp_path, monkeypatc
                     p['x_px']+original.shape[1], p['y_px']+original.shape[0])))
                 mask = original[:, :, 3] > 0
                 assert np.array_equal(rendered[mask], original[mask])
-    assert all(path.suffix.lower() == '.png' for path in (tmp_path/'切膜机文件').iterdir())
+    assert not list((tmp_path/'切膜机文件').glob('*.png'))
+    assert all(path.suffix.lower() == '.png'
+               for path in (tmp_path/'切膜机文件').rglob('*.png'))
 
 
 def test_normal_entry_and_active_task_protection(tmp_path, monkeypatch):

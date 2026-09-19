@@ -110,6 +110,7 @@ class GenerateWorker(QObject):
                 analysis_ready=self.analysis_ready.emit,
                 batch_name=self.batch_name,
                 phase_ready=self._phase,
+                split_by_knife=(not self.preview_only and self.settings.cutter_mode == 'dual'),
             )
             self.cancellation.check()
             result['operation_timings'] = self.timing.finish()
@@ -126,10 +127,12 @@ class GenerateWorker(QObject):
             from ..layout_engine.output.output_name import (
                 finish_output_files, output_log_path, remap_result_files,
             )
+            from ..layout_engine.output.knife_folders import knife_output_folders
             self._progress('整理输出文件夹',0,1,'将合格排版图移入切膜机文件')
-            marker.unlink(missing_ok=True)
             files = result.get('files') or [result['filename']]
-            self.output, mapping = finish_output_files(self.output, files)
+            folders = knife_output_folders(result)
+            marker.unlink(missing_ok=True)
+            self.output, mapping = finish_output_files(self.output, files, folders)
             remap_result_files(result, mapping)
             self._progress('整理输出文件夹',1,1,str(self.output))
             report_text = timing_report(result['operation_timings'])

@@ -46,6 +46,10 @@ def production_summary_text(result):
     ]
     from automatic_print.layout_engine.orders.batch_analysis import distribution_text
     lines.insert(2, distribution_text(analysis))
+    files = result.get('files') or ()
+    if len(files) > 1:
+        lines.extend(f'输出文件 {index}：{name}'
+                     for index, name in enumerate(files, 1))
     return '\n'.join(lines)
 
 
@@ -90,8 +94,8 @@ def file_information_text(result):
         lines.append(details)
     if result.get('timings_seconds', {}).get('output_validation'):
         lines.append(
-            '以上信息来自本次生成记录；保存后已通过单次顺序解压核对PNG完整性、'
-            '尺寸、RGBA格式和全部刀位的全长实际像素。'
+            '以上信息来自本次生成记录；保存时已核对全部刀位的实际像素，'
+            '保存后已顺序核对PNG数据块CRC、尺寸和RGBA格式。'
         )
     else:
         lines.append('以上信息来自本次生成记录，未重新读取或解压输出大图。')

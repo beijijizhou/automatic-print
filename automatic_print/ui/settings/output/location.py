@@ -8,7 +8,7 @@ def build_output_location(window, default):
     window.custom_output_location = prefs.value('output/custom_location',
                                                 prefs.value('output_location', default, str), str)
     window.output_location = QLineEdit(window.custom_output_location)
-    window.output_beside_source = QCheckBox('默认保存到图片文件夹同级的“切膜机文件”（直接存放排版图）')
+    window.output_beside_source = QCheckBox('默认保存到图片文件夹同级的“切膜机文件”（切膜图分常规/旋转子文件夹）')
     window.output_beside_source.setChecked(prefs.value('output/beside_source', True, bool))
     button = QPushButton('选择保存位置…')
     button.clicked.connect(window.choose_output_location)
