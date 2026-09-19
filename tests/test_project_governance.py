@@ -27,13 +27,11 @@ def test_windows_quality_gate_runs_complete_suite():
     assert 'python -m pytest -q' in workflow
 
 
-def test_self_hosted_acceptance_is_pinned_and_keeps_batch_failures_independent():
-    workflow = (ROOT/'.github/workflows/windows-self-hosted.yml').read_text(encoding='utf-8')
+def test_local_acceptance_is_pinned_and_keeps_batch_failures_independent():
+    assert not (ROOT/'.github/workflows/windows-self-hosted.yml').exists()
     runner = (ROOT/'windows/run-real-batch-suite.ps1').read_text(encoding='utf-8')
     manifest = json.loads((ROOT/'windows/real-batch-suite.json').read_text(encoding='utf-8'))
-    assert 'Record immutable tested commit' in workflow
-    assert 'run-real-batch-suite.ps1' in workflow
-    assert 'AUTOMATIC_PRINT_S2B_BATCH_INFO_KEY' in workflow
+    assert 'tested-commit.txt' in runner
     assert 'foreach ($batch in $batches)' in runner
     assert 'foreach ($cacheState in $batch.passes)' in runner
     assert 'suite-summary.json' in runner

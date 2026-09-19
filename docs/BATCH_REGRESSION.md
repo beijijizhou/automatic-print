@@ -19,9 +19,9 @@ S2B、Haloo及其他已接入平台；某个平台暂无样本时继续测试其
 - 单件、多件、双面和订单连续性符合平台规则；
 - 预览数据、排版坐标、实际输出像素及输出文件信息相互一致。
 
-## Windows Runner 固定验收矩阵
+## 本地固定验收矩阵
 
-`windows/real-batch-suite.json` 保存自托管 Runner 的可复现矩阵和预期图片数。数据由
+`windows/real-batch-suite.json` 保存本地可复现矩阵和预期图片数。数据由
 `windows/stage-real-batch-suite.ps1` 从 NAS 只读复制到本地 staging；运行时记录实际 Git commit 和
 输入文件清单摘要。矩阵至少包含十个独立批次文件夹：三个 Haloo 批次使用固定种子 `20260917`
 选取，另含各两个隆丰、莆田和 S2B 完整批次，以及下述隆丰性能批次。
