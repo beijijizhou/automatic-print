@@ -21,19 +21,19 @@ def test_agent_guide_defines_reuse_and_push_gates():
         assert rule in guide
 
 
-def test_windows_quality_gate_runs_complete_suite():
+def test_windows_quality_gate_runs_targeted_checks_only():
     workflow = (ROOT/'.github/workflows/quality-gate.yml').read_text(encoding='utf-8')
     assert 'windows-latest' in workflow
-    assert 'python -m pytest -q' in workflow
+    assert 'Run targeted merge checks' in workflow
+    assert 'tests/test_shared_knife_workflow.py' in workflow
+    assert 'run: python -m pytest -q\n' not in workflow
 
 
-def test_self_hosted_acceptance_is_pinned_and_keeps_batch_failures_independent():
-    workflow = (ROOT/'.github/workflows/windows-self-hosted.yml').read_text(encoding='utf-8')
+def test_local_acceptance_is_pinned_and_keeps_batch_failures_independent():
+    assert not (ROOT/'.github/workflows/windows-self-hosted.yml').exists()
     runner = (ROOT/'windows/run-real-batch-suite.ps1').read_text(encoding='utf-8')
     manifest = json.loads((ROOT/'windows/real-batch-suite.json').read_text(encoding='utf-8'))
-    assert 'Record immutable tested commit' in workflow
-    assert 'run-real-batch-suite.ps1' in workflow
-    assert 'AUTOMATIC_PRINT_S2B_BATCH_INFO_KEY' in workflow
+    assert 'tested-commit.txt' in runner
     assert 'foreach ($batch in $batches)' in runner
     assert 'foreach ($cacheState in $batch.passes)' in runner
     assert 'suite-summary.json' in runner

@@ -51,10 +51,10 @@ def present_action_result(owner, result: dict) -> None:
             unattended = [name for name, route in routes.items() if route['unattended']]
             attended = [name for name, route in routes.items() if not route['unattended']]
             text += (f'\n共用刀位 {result["shared_knife_mm"]:g} 毫米：'
-                     f'常规（固定刀位）{len(unattended)} 批，需值守 {len(attended)} 批。'
+                     f'常规（固定刀位）{len(unattended)} 批，旋转（需换刀）{len(attended)} 批。'
                      '\n仅生成并加载PRN，尚未启动物理打印。')
             if attended:
-                text += '\n需值守：' + '；'.join(
+                text += '\n旋转区需换刀：' + '；'.join(
                     f'{name}：{routes[name]["reason"]}' for name in attended)
         if layout_errors:
             text += '\n排版失败：' + '；'.join(

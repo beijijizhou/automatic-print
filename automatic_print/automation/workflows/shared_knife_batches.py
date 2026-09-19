@@ -42,9 +42,9 @@ def render_shared_knife_batches(platform_root, platform_name, prepared, settings
     token = datetime.now().strftime('%m%d%H%M') + '_' + uuid4().hex[:6]
     root = Path(platform_root) / '切膜机文件'
     run_name = f'共刀_{token}'
-    for category in ('常规', '需值守'):
+    for category in ('常规', '旋转'):
         (root / category).mkdir(parents=True, exist_ok=True)
-    staged = root / '需值守' / run_name / '待检验'
+    staged = root / '旋转' / run_name / '待检验'
     staged.mkdir(parents=True, exist_ok=False)
     completed, routes, errors = [], {}, []
     total = len(prepared)
@@ -62,20 +62,30 @@ def render_shared_knife_batches(platform_root, platform_name, prepared, settings
                 reason += f'；{len(shrink)} 张已等比缩小，原/采用尺寸见排版报告'
         except Exception as error:
             eligible, reason = False, f'固定刀位无法完成：{error}'
-            progress(f'{batch}：{reason}；改用原排版策略，归入需值守')
+            progress(f'{batch}：{reason}；改用原排版策略，复核实际刀位')
             try:
-                category = '需值守'
-                target = root / category / run_name
-                target.mkdir(parents=True, exist_ok=True)
-                result = generate_layout(images, target, settings,
+                fallback_stage = root / '旋转' / run_name / f'待检验_{index}'
+                fallback_stage.mkdir(parents=True, exist_ok=False)
+                result = generate_layout(images, fallback_stage, settings,
                                          _layout_progress(progress, batch), batch_name=batch)
+                eligible, fallback_reason = continuous_print_eligibility(result, locked)
+                if not eligible and not fallback_reason.startswith('实际纵刀位'):
+                    raise ValueError(f'原策略输出未通过安全复核：{fallback_reason}')
+                category = '常规' if eligible else '旋转'
+                reason += f'；原策略复核：{fallback_reason}'
+                target = root / category / run_name
+                _promote_files(fallback_stage, target, result)
             except Exception as fallback_error:
                 errors.append({'batch': batch, 'error': str(fallback_error),
                                'fixed_error': reason})
                 progress(f'{batch}：原排版策略也失败，保留诊断并继续下一批 · {fallback_error}')
                 continue
         else:
-            category = '常规' if eligible else '需值守'
+            if not eligible and not reason.startswith('实际纵刀位'):
+                errors.append({'batch': batch, 'error': f'固定刀位输出未通过安全复核：{reason}'})
+                progress(f'{batch}：安全复核未通过，输出保留在待检验区，不生成PRN · {reason}')
+                continue
+            category = '常规' if eligible else '旋转'
             target = root / category / run_name
             try:
                 _promote_files(staged, target, result)

@@ -17,10 +17,10 @@ RIIN 或其他 RIP 软件的 PNG。
 在 PowerShell 运行：
 
 ```powershell
-powershell -ExecutionPolicy Bypass -Command "irm 'https://raw.githubusercontent.com/beijijizhou/automatic-print/main/windows/bootstrap-test-computer.ps1?v=0.1.290' | iex"
+powershell -ExecutionPolicy Bypass -Command "irm 'https://raw.githubusercontent.com/beijijizhou/automatic-print/main/windows/bootstrap-test-computer.ps1?v=0.1.292' | iex"
 ```
 
-该入口用于指定测试电脑拉取已经通过完整测试并推送到 `main` 的源码。正式生产电脑使用 GitHub
+该入口用于指定测试电脑拉取已经通过本次相关检查并推送到 `main` 的源码。正式生产电脑使用 GitHub
 Release 安装包；源码更新、Release 和生产验收是三个独立状态。
 
 ## 本地开发
@@ -68,42 +68,21 @@ RIIN要求管理员权限时，在已登录的Windows桌面运行以下命令，
 .venv/bin/python -m pytest -q tests/相关测试.py
 ```
 
-任何源码推送前必须运行完整门禁：
+未经用户针对本次任务明确同意，不运行或通过 CI 触发完整测试。合并到 `main` 本身不构成授权。
+本地推送前运行本次调用链的针对性测试；如用户明确要求完整测试，再运行：
 
 ```bash
 .venv/bin/python -m pytest -q
 ```
 
-只要存在失败就禁止推送。准备正式 Windows Release 时，还需要更新版本、完整测试、创建对应标签，
-并由 Windows 工作流构建安装包。GitHub `main` 分支应要求 `Quality Gate` 通过，避免未经完整测试的
-代码进入测试电脑更新来源。
+已运行的针对性测试失败时禁止推送。准备正式 Windows Release 时，还需要更新版本、
+取得所需验证授权、创建对应标签，并由 Windows 工作流构建安装包。GitHub `main` 分支应要求
+`Quality Gate` 的针对性检查通过；不得把该检查称为完整测试或生产验收。
 
-## Windows 自托管测试机
+## 本地真实批次验收
 
-专用 Windows 测试机使用 `codex/windows-test` 分支和 `Windows test machine` 工作流，执行完整
-自动测试、真实批次排版验收、Windows 安装包构建，并上传测试报告、耗时、闪退日志和 EXE。
-Runner 仅绑定本仓库，标签为 `automatic-print`；工作流不接受 `pull_request` 触发，避免在持久化
-生产测试电脑上运行不可信分支代码。
-
-在仓库的 `Settings > Actions > Runners > New self-hosted runner` 生成一小时有效的注册令牌后，
-以管理员 PowerShell 运行：
-
-```powershell
-.\windows\setup-actions-runner.ps1
-```
-
-脚本会以隐藏输入方式读取一次性令牌，避免令牌进入 PowerShell 命令历史。
-
-测试机默认使用 `C:\actions-runner\real-batches\smoke\YD-CY-YD001` 中的稳定生产样本。
-如需替换或扩充样本，可在 Actions 仓库变量 `AUTOMATIC_PRINT_REAL_BATCH_PATHS` 中保存真实批次
-绝对路径，多个目录用分号分隔。也可以手动触发工作流时临时指定批次目录和要测试的提交 SHA。
-真实图片回归会在单元测试失败时继续执行，确保报告同时包含代码测试和生产数据兼容性结果。
-`windows/real-batch-suite.json` 另行固定至少十个独立批次文件夹的验收矩阵：三个由固定种子选出的
-Haloo 批次、各两个隆丰、莆田和 S2B 完整批次，以及隆丰 `609172109020` 的 200 PNG 冷/热缓存性能门禁。先运行
-`windows/stage-real-batch-suite.ps1`，把 NAS 源图只读复制到 `C:\actions-runner\real-batches\acceptance`；
-Runner 服务不直接依赖映射盘。每批使用独立进程、缓存状态和输出目录，单批失败后仍继续其余批次，
-最终统一判定；报告核对源文件未变化、补距像素、保存后刀道和订单完整性。200 PNG 使用8段并行输出，
-冷、热缓存生成时间都必须不超过30秒。生成图仅保留在测试机，不上传生产队列，也不触发物理打印。
+专用自托管测试 Runner 已停用。完整验收改由人工在本机运行自动测试套件，并按
+`docs/BATCH_REGRESSION.md` 的矩阵核验不同平台的真实输出；不自动接单或启动物理打印。
 
 ## 输出
 

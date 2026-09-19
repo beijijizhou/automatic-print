@@ -138,7 +138,7 @@ def test_fixed_knife_uses_same_scale_on_both_faces(tmp_path):
     assert len(adjusted.width_adjustments) == 2
 
 
-def test_one_run_keeps_separate_batches_and_routes_oversize_to_attended(tmp_path, monkeypatch):
+def test_one_run_keeps_separate_batches_and_shrinks_oversize_to_normal(tmp_path, monkeypatch):
     settings = LayoutSettings(
         dpi=25.4, media_width_mm=600, cutter_mode='dual',
         cutter_knife_mm=300, cutter_auto_knife=True,
@@ -159,7 +159,7 @@ def test_one_run_keeps_separate_batches_and_routes_oversize_to_attended(tmp_path
                                           settings, lambda _message: None)
     output_root = Path(report['output_folder'])
     assert output_root.name == '切膜机文件'
-    assert {path.name for path in output_root.iterdir() if path.is_dir()} == {'常规', '需值守'}
+    assert {path.name for path in output_root.iterdir() if path.is_dir()} == {'常规', '旋转'}
     assert [batch for batch, _result in report['batches']] == ['批次A', '批次B']
     assert not report['layout_errors']
     assert report['batch_routes']['批次A']['unattended']
@@ -194,7 +194,7 @@ def test_completed_fixed_knife_outputs_are_not_rediscovered_as_source_batches(tm
     assert discover_batch_folders(root) == [source]
 
 
-def test_fixed_candidate_failure_stays_in_attended_folder(tmp_path, monkeypatch):
+def test_fixed_candidate_failure_stays_in_rotation_folder(tmp_path, monkeypatch):
     source = tmp_path / '批次C'
     source.mkdir()
     path = source / '0.png'
@@ -211,7 +211,8 @@ def test_fixed_candidate_failure_stays_in_attended_folder(tmp_path, monkeypatch)
     assert not report['layout_errors']
     route = report['batch_routes']['批次C']
     assert not route['unattended']
-    assert Path(route['folder']).parts[0] == '需值守'
+    assert Path(route['folder']).parts[0] == '旋转'
+    assert '实际纵刀位' in route['reason']
     result = report['batches'][0][1]
     output = Path(report['output_folder']) / route['folder'] / result['filename']
     assert output.is_file()
@@ -221,7 +222,25 @@ def test_fixed_candidate_failure_stays_in_attended_folder(tmp_path, monkeypatch)
                         sent.append((files, target)) or {'state': 'completed'})
     printed, errors, skipped = jobs.generate_batch_prns(report, lambda _message: None)
     assert len(printed) == len(sent) == 1 and not errors and not skipped
-    assert sent[0][1].parent.parent.name == '需值守'
+    assert sent[0][1].parent.parent.name == '旋转'
+
+
+def test_unverified_fixed_output_is_not_sent_to_rotation_or_prn(tmp_path, monkeypatch):
+    from automatic_print.automation.workflows import shared_knife_batches
+    source = tmp_path / '批次E'
+    source.mkdir()
+    result = _result((mm_to_px(300, 300),))
+    result['cut_corridor'] = {'pixel_verified': False}
+    monkeypatch.setattr(shared_knife_batches, 'generate_layout',
+                        lambda *_args, **_kwargs: result)
+    settings = LayoutSettings(cutter_mode='dual', media_width_mm=600,
+                              cutter_knife_mm=300)
+    report = render_shared_knife_batches(tmp_path / '隆丰', '隆丰',
+                                         [(source, [source / '0.png'])], settings,
+                                         lambda _message: None)
+    assert not report['batches']
+    assert not report['batch_routes']
+    assert '实际输出像素' in report['layout_errors'][0]['error']
 
 
 def test_single_unpaired_row_still_routes_to_fixed_knife_normal(tmp_path):
