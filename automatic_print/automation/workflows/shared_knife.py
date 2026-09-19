@@ -14,6 +14,7 @@ def locked_knife_settings(settings: LayoutSettings) -> LayoutSettings:
         raise ValueError('固定中间刀位必须位于当前可打印膜宽内。')
     return replace(
         settings, cutter_auto_knife=False, strict_fixed_knife=True,
+        force_small_pair_width=True,
         cutter_rotation_zone=False,
         cutter_majority_two_zone=False, cutter_tail_rotation=False,
         cutter_compare_whole_rotation=False, allow_rotation=False,

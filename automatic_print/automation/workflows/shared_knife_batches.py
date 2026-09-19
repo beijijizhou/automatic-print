@@ -54,6 +54,10 @@ def render_shared_knife_batches(platform_root, platform_name, prepared, settings
             result = generate_layout(images, staged, locked,
                                      _layout_progress(progress, batch), batch_name=batch)
             eligible, reason = continuous_print_eligibility(result, locked)
+            shrink = [row for row in result.get('analysis', {}).get('width_adjustments', ())
+                      if row[1].startswith('共刀并排等比缩小：')]
+            if shrink:
+                reason += f'；{len(shrink)} 张已等比缩小，原/采用尺寸见排版报告'
         except Exception as error:
             eligible, reason = False, f'固定刀位无法完成：{error}'
             progress(f'{batch}：{reason}；改用原排版策略，归入需值守')
