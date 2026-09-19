@@ -61,6 +61,7 @@ def _record(previous_signature, signature, previous_zone, zone, required, actual
         'required_px': required,
         'actual_px': actual,
         'added_px': added,
+        'distance_reference': '上一枚左侧识别刀码起点',
     }
 
 
@@ -72,26 +73,28 @@ def apply_knife_change_gap(result, settings):
         return result, []
     shifts, records = {}, []
     cumulative = 0
-    previous_signature = previous_marker = previous_zone = None
+    previous_signature = previous_marker_start = previous_zone = None
     for row in _rows(planned):
-        signature, marker, zone = _row_facts(row)
-        if signature is None or marker is None:
+        signature, marker_start, zone = _row_facts(row)
+        if signature is None or marker_start is None:
             continue
-        marker += cumulative
+        marker_start += cumulative
         if previous_signature is not None and signature != previous_signature:
-            actual = marker - previous_marker
+            actual = marker_start - previous_marker_start
             added = max(0, required - actual)
             cumulative += added
-            marker += added
+            marker_start += added
             records.append(_record(
                 previous_signature, signature, previous_zone, zone,
-                required, marker - previous_marker, added,
+                required, marker_start - previous_marker_start, added,
             ))
         for path, placement in row:
             shifts[(str(path), placement.sequence_number)] = cumulative
-        previous_signature, previous_marker, previous_zone = signature, marker, zone
-    if previous_marker is not None:
-        actual = height + cumulative - previous_marker
+        previous_signature = signature
+        previous_marker_start = marker_start
+        previous_zone = zone
+    if previous_marker_start is not None:
+        actual = height + cumulative - previous_marker_start
         added = max(0, required - actual)
         cumulative += added
         records.append(_record(
@@ -119,20 +122,22 @@ def inspect_knife_change_gaps(planned, settings, canvas_height=None):
     if not required or settings.cutter_mode != 'dual':
         return []
     records = []
-    previous_signature = previous_marker = previous_zone = None
+    previous_signature = previous_marker_start = previous_zone = None
     for row in _rows(planned):
-        signature, marker, zone = _row_facts(row)
-        if signature is None or marker is None:
+        signature, marker_start, zone = _row_facts(row)
+        if signature is None or marker_start is None:
             continue
         if previous_signature is not None and signature != previous_signature:
             records.append(_record(
                 previous_signature, signature, previous_zone, zone,
-                required, marker - previous_marker,
+                required, marker_start - previous_marker_start,
             ))
-        previous_signature, previous_marker, previous_zone = signature, marker, zone
-    if previous_marker is not None and canvas_height is not None:
+        previous_signature = signature
+        previous_marker_start = marker_start
+        previous_zone = zone
+    if previous_marker_start is not None and canvas_height is not None:
         records.append(_record(
             previous_signature, (), previous_zone, '批次结束',
-            required, canvas_height - previous_marker,
+            required, canvas_height - previous_marker_start,
         ))
     return records

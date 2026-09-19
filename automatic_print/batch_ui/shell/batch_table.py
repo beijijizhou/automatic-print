@@ -8,6 +8,7 @@ from ...automation.batches.local import discover_local_batches
 
 def display_batch_records(owner, records, saved_at='', cached=False,
                           select_ready=False) -> None:
+    _update_range_choices(owner, records)
     owner.table.setRowCount(len(records))
     local_codes = {
         batch.batch_number
@@ -24,7 +25,7 @@ def display_batch_records(owner, records, saved_at='', cached=False,
         owner.table.setCellWidget(row, 0, box)
         values = (
             record.batch_number, str(record.item_count), str(record.piece_count),
-            record.batch_type, record.created_at,
+            record.batch_type, record.generated_at,
             '本地已有' if is_local else
             ('可导出/下载' if is_s2b else '可下载') if is_ready else '生成中',
         )
@@ -42,3 +43,19 @@ def display_batch_records(owner, records, saved_at='', cached=False,
             if box.isEnabled():
                 box.setChecked(True)
         owner.select_button.setText('取消全选')
+
+
+def _update_range_choices(owner, records) -> None:
+    """Refresh both editable selectors without discarding pasted text."""
+    batch_numbers = list(dict.fromkeys(
+        record.batch_number for record in records if record.batch_number
+    ))
+    for combo in (owner.range_start, owner.range_end):
+        current = combo.currentText().strip()
+        combo.blockSignals(True)
+        combo.clear()
+        combo.addItems(batch_numbers)
+        combo.setCurrentIndex(-1)
+        if current:
+            combo.setEditText(current)
+        combo.blockSignals(False)

@@ -14,6 +14,9 @@ class Cancellation:
     def request(self) -> None:
         self._requested.set()
 
+    def requested(self) -> bool:
+        return self._requested.is_set()
+
     def check(self) -> None:
         if self._requested.is_set():
             raise TaskCancelled("用户已停止当前处理。")

@@ -6,8 +6,9 @@ from typing import Any
 from .gateway import call_module
 
 PRODUCT_ITEM_MODULE = "productItemManage-"
-BATCH_RULE_MODULE = "index-tzXGOuzl.js"
+BATCH_RULE_MODULE = "index-B6_UezUx.js"
 GENERATE_BATCH_MODULE = "productOrderManage-B-Bfdh3C.js"
+SUPPLEMENT_BATCH_MODULE = "productItemManage-ppzeq-54.js"
 
 
 @dataclass(frozen=True)
@@ -15,6 +16,7 @@ class BatchRule:
     id: int | str
     name: str
     shipping_statuses: tuple[str, ...]
+    is_default: bool = False
 
 
 def production_item_payload(
@@ -90,7 +92,7 @@ def list_all_received_items(page) -> tuple[list[dict[str, Any]], int]:
 def list_batch_rules(page) -> tuple[BatchRule, ...]:
     rows = call_module(
         page,
-        "index-tzXGOuzl",
+        "index-B6_UezUx",
         "k",
         {"product_sale_type_list": 1},
         BATCH_RULE_MODULE,
@@ -102,7 +104,8 @@ def list_batch_rules(page) -> tuple[BatchRule, ...]:
             if condition.get("key") == "shipping_status":
                 statuses = [str(value) for value in condition.get("value") or []]
         result.append(
-            BatchRule(row["id"], str(row.get("name") or ""), tuple(statuses))
+            BatchRule(row["id"], str(row.get("name") or ""), tuple(statuses),
+                      bool(row.get("is_default")))
         )
     return tuple(result)
 
@@ -129,4 +132,47 @@ def generate_filtered_batch(
         "r",
         request,
         GENERATE_BATCH_MODULE,
+    )
+
+
+def generate_selected_batch(
+    page, production_order_item_ids, batch_rule_id: int | str
+) -> Any:
+    """Generate one batch from an exact, already-validated item-id set."""
+    item_ids = [str(item_id) for item_id in production_order_item_ids if str(item_id)]
+    if not item_ids:
+        raise ValueError("生成批次必须包含至少一个生产项ID。")
+    request = {
+        "production_order_item_ids": item_ids,
+        "batch_creat_type": 2,
+        "batch_rule_id": batch_rule_id,
+    }
+    return call_module(
+        page,
+        "productOrderManage-",
+        "r",
+        request,
+        GENERATE_BATCH_MODULE,
+    )
+
+
+def generate_supplement_batch(
+    page,
+    items: list[tuple[int | str, int]],
+    batch_rule_id: int | str,
+) -> Any:
+    """Generate a supplement batch for exact, already-batched production items."""
+    item_list = [
+        {"item_id": str(item_id), "qty": int(qty)}
+        for item_id, qty in items
+        if str(item_id) and int(qty) > 0
+    ]
+    if not item_list:
+        raise ValueError("补单批次必须包含至少一个数量大于0的生产项。")
+    return call_module(
+        page,
+        PRODUCT_ITEM_MODULE,
+        "v",
+        {"item_list": item_list, "batch_rule_id": batch_rule_id},
+        SUPPLEMENT_BATCH_MODULE,
     )

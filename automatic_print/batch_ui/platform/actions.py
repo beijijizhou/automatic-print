@@ -13,8 +13,8 @@ from ..task.worker import AutomationWorker
 
 class BatchActionsMixin:
     def load_batch_range(self) -> None:
-        start = self.range_start.text().strip()
-        end = self.range_end.text().strip()
+        start = self.range_start.currentText().strip()
+        end = self.range_end.currentText().strip()
         if not (
             len(start) == 12
             and start.isdigit()
@@ -108,11 +108,20 @@ class BatchActionsMixin:
         )
 
     def download_selected(self) -> None:
-        selected = [
+        self._download_selected(auto_print=False)
+
+    def download_and_print_selected(self) -> None:
+        self._download_selected(auto_print=True)
+
+    def _selected_batch_numbers(self) -> list[str]:
+        return [
             self.table.item(row, 1).text()
             for row in range(self.table.rowCount())
             if self.table.cellWidget(row, 0).isChecked()
         ]
+
+    def _download_selected(self, *, auto_print: bool) -> None:
+        selected = self._selected_batch_numbers()
         if not selected:
             QMessageBox.warning(
                 self, "请选择批次", "请至少选择一个可下载批次。"
@@ -139,13 +148,15 @@ class BatchActionsMixin:
             "output": Path(self.output.text().strip()),
             "batch_numbers": selected,
             "batch_types": batch_types,
+            "auto_print": auto_print,
         }
-        if not self.download_only:
+        if auto_print or not self.download_only:
             options.update(
                 settings=self._current_layout_settings(),
                 sample_limit=5 if self.test_mode.isChecked() else None,
-                merge_batches=self.merge_batches.isChecked(),
-                preview_only=self.download_preview_only.isChecked(),
+                merge_batches=self.merge_batches.isChecked() and auto_print != 'shared_knife',
+                preview_only=(False if auto_print
+                              else self.download_preview_only.isChecked()),
             )
         self._start_worker(
             AutomationWorker(
@@ -160,11 +171,7 @@ class BatchActionsMixin:
                 self, "找不到文件夹", "请选择包含已下载生产图的文件夹。"
             )
             return
-        selected = [
-            self.table.item(row, 1).text()
-            for row in range(self.table.rowCount())
-            if self.table.cellWidget(row, 0).isChecked()
-        ]
+        selected = self._selected_batch_numbers()
         if self.merge_batches.isChecked() and len(selected) < 2:
             QMessageBox.warning(
                 self, "请选择多个批次", "合并排版请至少选择两个批次。"

@@ -21,7 +21,7 @@ def discover_batch_folders(platform_root: Path) -> list[Path]:
     folders = [folder for folder in platform_root.rglob('*')
                if folder.is_dir() and len(folder.name) == 12
                and folder.name.isdigit()
-               and not {'PROCESSED', 'TEST_SAMPLE', 'PREVIEW'}.intersection(folder.parts)]
+               and not {'PROCESSED', 'TEST_SAMPLE', 'PREVIEW', '切膜机文件'}.intersection(folder.parts)]
     candidates = set(folders)
     return [folder for folder in folders
             if not any(parent in candidates and parent.name == folder.name

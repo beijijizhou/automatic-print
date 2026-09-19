@@ -25,6 +25,7 @@ def process_local_batches(
     merge_batches: bool,
     progress,
     preview_only: bool = False,
+    shared_knife: bool = False,
 ) -> dict:
     platform_root = output / platform_name
     folders = _batch_folders(platform_root, batch_numbers)
@@ -54,6 +55,10 @@ def process_local_batches(
         else "PROCESSED"
     )
     destination_root = platform_root / output_name
+    if shared_knife:
+        from ...automation.workflows.shared_knife_batches import render_shared_knife_batches
+        return render_shared_knife_batches(platform_root, platform_name, prepared,
+                                           settings, progress)
     if merge_batches:
         completed = _render_merged(
             prepared, destination_root, settings, progress, preview_only

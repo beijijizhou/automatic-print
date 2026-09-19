@@ -33,6 +33,38 @@ def present_action_result(owner, result: dict) -> None:
                 QUrl.fromLocalFile(str(folder.resolve()))
             )
         return
+    if result['type'] == 'downloaded_processed_and_printed':
+        printed = result.get('print_files') or []
+        errors = result.get('print_errors') or []
+        layout_errors = result.get('layout_errors') or []
+        routes = result.get('batch_routes') or {}
+        skipped = result.get('skipped_print_batches') or []
+        text = (
+            f"{result['platform']}：已下载并完成 {len(result['batches'])} 个批次排版；"
+            f"成功生成并加入PrinterExp {len(printed)} 个PRN。"
+        )
+        if errors:
+            text += "\nPRN失败：" + "；".join(
+                f"{item['batch']}：{item['error']}" for item in errors
+            )
+        if routes:
+            unattended = [name for name, route in routes.items() if route['unattended']]
+            attended = [name for name, route in routes.items() if not route['unattended']]
+            text += (f'\n共用刀位 {result["shared_knife_mm"]:g} 毫米：'
+                     f'常规（固定刀位）{len(unattended)} 批，需值守 {len(attended)} 批。'
+                     '\n仅生成并加载PRN，尚未启动物理打印。')
+            if attended:
+                text += '\n需值守：' + '；'.join(
+                    f'{name}：{routes[name]["reason"]}' for name in attended)
+        if layout_errors:
+            text += '\n排版失败：' + '；'.join(
+                f'{item["batch"]}：{item["error"]}' for item in layout_errors)
+        if skipped:
+            text += "\n按用户停止请求未启动：" + "、".join(skipped)
+        owner.summary.setText(text)
+        owner.log.appendPlainText(text)
+        QMessageBox.information(owner, '自动化排版完成', text)
+        return
     mode = ('排版预览' if result.get('preview_only') else
             '测试小样' if result['test'] else '生产批次')
     merged_codes = result.get('merged_batches') or []
