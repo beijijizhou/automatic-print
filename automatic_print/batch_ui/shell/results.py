@@ -39,10 +39,14 @@ def present_action_result(owner, result: dict) -> None:
         layout_errors = result.get('layout_errors') or []
         routes = result.get('batch_routes') or {}
         skipped = result.get('skipped_print_batches') or []
+        writing = sum(not item.get('riin_complete', True) for item in printed)
+        finished = len(printed) - writing
         text = (
             f"{result['platform']}：已下载并完成 {len(result['batches'])} 个批次排版；"
-            f"成功生成并加入PrinterExp {len(printed)} 个PRN。"
+            f"已加入PrintExp {len(printed)} 个PRN（RIIN已完成 {finished}，仍在写入 {writing}）。"
         )
+        if writing:
+            text += '\n仍在写入的PRN须等RIIN完成，并核对PrintExp预览后再实际打印。'
         if errors:
             text += "\nPRN失败：" + "；".join(
                 f"{item['batch']}：{item['error']}" for item in errors

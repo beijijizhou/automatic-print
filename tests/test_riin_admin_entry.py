@@ -222,4 +222,5 @@ class AdminEntryTests(unittest.TestCase):
             self.assertEqual(result['image_count'], 2)
             self.assertEqual(result['chunk_count'], 2)
             self.assertEqual(result['bytes'], 123)
+            self.assertTrue(result['riin_complete'])
             self.assertEqual(result['steps'][-1]['state'], 'printexp_loaded')

@@ -146,3 +146,24 @@ def test_available_prn_path_never_overwrites_existing_file(tmp_path):
 
     (tmp_path / "batch.prn").write_bytes(b"existing")
     assert available_prn_path(tmp_path, "batch") == tmp_path / "batch-2.prn"
+
+
+def test_early_prn_result_is_labeled_as_still_writing(tmp_path, monkeypatch):
+    from unittest.mock import MagicMock
+    from automatic_print.batch_ui.shell.results import present_action_result
+
+    owner = SimpleNamespace(summary=MagicMock(), log=MagicMock())
+    monkeypatch.setattr(
+        'automatic_print.batch_ui.shell.results.QMessageBox.information',
+        lambda *_args: None,
+    )
+    present_action_result(owner, {
+        'type': 'downloaded_processed_and_printed',
+        'platform': 'Haloo', 'batches': [('batch', {})],
+        'output_folder': str(tmp_path),
+        'print_files': [{'batch': 'batch', 'riin_complete': False}],
+    })
+
+    message = owner.summary.setText.call_args.args[0]
+    assert '仍在写入 1' in message
+    assert '等RIIN完成' in message

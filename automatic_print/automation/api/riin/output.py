@@ -95,15 +95,13 @@ def riin_output_task(output):
 
 
 def wait_for_print_file(output, timeout=7200):
-    """Wait for RIIN task completion and a stable, non-placeholder PRN."""
+    """Wait for real RIIN progress and a non-placeholder PRN, or completion."""
     target = Path(output).resolve()
     deadline = time.monotonic() + timeout
     previous_size = -1
     stable_reads = 0
-    observed_task = False
     while time.monotonic() < deadline:
         task = riin_output_task(target)
-        observed_task = observed_task or task is not None
         if task and task['state'] in {'打印出错', '停止'}:
             raise RuntimeError(
                 f"RIIN文件任务{task['state']}：{target}"
@@ -112,9 +110,19 @@ def wait_for_print_file(output, timeout=7200):
             size = target.stat().st_size
         except FileNotFoundError:
             size = 0
+        if task and task['state'] == '正在打印...' and size >= 1024:
+            percent = str(task.get('percent') or '').strip().rstrip('%').strip()
+            try:
+                started = float(percent.replace(',', '.')) > 0
+            except ValueError:
+                started = False
+            if started:
+                return {
+                    'state': 'prn_writing', 'output': str(target),
+                    'bytes': size, 'riin_task': task,
+                }
         task_finished = task is not None and task['state'] == '打印完成'
-        legacy_finished = not observed_task and size >= 1024
-        if (task_finished or legacy_finished) and size >= 1024 and size == previous_size:
+        if task_finished and size >= 1024 and size == previous_size:
             stable_reads += 1
             if stable_reads >= 3:
                 return {

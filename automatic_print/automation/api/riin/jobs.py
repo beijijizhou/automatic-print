@@ -138,7 +138,9 @@ def generate_batch_prns(processed, progress, stop_requested=lambda: False):
                 )
                 completed.append({"batch": batch, "folder": relative,
                                   "files": names, **automation})
-                progress(f"[{index}/{len(batches)}] {batch} · 第{segment}/{len(groups)}组：PRN已生成并加入PrinterExp")
+                status = ('PRN已生成并加入PrintExp' if automation.get('riin_complete', True)
+                          else 'RIIN已开始写入，PRN已加入PrintExp；文件仍在生成')
+                progress(f"[{index}/{len(batches)}] {batch} · 第{segment}/{len(groups)}组：{status}")
             except Exception as error:
                 detail = (f'第{segment}/{len(groups)}组 {relative}：{error}'
                           if len(groups) > 1 else str(error))

@@ -27,11 +27,13 @@ def automate_layout_to_prn(handle, process_id, source, output, paths=None):
     steps.append(desktop.open_output(handle))
     steps.append(riin_output.begin_file_output(process_id))
     steps.append(riin_output.save_print_file(process_id, target))
-    completed = riin_output.wait_for_print_file(target)
-    steps.append(completed)
+    file_status = riin_output.wait_for_print_file(target)
+    steps.append(file_status)
     steps.append(riin_output.load_printexp(target))
     return {
         'state': 'completed', 'source': str(Path(source).resolve()),
         'image_count': len(paths), 'chunk_count': len(chunks),
-        'output': str(target), 'bytes': completed['bytes'], 'steps': steps,
+        'output': str(target), 'bytes': file_status['bytes'],
+        'riin_complete': file_status['state'] == 'prn_generated',
+        'riin_task': file_status.get('riin_task'), 'steps': steps,
     }
