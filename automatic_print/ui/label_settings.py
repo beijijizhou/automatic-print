@@ -29,6 +29,7 @@ class LabelSettingsDialog(QDialog):
         self.platform.setEditable(True)
         self.platform.addItem('隆丰')
         self.platform.addItem('S2B')
+        self.platform.addItem('Haloo')
         self.platform_enabled = QCheckBox('显示平台＋尺码标签（关闭后仍保留切膜刀码）')
         self.platform_enabled.setChecked(True)
         self.platform_enabled.setToolTip(
