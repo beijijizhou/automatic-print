@@ -1,6 +1,7 @@
 """Split an already verified plan only at complete-order and row boundaries."""
 
 from automatic_print.layout_engine.orders.order_groups import order_key
+from automatic_print.layout_engine.cutting.geometry.knife_signature import knife_signature
 
 
 def partition_plan(planned, count, split_by_knife=False):
@@ -21,13 +22,7 @@ def partition_plan(planned, count, split_by_knife=False):
         return _partition_blocks(planned, blocks, min(max(1, count), len(blocks)))
     runs = []
     for block in blocks:
-        signatures = {
-            tuple(placement.cut_knife_xs_px or (
-                () if placement.cut_knife_x_px is None
-                else (placement.cut_knife_x_px,)
-            ))
-            for _path, placement in block[2]
-        }
+        signatures = {knife_signature(placement) for _path, placement in block[2]}
         if len(signatures) != 1:
             raise ValueError('同一完整订单跨越不同刀位，不能拆成独立打印文件。')
         signature = next(iter(signatures))

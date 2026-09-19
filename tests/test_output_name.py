@@ -1,3 +1,5 @@
+from pathlib import Path
+
 from PIL import Image
 import pytest
 
@@ -129,3 +131,25 @@ def test_segment_files_flatten_and_result_names_follow_collision(tmp_path):
     assert result['parts'][0]['filename'] == result['filename']
     assert result['placements'][0]['output_filename'] == result['filename']
     assert result['transition_marks'][0]['filename'] == names[1]
+
+
+def test_knife_subfolders_preserve_existing_file_and_relative_names(tmp_path):
+    from automatic_print.layout_engine.output.output_name import finish_output_files
+    stage = batch_output_directory(tmp_path, '批次123', 'JOB_KNIFE')
+    stage.mkdir(parents=True)
+    names = ['批次123 常规.png', '批次123 旋转区.png']
+    for name in names:
+        Image.new('RGBA', (1, 1), 'red').save(stage/name)
+    root = tmp_path/'切膜机文件'
+    (root/'旋转').mkdir(parents=True)
+    Image.new('RGBA', (1, 1), 'blue').save(root/'旋转'/names[1])
+    output, mapping = finish_output_files(
+        stage, names, {names[0]: '常规', names[1]: '旋转'},
+    )
+    assert output == root
+    assert (root/mapping[names[0]]).is_file()
+    assert (root/mapping[names[1]]).is_file()
+    assert mapping[names[0]] == str(Path('常规')/names[0])
+    assert mapping[names[1]] == str(Path('旋转')/'批次123 旋转区 (2).png')
+    with Image.open(root/'旋转'/names[1]) as old:
+        assert old.getpixel((0, 0)) == (0, 0, 255, 255)

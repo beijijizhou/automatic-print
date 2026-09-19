@@ -56,7 +56,7 @@ def batch_directory_name(batch_name, job_id):
     return Path(label_output_name(batch_name)).stem
 
 
-def finish_output_files(directory, filename):
+def finish_output_files(directory, filename, subfolders=None):
     directory = Path(directory)
     staged = directory.parent.name == '.处理中' and directory.parent.parent.name == '排版日志'
     log_root = directory.parent.parent if staged else directory.parent/'排版日志'
@@ -65,13 +65,29 @@ def finish_output_files(directory, filename):
     print_root.mkdir(parents=True, exist_ok=True)
     names = [filename] if isinstance(filename, str) else list(filename)
     mapping = {}
+    moves = []
     for name in names:
         source = directory/name
         if not source.is_file():
             raise ValueError(f'完成输出时找不到排版文件：{source}')
-        target = unused_output_path(print_root, name)
-        source.replace(target)
-        mapping[name] = target.name
+        subfolder = (subfolders or {}).get(name)
+        if subfolder not in (None, '常规', '旋转'):
+            raise ValueError(f'无效的刀位输出文件夹：{subfolder}')
+        target_dir = print_root/subfolder if subfolder else print_root
+        target = unused_output_path(target_dir, name)
+        moves.append((source, target))
+        mapping[name] = str(Path(subfolder)/target.name) if subfolder else target.name
+    moved = []
+    try:
+        for source, target in moves:
+            target.parent.mkdir(parents=True, exist_ok=True)
+            source.replace(target)
+            moved.append((source, target))
+    except OSError:
+        for source, target in reversed(moved):
+            if target.is_file() and not source.exists():
+                target.replace(source)
+        raise
     directory.rmdir()
     try:
         directory.parent.rmdir()

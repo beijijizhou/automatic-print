@@ -4,6 +4,7 @@ from dataclasses import replace
 from dataclasses import dataclass
 
 from ...layout_engine.domain.models import LayoutSettings, mm_to_px
+from ...layout_engine.cutting.geometry.knife_signature import actual_knife_signatures
 
 
 def locked_knife_settings(settings: LayoutSettings) -> LayoutSettings:
@@ -21,17 +22,6 @@ def locked_knife_settings(settings: LayoutSettings) -> LayoutSettings:
         compare_film_sizes=False,
         developer_compact_cutter_layout=False,
     )
-
-
-def actual_knife_signatures(result: dict) -> set[tuple[int, ...]]:
-    """Inspect every rendered placement, including every output segment."""
-    signatures = set()
-    for placement in result.get('placements') or ():
-        knives = tuple(placement.get('cut_knife_xs_px') or ())
-        if not knives and placement.get('cut_knife_x_px') is not None:
-            knives = (placement['cut_knife_x_px'],)
-        signatures.add(knives)
-    return signatures
 
 
 def continuous_print_eligibility(result: dict, settings: LayoutSettings) -> tuple[bool, str]:

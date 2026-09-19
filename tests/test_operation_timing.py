@@ -67,8 +67,12 @@ def test_worker_reports_scan_through_output_and_persists_timings(tmp_path):
     result = finished[0]['operation_timings']
     names = [row['name'] for row in result['steps']]
     assert names[0] == '扫描文件名'
-    assert {'读取尺寸与标签', '刀位与排版计算', '图片准备与合成',
-            '合成像素安全检查', '膜标签与辅助线处理', '保存输出图片'} <= set(names)
+    assert {'读取尺寸与标签', '刀位与排版计算',
+            '分段合成、安全检查与保存'} <= set(names)
+    part_steps = {step['name'] for part in finished[0]['parts']
+                  for step in part['operation_timings']['steps']}
+    assert {'图片准备与合成', '合成像素安全检查',
+            '膜标签与辅助线处理', '保存输出图片'} <= part_steps
     assert abs(sum(s['seconds'] for s in result['steps'])-result['total_seconds']) < .01
     assert result['status'] == '已完成'
     assert updates[-1] == result

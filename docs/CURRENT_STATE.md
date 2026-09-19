@@ -50,7 +50,9 @@
 - 生成完成弹窗由 `layout_engine/output/output_file_info.py` 汇总最终生产结果；膜规格表把当前膜行替换为
   同一最终计划的真实统计，输出名由 `layout_engine/output/output_name.py` 同时写入订单数和件数。
 - `layout_engine/output/output_name.py` 统一管理输出落点：生成期间写入 `排版日志/.处理中` 隔离目录，
-  安全检查完成后把最终PNG扁平移入 `切膜机文件`；文本报告保存在平级 `排版日志`，不写输出JSON。
+  安全检查完成后由`layout_engine/output/knife_folders.py`复核逐文件实际刀位，将普通切膜PNG分别
+  移入`切膜机文件/常规`或`切膜机文件/旋转`；非切膜PNG直接进入`切膜机文件`。
+  文本报告保存在平级 `排版日志`，不写输出JSON。
 - 多批次生成控制：`automatic_print/controllers/bulk_generation.py` 管理线程、取消和释放；
   `ui/batch_folder_selection.py`在后台扫描并提供批次勾选，`ui/bulk_workbench.py`、
   `bulk_generation_worker.py`、`batch_status_board.py`分别负责展示编排、任务执行和状态视图。

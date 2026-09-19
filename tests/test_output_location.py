@@ -89,8 +89,8 @@ def test_generated_png_is_beside_source_in_independent_job(tmp_path, monkeypatch
     assert job == source.parent / '切膜机文件'
     assert job != source
     assert 'JOB_' not in job.name
-    assert all(path.name.startswith('batch123_') for path in job.glob('*.png'))
-    assert list(job.glob('*.png'))
+    assert all(path.name.startswith('batch123_') for path in job.rglob('*.png'))
+    assert list((job/'常规').glob('*.png'))
     assert not list(job.glob('*.json'))
     assert list((source.parent/'排版日志').glob('*_排版报告*.txt'))
     assert image.is_file()
