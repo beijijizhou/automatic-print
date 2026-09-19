@@ -95,12 +95,23 @@ def validate_embedded_marks(planned, settings=None):
             header_bottom = p.y_px+round(header.bottom*p.height_px)
             for kind,x,y,w,h in (('标签',p.number_x_px,p.number_y_px,p.number_width_px,p.number_height_px),
                           ('平台',p.platform_x_px,p.platform_y_px,p.platform_width_px,p.platform_height_px)):
-                if w and h and not (y >= header_top and y+h <= header_bottom):
+                if p.rotation_degrees % 180:
+                    from .marker_stack import in_short_edge_space
+                    valid = in_short_edge_space(header, p.width_px, p.height_px,
+                        (x-p.x_px, y-p.y_px, w, h))
+                    if (kind == '平台' and settings.platform_reuse_qr and w and h
+                            and not valid):
+                        from automatic_print.layout_engine.labeling.platform.platform_space import card_rect_clear
+                        valid = card_rect_clear(path, p.width_px, p.height_px,
+                            p.rotation_degrees, (x-p.x_px, y-p.y_px, w, h))
+                else:
+                    valid = y >= header_top and y+h <= header_bottom
+                if w and h and not valid:
                     raise ValueError(
-                        f'{path.name}：{kind}文字超出膜标签高度范围，可能进入膜标签与图案之间，禁止输出。'
+                        f'{path.name}：{kind}文字不在膜标签安全空白，可能进入图案，禁止输出。'
                     )
                 overlaps = w and h and x < p.x_px+p.width_px and x+w > p.x_px and y < p.y_px+p.height_px and y+h > p.y_px
-                in_header = y >= header_top and y+h <= header_bottom
+                in_header = valid
                 if kind == '平台' and settings.platform_reuse_qr and overlaps:
                     from automatic_print.layout_engine.labeling.platform.platform_space import card_rect_clear
                     reused = card_rect_clear(

@@ -34,6 +34,9 @@
   `ui/workbench/overview/`按界面区域分别拥有快捷标签、批次数据、预览和信号联动；进入时默认展示
   不解码缩略图的整批订单结构图，按单件尺码群、双面尺码群和多件订单尺码群显示真实排版坐标；
   用户可切换到当前订单真实图片，刀码示意不代替真实坐标预览。
+  默认刀码与标签四位置页由`ui/previews/markers/`后台逐图生成；异常图片不会使整页消失，
+  缺少可用生产图时使用仓库内去标识化 Haloo 样本，严格安全定位仍失败时由代码绘制仅方向示意，
+  明确标注不代表可生产坐标。样本由`scripts/build_haloo_preview_asset.py`可复现生成并随安装包打包。
 - `ui/current_film.py` 的当前膜卡片可直接修改膜规格、排版模式和自定义膜宽，修改结果与打印参数设置使用同一数据源。
   主界面输出参数可修改最终画布宽度，默认60厘米膜固定570毫米画布，左右各留15毫米；设置页左右预留与快捷宽度双向同步。
   `layout_engine/pipeline/service.py` 在排版后按设定宽度补足透明画布，并在保存前复核内容与刀码边界。
@@ -107,8 +110,8 @@
   `layout_engine/planning/zones/gap_fallback.py` 用虚拟尺寸覆盖重跑完整订单局部比较，双面同倍率且整批仍最多只有并排区和旋转区两个区域。
 - 标签与刀码：`layout_engine/labeling/base/labels.py`、`layout_engine/labeling/base/dynamic_label.py`、`layout_engine/labeling/text/templates.py`、`layout_engine/labeling/markers/marker_stack.py`、`layout_engine/labeling/markers/left_marker.py`、
   `layout_engine/labeling/platform/platform_label.py`、`layout_engine/labeling/base/header_region.py`、`layout_engine/labeling/platform/transparent_search.py`。生产标签的机器号、批次正倒序及原图订单尺码共用同一模板和占位；优先在刀码与膜标签之间搜索已验证透明空白，空间不足时由整批回退在刀码与原图之间扩出真实占位的透明走廊，重新规划并验证刀位。平台尺码文字只放入原图二维码卡片内部
-  已验证的未印刷白色或透明空位，绝不放到卡片与图案之间，使用不超过二维码卡片高度的最大字号；先在原图坐标确定位置，再与二维码一起旋转，预览与输出复用同一坐标。生产标签先搜索旋转后膜标签高度带内、卡片左侧的透明空位；二维码卡片没有经过最终像素验证的安全空位时，仅跳过该图的平台尺码文字、记录异常并继续，不阻断整批。整批复用透明带失败时由`layout_engine/planning/zones/gap_fallback.py`
-  扩出刀码与原图之间的透明走廊，计入真实占位、重算刀位并记录完整恢复诊断；标签仍限制在膜标签高度内。最终坐标越界等不可恢复安全冲突不得猜值绕过，文字不能进入膜标签与图案之间。
+  已验证的未印刷白色或透明空位，绝不放到卡片与图案之间，使用不超过二维码卡片高度的最大字号；先在原图坐标确定位置，再与二维码一起旋转，预览与输出复用同一坐标。生产标签未旋转时搜索卡片左侧透明带；旋转90度时由`layout_engine/labeling/platform/short_edge_space.py`沿卡片短边搜索上方或下方的整块透明位，位置仍在原图占位内。二维码卡片没有经过最终像素验证的安全空位时，仅跳过该图的平台尺码文字、记录异常并继续，不阻断整批。整批复用透明带失败时由`layout_engine/planning/zones/gap_fallback.py`
+  扩出刀码与原图之间的透明走廊，计入真实占位、重算刀位并记录完整恢复诊断；旋转和未旋转的标签分别限制在经过验证的短边与高度带安全空白内。最终坐标越界等不可恢复安全冲突不得猜值绕过，文字不能进入膜标签与图案之间。
 - 开发者排版隔离：换刀与批次结束600毫米停止距离只有开发者模式显式传入正数时才进入规划、候选比较和独立开发者缓存版本；普通模式不调用该逻辑，使用算法缓存版本7，缓存键也不包含开发者紧凑排版与停止距离字段。
 - 标签字体加载与线程内有界缓存由`layout_engine/labeling/text/fonts.py`唯一拥有；`layout_engine/labeling/base/labels.py`只负责标签内容、
   换行和徽标渲染。单图排版对象`LayoutItem`与`Placement`统一归`layout_engine/domain/models.py`。

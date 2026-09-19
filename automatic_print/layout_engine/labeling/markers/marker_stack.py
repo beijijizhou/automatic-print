@@ -1,4 +1,5 @@
 """A single left-aligned marker column: block, platform, then ordinary label."""
+from math import ceil, floor
 from automatic_print.layout_engine.domain.models import mm_to_px
 
 
@@ -21,7 +22,11 @@ def header_safe_coordinates(
     _bx, _by, bw, bh = block
     _lx, _ly, lw, lh = label
     px, py, pw, ph = platform
-    if lh > bottom-top:
+    if degrees % 180:
+        available_height = top if (region.top+region.bottom)/2 >= .5 else height-bottom
+    else:
+        available_height = bottom-top
+    if lh > available_height:
         raise ValueError(f'{path.name}：标签文字无法完整放入膜标签高度范围，禁止输出。')
     # First use source-header transparency before the card. A missing rectangle
     # triggers the shared, full-batch external-gutter fallback.
@@ -29,9 +34,10 @@ def header_safe_coordinates(
     from automatic_print.layout_engine.labeling.platform.platform_space import (
         card_rect_clear, header_space,
     )
+    from automatic_print.layout_engine.labeling.platform.short_edge_space import short_edge_space
     reserved = ()
     if pw and ph:
-        if ph > bottom-top:
+        if ph > available_height and not settings.platform_reuse_qr:
             raise ValueError(f'{path.name}：平台文字无法完整放入膜标签高度范围，禁止输出。')
         if settings.platform_reuse_qr:
             if not card_rect_clear(path, image_size[0], height, degrees,
@@ -40,19 +46,32 @@ def header_safe_coordinates(
                 # cutter geometry unchanged when the QR card has no verified
                 # blank rectangle.
                 px = py = pw = ph = 0
+        elif degrees % 180:
+            position = short_edge_space(path, region, image_size[0], height,
+                                        pw, ph, degrees)
+            if position is None:
+                raise ValueError(f'{path.name}：膜标签短边没有平台文字的透明空位，禁止输出。')
+            px, py = position
         else:
             px = header_space(path, region, image_size[0], height, pw, ph, 0, degrees)
             if px is None:
                 raise ValueError(f'{path.name}：膜标签高度带内没有平台文字的透明空位，禁止输出。')
             py = top
         reserved = ((px, py, pw, ph),) if pw and ph else ()
-    label_x = header_space(
-        path, region, image_size[0], height, lw, lh, 0, degrees,
-        reserved=reserved, between_marker_and_card=True,
-    )
-    if label_x is None:
-        raise ValueError(f'{path.name}：膜标签高度带内没有批次标签的透明空位，禁止输出。')
-    label_y = top
+    if degrees % 180:
+        position = short_edge_space(path, region, image_size[0], height,
+                                    lw, lh, degrees, reserved=reserved)
+        if position is None:
+            raise ValueError(f'{path.name}：膜标签短边没有批次标签的透明空位，禁止输出。')
+        label_x, label_y = position
+    else:
+        label_x = header_space(
+            path, region, image_size[0], height, lw, lh, 0, degrees,
+            reserved=reserved, between_marker_and_card=True,
+        )
+        if label_x is None:
+            raise ValueError(f'{path.name}：膜标签高度带内没有批次标签的透明空位，禁止输出。')
+        label_y = top
     from automatic_print.layout_engine.cutting.geometry.rotated_marks import marker_top
     block_y = marker_top(region, height) if bh else 0
     return (
@@ -60,6 +79,18 @@ def header_safe_coordinates(
         (label_x, label_y, lw, lh),
         (px, py, pw, ph),
     )
+
+
+def in_short_edge_space(region, width, height, rect):
+    """Require the whole badge to remain inside the image beside a short end."""
+    x, y, w, h = rect
+    left, right = ceil(region.left*width), floor(region.right*width)
+    if not (0 <= x and x+w <= width and left <= x and x+w <= right
+            and 0 <= y and y+h <= height):
+        return False
+    if (region.top+region.bottom)/2 >= .5:
+        return y+h <= floor(region.top*height)
+    return y >= ceil(region.bottom*height)
 
 
 def stacked_coordinates(settings, block, label, platform):

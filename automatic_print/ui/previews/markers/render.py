@@ -46,3 +46,23 @@ def render_example(path, item, labels, settings):
     pixels = canvas.tobytes()
     canvas.close()
     return pixels, (width, height)
+
+
+def render_direction_diagram(path, degrees):
+    """Show source/card orientation when production-safe badge coordinates fail."""
+    with Image.open(path) as source:
+        with source.convert('RGBA') as rgba:
+            rotated = rgba.rotate(degrees, expand=True)
+    scale = min(780/rotated.width, 570/rotated.height)
+    width, height = max(1, round(rotated.width*scale)), max(1, round(rotated.height*scale))
+    canvas = Image.new('RGBA', (width+90, height+60), '#f1f5f9')
+    with rotated.resize((width, height), Image.Resampling.LANCZOS) as shown:
+        canvas.alpha_composite(shown, (80, 50))
+    rotated.close()
+    draw = ImageDraw.Draw(canvas)
+    draw.rectangle((80, 50, 80+width-1, 50+height-1), outline='#2563eb', width=2)
+    draw.rectangle((18, 54, 48, 114), fill='#dc2626')
+    draw.text((12, 15), 'DIRECTION ONLY - NOT PRINTABLE', fill='#9a3412')
+    pixels, size = canvas.tobytes(), canvas.size
+    canvas.close()
+    return pixels, size

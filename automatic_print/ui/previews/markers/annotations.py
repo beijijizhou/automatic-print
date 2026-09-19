@@ -5,6 +5,8 @@ from PySide6.QtGui import QColor, QFont, QImage, QPainter, QPen
 
 def annotated_example(image, data, settings):
     item = data['item']
+    if item is None:
+        return image  # Direction-only fallback has no production-safe coordinates.
     top = min(0, item.block_ry)
     scale = min(900/item.footprint_width, 650/(item.footprint_height-top))
     left, above, below = 100, 100, 55

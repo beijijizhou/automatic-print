@@ -17,7 +17,7 @@ class ExampleWorker(QThread):
     def run(self):
         try:
             self.ready.emit(build_examples(self.paths, self.settings))
-        except (ValueError, OSError) as error:
+        except Exception as error:
             self.failed.emit(str(error))
 
 
@@ -116,12 +116,19 @@ class MarkerExamples(QGroupBox):
             image = QImage(data['pixels'], *data['size'], QImage.Format_RGBA8888).copy()
             image = annotated_example(image, data, settings)
             self.images.append(image)
-            kind = '当前批次生产图' if data['production'] else '示意图：当前抽样未找到该侧膜标签'
-            caption.setText(kind+'\n'+data['detail'])
-            picture.setToolTip(data['source'] or '示意样板；位置由生产排版模块计算，不生成打印文件。')
+            kind = {'production': '当前批次生产图',
+                    'haloo': '内置 Haloo 示意样本（非当前生产图）',
+                    'code': '代码绘制示意图（非当前生产图）',
+                    'haloo-direction': '内置 Haloo 样本 · 仅方向示意（不可作为生产坐标）',
+                    'code-direction': '代码绘制 · 仅方向示意（不可作为生产坐标）'}[data['sample_kind']]
+            reason = data['fallback_reason']
+            short_reason = reason.split('；', 1)[0][:70] if reason else ''
+            caption.setText(kind + (f' · {short_reason}' if short_reason else '') + '\n' + data['detail'])
+            picture.setToolTip(data['source'] or reason or
+                '示意图使用生产排版模块计算位置，不生成打印文件。')
         count = sum(r['production'] for r in results)
         mode = {'free':'自由排版','single':'单列切膜','dual':'自动多列切膜'}.get(settings.cutter_mode,settings.cutter_mode)
-        self.status.setText(f'四种情况已更新 · {mode} · {count}种使用当前批次生产图。使用当前模式标记位置；'
+        self.status.setText(f'四种情况已更新 · {mode} · {count}种使用当前批次生产图，其余使用内置样本或代码示意。使用当前模式标记位置；'
                            '位置取自当前参数，不预设文字在刀码下方。抽样前24张，示例不替代整批刀位检查。')
         self.draw_images()
 

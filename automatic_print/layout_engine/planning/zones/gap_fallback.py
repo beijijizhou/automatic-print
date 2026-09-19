@@ -16,6 +16,8 @@ def header_space_failure(error):
     return any(message in str(error) for message in (
         '膜标签高度带内没有批次标签的透明空位',
         '膜标签高度带内没有平台文字的透明空位',
+        '膜标签短边没有批次标签的透明空位',
+        '膜标签短边没有平台文字的透明空位',
         '平台文字没有可复用的二维码透明空位',
     ))
 

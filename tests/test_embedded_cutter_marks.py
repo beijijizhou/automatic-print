@@ -101,7 +101,7 @@ def test_added_text_stays_inside_membrane_label_height_and_never_below_it(tmp_pa
     assert placement.number_x_px+placement.number_width_px <= (
         placement.x_px+round(band.left*placement.width_px)
     )
-    with pytest.raises(ValueError, match='膜标签高度范围'):
+    with pytest.raises(ValueError, match='膜标签安全空白'):
         validate_embedded_marks([
             (path, replace(placement, number_y_px=bottom+1))
         ], config)
@@ -120,15 +120,25 @@ def test_narrow_header_uses_verified_gutter_between_mark_and_source(tmp_path, de
     )
     result = generate_layout([path], tmp_path/'out', config)
     placement = result['placements'][0]
-    assert result['analysis']['header_space_recovery']
     assert placement['color_block_x_px']+placement['color_block_width_px'] <= placement['number_x_px']
-    assert placement['number_x_px']+placement['number_width_px'] <= placement['x_px']
     from automatic_print.layout_engine.domain.models import Placement
     planned = Placement(**placement)
-    with pytest.raises(ValueError, match='刀码与膜标签之间的安全空白'):
-        validate_embedded_marks([(
-            path, replace(planned, number_x_px=planned.color_block_x_px),
-        )], replace(config, preserve_header_gap=False))
+    if degrees:
+        from automatic_print.layout_engine.labeling.markers.marker_stack import in_short_edge_space
+        band = detect_guide_band(path).rotated(degrees)
+        assert not result['analysis'].get('header_space_recovery')
+        assert in_short_edge_space(band, planned.width_px, planned.height_px,
+            (planned.number_x_px-planned.x_px, planned.number_y_px-planned.y_px,
+             planned.number_width_px, planned.number_height_px))
+        assert planned.number_y_px >= planned.y_px
+        assert planned.number_y_px+planned.number_height_px <= planned.y_px+planned.height_px
+    else:
+        assert result['analysis']['header_space_recovery']
+        assert placement['number_x_px']+placement['number_width_px'] <= placement['x_px']
+        with pytest.raises(ValueError, match='刀码与膜标签之间的安全空白'):
+            validate_embedded_marks([(
+                path, replace(planned, number_x_px=planned.color_block_x_px),
+            )], replace(config, preserve_header_gap=False))
     with Image.open(tmp_path/'out'/result['filename']) as output:
         box = (placement['number_x_px'], placement['number_y_px'],
                placement['number_x_px']+placement['number_width_px'],

@@ -28,7 +28,10 @@ def source_label_badge(text, settings, path, degrees=0):
                 width, height = height, width
             region = region.rotated(degrees)
             maximum = max(1, round((region.right-region.left)*width))
-            available_height = max(1, round((region.bottom-region.top)*height))
+            available_height = max(1, round(
+                (region.top if (region.top+region.bottom)/2 >= .5 else 1-region.bottom)*height
+                if degrees % 180 else (region.bottom-region.top)*height
+            ))
             badge = label_badge(
                 text, settings.dpi, settings.number_font_size_mm, maximum
             )

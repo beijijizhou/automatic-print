@@ -8,7 +8,9 @@ from PIL import Image
 
 from automatic_print.layout_engine import LayoutSettings, generate_layout
 from automatic_print.layout_engine.domain.models import mm_to_px
-from automatic_print.layout_engine.labeling.markers.marker_stack import stacked_coordinates, validate_stack
+from automatic_print.layout_engine.labeling.markers.marker_stack import (
+    in_short_edge_space, stacked_coordinates, validate_stack,
+)
 from automatic_print.layout_engine.labeling.markers.marker_space import validate_embedded_marks
 from automatic_print.layout_engine.cutting.geometry.cut_guide_geometry import detect_guide_band
 from test_marker_examples import sources
@@ -80,12 +82,21 @@ def test_platform_and_label_stay_in_safe_header_band(tmp_path, mode, side, degre
         assert p.platform_y_px == p.color_block_y_px+p.color_block_height_px+mm_to_px(settings.number_gap_mm, settings.dpi)
         assert p.number_y_px >= p.platform_y_px+p.platform_height_px
         assert p.x_px > p.color_block_width_px
-    else:
+    elif payloads[0]['settings'].preserve_header_gap:
         band = detect_guide_band(path).rotated(degrees)
         top = p.y_px+round(band.top*p.height_px)
         bottom = p.y_px+round(band.bottom*p.height_px)
-        assert top <= p.number_y_px < p.number_y_px+p.number_height_px <= bottom
-        assert top <= p.platform_y_px < p.platform_y_px+p.platform_height_px <= bottom
+        if degrees % 180:
+            assert in_short_edge_space(band, p.width_px, p.height_px,
+                (p.number_x_px-p.x_px, p.number_y_px-p.y_px,
+                 p.number_width_px, p.number_height_px))
+            if p.platform_width_px:
+                assert in_short_edge_space(band, p.width_px, p.height_px,
+                    (p.platform_x_px-p.x_px, p.platform_y_px-p.y_px,
+                     p.platform_width_px, p.platform_height_px))
+        else:
+            assert top <= p.number_y_px < p.number_y_px+p.number_height_px <= bottom
+            assert top <= p.platform_y_px < p.platform_y_px+p.platform_height_px <= bottom
         assert p.x_px <= p.number_x_px
         assert p.number_x_px+p.number_width_px <= p.x_px+p.width_px
         assert p.x_px <= p.platform_x_px
@@ -93,6 +104,9 @@ def test_platform_and_label_stay_in_safe_header_band(tmp_path, mode, side, degre
         assert (p.number_x_px+p.number_width_px <= p.platform_x_px
                 or p.platform_x_px+p.platform_width_px <= p.number_x_px)
         assert p.color_block_x_px+p.color_block_width_px == p.x_px
+    else:
+        assert result['analysis']['header_space_recovery']
+        assert p.number_x_px+p.number_width_px <= p.x_px
     with Image.open(tmp_path/'out'/result['filename']) as output, Image.open(path) as original:
         with original.rotate(degrees, expand=True) as source:
             pixels = np.asarray(output.crop((p.x_px, p.y_px, p.x_px+source.width, p.y_px+source.height)))
@@ -102,11 +116,11 @@ def test_platform_and_label_stay_in_safe_header_band(tmp_path, mode, side, degre
     if mode == 'free':
         with pytest.raises(ValueError, match='平台文字未在刀码正下方'):
             validate_stack(path, replace(p, platform_x_px=p.platform_x_px+1), settings)
-    else:
-        with pytest.raises(ValueError, match='膜标签高度范围'):
+    elif payloads[0]['settings'].preserve_header_gap:
+        with pytest.raises(ValueError, match='膜标签安全空白'):
             validate_embedded_marks([
                 (path, replace(p, number_y_px=p.y_px+p.height_px))
-            ], settings)
+            ], payloads[0]['settings'])
 
 
 @pytest.mark.parametrize('engine', ['pillow', 'libvips'])
@@ -132,9 +146,13 @@ def test_segmented_double_batch_stack_and_full_saved_corridors(tmp_path, engine)
                 from automatic_print.layout_engine.domain.models import Placement
                 p = Placement(**row)
                 validate_stack(Path(p.source), p, settings)
-                assert p.x_px <= p.platform_x_px
-                assert p.platform_x_px+p.platform_width_px <= p.x_px+p.width_px
-                assert p.color_block_x_px+p.color_block_width_px == p.x_px
+                if not result['analysis'].get('header_space_recovery'):
+                    assert p.x_px <= p.platform_x_px
+                    assert p.platform_x_px+p.platform_width_px <= p.x_px+p.width_px
+                if result['analysis'].get('header_space_recovery'):
+                    assert p.color_block_x_px+p.color_block_width_px <= p.x_px
+                else:
+                    assert p.color_block_x_px+p.color_block_width_px == p.x_px
                 with Image.open(tmp_path/p.source) as source:
                     expected = np.asarray(source)
                     pixels = np.asarray(output.crop((p.x_px,p.y_px,p.x_px+source.width,p.y_px+source.height)))
