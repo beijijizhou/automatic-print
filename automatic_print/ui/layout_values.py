@@ -59,6 +59,7 @@ def settings_from_window(window) -> LayoutSettings:
         preserve_header_gap=True,
         auto_fit_width=window.auto_fit_width.isChecked(),
         force_small_pair_width=window.cutter_settings.force_small_pair.isChecked(),
+        force_small_pair_source_limit_mm=window.cutter_settings.force_small_pair_limit.value(),
         developer_gap_loss=True,
         developer_compact_cutter_layout=getattr(window, 'developer_mode_enabled', False),
         platform_below_marker=True,

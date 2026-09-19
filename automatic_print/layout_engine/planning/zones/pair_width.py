@@ -1,4 +1,4 @@
-"""Shared virtual width cap for S–L layouts and strict fixed-knife batches."""
+"""Shared virtual width cap for S–XL layouts and strict fixed-knife batches."""
 from dataclasses import replace
 
 from automatic_print.layout_engine.intake.metadata.images import print_dimensions
@@ -8,8 +8,7 @@ from automatic_print.layout_engine.intake.metadata.source_metadata import source
 from automatic_print.layout_engine.orders.order_groups import pair_identity
 
 
-ELIGIBLE_SIZES = {'S', 'M', 'L'}
-SHARED_KNIFE_SHRINK_LIMIT_MM = 310
+ELIGIBLE_SIZES = {'S', 'M', 'L', 'XL'}
 
 
 def apply_pair_width_cap(paths, settings, progress=None):
@@ -18,6 +17,7 @@ def apply_pair_width_cap(paths, settings, progress=None):
             and (settings.cutter_majority_two_zone or fixed)):
         return settings
     requested_cap = settings.force_small_pair_width_mm
+    source_limit = settings.force_small_pair_source_limit_mm
     cap = min(requested_cap, _safe_artwork_width(paths, settings))
     if cap <= 0:
         raise ValueError('强制双排宽度必须大于 0 毫米。')
@@ -26,11 +26,11 @@ def apply_pair_width_cap(paths, settings, progress=None):
     dimensions_by_path = {}
     factors = {}
     for path in paths:
-        if not fixed and source_size(path) not in ELIGIBLE_SIZES:
+        if source_size(path) not in ELIGIBLE_SIZES:
             continue
         dimensions = print_dimensions(path, settings.dpi)
         dimensions_by_path[path] = dimensions
-        if fixed and dimensions.width_mm > SHARED_KNIFE_SHRINK_LIMIT_MM:
+        if dimensions.width_mm > source_limit:
             continue
         if dimensions.width_mm <= cap:
             continue
@@ -44,7 +44,8 @@ def apply_pair_width_cap(paths, settings, progress=None):
             if identity:
                 paired.setdefault(identity[0], []).append(path)
         for mates in paired.values():
-            if any(dimensions_by_path[path].width_mm > SHARED_KNIFE_SHRINK_LIMIT_MM
+            if any(source_size(path) not in ELIGIBLE_SIZES or
+                   dimensions_by_path[path].width_mm > source_limit
                    for path in mates):
                 for path in mates:
                     factors.pop(path, None)
@@ -63,10 +64,11 @@ def apply_pair_width_cap(paths, settings, progress=None):
         width = dimensions.width_mm * factor
         height = dimensions.height_mm * factor
         overrides[resolved_name(path)] = (width, height)
-        title = '共刀并排等比缩小' if fixed else 'S–L 并排宽度上限'
+        title = '共刀并排等比缩小' if fixed else 'S–XL 并排宽度上限'
         text = (f'{title}：原尺寸 {dimensions.width_mm:.2f}×{dimensions.height_mm:.2f} 毫米，'
                 f'等比缩小为 {width:.2f}×{height:.2f} 毫米（{factor*100:.2f}%）；'
-                f'用户上限 {requested_cap:.2f} 毫米，已扣除刀码安全占位；'
+                f'原宽上限 {source_limit:.2f} 毫米，目标上限 {requested_cap:.2f} 毫米，'
+                '已扣除刀码安全占位；'
                 '原文件未修改，预览和输出使用相同尺寸，刀码仍服从本区域统一刀位。')
         notices.append((path.name, text, str(path)))
         if progress:

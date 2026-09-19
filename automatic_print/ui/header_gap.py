@@ -54,12 +54,27 @@ def build_quick_header_gap(window):
 
 
 def build_quick_force_pair(window):
-    """Mirror the canonical S-L pairing switch in the main action area."""
-    control = QCheckBox('S–L 并排宽度上限（自动扣除刀码占位）')
+    """Mirror the S–XL pairing switch and its editable original-width limit."""
+    group = QWidget()
+    row = QHBoxLayout(group)
+    row.setContentsMargins(0, 0, 0, 0)
+    control = QCheckBox('S–XL 并排等比缩小（自动扣除刀码占位）')
     canonical = window.cutter_settings.force_small_pair
     control.setChecked(canonical.isChecked())
     control.setToolTip(canonical.toolTip())
     control.toggled.connect(canonical.setChecked)
     canonical.toggled.connect(control.setChecked)
+    row.addWidget(control)
+    row.addWidget(QLabel('可缩原图宽度≤'))
+    from .spinbox_style import double_spinbox
+    canonical_limit = window.cutter_settings.force_small_pair_limit
+    field = double_spinbox(canonical_limit.value(), canonical_limit.minimum(),
+                           canonical_limit.maximum(), decimals=0)
+    field.setSuffix(' 毫米')
+    field.setToolTip(canonical_limit.toolTip())
+    field.valueChanged.connect(canonical_limit.setValue)
+    canonical_limit.valueChanged.connect(field.setValue)
+    row.addWidget(field)
     window.quick_force_small_pair = control
-    return control
+    window.quick_force_small_pair_limit = field
+    return group

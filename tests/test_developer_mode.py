@@ -127,6 +127,23 @@ def test_two_zone_layout_stays_visible_and_active_outside_developer_mode(tmp_pat
     owner.close()
 
 
+def test_quick_pair_limit_is_editable_persistent_and_shared_with_settings(tmp_path):
+    path = tmp_path/'pair-limit.ini'
+    owner = window(path)
+    assert 'S–XL' in owner.quick_force_small_pair.text()
+    assert owner.quick_force_small_pair_limit.isVisible()
+    assert owner.quick_force_small_pair_limit.value() == 310
+    owner.quick_force_small_pair_limit.setValue(305)
+    assert owner.cutter_settings.force_small_pair_limit.value() == 305
+    assert owner._layout_settings().force_small_pair_source_limit_mm == 305
+    owner.close()
+    reopened = window(path)
+    assert reopened.quick_force_small_pair_limit.value() == 305
+    reopened.cutter_settings.force_small_pair_limit.setValue(300)
+    assert reopened.quick_force_small_pair_limit.value() == 300
+    reopened.close()
+
+
 def test_legacy_570_gap_migrates_once_and_then_respects_manual_value(tmp_path):
     path = tmp_path/'legacy-gap.ini'
     preferences = QSettings(str(path), QSettings.IniFormat)

@@ -69,7 +69,7 @@ def _measured_plan(paths, settings, progress, analysis_ready):
         {'source': name, 'path': path, 'kind': text,
          'action': '已按开发者设置等比缩小；请核对预览和实际烫印尺寸'}
         for name, text, path in settings.width_adjustments
-        if text.startswith(('S–L 并排宽度上限：', '共刀并排等比缩小：'))
+        if text.startswith(('S–XL 并排宽度上限：', '共刀并排等比缩小：'))
     )
     if analysis.get('rotation_recovery'):
         analysis['image_anomalies'].append({'source':'整批旋转恢复','kind':analysis['rotation_recovery']['action'],

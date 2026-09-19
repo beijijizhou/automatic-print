@@ -96,7 +96,7 @@ def test_two_longfeng_batches_generate_with_the_same_real_knife(tmp_path):
         source.mkdir()
         paths = []
         for index in range(4):
-            path = source / f'{index}.png'
+            path = source / f'B{index + 1}-1-T-Black-XL-NO1-1.png'
             Image.new('RGB', (280, 300 + index * 10), 'blue').save(
                 path, dpi=(25.4, 25.4))
             paths.append(path)
@@ -114,7 +114,7 @@ def test_strict_fixed_knife_shrinks_oversize_without_changing_knife(tmp_path):
         cutter_knife_mm=300, number_images=False, margin_mm=0,
         color_block_gap_mm=5, png_engine='pillow',
     ))
-    path = tmp_path / 'too-wide.png'
+    path = tmp_path / 'B1-1-T-Black-XL-NO1-1.png'
     Image.new('RGB', (310, 300), 'blue').save(path, dpi=(25.4, 25.4))
     result = generate_layout([path], tmp_path / 'fixed', settings)
     assert continuous_print_eligibility(result, settings)[0]
@@ -129,7 +129,7 @@ def test_strict_fixed_knife_shrinks_oversize_without_changing_knife(tmp_path):
 def test_fixed_knife_uses_same_scale_on_both_faces(tmp_path):
     paths = []
     for side, width in ((1, 310), (2, 280)):
-        path = tmp_path / f'order-size-NO1-{side}.png'
+        path = tmp_path / f'B1-1-T-Black-XL-NO1-{side}.png'
         Image.new('RGB', (width, 300), 'blue').save(path, dpi=(25.4, 25.4))
         paths.append(path)
     settings = locked_knife_settings(LayoutSettings(
@@ -148,7 +148,7 @@ def test_fixed_knife_uses_same_scale_on_both_faces(tmp_path):
 def test_shared_knife_limit_keeps_wide_double_order_unscaled(tmp_path):
     paths = []
     for side, width in ((1, 311), (2, 280)):
-        path = tmp_path / f'order-size-NO1-{side}.png'
+        path = tmp_path / f'B1-1-T-Black-XL-NO1-{side}.png'
         Image.new('RGB', (width, 300), 'blue').save(path, dpi=(25.4, 25.4))
         paths.append(path)
     settings = locked_knife_settings(LayoutSettings(
@@ -160,10 +160,27 @@ def test_shared_knife_limit_keeps_wide_double_order_unscaled(tmp_path):
     assert not adjusted.width_adjustments
 
 
-def test_shared_knife_routes_over_310_to_independent_zone_across_batches(tmp_path):
+def test_user_pair_limit_controls_s_to_xl_and_shared_knife(tmp_path):
+    paths = []
+    for size, width in (('XL', 305), ('2XL', 305), ('L', 306)):
+        path = tmp_path / f'B{len(paths)+1}-1-T-Black-{size}-NO1-1.png'
+        Image.new('RGB', (width, 300), 'blue').save(path, dpi=(25.4, 25.4))
+        paths.append(path)
+    settings = locked_knife_settings(LayoutSettings(
+        dpi=25.4, media_width_mm=600, cutter_mode='dual', cutter_knife_mm=300,
+        force_small_pair_source_limit_mm=305, number_images=False,
+    ))
+    adjusted = apply_pair_width_cap(paths, settings)
+    assert set(dict(adjusted.dimension_overrides)) == {str(paths[0].resolve())}
+    assert len(adjusted.width_adjustments) == 1
+
+
+@pytest.mark.parametrize('limit', [305, 310])
+def test_shared_knife_routes_over_limit_to_independent_zone_across_batches(tmp_path, limit):
     settings = LayoutSettings(
         dpi=25.4, media_width_mm=600, cutter_mode='dual', cutter_knife_mm=300,
         platform_name='隆丰', number_images=False, margin_mm=0,
+        force_small_pair_source_limit_mm=limit,
         color_block_gap_mm=5, png_engine='pillow', output_parts=1,
     )
     prepared = []
@@ -171,7 +188,7 @@ def test_shared_knife_routes_over_310_to_independent_zone_across_batches(tmp_pat
         source = tmp_path / batch
         source.mkdir()
         paths = []
-        for index, width in enumerate((280, 280, 311), 1):
+        for index, width in enumerate((280, 280, limit + 1), 1):
             path = source / f'B{index}-1-T-Black-M-NO1-1.png'
             Image.new('RGB', (width, 300), 'blue').save(path, dpi=(25.4, 25.4))
             paths.append(path)
@@ -187,7 +204,8 @@ def test_shared_knife_routes_over_310_to_independent_zone_across_batches(tmp_pat
         assert routes[0]['knife_signature'] == expected
         assert result['order_check']
         assert all(part['cut_corridor']['pixel_verified'] for part in result['parts'])
-        assert not any('311' in row[1] for row in result['analysis']['width_adjustments'])
+        assert not any(f'原尺寸 {limit + 1:.2f}' in row[1]
+                       for row in result['analysis']['width_adjustments'])
         for route in routes:
             with Image.open(Path(report['output_folder']) / route['folder'] /
                             route['filename']) as output:
@@ -207,7 +225,7 @@ def test_one_run_keeps_separate_batches_and_shrinks_oversize_to_normal(tmp_path,
         source.mkdir()
         paths = []
         for index in range(2):
-            path = source / f'{index}.png'
+            path = source / f'B{index + 1}-1-T-Black-XL-NO1-1.png'
             Image.new('RGB', (width, 300), 'blue').save(path, dpi=(25.4, 25.4))
             paths.append(path)
         prepared.append((source, paths))
