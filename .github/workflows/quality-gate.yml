@@ -11,8 +11,8 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  full-tests:
-    name: Full tests on Windows
+  targeted-tests:
+    name: Targeted tests on Windows
     runs-on: windows-latest
     timeout-minutes: 30
     env:
@@ -25,5 +25,5 @@ jobs:
           cache: pip
       - name: Install dependencies
         run: python -m pip install -r requirements.txt pytest
-      - name: Run complete test suite
-        run: python -m pytest -q
+      - name: Run targeted merge checks
+        run: python -m pytest -q tests/test_shared_knife_workflow.py tests/test_longfeng_erp_entry.py tests/test_project_governance.py tests/test_version_display.py

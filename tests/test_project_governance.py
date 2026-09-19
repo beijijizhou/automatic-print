@@ -21,10 +21,12 @@ def test_agent_guide_defines_reuse_and_push_gates():
         assert rule in guide
 
 
-def test_windows_quality_gate_runs_complete_suite():
+def test_windows_quality_gate_runs_targeted_checks_only():
     workflow = (ROOT/'.github/workflows/quality-gate.yml').read_text(encoding='utf-8')
     assert 'windows-latest' in workflow
-    assert 'python -m pytest -q' in workflow
+    assert 'Run targeted merge checks' in workflow
+    assert 'tests/test_shared_knife_workflow.py' in workflow
+    assert 'run: python -m pytest -q\n' not in workflow
 
 
 def test_local_acceptance_is_pinned_and_keeps_batch_failures_independent():

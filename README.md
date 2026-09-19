@@ -17,10 +17,10 @@ RIIN 或其他 RIP 软件的 PNG。
 在 PowerShell 运行：
 
 ```powershell
-powershell -ExecutionPolicy Bypass -Command "irm 'https://raw.githubusercontent.com/beijijizhou/automatic-print/main/windows/bootstrap-test-computer.ps1?v=0.1.291' | iex"
+powershell -ExecutionPolicy Bypass -Command "irm 'https://raw.githubusercontent.com/beijijizhou/automatic-print/main/windows/bootstrap-test-computer.ps1?v=0.1.292' | iex"
 ```
 
-该入口用于指定测试电脑拉取已经通过完整测试并推送到 `main` 的源码。正式生产电脑使用 GitHub
+该入口用于指定测试电脑拉取已经通过本次相关检查并推送到 `main` 的源码。正式生产电脑使用 GitHub
 Release 安装包；源码更新、Release 和生产验收是三个独立状态。
 
 ## 本地开发
@@ -68,15 +68,16 @@ RIIN要求管理员权限时，在已登录的Windows桌面运行以下命令，
 .venv/bin/python -m pytest -q tests/相关测试.py
 ```
 
-任何源码推送前必须运行完整门禁：
+未经用户针对本次任务明确同意，不运行或通过 CI 触发完整测试。合并到 `main` 本身不构成授权。
+本地推送前运行本次调用链的针对性测试；如用户明确要求完整测试，再运行：
 
 ```bash
 .venv/bin/python -m pytest -q
 ```
 
-只要存在失败就禁止推送。准备正式 Windows Release 时，还需要更新版本、完整测试、创建对应标签，
-并由 Windows 工作流构建安装包。GitHub `main` 分支应要求 `Quality Gate` 通过，避免未经完整测试的
-代码进入测试电脑更新来源。
+已运行的针对性测试失败时禁止推送。准备正式 Windows Release 时，还需要更新版本、
+取得所需验证授权、创建对应标签，并由 Windows 工作流构建安装包。GitHub `main` 分支应要求
+`Quality Gate` 的针对性检查通过；不得把该检查称为完整测试或生产验收。
 
 ## 本地真实批次验收
 
