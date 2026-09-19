@@ -1,4 +1,4 @@
-"""Shared virtual width cap for S–XL layouts and strict fixed-knife batches."""
+"""Shared virtual width cap for selected sizes and strict fixed-knife batches."""
 from dataclasses import replace
 
 from automatic_print.layout_engine.intake.metadata.images import print_dimensions
@@ -8,9 +8,6 @@ from automatic_print.layout_engine.intake.metadata.source_metadata import source
 from automatic_print.layout_engine.orders.order_groups import pair_identity
 
 
-ELIGIBLE_SIZES = {'S', 'M', 'L', 'XL'}
-
-
 def apply_pair_width_cap(paths, settings, progress=None):
     fixed = settings.strict_fixed_knife
     if not (settings.force_small_pair_width and settings.cutter_mode == 'dual'
@@ -18,6 +15,7 @@ def apply_pair_width_cap(paths, settings, progress=None):
         return settings
     requested_cap = settings.force_small_pair_width_mm
     source_limit = settings.force_small_pair_source_limit_mm
+    eligible_sizes = set(settings.force_small_pair_sizes)
     cap = min(requested_cap, _safe_artwork_width(paths, settings))
     if cap <= 0:
         raise ValueError('强制双排宽度必须大于 0 毫米。')
@@ -26,7 +24,7 @@ def apply_pair_width_cap(paths, settings, progress=None):
     dimensions_by_path = {}
     factors = {}
     for path in paths:
-        if source_size(path) not in ELIGIBLE_SIZES:
+        if source_size(path) not in eligible_sizes:
             continue
         dimensions = print_dimensions(path, settings.dpi)
         dimensions_by_path[path] = dimensions
@@ -44,7 +42,7 @@ def apply_pair_width_cap(paths, settings, progress=None):
             if identity:
                 paired.setdefault(identity[0], []).append(path)
         for mates in paired.values():
-            if any(source_size(path) not in ELIGIBLE_SIZES or
+            if any(source_size(path) not in eligible_sizes or
                    dimensions_by_path[path].width_mm > source_limit
                    for path in mates):
                 for path in mates:
@@ -64,7 +62,7 @@ def apply_pair_width_cap(paths, settings, progress=None):
         width = dimensions.width_mm * factor
         height = dimensions.height_mm * factor
         overrides[resolved_name(path)] = (width, height)
-        title = '共刀并排等比缩小' if fixed else 'S–XL 并排宽度上限'
+        title = '共刀并排等比缩小' if fixed else '所选尺码并排宽度上限'
         text = (f'{title}：原尺寸 {dimensions.width_mm:.2f}×{dimensions.height_mm:.2f} 毫米，'
                 f'等比缩小为 {width:.2f}×{height:.2f} 毫米（{factor*100:.2f}%）；'
                 f'原宽上限 {source_limit:.2f} 毫米，目标上限 {requested_cap:.2f} 毫米，'

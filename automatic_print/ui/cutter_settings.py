@@ -2,7 +2,7 @@ from PySide6.QtWidgets import QCheckBox, QComboBox, QFormLayout, QLabel, QWidget
 from .spinbox_style import double_spinbox
 from .printable_width import PrintableWidthPanel
 from .transition_settings import TransitionSettings
-from .cutter_settings_state import load_knife_change_gap, pair_width_limit
+from .cutter_settings_state import load_knife_change_gap, pair_width_limit, pair_size_selector
 
 class CutterSettingsPanel(QWidget):
     """Film specification owns its valid production modes and knife settings."""
@@ -31,13 +31,14 @@ class CutterSettingsPanel(QWidget):
         legacy = preferences.value('developer/majority_two_zone', True, bool)
         self.two_zone.setChecked(preferences.value('layout/majority_two_zone', legacy, bool))
         self.two_zone.setToolTip('能安全双排的完整订单优先集中双排，其余进入旋转区；最多两个区域。')
-        self.force_small_pair = QCheckBox('S–XL 并排等比缩小（自动扣除刀码占位）')
+        self.force_small_pair = QCheckBox('并排等比缩小（自动扣除刀码占位）')
         if not preferences.value('layout/force_small_pair_default_on_v1', False, bool):
             preferences.setValue('layout/force_small_pair_width', True)
             preferences.setValue('layout/force_small_pair_default_on_v1', True)
         self.force_small_pair.setChecked(preferences.value('layout/force_small_pair_width', True, bool))
-        self.force_small_pair.setToolTip('默认开启；S–XL 原图在设定宽度内可等比缩小，不放大小图，刀码仍按区域统一刀位。')
+        self.force_small_pair.setToolTip('默认开启；选中尺码的原图在设定宽度内可等比缩小，不放大小图，刀码仍按区域统一刀位。')
         self.force_small_pair_limit = pair_width_limit(preferences)
+        self.force_small_pair_sizes = pair_size_selector(preferences)
         self.tail_rotation = QCheckBox('单件批次末尾 3XL 及以上：省膜时整尺码块旋转')
         self.tail_rotation.setChecked(preferences.value('cutter/tail_rotation', True, bool))
         self.safety = double_spinbox(0, 0, 0)
@@ -74,7 +75,8 @@ class CutterSettingsPanel(QWidget):
             ("刀位选择", self.auto_knife),
             ("旋转区域", self.rotation_zone),
             ('并排集中', self.two_zone),
-            ('S–XL并排', self.force_small_pair),
+            ('并排缩小', self.force_small_pair),
+            ('允许缩小的尺码', self.force_small_pair_sizes),
             ('可缩原图宽度上限', self.force_small_pair_limit),
             ('快速末尾旋转', self.tail_rotation),
             ('换刀与批次结束停止距离（毫米）', self.knife_change_gap),
@@ -148,8 +150,8 @@ class CutterSettingsPanel(QWidget):
         self.auto_knife.setEnabled(mode == "dual")
         self.rotation_zone.setEnabled(mode == "dual")
         self.two_zone.setEnabled(mode == 'dual')
-        self.force_small_pair.setEnabled(mode == 'dual')
-        self.force_small_pair_limit.setEnabled(mode == 'dual')
+        for control in (self.force_small_pair, self.force_small_pair_limit, self.force_small_pair_sizes):
+            control.setEnabled(mode == 'dual')
         self.tail_rotation.setEnabled(mode == 'dual')
         self.knife_change_gap.setEnabled(mode == 'dual')
         if self.quick_mode.isChecked():

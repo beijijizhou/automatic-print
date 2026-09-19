@@ -54,6 +54,7 @@ class LayoutSettings:
     force_small_pair_width: bool = False
     force_small_pair_width_mm: float = 270
     force_small_pair_source_limit_mm: float = 310
+    force_small_pair_sizes: tuple[str, ...] = ('S', 'M', 'L', 'XL')
     dimension_overrides: tuple = ()
     header_gap_overrides: tuple = ()
     width_adjustments: tuple = ()

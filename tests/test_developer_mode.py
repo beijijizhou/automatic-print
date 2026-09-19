@@ -130,18 +130,33 @@ def test_two_zone_layout_stays_visible_and_active_outside_developer_mode(tmp_pat
 def test_quick_pair_limit_is_editable_persistent_and_shared_with_settings(tmp_path):
     path = tmp_path/'pair-limit.ini'
     owner = window(path)
-    assert 'S–XL' in owner.quick_force_small_pair.text()
+    assert owner.quick_force_small_pair_sizes.selected_sizes() == ('S', 'M', 'L', 'XL')
     assert owner.quick_force_small_pair_limit.isVisible()
     assert owner.quick_force_small_pair_limit.value() == 310
     owner.quick_force_small_pair_limit.setValue(305)
+    quick_sizes = {action.text(): action for action in owner.quick_force_small_pair_sizes.menu().actions()}
+    quick_sizes['2XL'].setChecked(True)
+    quick_sizes['S'].setChecked(False)
     assert owner.cutter_settings.force_small_pair_limit.value() == 305
+    assert owner.cutter_settings.force_small_pair_sizes.selected_sizes() == ('M', 'L', 'XL', '2XL')
     assert owner._layout_settings().force_small_pair_source_limit_mm == 305
+    assert owner._layout_settings().force_small_pair_sizes == ('M', 'L', 'XL', '2XL')
     owner.close()
     reopened = window(path)
     assert reopened.quick_force_small_pair_limit.value() == 305
+    assert reopened.quick_force_small_pair_sizes.selected_sizes() == ('M', 'L', 'XL', '2XL')
     reopened.cutter_settings.force_small_pair_limit.setValue(300)
+    canonical_sizes = {action.text(): action for action in reopened.cutter_settings.force_small_pair_sizes.menu().actions()}
+    canonical_sizes['3XL'].setChecked(True)
     assert reopened.quick_force_small_pair_limit.value() == 300
+    assert reopened.quick_force_small_pair_sizes.selected_sizes() == ('M', 'L', 'XL', '2XL', '3XL')
+    for action in canonical_sizes.values():
+        action.setChecked(False)
     reopened.close()
+    empty = window(path)
+    assert empty.quick_force_small_pair_sizes.selected_sizes() == ()
+    assert empty._layout_settings().force_small_pair_sizes == ()
+    empty.close()
 
 
 def test_legacy_570_gap_migrates_once_and_then_respects_manual_value(tmp_path):

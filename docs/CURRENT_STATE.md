@@ -65,7 +65,7 @@
   `切膜机文件/旋转`，各区按任务归档避免同名批次覆盖；切分沿完整订单和排版行边界，
   不同刀位分别生成PRN，且该入口跳过四种膜规格省膜比较；单行未配成双排但固定刀位不变的文件
   仍归常规。严格固定刀位模式只锁定多排区；共刀入口复用 `planning/zones/pair_width.py` 的虚拟尺寸覆盖，
-  对S–XL原始打印宽度不超过用户上限（默认310毫米）且超过刀位两侧安全上限的图等比缩小、双面同倍率，并在报告记录原/采用尺寸；
+  对用户所选尺码（默认S–XL）、原始打印宽度不超过用户上限（默认310毫米）且超过刀位两侧安全上限的图等比缩小、双面同倍率，并在报告记录原/采用尺寸；
   超出上限或完整订单仍放不下时进入独立刀位的旋转区，按实际刀位分文件归档；失败任务保留诊断并继续处理其他批次。RIIN按各文件真实路径生成
   PRN并加入PrinterExp，但当前入口不启动实体打印，“常规”仅表示刀位兼容候选。
 
@@ -94,7 +94,7 @@
   `layout_engine/planning/knife/optimizer.py`、`layout_engine/planning/columns/adaptive_knife.py`、`layout_engine/planning/zones/zone_optimizer.py`、`layout_engine/planning/rotation/rotation_zones.py`。列数由膜宽与真实占位
   动态形成；物理上无法容纳整批或无法实际使用全部列的候选在进入排版动态规划前淘汰，列分配使用有记忆匹配而非全排列。`layout_engine/planning/columns/adaptive_knife.py` 唯一组装“并排区 + 剩余旋转区”，旋转仍超宽时复用 `layout_engine/planning/zones/width_fit.py` 缩小缓存。
   混色订单不参与单色区域边界比较，避免错误清空已经成立的多数并排区。
-- 主界面默认开启的 S–XL 并排等比缩小及可编辑310毫米原宽上限由 `layout_engine/planning/zones/pair_width.py` 唯一计算；通过单图尺寸覆盖交给既有
+- 主界面默认开启的并排等比缩小、可勾选尺码（默认S–XL）及可编辑310毫米原宽上限由 `layout_engine/planning/zones/pair_width.py` 唯一计算；通过单图尺寸覆盖交给既有
   测量、刀位、预览和渲染链路，不生成或修改源图片副本。
 - 旋转与超宽恢复：`layout_engine/planning/rotation/rotation_compare.py`、`layout_engine/planning/rotation/whole_rotation.py`、`layout_engine/planning/rotation/tail_rotation.py`、
   `layout_engine/planning/rotation/single_rotation.py`、`layout_engine/planning/zones/width_fit.py`、`layout_engine/planning/zones/gap_fallback.py`。
@@ -106,7 +106,7 @@
   图片自身的透明空位并互相避让；二维码卡片没有经过最终像素验证的安全空位时，仅跳过该图的平台尺码文字、记录异常并继续，不阻断整批。外置刀码紧贴图片边缘；整批复用透明带失败时由`layout_engine/planning/zones/gap_fallback.py`
   改用外置标签真实占位、重算刀位并记录完整恢复诊断。最终坐标越界等不可恢复安全冲突仍不得猜值绕过，
   不能回退到刀码与二维码之间或膜标签与图案之间。
-- 开发者排版隔离：换刀与批次结束600毫米停止距离只有开发者模式显式传入正数时才进入规划、候选比较和独立开发者缓存版本；普通模式不调用该逻辑，使用算法缓存版本5，缓存键也不包含开发者紧凑排版与停止距离字段。
+- 开发者排版隔离：换刀与批次结束600毫米停止距离只有开发者模式显式传入正数时才进入规划、候选比较和独立开发者缓存版本；普通模式不调用该逻辑，使用算法缓存版本6，缓存键也不包含开发者紧凑排版与停止距离字段。
 - 标签字体加载与线程内有界缓存由`layout_engine/labeling/text/fonts.py`唯一拥有；`layout_engine/labeling/base/labels.py`只负责标签内容、
   换行和徽标渲染。单图排版对象`LayoutItem`与`Placement`统一归`layout_engine/domain/models.py`。
 - 渲染与编码：`layout_engine/rendering/engines/pillow_renderer.py`、`layout_engine/rendering/engines/vips_renderer.py`、`layout_engine/rendering/png/`、

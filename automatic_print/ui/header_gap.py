@@ -58,13 +58,19 @@ def build_quick_force_pair(window):
     group = QWidget()
     row = QHBoxLayout(group)
     row.setContentsMargins(0, 0, 0, 0)
-    control = QCheckBox('S–XL 并排等比缩小（自动扣除刀码占位）')
+    control = QCheckBox('并排等比缩小（自动扣除刀码占位）')
     canonical = window.cutter_settings.force_small_pair
     control.setChecked(canonical.isChecked())
     control.setToolTip(canonical.toolTip())
     control.toggled.connect(canonical.setChecked)
     canonical.toggled.connect(control.setChecked)
     row.addWidget(control)
+    from .cutter_settings_state import PairSizeSelector
+    canonical_sizes = window.cutter_settings.force_small_pair_sizes
+    sizes = PairSizeSelector(canonical_sizes.selected_sizes())
+    sizes.sizesChanged.connect(canonical_sizes.set_selected_sizes)
+    canonical_sizes.sizesChanged.connect(sizes.set_selected_sizes)
+    row.addWidget(sizes)
     row.addWidget(QLabel('可缩原图宽度≤'))
     from .spinbox_style import double_spinbox
     canonical_limit = window.cutter_settings.force_small_pair_limit
@@ -76,5 +82,6 @@ def build_quick_force_pair(window):
     canonical_limit.valueChanged.connect(field.setValue)
     row.addWidget(field)
     window.quick_force_small_pair = control
+    window.quick_force_small_pair_sizes = sizes
     window.quick_force_small_pair_limit = field
     return group

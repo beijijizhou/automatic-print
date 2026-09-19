@@ -9,6 +9,7 @@ from automatic_print.layout_engine.intake.metadata.images import print_dimension
 from automatic_print.automation.workflows.shared_knife_batches import render_shared_knife_batches
 from pathlib import Path
 from collections import Counter
+from dataclasses import replace
 from types import SimpleNamespace
 from PIL import Image
 import pytest
@@ -173,6 +174,24 @@ def test_user_pair_limit_controls_s_to_xl_and_shared_knife(tmp_path):
     adjusted = apply_pair_width_cap(paths, settings)
     assert set(dict(adjusted.dimension_overrides)) == {str(paths[0].resolve())}
     assert len(adjusted.width_adjustments) == 1
+
+
+def test_manual_size_choice_controls_shared_knife_scaling(tmp_path):
+    paths = []
+    for size in ('XL', '2XL', 'L'):
+        path = tmp_path / f'B{len(paths)+1}-1-T-Black-{size}-NO1-1.png'
+        Image.new('RGB', (305, 300), 'blue').save(path, dpi=(25.4, 25.4))
+        paths.append(path)
+    settings = locked_knife_settings(LayoutSettings(
+        dpi=25.4, media_width_mm=600, cutter_mode='dual', cutter_knife_mm=300,
+        force_small_pair_source_limit_mm=305, force_small_pair_sizes=('XL', '2XL'),
+        number_images=False,
+    ))
+    adjusted = apply_pair_width_cap(paths, settings)
+    assert set(dict(adjusted.dimension_overrides)) == {
+        str(paths[0].resolve()), str(paths[1].resolve())}
+    assert not apply_pair_width_cap(paths, replace(
+        settings, force_small_pair_sizes=())).dimension_overrides
 
 
 @pytest.mark.parametrize('limit', [305, 310])
