@@ -47,6 +47,12 @@ class LabelQuickPanel(QWidget):
             "more",
             self.details_dialog.open_algorithm_costs,
         )
+        self.cold_benchmark_button = _tool_button(
+            "DTF随机10批冷启动测试…",
+            "从 DTF 盘随机抽取10个HL批次，逐批生成并记录全部分阶段耗时。",
+            "folder",
+            self.details_dialog.open_cold_benchmark,
+        )
 
 
 def _tool_button(text, tooltip, icon, action):

@@ -120,7 +120,7 @@ def build_batch_tools(panel):
     panel.developer_tools_label = QLabel('开发者功能：')
     row.addWidget(panel.developer_tools_label)
     for button in (
-        panel.history_button, panel.bulk_analysis_button,
+        panel.history_button, panel.bulk_analysis_button, panel.cold_benchmark_button,
         panel.algorithm_costs_button,
     ):
         row.addWidget(button)

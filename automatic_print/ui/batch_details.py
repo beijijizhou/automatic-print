@@ -39,6 +39,16 @@ class BatchDetailsDialog(QDialog):
         from .bulk_workbench import open_bulk
         open_bulk(self.parent())
 
+    def open_cold_benchmark(self):
+        if not getattr(self.parent(), 'developer_mode_enabled', False):
+            return
+        if not hasattr(self, 'cold_benchmark_dialog'):
+            from .cold_batch_benchmark import ColdBatchBenchmarkDialog
+            self.cold_benchmark_dialog = ColdBatchBenchmarkDialog(self.parent())
+        self.cold_benchmark_dialog.show()
+        self.cold_benchmark_dialog.raise_()
+        self.cold_benchmark_dialog.activateWindow()
+
     def open_algorithm_costs(self):
         if not getattr(self.parent(), 'developer_mode_enabled', False):
             return
