@@ -23,6 +23,24 @@ def cancel_import(process_id):
     return {'state': 'unconfirmed_import_cancelled'}
 
 
+def cancel_crop_warning(process_id):
+    """Cancel only RIIN's exact destructive auto-crop confirmation."""
+    from pywinauto import Desktop
+    expected = '图元超出画布，超出部分将被自动裁切，是否继续打印?'
+    dialogs = [
+        window for window in Desktop(backend='win32').windows(process=process_id)
+        if window.class_name() == '#32770' and window.window_text() == 'RIIN'
+        and window.is_visible()
+        and expected in {item.window_text() for item in window.descendants()}
+    ]
+    if len(dialogs) != 1:
+        raise RuntimeError(f'应找到一个RIIN自动裁切警告，实际找到{len(dialogs)}个。')
+    dialog = Desktop(backend='win32').window(handle=dialogs[0].handle)
+    dialog.child_window(title='取消', control_id=7, class_name='Button').click()
+    dialog.wait_not('visible', timeout=10)
+    return {'state': 'unsafe_crop_cancelled', 'warning': expected}
+
+
 def acknowledge_import_errors(process_id):
     from pywinauto import Desktop
     errors = []

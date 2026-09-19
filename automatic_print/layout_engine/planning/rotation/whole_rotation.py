@@ -9,6 +9,8 @@ from automatic_print.layout_engine.labeling.markers.marker_space import validate
 
 def recover_normal_width(paths,settings,progress,error):
     from automatic_print.layout_engine.planning.zones.gap_fallback import width_failure
+    if settings.strict_fixed_knife:
+        raise error
     if settings.cutter_mode not in {'free','single','dual'} or not width_failure(error):
         raise error
     from automatic_print.layout_engine.orders.order_groups import ordered_paths

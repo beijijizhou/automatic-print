@@ -26,13 +26,13 @@ DEVELOPER_FEATURES = (
         ('S2B 批次信息查询', '通过共享服务读取颜色、尺码等批次资料'),
     )),
     ('实验平台与输出', (
-        ('自动化排版', '选择批次后先执行本地排版，再把最终PNG交给RIIN生成PRN'),
+        ('批次下载与自动化打印', '在生产平台下载中选择批次，下载后排版并由RIIN生成PRN'),
         ('隆丰 ERP 下载', '下载已生成批次并仅计算排版数据'),
         ('S2B 生产图下载', '读取已生成导出记录并下载、校验和解压生产图'),
         ('莆田平台', '显示尚在验证中的莆田本地排版入口'),
         ('Haloo平台', '显示尚在验证中的Haloo本地排版入口'),
         ('并行分块 TIFF', '允许选择实验性的 TIFF 输出格式'),
-        ('换刀与批次结束停止距离', '右侧刀位变化或批次结束时，在前一枚左侧刀码后保留570毫米安全距离'),
+        ('换刀与批次结束停止距离', '右侧刀位变化或批次结束时，在前一枚左侧刀码后保留600毫米安全距离'),
     )),
 )
 
@@ -108,12 +108,10 @@ def developer_task_active(window):
     dialog = getattr(details, 'bulk_dialog', None)
     production = getattr(details, 'production_bulk_dialog', None)
     erp = getattr(window, 'longfeng_erp_dialog', None)
-    automated = getattr(window, 'automated_layout_page', None)
     return bool(
         (dialog and dialog.thread is not None)
         or (production and production.thread is not None)
         or (erp and erp.thread is not None)
-        or (automated and automated.busy)
     )
 
 

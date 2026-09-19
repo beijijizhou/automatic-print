@@ -1,17 +1,22 @@
 from PySide6.QtWidgets import (
     QCheckBox,
+    QComboBox,
     QHBoxLayout,
     QHeaderView,
     QLabel,
-    QLineEdit,
     QPlainTextEdit,
     QPushButton,
     QTableWidget,
     QVBoxLayout,
     QWidget,
 )
-
-
+def editable_batch_combo(placeholder: str) -> QComboBox:
+    combo = QComboBox()
+    combo.setEditable(True)
+    combo.setInsertPolicy(QComboBox.NoInsert)
+    combo.lineEdit().setPlaceholderText(placeholder)
+    combo.setToolTip("可从已读取的批次中选择，也可粘贴或复制批次号。")
+    return combo
 def table_widget(headers: list[str], stretch: int | None = None):
     table = QTableWidget(0, len(headers))
     table.setHorizontalHeaderLabels(headers)
@@ -93,17 +98,16 @@ def build_production_page(owner, output_row: QHBoxLayout) -> QWidget:
     page = QWidget()
     layout = QVBoxLayout(page)
     intro = QLabel(
-        "查看已经生成的生产批次，下载并解压生产图；下载不会自动启动排版。"
+        "选择已经生成的生产批次；可以仅下载并解压，也可以继续本地排版、"
+        "由RIIN生成PRN并加入PrinterExp。不会启动物理打印。"
         if getattr(owner, "download_only", False)
         else "查看已经生成且正在生产的批次，并下载生产图。"
              "下载完成后仅解压；请手动启动排版。"
     )
     intro.setWordWrap(True)
     owner.summary = QLabel("尚未读取已生成批次。")
-    owner.range_start = QLineEdit()
-    owner.range_start.setPlaceholderText("起始批次号")
-    owner.range_end = QLineEdit()
-    owner.range_end.setPlaceholderText("结束批次号")
+    owner.range_start = editable_batch_combo("选择或粘贴起始批次号")
+    owner.range_end = editable_batch_combo("选择或粘贴结束批次号")
     owner.range_button = QPushButton("读取并选择范围")
     owner.range_button.clicked.connect(owner.load_batch_range)
     range_row = QHBoxLayout()
@@ -113,7 +117,7 @@ def build_production_page(owner, output_row: QHBoxLayout) -> QWidget:
     range_row.addWidget(owner.range_end)
     range_row.addWidget(owner.range_button)
     owner.table = table_widget(
-        ["选择", "批次号", "项目", "件数", "类型", "创建时间", "生产图"],
+        ["选择", "批次号", "项目", "件数", "类型", "生成批次时间", "生产图"],
         5,
     )
     owner.refresh_button = QPushButton("刷新批次")
@@ -122,6 +126,16 @@ def build_production_page(owner, output_row: QHBoxLayout) -> QWidget:
     owner.select_button.clicked.connect(owner.select_all_ready)
     owner.download_button = QPushButton("下载并解压")
     owner.download_button.clicked.connect(owner.download_selected)
+    owner.automated_print_button = QPushButton("下载、排版并生成打印文件")
+    owner.automated_print_button.clicked.connect(owner.download_and_print_selected)
+    owner.automated_print_button.setToolTip(
+        "按当前打印参数生成最终PNG，再逐批交给RIIN生成PRN并加入PrinterExp；"
+        "不会启动物理打印。"
+    )
+    owner.shared_knife_button = QPushButton('多批次共用刀位生成PRN')
+    owner.shared_knife_button.clicked.connect(lambda: owner._download_selected(auto_print='shared_knife'))
+    owner.shared_knife_button.setToolTip('一次读取所选批次，按当前固定刀位分别排版；不兼容批次归入需值守。生成PRN但不启动物理打印。')
+    owner.shared_knife_button.setVisible(owner.platform_names == ('隆丰',))
     owner.open_download_folder = QCheckBox("下载完成后打开文件夹")
     owner.open_download_folder.setChecked(True)
     owner.process_button = QPushButton("重新排版已下载批次")
@@ -131,6 +145,8 @@ def build_production_page(owner, output_row: QHBoxLayout) -> QWidget:
         owner.refresh_button,
         owner.select_button,
         owner.download_button,
+        owner.automated_print_button,
+        owner.shared_knife_button,
         owner.process_button,
     ):
         actions.addWidget(button)
@@ -161,6 +177,8 @@ def build_production_page(owner, output_row: QHBoxLayout) -> QWidget:
             owner.merge_batches,
         ):
             control.hide()
+    else:
+        owner.automated_print_button.hide()
     if not hasattr(owner, "log"):
         owner.log = QPlainTextEdit()
         owner.log.setReadOnly(True)

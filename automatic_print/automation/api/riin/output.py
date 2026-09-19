@@ -149,8 +149,10 @@ def load_printexp(output):
     dialog = Desktop(backend='win32').window(
         process=main.process_id(), title='打开', class_name='#32770')
     if not dialog.exists(timeout=1) or not dialog.is_visible():
-        main.set_focus()
         button = main.child_window(control_id=5, class_name='Button', title='打开')
+        # The elevated controller may run on a non-interactive desktop where
+        # pywinauto.set_focus() fails while trying to move the mouse.  This MFC
+        # command is message-driven and does not require pointer focus.
         button.parent().post_message(0x0111, 5, button.handle)
     dialog.wait('visible', timeout=5)
     ui_dialog = Desktop(backend='uia').window(handle=dialog.handle)

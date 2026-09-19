@@ -9,7 +9,10 @@ from .desktop import (
     accessible_inventory, dialog_inventory, import_menu, open_import, open_output,
     select_document, submit_import, window_inventory,
 )
-from .dialogs import acknowledge_import_errors, cancel_import, confirm_import
+from .dialogs import (
+    acknowledge_import_errors, cancel_crop_warning, cancel_import,
+    confirm_import,
+)
 from .elevation import is_administrator, launch_elevated
 from .window_control import probe_riin
 from .output import begin_file_output, inspect_printexp, load_printexp, new_document, save_print_file
@@ -18,7 +21,7 @@ from .workflow import automate_layout_to_prn
 
 def main(argv=None):
     parser = argparse.ArgumentParser(description='RIIN独立管理员控制入口')
-    parser.add_argument('operation', choices=('automate-layout', 'inspect', 'open-import', 'import', 'confirm-import', 'cancel-import', 'import-menu', 'acknowledge-import-errors', 'select-document', 'open-output', 'begin-file-output', 'save-print-file', 'inspect-printexp', 'load-printexp', 'new-document'))
+    parser.add_argument('operation', choices=('automate-layout', 'inspect', 'open-import', 'import', 'confirm-import', 'cancel-import', 'cancel-crop-warning', 'import-menu', 'acknowledge-import-errors', 'select-document', 'open-output', 'begin-file-output', 'save-print-file', 'inspect-printexp', 'load-printexp', 'new-document'))
     parser.add_argument('--document')
     parser.add_argument('--manifest', type=Path)
     parser.add_argument('--output', type=Path)
@@ -77,6 +80,8 @@ def main(argv=None):
             result['action'] = confirm_import(windows[0].process_id)
         elif args.operation == 'cancel-import':
             result['action'] = cancel_import(windows[0].process_id)
+        elif args.operation == 'cancel-crop-warning':
+            result['action'] = cancel_crop_warning(windows[0].process_id)
         elif args.operation == 'import-menu':
             result['action'] = import_menu(windows[0].handle)
         elif args.operation == 'acknowledge-import-errors':

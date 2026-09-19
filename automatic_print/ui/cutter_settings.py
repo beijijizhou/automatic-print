@@ -2,6 +2,7 @@ from PySide6.QtWidgets import QCheckBox, QComboBox, QFormLayout, QLabel, QWidget
 from .spinbox_style import double_spinbox
 from .printable_width import PrintableWidthPanel
 from .transition_settings import TransitionSettings
+from .cutter_settings_state import load_knife_change_gap
 
 class CutterSettingsPanel(QWidget):
     """Film specification owns its valid production modes and knife settings."""
@@ -44,10 +45,10 @@ class CutterSettingsPanel(QWidget):
         self.left_marker_lift = double_spinbox(preferences.value('cutter/left_marker_lift_mm',1.5,float),0,30)
         self.left_marker_lift.valueChanged.connect(lambda v: preferences.setValue('cutter/left_marker_lift_mm',v))
         self.knife_change_gap = double_spinbox(
-            preferences.value('cutter/knife_change_gap_mm', 570, float), 0, 2000)
+            load_knife_change_gap(preferences), 0, 2000)
         self.knife_change_gap.setToolTip(
             '右侧纵刀位置变化及批次结束时，保证前一枚左侧识别刀码后至少保留该距离；'
-            '机器搜索距离550毫米时建议使用570毫米。0表示关闭。')
+            '当前生产安全默认值为600毫米。0表示关闭。')
         self.knife_change_gap.valueChanged.connect(
             lambda v: preferences.setValue('cutter/knife_change_gap_mm', v))
         self.transitions = TransitionSettings(preferences, self)

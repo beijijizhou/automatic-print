@@ -7,6 +7,7 @@ from unittest.mock import MagicMock, patch
 
 from automatic_print.automation.api.riin.__main__ import main
 from automatic_print.automation.api.riin.desktop import open_output, png_import_paths
+from automatic_print.automation.api.riin.dialogs import cancel_crop_warning
 from automatic_print.automation.api.riin.output import (
     load_printexp, wait_for_print_file,
 )
@@ -14,6 +15,26 @@ from automatic_print.automation.api.riin.workflow import automate_layout_to_prn
 
 
 class AdminEntryTests(unittest.TestCase):
+    def test_crop_warning_cancel_requires_exact_destructive_message(self):
+        desktop = MagicMock()
+        found, dialog, message = MagicMock(), MagicMock(), MagicMock()
+        found.class_name.return_value = '#32770'
+        found.window_text.return_value = 'RIIN'
+        found.is_visible.return_value = True
+        message.window_text.return_value = (
+            '图元超出画布，超出部分将被自动裁切，是否继续打印?'
+        )
+        found.descendants.return_value = [message]
+        desktop.windows.return_value = [found]
+        desktop.window.return_value = dialog
+        with patch('pywinauto.Desktop', return_value=desktop):
+            result = cancel_crop_warning(22)
+        desktop.windows.assert_called_once_with(process=22)
+        dialog.child_window.assert_called_once_with(
+            title='取消', control_id=7, class_name='Button')
+        dialog.child_window.return_value.click.assert_called_once_with()
+        self.assertEqual(result['state'], 'unsafe_crop_cancelled')
+
     def test_prn_placeholder_waits_for_riin_task_completion(self):
         with tempfile.TemporaryDirectory() as folder:
             target = Path(folder) / 'batch.prn'
@@ -68,6 +89,38 @@ class AdminEntryTests(unittest.TestCase):
             self.assertEqual(result['task'], target.name)
             self.assertEqual(result['progress'], '0.00%')
             self.assertEqual(result['copies'], '0 / 1')
+
+    def test_printexp_open_uses_window_message_without_pointer_focus(self):
+        with tempfile.TemporaryDirectory() as folder:
+            target = Path(folder) / 'batch.prn'
+            target.write_bytes(b'prn')
+            native_desktop = MagicMock()
+            uia_desktop = MagicMock()
+            main, native_dialog, button, parent = (
+                MagicMock(), MagicMock(handle=99), MagicMock(handle=88), MagicMock()
+            )
+            main.process_id.return_value = 22
+            main.child_window.return_value = button
+            button.parent.return_value = parent
+            native_dialog.exists.return_value = False
+            native_dialog.is_visible.side_effect = [False, True]
+            field = MagicMock()
+            field.get_value.return_value = str(target.resolve())
+            task = MagicMock()
+            task.is_visible.return_value = True
+            task.window_text.return_value = target.name
+            main.descendants.return_value = [task]
+            native_desktop.window.side_effect = [main, native_dialog]
+            uia_desktop.window.return_value.child_window.return_value = field
+
+            def desktop(backend):
+                return native_desktop if backend == 'win32' else uia_desktop
+
+            with patch('pywinauto.Desktop', side_effect=desktop):
+                result = load_printexp(target)
+            main.set_focus.assert_not_called()
+            parent.post_message.assert_called_once_with(0x0111, 5, button.handle)
+            self.assertEqual(result['state'], 'printexp_loaded')
 
     def test_output_waits_for_riin_before_using_document_print_command(self):
         desktop = MagicMock()

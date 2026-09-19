@@ -53,7 +53,8 @@ def validate_cut_corridor(planned, settings, canvas_width, left_marker_px=0,
     if planned and all(p.cut_column_count == 1 for _, p in planned):
         return {"knife_xs_px": [], "corridors": [],
                 "checked_images": len(planned), "continuous": True,
-                "left_marker_x_px": left_marker_px, "column_count": 1}
+                "left_marker_x_px": left_marker_px, "column_count": 1,
+                "knife_change_gaps": knife_change_gaps}
     if any(p.cut_knife_x_px is not None or p.cut_knife_xs_px for _,p in planned):
         zones = []
         for name in dict.fromkeys(p.cut_zone for _,p in planned):

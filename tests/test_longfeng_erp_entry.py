@@ -6,6 +6,7 @@ os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 from PySide6.QtCore import QSettings
 from PySide6.QtWidgets import QApplication
 
+from automatic_print.automation.browser.batches import BatchRecord
 from automatic_print.ui.main_window import MainWindow
 from automatic_print.batch_ui.local.processing import process_local_batches
 from automatic_print.batch_ui.task.worker import AutomationWorker
@@ -39,12 +40,41 @@ def test_platform_download_is_multi_select_and_preview_only(tmp_path):
     assert longfeng.download_preview_only.isChecked()
     assert not longfeng.download_preview_only.isEnabled()
     assert longfeng.download_button.text() == "下载并解压"
+    assert longfeng.automated_print_button.text() == "下载、排版并生成打印文件"
+    assert not longfeng.automated_print_button.isHidden()
+    assert longfeng.shared_knife_button.text() == '多批次共用刀位生成PRN'
+    assert not longfeng.shared_knife_button.isHidden()
     assert longfeng.open_download_folder.text() == "下载完成后打开文件夹"
     assert longfeng.open_download_folder.isChecked()
     assert not longfeng.open_download_folder.isHidden()
     assert longfeng.process_button.isHidden()
     assert longfeng.test_mode.isHidden()
     assert longfeng.download_preview_only.isHidden()
+    assert longfeng.range_start.isEditable()
+    assert longfeng.range_end.isEditable()
+    assert longfeng.range_start.currentText() == ""
+    assert longfeng.table.horizontalHeaderItem(5).text() == "生成批次时间"
+
+    records = [
+        BatchRecord(
+            "609180001002", 2, 3, "单项多件",
+            "2026-09-18 09:30:00", True,
+        ),
+        BatchRecord(
+            "609180001001", 1, 1, "单项单件",
+            "2026-09-18 09:20:00", True,
+        ),
+    ]
+    longfeng._display_batch_records(records)
+    assert [
+        longfeng.range_start.itemText(index)
+        for index in range(longfeng.range_start.count())
+    ] == ["609180001002", "609180001001"]
+    longfeng.range_start.setCurrentIndex(1)
+    assert longfeng.range_start.currentText() == "609180001001"
+    longfeng.range_end.setEditText("609180001002")
+    assert longfeng.range_end.currentText() == "609180001002"
+    assert longfeng.table.item(0, 5).text() == "2026-09-18 09:30:00"
 
     page.platform_checks["莆田"].setChecked(True)
     APP.processEvents()
@@ -61,7 +91,7 @@ def test_platform_download_is_multi_select_and_preview_only(tmp_path):
     assert s2b.range_start.isHidden()
     assert s2b.range_end.isHidden()
     assert s2b.range_button.isHidden()
-    assert "不会自动启动排版" in s2b.main_tabs.currentWidget().findChildren(
+    assert "RIIN生成PRN" in s2b.main_tabs.currentWidget().findChildren(
         type(s2b.summary)
     )[0].text()
 

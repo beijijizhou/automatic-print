@@ -1,0 +1,121 @@
+"""Run verified RIIN file-output jobs outside the GUI thread."""
+import json
+from pathlib import Path
+import tempfile
+import time
+import uuid
+
+from .elevation import launch_elevated
+
+
+def available_prn_path(folder, stem=None):
+    root = Path(folder).resolve()
+    candidate = root / f"{stem or root.name}.prn"
+    index = 2
+    while candidate.exists():
+        candidate = root / f"{stem or root.name}-{index}.prn"
+        index += 1
+    return candidate
+
+
+def generated_pngs(folder, result):
+    root = Path(folder).resolve()
+    names = result.get("files") or [result["filename"]]
+    files = [(root / name).resolve() for name in names]
+    missing = [path for path in files if not path.is_file()]
+    if not files or missing:
+        raise ValueError(
+            "本地排版没有返回可导入的最终PNG。"
+            if not files
+            else f"本地排版结果不存在：{missing[0]}"
+        )
+    if any(path.suffix.lower() != ".png" for path in files):
+        raise ValueError("RIIN自动化只接受本地排版生成的PNG。")
+    return files
+
+
+def generate_prn(files, output, progress):
+    paths = [Path(path).resolve(strict=True) for path in files]
+    target = Path(output).resolve()
+    if not paths or any(path.suffix.lower() != ".png" for path in paths):
+        raise ValueError("RIIN导入清单必须包含已生成的PNG。")
+    folder = Path(tempfile.gettempdir()) / "AutomaticPrint" / "riin-reports"
+    folder.mkdir(parents=True, exist_ok=True)
+    token = uuid.uuid4().hex
+    manifest = folder / f"{token}-files.json"
+    report = folder / f"{token}-result.json"
+    manifest.write_text(
+        json.dumps([str(path) for path in paths], ensure_ascii=False),
+        encoding="utf-8",
+    )
+    started = time.monotonic()
+    finished = False
+    try:
+        launch_elevated([
+            "automate-layout", "--report", str(report),
+            "--manifest", str(manifest), "--output", str(target),
+        ])
+        while True:
+            if report.is_file():
+                try:
+                    payload = json.loads(report.read_text(encoding="utf-8"))
+                except (OSError, json.JSONDecodeError):
+                    pass
+                else:
+                    finished = True
+                    break
+            elapsed = time.monotonic() - started
+            if elapsed > 7500:
+                raise TimeoutError(
+                    f"RIIN任务超过125分钟仍未返回；任务未被取消：{target}"
+                )
+            if target.is_file():
+                progress(
+                    f"RIIN正在生成 {target.name} · "
+                    f"{target.stat().st_size / 1_000_000_000:.2f} GB · "
+                    f"{elapsed:.0f} 秒"
+                )
+            else:
+                progress(
+                    f"RIIN正在导入 {len(paths)} 个排版PNG · {elapsed:.0f} 秒"
+                )
+            time.sleep(0.5)
+        if not payload.get("ok"):
+            raise RuntimeError(payload.get("error") or "RIIN生成PRN失败。")
+        automation = payload.get("automation") or {}
+        if automation.get("state") != "completed":
+            raise RuntimeError("RIIN没有返回完整的文件生成结果。")
+        return automation
+    finally:
+        if finished or not report.is_file():
+            manifest.unlink(missing_ok=True)
+        if finished:
+            report.unlink(missing_ok=True)
+
+
+def generate_batch_prns(processed, progress, stop_requested=lambda: False):
+    output_root = Path(processed["output_folder"])
+    completed, errors, skipped = [], [], []
+    batches = processed.get("batches") or []
+    routes = processed.get('batch_routes') or {}
+    for index, (batch, result) in enumerate(batches, start=1):
+        if stop_requested():
+            skipped.extend(name for name, _result in batches[index - 1:])
+            break
+        folder = output_root / routes.get(batch, {}).get('folder', batch)
+        try:
+            files = generated_pngs(folder, result)
+            output = available_prn_path(folder, batch)
+            progress(f"[{index}/{len(batches)}] {batch}：正在交给RIIN生成PRN")
+            automation = generate_prn(
+                files, output,
+                lambda message: progress(
+                    f"[{index}/{len(batches)}] {batch} · {message}"
+                ),
+            )
+            completed.append({"batch": batch, **automation})
+            progress(f"[{index}/{len(batches)}] {batch}：PRN已生成并加入PrinterExp")
+        except Exception as error:
+            errors.append({"batch": batch, "error": str(error)})
+            progress(f"{batch}：PRN生成失败，继续处理其他批次 · {error}")
+    return completed, errors, skipped

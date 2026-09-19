@@ -42,6 +42,7 @@ class ThreadActionsMixin:
             "status_and_list": worker.batches_loaded,
             "preview_rules": worker.plan_loaded,
             "generate_rules": worker.completed,
+            "generate_completed_haloo": worker.completed,
             "download": worker.completed,
             "process": worker.completed,
         }[worker.action]
@@ -56,7 +57,7 @@ class ThreadActionsMixin:
 
     @Slot(str)
     def append_log(self, message: str) -> None:
-        if "正在保存大图" not in message:
+        if "正在保存大图" not in message and "RIIN正在" not in message:
             self.log.appendPlainText(message)
 
     @Slot(str)
@@ -92,6 +93,9 @@ class ThreadActionsMixin:
 
     @Slot(object)
     def action_finished(self, result: dict) -> None:
+        if result.get('type') == 'completed_haloo_generated':
+            self.completed_haloo_page.show_generation_result(result)
+            return
         if result.get('type') == 'read':
             if result['kind'] == 'completed_haloo':
                 self.completed_haloo_page.show_result(result)
@@ -113,6 +117,8 @@ class ThreadActionsMixin:
             self.refresh_button,
             self.select_button,
             self.download_button,
+            getattr(self, "automated_print_button", None),
+            getattr(self, "shared_knife_button", None),
             getattr(self, "open_download_folder", None),
             self.process_button,
             self.merge_batches,
@@ -130,6 +136,8 @@ class ThreadActionsMixin:
         for widget in widgets:
             if widget is not None:
                 widget.setEnabled(enabled)
+        if hasattr(self, 'completed_haloo_page'):
+            self.completed_haloo_page.set_actions_enabled(enabled)
         plan = self.pending_batch_plan
         if hasattr(self, "generate_rules_button"):
             self.generate_rules_button.setEnabled(

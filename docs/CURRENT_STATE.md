@@ -56,6 +56,12 @@
   `bulk_generation_worker.py`、`batch_status_board.py`分别负责展示编排、任务执行和状态视图。
   主界面以一个“开始排版”入口统一处理单批次目录和多批次上级目录；扫描层跳过“切膜机文件”，
   用户勾选后的批次清单决定实际队列及“合并所有子文件夹”的输入范围。
+- 隆丰生产平台页的“多批次共用刀位生成PRN”独立入口一次下载、读取所选批次，再用当前固定纵刀
+  分别排版；`automation/workflows/shared_knife.py`逐张检查刀位、订单、膜宽和最终像素安全通道，
+  `shared_knife_batches.py`把候选与需值守批次分别存入同一任务的两个区域。严格固定刀位模式禁止
+  原有超宽恢复分支改刀；固定刀位放不下时
+  复用原排版策略重排到需值守区；失败任务保留诊断并继续处理其他批次。RIIN按各批真实路径生成
+  PRN并加入PrinterExp，但当前入口不启动实体打印，“连续打印”仅表示刀位兼容候选。
 
 ## 排版核心
 
@@ -94,7 +100,7 @@
   图片自身的透明空位并互相避让；二维码卡片没有经过最终像素验证的安全空位时，仅跳过该图的平台尺码文字、记录异常并继续，不阻断整批。外置刀码紧贴图片边缘；整批复用透明带失败时由`layout_engine/planning/zones/gap_fallback.py`
   改用外置标签真实占位、重算刀位并记录完整恢复诊断。最终坐标越界等不可恢复安全冲突仍不得猜值绕过，
   不能回退到刀码与二维码之间或膜标签与图案之间。
-- 开发者排版隔离：换刀与批次结束570毫米停止距离只有开发者模式显式传入正数时才进入规划、候选比较和独立开发者缓存版本；普通模式不调用该逻辑，使用算法缓存版本4，缓存键也不包含开发者紧凑排版与停止距离字段。
+- 开发者排版隔离：换刀与批次结束600毫米停止距离只有开发者模式显式传入正数时才进入规划、候选比较和独立开发者缓存版本；普通模式不调用该逻辑，使用算法缓存版本4，缓存键也不包含开发者紧凑排版与停止距离字段。
 - 标签字体加载与线程内有界缓存由`layout_engine/labeling/text/fonts.py`唯一拥有；`layout_engine/labeling/base/labels.py`只负责标签内容、
   换行和徽标渲染。单图排版对象`LayoutItem`与`Placement`统一归`layout_engine/domain/models.py`。
 - 渲染与编码：`layout_engine/rendering/engines/pillow_renderer.py`、`layout_engine/rendering/engines/vips_renderer.py`、`layout_engine/rendering/png/`、
@@ -113,7 +119,7 @@
   `layout_engine/cutting/validation/marked_pixel_validation.py`、`layout_engine/cutting/geometry/printed_guides.py`、`layout_engine/output/output_file_info.py`。
   `layout_engine/cutting/geometry/knife_change_gap.py`在开发者模式参数启用时，对实际刀位变化边界移动后续整行，
   并在最后一枚左侧识别刀码之后补足批次结束距离；双排转旋转、旋转转双排和批次结束均至少保留
-  设定距离（机器550毫米搜索距离默认采用570毫米），最终刀位检查和输出报告复核同一距离事实。
+  设定距离（当前生产安全默认采用600毫米）；区域变化以相邻两枚左侧识别刀码起点计距，批次结束以最后一枚刀码起点到文件结束计距，最终刀位检查和输出报告复核同一距离事实。
 - 膜方案与统计：`layout_engine/planning/film/film_comparison.py` 直接复用当前实际输出行并并行计算其余方案；`layout_engine/planning/film/film_specs.py`、`layout_engine/reporting/metrics.py`、
   `layout_engine/reporting/operation_timing.py`、`layout_engine/reporting/algorithm_costs.py`。
 - 缓存：`layout_engine/planning/cache/plan_cache.py`、`layout_engine/planning/cache/normal_plan_cache.py`、`layout_engine/planning/cache/cached_planner.py`；单图测量由
@@ -154,28 +160,30 @@
 
 ## 外部自动化
 
-- Haloo 下载工作区提供已生产分类只读预览，展示样本范围、物流、底款、颜色、面别、尺码档、来源批次及未纳入数量；不提交生成、不声称跨页整单完整。`batch_ui/task/reads.py`复用现有工作线程，`local/scanning.py`后台读取目录并按来源范围丢弃旧结果。批次排版复用界面补距开关及数值，不再强制40毫米。
+- Haloo 下载工作区提供已生产底款分类及可选分组补单生成；勾选时与最终确认窗口均逐组展示真实底款名称/ID、颜色和件数，确认后才提交。页面还展示样本范围、物流、面别、尺码档、来源批次及未纳入数量；提交前重新精确读取整单，拦截已补单、过期或不完整分组。`batch_ui/task/reads.py`复用现有工作线程；`local/scanning.py`后台读取目录并按来源范围丢弃旧结果。批次排版复用界面补距开关及数值，不再强制40毫米。
 
 - ERP批次页允许等待隐藏微前端iframe挂载，再由批次入口验证实际表格。`automation/batches/local.py`统一发现本地批次；同批次号的嵌套解压目录保留外层一次，包含其全部图片，避免重复排版；预览输出目录不参与来源发现。
-- Haloo已生产测试批次由`automation/batches/completed.py`只读规划：状态9、实际生产图面别、整单、物流、订单组成、主底款、黑白和尺码档均须明确；已生产项目已有来源批次且生成接口无预演参数，当前安全门禁禁止写入，避免重开生产或扰动队列。接口证据见`docs/HALOO_BATCH_GENERATION.md`。
+- Haloo已生产测试批次由`automation/batches/completed.py`规划：状态9、实际生产图面别、整单、物流、订单组成、每种底款、黑白、尺码档及数量均须明确；多项多件混色整单不拆。已有批次的完成订单走补单批次接口，不改变订单完成状态，提交前通过`order_id`精确读取整单并重新核对状态、来源批次、数量和项目集合。普通精确选择接口会排除已有批次项目。接口证据见`docs/HALOO_BATCH_GENERATION.md`。
 
 - `automation/api/riin/__main__.py`提供独立管理员命令入口，`elevation.py`通过Windows正常UAC授权启动一次指定操作；不要求主工作台或Codex提权。`desktop.py`拥有原生/UIA控件发现和导入文件选择框，`dialogs.py`拥有导入确认与错误对话框操作，`workflow.py`编排完整导入到PRN流程；来源目录递归读取PNG并按文件选择框容量分段。报告区分“提交导入”和实际加载完成，失败保留RIIN界面供用户继续处理；文件输出由output.py负责。旧版MFC导入按钮使用已核验的工具栏相对位置，工具栏高度不符时拒绝点击并要求重新校准。
-- `automation/api/riin/output.py`新增文件输出和PrintExp加载命令，扩展上述导入入口。RIIN发送方式必须是“文件”，输出路径不可覆盖；PrintExp仅提交已有PRN，不启动物理打印。加载报告与实际预览核验分开。
-- 主工作台在“本地排版”顶部开发者功能行提供“自动生成打印文件”按钮，复用本地排版的进度、预览、耗时、总结和批次记录；用户选择原始批次后，
-  `ui/automated_layout.py`及`ui/automated_layout_files.py`先调用`ui/bulk_workbench.py`的统一本地排版入口并等待全部批次完成，随后只把
-  本次结果记录中的最终PNG清单交给单一受限管理员任务，完成RIIN新建文档、分段导入、确认导入和
-  PRN文件输出；不得把原图目录直接送入RIIN。若用户明确选择已有“切膜机文件”目录，则只枚举直接子项PNG，不解压像素也不二次排版，直接交给RIIN。
-  RIIN等待期间同一区域持续显示导入文件数、已用时以及PRN已写入大小；只有非空PRN稳定落盘后才自动加入已打开的PrintExp并显示完成，但不点击开始打印；失败时保留已完成步骤和可复制诊断，由用户在RIIN中决定后续处理。
+- `automation/api/riin/output.py`新增文件输出和PrintExp加载命令，扩展上述导入入口。RIIN发送方式必须是“文件”，输出路径不可覆盖；PrintExp仅提交已有PRN，不启动物理打印。管理员后台会话通过窗口消息打开PrintExp文件框，不依赖鼠标焦点或活动桌面；加载报告与实际预览核验分开。
+- RIIN若明确提示图元超出画布并会自动裁切，受限管理员入口只允许精确匹配该警告后取消本次危险输出；不得确认裁切。原PNG与RIIN文档保留，改用匹配当前画布的安全膜宽重新排版后才能继续。
+- “自动生成打印文件”已移入开发者“生产平台下载”工作区。`batch_ui/task/automatic_print.py`在明确的
+  自动化动作下组合现有下载和`batch_ui/local/processing.py`排版，`automation/api/riin/jobs.py`
+  只接收本次最终PNG并按所选批次逐一生成独立PRN；首页本地排版不再保留第二个文件夹选择入口。
+  RIIN等待期间平台页持续显示当前批次、已用时和PRN实际写入大小；成功后加入PrintExp但不点击开始打印。
+  单批RIIN失败时保留PNG和诊断并继续其他批次，用户停止请求只阻止尚未提交的后续批次，不中断RIIN已接收任务。
   每次RIIN任务记录本次新建的唯一MDI文档；导入完成后必须重新选中该文档再打开文件输出，避免RIIN存在多个未命名文档时把打印命令发送给任务管理中心或旧文档。
   RIIN文件输出进入其内部任务队列后，可能长时间显示“等待打印/正在打印”，并且只在任务完成时发布目标PRN；自动化最多等待两小时且仅以非空文件稳定落盘为成功，不能用三分钟无文件误判失败并重复提交同一路径。
   RIIN可能在排队时先创建48字节占位文件；完成判定必须同时满足任务管理中心精确输出路径对应行显示“打印完成”、文件不少于1KB且连续稳定，才可加入PrintExp。等待、正在打印、出错或停止均不能以文件暂时不增长替代真实任务状态。
+  45厘米等窄膜在自动多列模式下可能安全退化为单列；即使没有右侧分割刀位，结果仍须报告从最后一枚左侧识别刀码起点到批次结束的停止距离，不能因`column_count == 1`省略600毫米核验记录。
 - `automatic_print/automation/` 根目录只提供公共入口；批次分类、扫描、命名和规则位于
   `batches/`，浏览器会话与批次页面位于`browser/`，导出下载位于`transfer/`，平台配置与
   平台页面行为位于`providers/`，端到端流程位于`workflows/`。蜂鸟ERP页面桥接、生产项、
   生产批次和响应转换分别归档在`automation/api/erp/`，调用方不再经过根目录转发模块。
-- ERP生产批次读取兼容顶层表格与工厂外壳中的`fnsz-sale`内嵌表格；莆田从首页“生产 / 批量生产”进入后可复用同一列表、搜索和下载通路。
+- ERP生产批次读取兼容顶层表格与工厂外壳中的`fnsz-sale`内嵌表格；莆田从首页“生产 / 批量生产”进入后可复用同一列表、搜索和下载通路。批次范围的起止编号可从当前列表下拉选择或直接粘贴，列表显示平台批次记录的生成时间。
 - 蜂鸟ERP原始批次行到中立`BatchRecord`的转换集中在`automation/api/erp/records.py`，浏览器模块只负责页面与请求流程。
-- “生产平台下载”作为主工作台独立页签，仅随开发者模式显示；支持多选已配置平台，每个平台独立显示批次、下载进度和日志。隆丰、莆田和Haloo复用蜂鸟ERP通路；S2B优先通过Supabase受限网关读取平台批次、人员标签、触发生产图导出并取得真实下载地址，原始S2B Token只在服务端解密；网关不可用时才回退专用浏览器登录。`production/downloads.py`负责编排，`production/archive_io.py`负责下载、校验及安全解压到`S2B/ARCHIVES`和`S2B/BATCHES`。下载流程不触发排版，也不自动创建生产批次。
+- “生产平台下载”作为主工作台独立页签，仅随开发者模式显示；支持多选已配置平台，每个平台独立显示批次、下载进度和日志。普通“下载并解压”不触发排版；显式“下载、排版并生成打印文件”复用当前参数继续处理。隆丰、莆田和Haloo复用蜂鸟ERP通路；S2B优先通过Supabase受限网关读取平台批次、人员标签、触发生产图导出并取得真实下载地址，原始S2B Token只在服务端解密；网关不可用时才回退专用浏览器登录。`production/downloads.py`负责编排，`production/archive_io.py`负责下载、校验及安全解压到`S2B/ARCHIVES`和`S2B/BATCHES`。两种动作都不自动创建生产批次。
 - 蜂鸟ERP批次若已完成生产图导出但当前表格没有完整显示三个旧版下载入口，下载器复用已登录页面加载的导出记录，校验受信任HTTPS主机后流式保存同一ZIP；旧版三按钮下载继续作为兼容路径，不能因页面入口缺失拒绝已有完整导出。
 - 生产平台工作台启动本地排版时，以当前工作台所选平台覆盖主界面的旧平台值；Haloo和莆田同时固定采用其40毫米默认补距，避免从下载页进入排版时因主界面残留选择而漏补。
 - 冷启动时图片尺寸和DPI按用户线程上限并行预读，再一次批量查询单图测量缓存；只影响整批摆放的开发者算法开关不进入单图标签/刀码缓存键，切换开发者模式或升级该排版策略不会无故重解码原图。

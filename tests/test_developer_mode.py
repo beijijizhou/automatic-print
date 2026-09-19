@@ -67,7 +67,7 @@ def test_default_shows_production_layout_but_hides_diagnostic_tools(tmp_path, mo
     assert features == [
         '排版历史', '批量分析文件夹', '算法诊断',
         '切膜刀码开关', '平台＋尺码标签开关', '批次顺序标注',
-        'S2B 批次信息查询', '自动化排版', '隆丰 ERP 下载', 'S2B 生产图下载',
+        'S2B 批次信息查询', '批次下载与自动化打印', '隆丰 ERP 下载', 'S2B 生产图下载',
         '莆田平台', 'Haloo平台', '并行分块 TIFF',
         '换刀与批次结束停止距离',
     ]
@@ -112,7 +112,7 @@ def test_two_zone_layout_stays_visible_and_active_outside_developer_mode(tmp_pat
     assert not hasattr(owner, 'riin_diagnostic_button')
     assert not owner.cutter_settings.force_small_pair.isHidden()
     assert not owner.cutter_settings.knife_change_gap.isHidden()
-    assert owner._layout_settings().cutter_knife_change_gap_mm == 570
+    assert owner._layout_settings().cutter_knife_change_gap_mm == 600
     owner.cutter_settings.force_small_pair.setChecked(True)
     assert owner._layout_settings().force_small_pair_width
     assert owner.label_settings.form.isRowVisible(owner.label_settings.source_order)
@@ -127,6 +127,22 @@ def test_two_zone_layout_stays_visible_and_active_outside_developer_mode(tmp_pat
     owner.close()
 
 
+def test_legacy_570_gap_migrates_once_and_then_respects_manual_value(tmp_path):
+    path = tmp_path/'legacy-gap.ini'
+    preferences = QSettings(str(path), QSettings.IniFormat)
+    preferences.setValue('cutter/knife_change_gap_mm', 570)
+    owner = window(path)
+    assert owner.cutter_settings.knife_change_gap.value() == 600
+    assert preferences.value('cutter/knife_change_gap_mm', 0, float) == 600
+    assert preferences.value('cutter/knife_change_gap_default_v2', False, bool)
+    owner.close()
+
+    preferences.setValue('cutter/knife_change_gap_mm', 570)
+    restored = window(path)
+    assert restored.cutter_settings.knife_change_gap.value() == 570
+    restored.close()
+
+
 def test_toggle_persists_and_existing_history_tab_hides(tmp_path, monkeypatch):
     import automatic_print.history.store as store
     monkeypatch.setattr(store, 'log_folder', lambda: tmp_path)
@@ -134,8 +150,8 @@ def test_toggle_persists_and_existing_history_tab_hides(tmp_path, monkeypatch):
     panel = owner.automation_home.label_quick_panel
     owner.developer_mode_checkbox.setChecked(True)
     assert not owner.cutter_settings.knife_change_gap.isHidden()
-    assert owner.cutter_settings.knife_change_gap.value() == 570
-    assert owner._layout_settings().cutter_knife_change_gap_mm == 570
+    assert owner.cutter_settings.knife_change_gap.value() == 600
+    assert owner._layout_settings().cutter_knife_change_gap_mm == 600
     assert owner.quick_header_gap_group.isVisible()
     assert owner.layout_rules_form.isRowVisible(owner.membrane_gap_enabled)
     assert owner.layout_rules_form.isRowVisible(owner.membrane_gap)

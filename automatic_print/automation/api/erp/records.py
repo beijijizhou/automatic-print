@@ -15,6 +15,11 @@ class BatchRecord:
     created_at: str
     production_images_ready: bool
 
+    @property
+    def generated_at(self) -> str:
+        """Time when the platform created/generated this production batch."""
+        return self.created_at
+
 
 def records_from_rows(page, api_rows, ready_codes=None) -> list[BatchRecord]:
     ready_codes = ready_codes or set()

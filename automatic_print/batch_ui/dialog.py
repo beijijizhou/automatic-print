@@ -88,7 +88,7 @@ class AutomationDialog(
             if self.platform_names == ('Haloo',):
                 from .platform.completed import CompletedHalooPage
                 self.completed_haloo_page = CompletedHalooPage(self)
-                self.main_tabs.addTab(self.completed_haloo_page, '已生产分类预览')
+                self.main_tabs.addTab(self.completed_haloo_page, '已生产底款分类')
             else:
                 self.main_tabs.tabBar().hide()
             return

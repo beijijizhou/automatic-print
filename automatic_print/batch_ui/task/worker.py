@@ -11,7 +11,6 @@ from ...automation.browser.batches import (
     load_batch_records_between,
     load_platform_order_status,
 )
-from ...automation.batches.naming import save_batch_type
 from ...automation.batches.rules import (
     RuleBatchPlan,
     generate_rule_batches,
@@ -45,6 +44,7 @@ class AutomationWorker(QObject):
         batch_types: dict[str, str] | None = None,
         merge_batches: bool = False,
         preview_only: bool = False,
+        auto_print: bool = False,
     ) -> None:
         super().__init__()
         self.action = action
@@ -60,6 +60,7 @@ class AutomationWorker(QObject):
         self.batch_types = batch_types or {}
         self.merge_batches = merge_batches
         self.preview_only = preview_only
+        self.auto_print = auto_print
         self.cancellation = Cancellation()
 
     def request_cancel(self) -> None:
@@ -156,6 +157,14 @@ class AutomationWorker(QObject):
             self._report,
         )
         self._save_batch_types()
+        if self.auto_print:
+            from .automatic_print import process_and_print
+            processed = process_and_print(
+                self._process_batches, files, self.progress.emit,
+                self.cancellation.requested,
+            )
+            self.completed.emit(processed)
+            return
         self._report("下载与解压完成；未启动排版。")
         self._deliver(
             self.completed,
@@ -180,19 +189,11 @@ class AutomationWorker(QObject):
             self.merge_batches,
             self._report,
             preview_only=self.preview_only,
+            shared_knife=self.auto_print == 'shared_knife',
         )
 
     def _save_batch_types(self) -> None:
-        platform_root = self.output / self.platform_name
-        for batch_number, batch_type in self.batch_types.items():
-            standard_folder = platform_root / "BATCHES" / batch_number
-            if standard_folder.is_dir():
-                save_batch_type(standard_folder, batch_type)
-                continue
-            folders = [
-                folder
-                for folder in platform_root.rglob(batch_number)
-                if folder.is_dir() and folder.name == batch_number
-            ]
-            if len(folders) == 1:
-                save_batch_type(folders[0], batch_type)
+        from .automatic_print import save_downloaded_batch_types
+        save_downloaded_batch_types(
+            self.output, self.platform_name, self.batch_types
+        )

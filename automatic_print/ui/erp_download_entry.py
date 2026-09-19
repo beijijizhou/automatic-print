@@ -45,7 +45,8 @@ class ProductionPlatformDownloadPage(QWidget):
 
         intro = QLabel(
             "每个平台独立保存登录、批次列表、下载进度和日志。"
-            "当前只下载并解压已生成批次，不会自动启动排版。"
+            "选择批次后可以仅下载，也可以自动完成本地排版、PRN生成和PrinterExp加载。"
+            "自动流程不会启动物理打印。"
         )
         intro.setWordWrap(True)
         layout = QVBoxLayout(self)
@@ -97,7 +98,7 @@ def install_production_platform_tab(
     index = tabs.addTab(page, "生产平台下载")
     tabs.setTabToolTip(
         index,
-        "从一个或多个生产平台读取并下载已经生成的生产批次。",
+        "从生产平台选择批次，仅下载或继续自动排版并生成PRN。",
     )
 
     bind_developer_tab_visibility(window, tabs, page, index)

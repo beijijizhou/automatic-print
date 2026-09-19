@@ -69,7 +69,8 @@ def cutting_description(result):
             actual = change['actual_px'] * 25.4 / result['output_dpi']
             rows.append(
                 f"{change['from_zone']}→{change['to_zone']}："
-                f"左侧识别刀码 {actual:.1f} 毫米（要求至少 {required:.1f} 毫米）"
+                f"从上一枚左侧识别刀码起点计算 {actual:.1f} 毫米"
+                f"（要求至少 {required:.1f} 毫米）"
             )
         change_text = '\n换刀与批次结束停止距离：' + '；'.join(rows)
     return (

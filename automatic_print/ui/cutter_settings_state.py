@@ -1,5 +1,18 @@
 """Persistence for cutter controls, kept separate from widget construction."""
 
+DEFAULT_KNIFE_CHANGE_GAP_MM = 600
+
+
+def load_knife_change_gap(preferences) -> float:
+    value = preferences.value(
+        'cutter/knife_change_gap_mm', DEFAULT_KNIFE_CHANGE_GAP_MM, float)
+    if not preferences.value('cutter/knife_change_gap_default_v2', False, bool):
+        if value == 570:
+            value = DEFAULT_KNIFE_CHANGE_GAP_MM
+            preferences.setValue('cutter/knife_change_gap_mm', value)
+        preferences.setValue('cutter/knife_change_gap_default_v2', True)
+    return value
+
 
 def save_cutter_settings(panel):
     panel.printable.save()

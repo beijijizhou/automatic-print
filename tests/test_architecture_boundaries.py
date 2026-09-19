@@ -136,7 +136,8 @@ def test_batch_workbench_matches_navigation_and_task_boundaries():
         '__init__.py', 'actions.py', 'cache.py', 'generation.py', 'pages.py', 'completed.py'
     }
     assert {path.name for path in (package/'task').glob('*.py')} == {
-        '__init__.py', 'actions.py', 'worker.py', 'reads.py'
+        '__init__.py', 'actions.py', 'worker.py', 'reads.py',
+        'automatic_print.py'
     }
 
 

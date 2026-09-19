@@ -7,10 +7,11 @@ from pathlib import Path
 os.environ.setdefault('QT_QPA_PLATFORM', 'offscreen')
 
 from PySide6.QtCore import QSettings
-from PySide6.QtWidgets import QApplication
+from PySide6.QtWidgets import QApplication, QDialog, QPlainTextEdit
 from automatic_print.ui.main_window import MainWindow
 from automatic_print.batch_ui.dialog import AutomationDialog
 from automatic_print.automation.batches.completed import plan_completed_haloo_batches
+from automatic_print.automation.api.erp.items import BatchRule
 
 APP = QApplication.instance() or QApplication([])
 
@@ -23,7 +24,7 @@ def pump_until(predicate):
     assert predicate()
 
 
-def test_completed_preview_is_read_only_and_clears_changed_scope(tmp_path, monkeypatch):
+def test_completed_preview_shows_style_and_color_before_generation(tmp_path, monkeypatch):
     owner = MainWindow(QSettings(str(tmp_path/'prefs.ini'), QSettings.IniFormat))
     owner.startup_update_timer.stop()
     owner.developer_mode_checkbox.setChecked(True)
@@ -37,15 +38,35 @@ def test_completed_preview_is_read_only_and_clears_changed_scope(tmp_path, monke
     assert calls[0].value == 30
     group = SimpleNamespace(logistics_code='USPS', order_composition='单项单件',
                             style_name='T恤', style_id='a', color='黑色', face='反面',
-                            size_group='S-XL', item_ids=('1',), source_batch_codes=('old',))
-    result = dict(scope=30, data=dict(count=2, groups=(group,)))
+                            size_group='S-XL', item_ids=('1',), item_quantities=(('1', 1),),
+                            source_batch_codes=('old',))
+    result = dict(scope=30, data=dict(count=2, groups=(group,),
+                                     rules=(BatchRule(1, '默认规则', (), True),)))
     page.show_result(result)
-    assert page.table.item(0, 4).text() == '反面'
+    assert page.table.item(0, 3).text() == 'T恤（ID: a）'
+    assert page.table.item(0, 4).text() == '黑色'
+    assert page.table.item(0, 5).text() == '反面'
     assert '未纳入 1 项' in page.summary.text()
-    assert '未生成批次' in page.summary.text()
+    page.boxes[0].setChecked(True)
+    assert 'T恤（ID: a）｜颜色：黑色' in page.selection_preview.toPlainText()
+    confirmation = []
+    def reject_after_inspection(dialog):
+        confirmation.append(dialog.findChild(QPlainTextEdit).toPlainText())
+        return QDialog.DialogCode.Rejected
+    monkeypatch.setattr(QDialog, 'exec', reject_after_inspection)
+    page.generate()
+    assert 'T恤（ID: a）｜颜色：黑色' in confirmation[0]
+    assert len(calls) == 1
+    monkeypatch.setattr(QDialog, 'exec', lambda _dialog: QDialog.DialogCode.Accepted)
+    page.generate()
+    assert len(calls) == 2
+    assert calls[1].action == 'generate_completed_haloo'
+    assert calls[1].groups == (group,)
+    assert calls[1].rule_id == 1
     page.limit.setValue(20)
     page.show_result(result)
     assert page.table.rowCount() == 0
+    assert not page.selection_preview.toPlainText()
     owner.close()
 
 
@@ -77,7 +98,7 @@ def test_slow_scan_runs_off_gui_thread_and_stale_scope_is_discarded(tmp_path, mo
 
 def test_multi_only_snapshot_does_not_require_single_item_style():
     rows = [dict(id=str(i), order_id='order', order_composition=3,
-                 logistics_sorting_code='USPS', status=9) for i in (1, 2)]
+                 logistics_sorting_code='USPS', status=9, qty=1) for i in (1, 2)]
     details = {str(i): {'production_images': [{'name': 'A面'}]} for i in (1, 2)}
     groups = plan_completed_haloo_batches(rows, details)
     assert groups[0].item_ids == ('1', '2')

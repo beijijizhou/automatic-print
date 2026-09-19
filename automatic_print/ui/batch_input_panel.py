@@ -108,7 +108,7 @@ def build_batch_input(owner, panel):
     return group
 
 
-def build_batch_tools(panel, automated):
+def build_batch_tools(panel):
     """Global inspection actions stay fixed above the scrolling workbench."""
     navigation = QWidget()
     navigation.setObjectName('pinnedWorkbenchNavigation')
@@ -117,11 +117,9 @@ def build_batch_tools(panel, automated):
     row.addStretch()
     panel.developer_tools_label = QLabel('开发者功能：')
     row.addWidget(panel.developer_tools_label)
-    automated.setIcon(action_icon('machine'))
-    automated.setToolTip('本地排版完成后交给RIIN生成PRN，并加入PrintExp；不会启动物理打印。')
     for button in (
         panel.history_button, panel.bulk_analysis_button,
-        panel.algorithm_costs_button, automated,
+        panel.algorithm_costs_button,
     ):
         row.addWidget(button)
     navigation.setStyleSheet(
