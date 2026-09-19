@@ -157,6 +157,9 @@ def test_one_run_keeps_separate_batches_and_routes_oversize_to_attended(tmp_path
         prepared.append((source, paths))
     report = render_shared_knife_batches(tmp_path / '隆丰', '隆丰', prepared,
                                           settings, lambda _message: None)
+    output_root = Path(report['output_folder'])
+    assert output_root.name == '切膜机文件'
+    assert {path.name for path in output_root.iterdir() if path.is_dir()} == {'常规', '需值守'}
     assert [batch for batch, _result in report['batches']] == ['批次A', '批次B']
     assert not report['layout_errors']
     assert report['batch_routes']['批次A']['unattended']
@@ -175,7 +178,7 @@ def test_one_run_keeps_separate_batches_and_routes_oversize_to_attended(tmp_path
                         sent.append((files, output)) or {'state': 'completed'})
     printed, errors, skipped = jobs.generate_batch_prns(report, lambda _message: None)
     assert len(printed) == len(sent) == 2 and not errors and not skipped
-    assert {output.parent.name for _files, output in sent} == {'连续打印'}
+    assert {output.parent.parent.name for _files, output in sent} == {'常规'}
     from automatic_print.automation.batches.local import discover_batch_folders
     assert not discover_batch_folders(tmp_path / '隆丰')
 
@@ -189,3 +192,54 @@ def test_completed_fixed_knife_outputs_are_not_rediscovered_as_source_batches(tm
         folder.mkdir(parents=True)
         Image.new('RGB', (20, 20), 'blue').save(folder / 'image.png')
     assert discover_batch_folders(root) == [source]
+
+
+def test_fixed_candidate_failure_stays_in_attended_folder(tmp_path, monkeypatch):
+    source = tmp_path / '批次C'
+    source.mkdir()
+    path = source / '0.png'
+    Image.new('RGB', (310, 300), 'blue').save(path, dpi=(25.4, 25.4))
+    settings = LayoutSettings(
+        dpi=25.4, media_width_mm=600, cutter_mode='dual',
+        cutter_knife_mm=300, cutter_auto_knife=True,
+        force_small_pair_width_mm=0, number_images=False, margin_mm=0,
+        color_block_gap_mm=5,
+    )
+    report = render_shared_knife_batches(tmp_path / '隆丰', '隆丰',
+                                         [(source, [path])], settings,
+                                         lambda _message: None)
+    assert not report['layout_errors']
+    route = report['batch_routes']['批次C']
+    assert not route['unattended']
+    assert Path(route['folder']).parts[0] == '需值守'
+    result = report['batches'][0][1]
+    output = Path(report['output_folder']) / route['folder'] / result['filename']
+    assert output.is_file()
+    from automatic_print.automation.api.riin import jobs
+    sent = []
+    monkeypatch.setattr(jobs, 'generate_prn', lambda files, target, progress:
+                        sent.append((files, target)) or {'state': 'completed'})
+    printed, errors, skipped = jobs.generate_batch_prns(report, lambda _message: None)
+    assert len(printed) == len(sent) == 1 and not errors and not skipped
+    assert sent[0][1].parent.parent.name == '需值守'
+
+
+def test_single_unpaired_row_still_routes_to_fixed_knife_normal(tmp_path):
+    source = tmp_path / '批次D'
+    source.mkdir()
+    path = source / 'only.png'
+    Image.new('RGB', (120, 180), 'blue').save(path, dpi=(25.4, 25.4))
+    settings = LayoutSettings(
+        dpi=25.4, media_width_mm=600, cutter_mode='dual',
+        cutter_knife_mm=300, number_images=False, margin_mm=0,
+        color_block_gap_mm=5,
+    )
+    report = render_shared_knife_batches(tmp_path / '隆丰', '隆丰',
+                                         [(source, [path])], settings,
+                                         lambda _message: None)
+    route = report['batch_routes']['批次D']
+    assert route['unattended']
+    assert Path(route['folder']).parts[0] == '常规'
+    result = report['batches'][0][1]
+    assert len(result['placements']) == 1
+    assert actual_knife_signatures(result) == {(300,)}

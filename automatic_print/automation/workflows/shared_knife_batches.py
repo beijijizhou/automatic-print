@@ -40,17 +40,19 @@ def render_shared_knife_batches(platform_root, platform_name, prepared, settings
     settings = replace(settings, output_format='png')  # RIIN file import accepts PNG only.
     locked = locked_knife_settings(settings)
     token = datetime.now().strftime('%m%d%H%M') + '_' + uuid4().hex[:6]
-    root = Path(platform_root) / '切膜机文件' / f'共刀_{token}'
-    root.mkdir(parents=True, exist_ok=False)
+    root = Path(platform_root) / '切膜机文件'
+    run_name = f'共刀_{token}'
+    for category in ('常规', '需值守'):
+        (root / category).mkdir(parents=True, exist_ok=True)
+    staged = root / '需值守' / run_name / '待检验'
+    staged.mkdir(parents=True, exist_ok=False)
     completed, routes, errors = [], {}, []
     total = len(prepared)
     progress(f'已读取 {total} 个批次；共用固定刀位 {locked.cutter_knife_mm:g} 毫米')
     for index, (folder, images) in enumerate(prepared, 1):
         batch = folder.name
-        staged = root / '待检验'
         progress(f'[{index}/{total}] {batch}：固定刀位排版 {len(images)} 张')
         try:
-            staged.mkdir(parents=True, exist_ok=True)
             result = generate_layout(images, staged, locked,
                                      _layout_progress(progress, batch), batch_name=batch)
             eligible, reason = continuous_print_eligibility(result, locked)
@@ -63,7 +65,7 @@ def render_shared_knife_batches(platform_root, platform_name, prepared, settings
             progress(f'{batch}：{reason}；改用原排版策略，归入需值守')
             try:
                 category = '需值守'
-                target = root / category
+                target = root / category / run_name
                 target.mkdir(parents=True, exist_ok=True)
                 result = generate_layout(images, target, settings,
                                          _layout_progress(progress, batch), batch_name=batch)
@@ -73,18 +75,18 @@ def render_shared_knife_batches(platform_root, platform_name, prepared, settings
                 progress(f'{batch}：原排版策略也失败，保留诊断并继续下一批 · {fallback_error}')
                 continue
         else:
-            category = '连续打印' if eligible else '需值守'
-            target = root / category
+            category = '常规' if eligible else '需值守'
+            target = root / category / run_name
             try:
                 _promote_files(staged, target, result)
             except OSError as error:
                 errors.append({'batch': batch, 'error': f'输出归档失败：{error}'})
                 progress(f'{batch}：输出仍保留在待检验区，继续下一批 · {error}')
                 continue
-        routes[batch] = {'folder': category,
+        routes[batch] = {'folder': str(Path(category) / run_name),
                          'unattended': eligible, 'reason': reason}
         completed.append((batch, result))
-        progress(f'[{index}/{total}] {batch}：已归入{"连续打印" if eligible else "需值守"} · {reason}')
+        progress(f'[{index}/{total}] {batch}：已归入{category} · {reason}')
     return {'type': 'processed', 'platform': platform_name, 'batches': completed,
             'batch_routes': routes, 'layout_errors': errors, 'merged_batches': [],
             'test': False, 'preview_only': False, 'shared_knife_mm': locked.cutter_knife_mm,
