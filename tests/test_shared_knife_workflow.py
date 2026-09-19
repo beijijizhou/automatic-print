@@ -145,6 +145,55 @@ def test_fixed_knife_uses_same_scale_on_both_faces(tmp_path):
     assert len(adjusted.width_adjustments) == 2
 
 
+def test_shared_knife_limit_keeps_wide_double_order_unscaled(tmp_path):
+    paths = []
+    for side, width in ((1, 311), (2, 280)):
+        path = tmp_path / f'order-size-NO1-{side}.png'
+        Image.new('RGB', (width, 300), 'blue').save(path, dpi=(25.4, 25.4))
+        paths.append(path)
+    settings = locked_knife_settings(LayoutSettings(
+        dpi=25.4, media_width_mm=600, cutter_mode='dual', cutter_knife_mm=300,
+        number_images=False,
+    ))
+    adjusted = apply_pair_width_cap(paths, settings)
+    assert not adjusted.dimension_overrides
+    assert not adjusted.width_adjustments
+
+
+def test_shared_knife_routes_over_310_to_independent_zone_across_batches(tmp_path):
+    settings = LayoutSettings(
+        dpi=25.4, media_width_mm=600, cutter_mode='dual', cutter_knife_mm=300,
+        platform_name='隆丰', number_images=False, margin_mm=0,
+        color_block_gap_mm=5, png_engine='pillow', output_parts=1,
+    )
+    prepared = []
+    for batch in ('批次甲', '批次乙'):
+        source = tmp_path / batch
+        source.mkdir()
+        paths = []
+        for index, width in enumerate((280, 280, 311), 1):
+            path = source / f'B{index}-1-T-Black-M-NO1-1.png'
+            Image.new('RGB', (width, 300), 'blue').save(path, dpi=(25.4, 25.4))
+            paths.append(path)
+        prepared.append((source, paths))
+    report = render_shared_knife_batches(tmp_path / '隆丰', '隆丰', prepared,
+                                         settings, lambda _message: None)
+    assert not report['layout_errors']
+    expected = (300,)
+    for batch, result in report['batches']:
+        routes = report['batch_routes'][batch]['parts']
+        assert len(routes) == 2
+        assert [Path(route['folder']).parts[0] for route in routes] == ['常规', '旋转']
+        assert routes[0]['knife_signature'] == expected
+        assert result['order_check']
+        assert all(part['cut_corridor']['pixel_verified'] for part in result['parts'])
+        assert not any('311' in row[1] for row in result['analysis']['width_adjustments'])
+        for route in routes:
+            with Image.open(Path(report['output_folder']) / route['folder'] /
+                            route['filename']) as output:
+                assert output.mode == 'RGBA'
+
+
 def test_one_run_keeps_separate_batches_and_shrinks_oversize_to_normal(tmp_path, monkeypatch):
     settings = LayoutSettings(
         dpi=25.4, media_width_mm=600, cutter_mode='dual',

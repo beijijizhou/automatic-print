@@ -9,6 +9,7 @@ from automatic_print.layout_engine.orders.order_groups import pair_identity
 
 
 ELIGIBLE_SIZES = {'S', 'M', 'L'}
+SHARED_KNIFE_SHRINK_LIMIT_MM = 310
 
 
 def apply_pair_width_cap(paths, settings, progress=None):
@@ -29,6 +30,8 @@ def apply_pair_width_cap(paths, settings, progress=None):
             continue
         dimensions = print_dimensions(path, settings.dpi)
         dimensions_by_path[path] = dimensions
+        if fixed and dimensions.width_mm > SHARED_KNIFE_SHRINK_LIMIT_MM:
+            continue
         if dimensions.width_mm <= cap:
             continue
         if not dimensions.embedded_dpi:
@@ -41,6 +44,11 @@ def apply_pair_width_cap(paths, settings, progress=None):
             if identity:
                 paired.setdefault(identity[0], []).append(path)
         for mates in paired.values():
+            if any(dimensions_by_path[path].width_mm > SHARED_KNIFE_SHRINK_LIMIT_MM
+                   for path in mates):
+                for path in mates:
+                    factors.pop(path, None)
+                continue
             factor = min(factors.get(path, 1.0) for path in mates)
             if factor < 1.0:
                 for path in mates:

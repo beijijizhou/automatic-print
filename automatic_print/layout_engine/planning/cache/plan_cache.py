@@ -14,6 +14,7 @@ from automatic_print.layout_engine.domain.models import Placement
 SCHEMA = 1
 LAYOUT_ALGORITHM_REVISION = 4
 DEVELOPER_LAYOUT_ALGORITHM_REVISION = 14
+SHARED_KNIFE_LAYOUT_ALGORITHM_REVISION = 1
 TTL_SECONDS = 24 * 60 * 60
 CACHE_LOCK_TIMEOUT_SECONDS = .25
 
@@ -55,7 +56,9 @@ def cache_key(paths, settings, created_at, progress=None):
         settings_data.pop('cutter_knife_change_gap_mm', None)
     if not developer_compact:
         settings_data.pop('developer_compact_cutter_layout', None)
-    algorithm_revision = (DEVELOPER_LAYOUT_ALGORITHM_REVISION
+    algorithm_revision = (SHARED_KNIFE_LAYOUT_ALGORITHM_REVISION
+                          if settings.strict_fixed_knife else
+                          DEVELOPER_LAYOUT_ALGORITHM_REVISION
                           if developer_knife_gap or developer_compact
                           else LAYOUT_ALGORITHM_REVISION)
     data = {'schema': SCHEMA, 'algorithm': algorithm_revision, 'files': files,

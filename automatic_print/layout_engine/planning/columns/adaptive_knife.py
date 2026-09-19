@@ -14,7 +14,8 @@ from automatic_print.layout_engine.orders.color_policy import order_color, order
 
 def plan_adaptive_knife_zones(paths, settings, progress, prepared=None):
     """Keep the pairable majority together and rotate complete leftovers."""
-    if settings.cutter_mode != 'dual' or not settings.cutter_auto_knife:
+    fixed = settings.strict_fixed_knife
+    if settings.cutter_mode != 'dual' or not (settings.cutter_auto_knife or fixed):
         raise ValueError('多数并排分区只适用于自动多列切膜模式。')
     base = replace(settings, cutter_rotation_zone=False, cutter_tail_rotation=False,
                    allow_rotation=False)
@@ -26,14 +27,14 @@ def plan_adaptive_knife_zones(paths, settings, progress, prepared=None):
         prepared_rotated_items = prepared_rotated_labels = None
     items = {row[0].path: row[0] for row in options}
     lanes = _lanes(replace(base, cutter_auto_knife=False,
-                           cutter_knife_mm=base.media_width_mm/2),
+                           cutter_knife_mm=(base.cutter_knife_mm if fixed else base.media_width_mm/2)),
                    mm_to_px(base.media_width_mm, base.dpi))
     spacing = mm_to_px(base.spacing_mm, base.dpi)
     double_orders, leftovers = _partition(
-        complete_orders(paths), items, lanes, spacing)
+        complete_orders(paths), items, lanes, spacing, fixed=fixed)
     normal_paths = [path for order in double_orders for path in order]
     rotated_paths = [path for order in leftovers for path in order]
-    if len(normal_paths) <= len(rotated_paths):
+    if not fixed and len(normal_paths) <= len(rotated_paths):
         raise ValueError('可安全双排的图片未超过半数，改用常规旋转方案比较。')
 
     effective = [base]
@@ -42,11 +43,11 @@ def plan_adaptive_knife_zones(paths, settings, progress, prepared=None):
             effective[0] = replace(base, cutter_knife_mm=current*25.4/total)
         if progress:
             progress('并排区：'+stage, current, total, filename)
-    normal = plan_cutter_layout(
+    normal = (plan_cutter_layout(
         normal_paths, base, report,
         prepared=([[items[path]] for path in normal_paths], labels),
         preserve_sequence=True,
-    )
+    ) if normal_paths else None)
 
     if not rotated_paths:
         knife = mm_to_px(effective[0].cutter_knife_mm, base.dpi)
@@ -91,10 +92,10 @@ def plan_adaptive_knife_zones(paths, settings, progress, prepared=None):
         from automatic_print.layout_engine.planning.rotation.rotation_zones import _rotated
         rotated = _rotated(rotated_paths, base, (rotated_items, rotated_labels))
         rotated_height = rotated[2]
-    boundary = normal[3]+spacing
+    boundary = normal[3]+spacing if normal else 0
     normal_knife = mm_to_px(effective[0].cutter_knife_mm, base.dpi)
     planned = [(path, replace(p, cut_zone='并排区', cut_knife_x_px=normal_knife))
-               for path, p in normal[0]]
+               for path, p in normal[0]] if normal else []
     planned.extend(_shift(path, placement, boundary)
                    for path, placement in rotated[0])
     height = boundary+rotated_height
@@ -107,10 +108,11 @@ def plan_adaptive_knife_zones(paths, settings, progress, prepared=None):
     return planned, labels | rotated_labels, width, height, height
 
 
-def _partition(orders, items, lanes, spacing):
+def _partition(orders, items, lanes, spacing, fixed=False):
     double, leftovers = [], []
     for order in orders:
-        (double if _pairable(order, items, lanes, spacing) else leftovers).append(order)
+        (double if _pairable(order, items, lanes, spacing, require_pair=not fixed)
+         else leftovers).append(order)
     # The physical output is double zone followed by rotation zone. Once one
     # colour reaches the second zone, later colours must also stay there so the
     # output never returns to an earlier colour after the zone boundary.
@@ -124,19 +126,21 @@ def _partition(orders, items, lanes, spacing):
     return double, leftovers
 
 
-def _pairable(order, items, lanes, spacing):
+def _pairable(order, items, lanes, spacing, require_pair=True):
     members = [items[path] for path in order]
     if any(item.rotation_degrees for item in members):
         return False
-    if len(members) == 1:
+    if len(members) == 1 and require_pair:
         return all(lane_fits(members[0], lane) for lane in lanes)
-    if len(members) == 2:
+    if len(members) == 2 and require_pair:
         return _horizontal(members, lanes) is not None
     units = build_units([[item] for item in members], spacing)
     groups = [[member.item for member in choices[0].members] for choices in units]
     solution = solve_groups(groups, lanes, spacing, pair_adjacent=True)
     if solution is None:
         return False
+    if not require_pair:
+        return True
     return any(count == 2 or len({member.x for member in row.members}) > 1
                for count, row in solution[1])
 

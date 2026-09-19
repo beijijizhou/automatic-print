@@ -43,7 +43,7 @@ def _route_parts(result, locked, root, run_name):
     routes, destinations = [], []
     for part in parts:
         eligible, reason = continuous_print_eligibility(part, locked)
-        if not eligible and not reason.startswith('实际纵刀位'):
+        if not eligible and not reason.startswith(('实际纵刀位', '旋转区使用独立刀位')):
             raise ValueError(f'{part.get("filename", "输出文件")} 未通过安全复核：{reason}')
         signatures = actual_knife_signatures(part)
         if len(signatures) != 1:
@@ -80,7 +80,8 @@ def render_shared_knife_batches(platform_root, platform_name, prepared, settings
         progress(f'[{index}/{total}] {batch}：固定刀位排版 {len(images)} 张')
         try:
             result = generate_layout(images, staged, locked,
-                                     _layout_progress(progress, batch), batch_name=batch)
+                                     _layout_progress(progress, batch), batch_name=batch,
+                                     split_by_knife=True)
             eligible, reason = continuous_print_eligibility(result, locked)
             shrink = [row for row in result.get('analysis', {}).get('width_adjustments', ())
                       if row[1].startswith('共刀并排等比缩小：')]

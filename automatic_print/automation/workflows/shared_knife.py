@@ -42,6 +42,9 @@ def continuous_print_eligibility(result: dict, settings: LayoutSettings) -> tupl
     corridor = result.get('cut_corridor') or {}
     if not corridor.get('pixel_verified'):
         return False, '没有完成实际输出像素刀位复核'
+    if any(placement.get('cut_zone') == '旋转区'
+           for placement in result['placements']):
+        return False, '旋转区使用独立刀位，不参与跨批次固定刀位连续打印'
     signatures = actual_knife_signatures(result)
     if signatures != {expected}:
         return False, f'实际纵刀位 {sorted(signatures)} 与锁定刀位 {expected} 不一致'

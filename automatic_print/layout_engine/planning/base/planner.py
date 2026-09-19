@@ -46,7 +46,7 @@ def _measured_plan(paths, settings, progress, analysis_ready):
         from automatic_print.layout_engine.planning.rotation.whole_rotation import compare_whole
         previously_selected = result
         comparison = analysis.get('rotation_comparison')
-        if not (comparison and comparison.get('selected_strategy') == '多数并排区 + 剩余旋转区'):
+        if not settings.strict_fixed_knife and not (comparison and comparison.get('selected_strategy') == '多数并排区 + 剩余旋转区'):
             result = compare_whole(paths, settings, progress, result)
         from automatic_print.layout_engine.planning.rotation.rotation_compare import update_selected_comparison
         update_selected_comparison(comparison, result, settings,
@@ -79,6 +79,9 @@ def _measured_plan(paths, settings, progress, analysis_ready):
     return result
 def _plan_layout(paths, settings, progress, analysis, analysis_ready):
     if settings.cutter_mode != "free":
+        if settings.strict_fixed_knife:
+            from automatic_print.layout_engine.planning.columns.adaptive_knife import plan_adaptive_knife_zones
+            return plan_adaptive_knife_zones(paths, settings, progress)
         if settings.cutter_mode == 'single' and settings.cutter_single_row_rotation:
             from .single_rows import plan_single_rows
             return plan_single_rows(paths,settings,progress)
