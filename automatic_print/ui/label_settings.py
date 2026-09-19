@@ -54,14 +54,14 @@ class LabelSettingsDialog(QDialog):
             lambda: self.text_template.setText(compact_label_text(self.text_template.text()))
         )
         help_label = QLabel(
-            "平台名、当前机器号和序号自动显示，无需写入标签。"
-            "可选变量：{日期}、{批次}、{完整文件名}、{文件名}。"
+            "平台名、当前机器号和序号自动显示；开启批次顺序标注时，原图尺码也写入同一生产标签。"
+            "可选变量：{日期}、{批次}、{尺码}、{完整文件名}、{文件名}。"
         )
         help_label.setWordWrap(True)
         help_label.setTextInteractionFlags(Qt.TextSelectableByMouse)
         qr_help = QLabel(
-            "切膜模式下文字必须完整位于膜标签高度范围，严禁放在膜标签与图案之间；"
-            "无法确认安全范围时禁止输出。"
+            "切膜模式下生产标签位于刀码与原图膜标签之间；原图空白不足时扩出透明走廊。"
+            "文字仍须完整位于膜标签高度范围，无法确认安全范围时禁止输出。"
         )
         qr_help.setWordWrap(True)
         qr_help.setTextInteractionFlags(Qt.TextSelectableByMouse)

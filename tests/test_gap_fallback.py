@@ -117,7 +117,7 @@ def test_missing_header_space_retries_with_external_label_footprint(monkeypatch)
 
     assert calls == [True, False]
     assert not settings.preserve_header_gap
-    assert reports[-1]['header_space_recovery']['adopted'] == '整批外置标签占位'
+    assert reports[-1]['header_space_recovery']['adopted'] == '刀码与原图之间扩出透明走廊'
     assert '原值：复用膜标签透明带' in reports[-1]['image_anomalies'][0]['kind']
     assert progress[-1][0] == '膜标签透明空位恢复'
 
@@ -214,4 +214,4 @@ def test_gap_rollback_then_header_space_failure_uses_external_labels(monkeypatch
     assert calls == [(40, True), (0, True), (0, False)]
     assert not settings.preserve_header_gap
     assert rows[0]['rollback_added_mm'] == 32
-    assert reports[-1]['header_space_recovery']['adopted'] == '整批外置标签占位'
+    assert reports[-1]['header_space_recovery']['adopted'] == '刀码与原图之间扩出透明走廊'

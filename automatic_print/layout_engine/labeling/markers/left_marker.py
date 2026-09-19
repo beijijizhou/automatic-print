@@ -22,6 +22,26 @@ def external_left_item(item):
     image_x = item.image_rx+dx
     if item.platform_below_marker:
         lift = item.image_ry-item.left_marker_lift_px-item.block_ry
+        if item.platform_reuse_qr and item.label_width:
+            from automatic_print.layout_engine.cutting.geometry.cut_guide_geometry import detect_guide_band
+            band = detect_guide_band(item.path)
+            if band is None:
+                raise ValueError(f'{item.path.name}：未能可靠识别膜标签高度范围，禁止输出新增文字。')
+            band = band.rotated(item.rotation_degrees)
+            top, bottom = round(band.top*item.height), round(band.bottom*item.height)
+            if item.label_height > bottom-top:
+                raise ValueError(f'{item.path.name}：标签文字无法完整放入膜标签高度范围，禁止输出。')
+            label_x = item.block_width+gap
+            image_x = max(image_x, label_x+item.label_width+gap)
+            dx = image_x-item.image_rx
+            return replace(item, image_rx=image_x, block_rx=0,
+                label_rx=label_x, label_ry=item.image_ry+top,
+                platform_rx=item.platform_rx+dx,
+                block_ry=item.image_ry-item.left_marker_lift_px,
+                footprint_width=max(image_x+item.width, label_x+item.label_width),
+                footprint_height=max(item.footprint_height,
+                    item.image_ry+top+item.label_height,
+                    item.image_ry-item.left_marker_lift_px+item.block_height))
         label_y = item.label_ry+lift
         platform_x = item.platform_rx+dx if item.platform_reuse_qr else 0
         platform_y = item.platform_ry if item.platform_reuse_qr else item.platform_ry+lift

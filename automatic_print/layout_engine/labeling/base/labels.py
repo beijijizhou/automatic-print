@@ -100,6 +100,7 @@ def format_label(
     total: int | None = None,
     batch_name: str = "",
 ) -> str:
+    from automatic_print.layout_engine.intake.metadata.source_metadata import source_size
     machine_number = normalize_machine_number(machine_number)
     total = max(number, total or number)
     aliases = {
@@ -108,6 +109,7 @@ def format_label(
         "{完整文件名}": "{filename}",
         "{文件名}": "{stem}",
         "{机器号}": "{machine}",
+        "{尺码}": "{size}",
         "{总数}": "{total}",
         "{倒序}": "{reverse}",
         "{批次}": "{batch}",
@@ -121,6 +123,7 @@ def format_label(
         "filename": path.name,
         "stem": path.stem,
         "machine": machine_number,
+        "size": source_size(path),
         "total": str(total),
         "reverse": str(total - number + 1),
         "batch": str(batch_name).strip() or path.parent.name,
@@ -131,7 +134,7 @@ def format_label(
         raise ValueError(
             "标签文字模板无效。可用内容："
             "{编号}、{总数}、{倒序}、{日期}、{批次}、{文件夹}、"
-            "{完整文件名}、{文件名}、{机器号}。"
+            "{完整文件名}、{文件名}、{机器号}、{尺码}。"
         ) from error
 
 

@@ -28,7 +28,7 @@ def recover_header_space(paths, settings, error, progress, analysis_ready):
     detail = str(error)
     source = detail.split('：', 1)[0]
     kind = (
-        '原值：复用膜标签透明带；采用值：整批外置标签占位；'
+        '原值：复用膜标签透明带；采用值：刀码与原图之间扩出透明走廊；'
         '原因：原透明带不足；影响：可能增加少量排版长度'
     )
     action = '已继续排版并重算刀位；修改入口：打印参数 > 膜标签与刀码预览'
@@ -45,7 +45,7 @@ def recover_header_space(paths, settings, error, progress, analysis_ready):
         data['header_space_recovery'] = {
             'reason': detail,
             'original': '复用膜标签透明带',
-            'adopted': '整批外置标签占位',
+            'adopted': '刀码与原图之间扩出透明走廊',
             'impact': '标签计入真实占位，可能增加少量排版长度',
             'edit_path': '打印参数 > 膜标签与刀码预览',
         }
@@ -55,7 +55,7 @@ def recover_header_space(paths, settings, error, progress, analysis_ready):
     if progress:
         progress(
             '膜标签透明空位恢复', 0, 1,
-            f'{source} · 透明空位不足，改用整批外置标签占位并继续',
+            f'{source} · 透明空位不足，改用整批透明走廊占位并继续',
         )
     # Re-enter the complete planning chain after adopting external labels.
     # Calling plan_layout directly here used to skip the post-plan rotated
@@ -67,7 +67,7 @@ def recover_header_space(paths, settings, error, progress, analysis_ready):
     if progress:
         progress(
             '膜标签透明空位恢复', 1, 1,
-            '外置标签占位排版完成；订单、刀位和像素安全检查继续执行',
+            '透明走廊排版完成；订单、刀位和像素安全检查继续执行',
         )
     return recovered_paths, adopted, result
 

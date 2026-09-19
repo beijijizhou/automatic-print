@@ -71,8 +71,10 @@ def test_added_text_stays_inside_membrane_label_height_and_never_below_it(tmp_pa
         cutter_left_marker_external=True,
         preserve_header_gap=True,
         platform_below_marker=True,
-        label_text_template='609162025022 · 正序 1/1 · 倒序 1/1',
-        label_machine_enabled=False,
+        label_text_template='',
+        label_source_order_enabled=True,
+        label_batch_name='609162025022',
+        label_machine_enabled=True,
         label_sequence_enabled=False,
     )
     payloads = []
@@ -81,6 +83,7 @@ def test_added_text_stays_inside_membrane_label_height_and_never_below_it(tmp_pa
         plan_ready=payloads.append,
     )
     placement = payloads[0]['planned'][0][1]
+    label = payloads[0]['labels'][1]
     band = detect_guide_band(path)
     top = placement.y_px+round(band.top*placement.height_px)
     bottom = placement.y_px+round(band.bottom*placement.height_px)
@@ -92,7 +95,42 @@ def test_added_text_stays_inside_membrane_label_height_and_never_below_it(tmp_pa
         placement.x_px+placement.width_px
     )
     assert placement.color_block_x_px+placement.color_block_width_px == placement.x_px
+    assert '尺码 M' in label
+    assert 'M1' in label and '609162025022' in label
+    assert placement.color_block_x_px+placement.color_block_width_px <= placement.number_x_px
+    assert placement.number_x_px+placement.number_width_px <= (
+        placement.x_px+round(band.left*placement.width_px)
+    )
     with pytest.raises(ValueError, match='膜标签高度范围'):
         validate_embedded_marks([
             (path, replace(placement, number_y_px=bottom+1))
         ], config)
+
+
+@pytest.mark.parametrize('degrees', [0, 90, -90])
+def test_narrow_header_uses_verified_gutter_between_mark_and_source(tmp_path, degrees):
+    path = make_batch(tmp_path)[-1]
+    config = LayoutSettings(
+        dpi=25.4, media_width_mm=580, cutter_mode='single',
+        allow_rotation=False, cutter_left_marker_external=True,
+        preserve_header_gap=True, platform_below_marker=True,
+        platform_reuse_qr=True, label_source_order_enabled=True,
+        label_batch_name='609162025022', label_machine_enabled=True,
+        manual_rotations=((str(path.resolve()), degrees),) if degrees else (),
+    )
+    result = generate_layout([path], tmp_path/'out', config)
+    placement = result['placements'][0]
+    assert result['analysis']['header_space_recovery']
+    assert placement['color_block_x_px']+placement['color_block_width_px'] <= placement['number_x_px']
+    assert placement['number_x_px']+placement['number_width_px'] <= placement['x_px']
+    from automatic_print.layout_engine.domain.models import Placement
+    planned = Placement(**placement)
+    with pytest.raises(ValueError, match='刀码与膜标签之间的安全空白'):
+        validate_embedded_marks([(
+            path, replace(planned, number_x_px=planned.color_block_x_px),
+        )], replace(config, preserve_header_gap=False))
+    with Image.open(tmp_path/'out'/result['filename']) as output:
+        box = (placement['number_x_px'], placement['number_y_px'],
+               placement['number_x_px']+placement['number_width_px'],
+               placement['number_y_px']+placement['number_height_px'])
+        assert output.crop(box).getchannel('A').getbbox()

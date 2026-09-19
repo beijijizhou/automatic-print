@@ -5,7 +5,7 @@ from automatic_print.layout_engine.domain.models import mm_to_px
 def header_safe_coordinates(
     path, settings, image_size, degrees, block, label, platform,
 ):
-    """Keep added text beside the cutter mark and inside the label-card height."""
+    """Use verified space between the left cutter mark and source label card."""
     if (not settings.preserve_header_gap or settings.cutter_mode == 'free'
             or not label[2] or not label[3]):
         return block, label, platform
@@ -23,9 +23,8 @@ def header_safe_coordinates(
     px, py, pw, ph = platform
     if lh > bottom-top:
         raise ValueError(f'{path.name}：标签文字无法完整放入膜标签高度范围，禁止输出。')
-    # The cutter marker touches the source. All added text must reuse verified
-    # transparent pixels inside the rotated source header band, never the lane
-    # between the marker, QR card and artwork.
+    # First use source-header transparency before the card. A missing rectangle
+    # triggers the shared, full-batch external-gutter fallback.
     block_x = -bw if bw else 0
     from automatic_print.layout_engine.labeling.platform.platform_space import (
         card_rect_clear, header_space,
@@ -49,7 +48,7 @@ def header_safe_coordinates(
         reserved = ((px, py, pw, ph),) if pw and ph else ()
     label_x = header_space(
         path, region, image_size[0], height, lw, lh, 0, degrees,
-        reserved=reserved,
+        reserved=reserved, between_marker_and_card=True,
     )
     if label_x is None:
         raise ValueError(f'{path.name}：膜标签高度带内没有批次标签的透明空位，禁止输出。')
@@ -85,6 +84,24 @@ def stacked_coordinates(settings, block, label, platform):
 def validate_stack(path, p, settings):
     if ((settings.preserve_header_gap and settings.cutter_mode != 'free')
             or not settings.platform_below_marker or not p.color_block_width_px):
+        return
+    if (settings.cutter_left_marker_external and settings.platform_reuse_qr
+            and p.number_width_px):
+        # The fallback reserves a real horizontal corridor. The platform badge
+        # remains in the source QR card, so the old vertical-stack rule below
+        # must not reject this independently verified label position.
+        from automatic_print.layout_engine.cutting.geometry.cut_guide_geometry import detect_guide_band
+        band = detect_guide_band(path)
+        if band is None:
+            raise ValueError(f'{path.name}：未能可靠识别膜标签高度范围，禁止输出新增文字。')
+        band = band.rotated(p.rotation_degrees)
+        top = p.y_px+round(band.top*p.height_px)
+        bottom = p.y_px+round(band.bottom*p.height_px)
+        if (p.number_x_px < p.color_block_x_px+p.color_block_width_px
+                or p.number_x_px+p.number_width_px > p.x_px
+                or p.number_y_px < top
+                or p.number_y_px+p.number_height_px > bottom):
+            raise ValueError(f'{path.name}：标签文字未位于刀码与膜标签之间的安全空白，禁止输出。')
         return
     y = p.color_block_y_px+p.color_block_height_px+mm_to_px(settings.number_gap_mm, settings.dpi)
     if p.platform_width_px and not settings.platform_reuse_qr:

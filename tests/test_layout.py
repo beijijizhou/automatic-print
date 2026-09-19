@@ -45,6 +45,13 @@ def test_batch_folder_forward_and_reverse_label_fields() -> None:
     assert text == 'M1 609162025022 · 正序 3/20 · 倒序 18/20'
 
 
+def test_order_size_label_uses_source_identity() -> None:
+    text = _format_label('{机器号} {批次} 尺码 {尺码}', 1,
+        Path('609162025022/A0000001-B7RLBYZ-1-T-LSJ-2-Black-XXL-NO1-1.png'),
+        datetime(2026, 9, 15), '%Y-%m-%d', 'M7', 1, '609162025022')
+    assert text == 'M7 609162025022 尺码 2XL'
+
+
 def test_image_discovery_includes_nested_windows_formats(tmp_path) -> None:
     nested = tmp_path / "nested"
     nested.mkdir()

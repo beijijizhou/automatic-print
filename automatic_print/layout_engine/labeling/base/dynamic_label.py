@@ -9,6 +9,12 @@ from automatic_print.layout_engine.measurement.measurement_timing import measure
 def source_label_badge(text, settings, path, degrees=0):
     if settings.cutter_mode != "free":
         maximum = mm_to_px(settings.color_block_width_mm, settings.dpi)
+        if (not settings.preserve_header_gap and settings.platform_below_marker
+                and settings.platform_reuse_qr and settings.cutter_left_marker_external):
+            size = print_dimensions(path, settings.dpi)
+            available_mm = (size.height_mm if degrees % 180 else size.width_mm)
+            maximum = max(maximum, mm_to_px(available_mm, settings.dpi))
+            return label_badge(text, settings.dpi, settings.number_font_size_mm, maximum)
         if settings.preserve_header_gap:
             region = detect_membrane_region(path)
             if region is None:
