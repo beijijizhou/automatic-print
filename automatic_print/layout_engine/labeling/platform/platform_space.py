@@ -26,18 +26,30 @@ def card_space(path, card, width, height, badge_width, badge_height, reserved=()
          ceil((x+w)*source_width/width)-left, ceil((y+h)*source_height/height)-top)
         for x, y, w, h in reserved if w and h
     )
-    for y in range(0, bottom-top-box_height+1):
-        for x in range(0, right-left-box_width+1):
-            if any(x < rx2 and x+box_width > rx1 and y < ry2
-                   and y+box_height > ry1
-                   for rx1, ry1, rx2, ry2 in source_reserved):
-                continue
-            occupied = (integral[y+box_height, x+box_width]
-                        - integral[y, x+box_width]
-                        - integral[y+box_height, x] + integral[y, x])
-            if not occupied:
-                return (round((x+left)*width/source_width),
-                        round((y+top)*height/source_height))
+    position = _first_clear_card_rect(
+        integral, right-left, bottom-top, box_width, box_height, source_reserved,
+    )
+    if position is not None:
+        x, y = position
+        return (round((x+left)*width/source_width),
+                round((y+top)*height/source_height))
+    return None
+
+
+def _first_clear_card_rect(integral, width, height, box_width, box_height, reserved):
+    """Keep the original top-to-bottom, left-to-right safety search order."""
+    xs = np.arange(width-box_width+1)
+    for y in range(height-box_height+1):
+        occupied = (integral[y+box_height, xs+box_width]
+                    - integral[y, xs+box_width]
+                    - integral[y+box_height, xs] + integral[y, xs])
+        clear = occupied == 0
+        for rx1, ry1, rx2, ry2 in reserved:
+            if y < ry2 and y+box_height > ry1:
+                clear &= ~((xs < rx2) & (xs+box_width > rx1))
+        candidates = np.flatnonzero(clear)
+        if candidates.size:
+            return int(candidates[0]), y
     return None
 
 

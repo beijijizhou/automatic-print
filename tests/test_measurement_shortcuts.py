@@ -1,8 +1,41 @@
 from threading import Barrier, Thread
+import random
+import numpy as np
 from PIL import Image
 from automatic_print.layout_engine.labeling.base import labels
 from automatic_print.layout_engine.labeling.platform import platform_space
 from automatic_print.layout_engine.labeling.platform.membrane_region import MembraneRegion
+
+
+def test_vector_card_search_matches_original_pixel_order_and_reservations():
+    rng = random.Random(19)
+    for _ in range(120):
+        width, height = rng.randint(2, 22), rng.randint(2, 18)
+        box_width, box_height = rng.randint(1, width), rng.randint(1, height)
+        blocked = np.array([
+            [rng.randrange(4) == 0 for _x in range(width)]
+            for _y in range(height)
+        ], dtype=np.int32)
+        integral = np.pad(blocked, ((1, 0), (1, 0))).cumsum(0).cumsum(1)
+        reserved = tuple(
+            (x, y, x+rng.randint(1, 6), y+rng.randint(1, 6))
+            for x, y in ((rng.randrange(width), rng.randrange(height))
+                         for _entry in range(rng.randrange(4)))
+        )
+        expected = None
+        for y in range(height-box_height+1):
+            for x in range(width-box_width+1):
+                if any(x < rx2 and x+box_width > rx1 and y < ry2
+                       and y+box_height > ry1 for rx1, ry1, rx2, ry2 in reserved):
+                    continue
+                if not blocked[y:y+box_height, x:x+box_width].any():
+                    expected = (x, y)
+                    break
+            if expected is not None:
+                break
+        assert platform_space._first_clear_card_rect(
+            integral, width, height, box_width, box_height, reserved,
+        ) == expected
 
 
 def test_nearby_clear_space_skips_full_header_search(tmp_path, monkeypatch):
