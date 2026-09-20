@@ -21,6 +21,7 @@ class LabelQuickPanel(QWidget):
         layout.setContentsMargins(0, 0, 0, 0)
         layout.addLayout(form)
         layout.addWidget(build_data_panel(window, self.summary, self.timings))
+        layout.insertWidget(1, window.batch_status_board)
         layout.addWidget(self.summary.failure_panel)
         layout.addWidget(preview_group)
         self._build_developer_tools()

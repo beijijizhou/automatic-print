@@ -59,9 +59,17 @@ def test_single_and_bulk_share_three_column_batch_records(tmp_path):
     assert board.items[0].text(0) == source.name
     owner.generation_preview.sources([source/'one.png', source/'two.png'])
     owner.generation_preview.progress('读取图片尺寸', 1, 2, 'one.png')
+    APP.processEvents()
+    panel = owner.automation_home.label_quick_panel
+    assert board.parentWidget() is panel
+    assert board.geometry().bottom() < panel.summary.geometry().top()
     assert board.groups['进行中'].topLevelItemCount() == 1
     assert board.items[0].text(1) == '2'
     assert 'one.png' in board.items[0].toolTip(0)
+    board.open_record.click()
+    assert owner.generation_preview.record_dialog.isVisible()
+    assert str(source) in owner.generation_preview.record_dialog.details.toPlainText()
+    owner.generation_preview.record_dialog.close()
     APP.processEvents()
     assert board.grab().save(str(tmp_path/'unified-single-board.png'))
     owner.worker_bridge.layout_finished.emit(str(tmp_path), {'preview_only': True})

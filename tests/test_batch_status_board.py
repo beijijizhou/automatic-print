@@ -57,3 +57,21 @@ def test_all_batches_are_visible_in_three_groups_with_live_independent_states(tm
     assert board.groups['进行中'].topLevelItemCount() == 0
     assert board.groups['未完成'].topLevelItemCount() == 1
     board.close()
+
+
+def test_same_folder_source_is_not_shown_as_dot_and_child_opens_parent(tmp_path):
+    root = tmp_path/'batch'
+    child = root/'S'
+    board = BatchStatusBoard()
+    board.reset([root], root, {0: {'source_batches': [
+        {'folder': root, 'image_count': 1}, {'folder': child, 'image_count': 2}]}})
+    item = board.items[0]
+    assert item.childCount() == 1
+    assert item.child(0).text(0) == 'S'
+    requested = []
+    board.recordRequested.connect(requested.append)
+    board.groups['未完成'].setCurrentItem(item.child(0))
+    assert board.currentIndex() == 0
+    board.request_record(item.child(0))
+    assert requested == [0]
+    board.close()

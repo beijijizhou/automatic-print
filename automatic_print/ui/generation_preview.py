@@ -14,6 +14,7 @@ class GenerationPreviewController(QObject):
         self.preview = self.panel.preview
         self.payload = None
         self.mode = None
+        window.batch_status_board.recordRequested.connect(self.open_record)
         bridge = window.worker_bridge
         bridge.layout_preview.connect(self.ready)
         bridge.layout_sources.connect(self.sources)
@@ -151,3 +152,31 @@ class GenerationPreviewController(QObject):
         if self.mode == 'single':
             self.window.batch_status_board.update_batch(0, '批次已停止', group='未完成')
         self.panel.summary.progress.setText('当前排版已停止；已计算的本批次信息和未完成结果均已保留。')
+
+    @Slot(int)
+    def open_record(self, index):
+        board = self.window.batch_status_board
+        item = board.items.get(index)
+        if item is None:
+            return
+        bulk = getattr(self.window, 'bulk_controller', None)
+        if self.mode == 'multiple' and bulk is not None:
+            board.setCurrentIndex(index)
+        lines = [item.toolTip(0)]
+        if item.toolTip(2):
+            lines.append('尺码群 / 订单群：'+item.toolTip(2))
+        if self.mode == 'multiple' and bulk is not None:
+            record = bulk.records.get(index)
+            if record:
+                lines.append('输出：'+str(record['output']))
+                lines.append('结果文件：'+str(record['result'].get('filename', '仅预览')))
+        timings = self.panel.timings.data
+        if timings:
+            lines.append(f"耗时：{timings['status']} · 总计 {timings['total_seconds']:.2f} 秒")
+            lines.extend(f"{step['name']}：{step['seconds']:.2f} 秒" for step in timings['steps'])
+        if self.mode == 'single':
+            lines.append('批次处理记录：\n'+self.window.run_log.toPlainText())
+        if not hasattr(self, 'record_dialog'):
+            from .batch_record_dialog import BatchRecordDialog
+            self.record_dialog = BatchRecordDialog(self.window)
+        self.record_dialog.show_record(item.text(0), '\n\n'.join(lines))

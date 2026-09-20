@@ -1,6 +1,6 @@
 """Direct, grouped batch visibility without a modal window or dropdown."""
 from PySide6.QtCore import Qt, Signal
-from PySide6.QtWidgets import QWidget, QHBoxLayout, QVBoxLayout, QLabel, QTreeWidget, QTreeWidgetItem
+from PySide6.QtWidgets import QWidget, QHBoxLayout, QVBoxLayout, QLabel, QPushButton, QTreeWidget, QTreeWidgetItem
 from .action_icons import action_icon
 from .progress_format import file_size_text
 
@@ -8,12 +8,23 @@ from .progress_format import file_size_text
 class BatchStatusBoard(QWidget):
     currentIndexChanged = Signal(int)
     userSelected = Signal(int)
+    recordRequested = Signal(int)
 
     def __init__(self, parent=None):
         super().__init__(parent)
         self.index = -1
         self.items, self.groups, self.titles = {}, {}, {}
-        row = QHBoxLayout(self)
+        outer = QVBoxLayout(self)
+        outer.setContentsMargins(0, 0, 0, 0)
+        caption = QHBoxLayout()
+        caption.addWidget(QLabel('批次状态 · 点击选择，双击查看记录'))
+        caption.addStretch()
+        self.open_record = QPushButton('查看所选批次记录')
+        self.open_record.setEnabled(False)
+        self.open_record.clicked.connect(self.request_record)
+        caption.addWidget(self.open_record)
+        outer.addLayout(caption)
+        row = QHBoxLayout()
         row.setContentsMargins(0, 0, 0, 0)
         for name, icon, color in (('已完成', 'done', '#15803d'),
                                   ('进行中', 'refresh', '#2563eb'),
@@ -35,11 +46,13 @@ class BatchStatusBoard(QWidget):
             tree.setColumnWidth(0, 120)
             tree.setColumnWidth(1, 60)
             tree.itemSelectionChanged.connect(lambda t=tree: self.choose(t))
+            tree.itemDoubleClicked.connect(lambda item, _column: self.request_record(item))
             body.addWidget(tree)
             row.addLayout(body, 1)
             self.groups[name], self.titles[name] = tree, title
-        self.setMinimumHeight(210)
-        self.setMaximumHeight(360)
+        outer.addLayout(row)
+        self.setMinimumHeight(205)
+        self.setMaximumHeight(300)
 
     def reset(self, folders, root=None, information=None):
         self.blockSignals(True)
@@ -62,6 +75,8 @@ class BatchStatusBoard(QWidget):
             if sources:
                 for source in sources:
                     path=source['folder']
+                    if path == folder:
+                        continue
                     relative=path.relative_to(root).as_posix() if root else path.name
                     child=QTreeWidgetItem([relative,str(source['image_count']),''])
                     child.setIcon(0,action_icon('folder','#64748b'))
@@ -80,6 +95,7 @@ class BatchStatusBoard(QWidget):
         self.blockSignals(False)
         if folders:
             self.setCurrentIndex(0)
+        self.open_record.setEnabled(bool(folders))
 
     def counts(self):
         for name, tree in self.groups.items():
@@ -158,6 +174,12 @@ class BatchStatusBoard(QWidget):
     def choose(self, tree):
         selected = tree.selectedItems()
         if selected:
-            index = selected[0].data(0, Qt.UserRole)
+            item = selected[0]
+            index = (item.parent() or item).data(0, Qt.UserRole)
             self.setCurrentIndex(index)
             self.userSelected.emit(index)
+
+    def request_record(self, item=None):
+        target = (item.parent() or item) if isinstance(item, QTreeWidgetItem) else self.items.get(self.index)
+        if target is not None:
+            self.recordRequested.emit(target.data(0, Qt.UserRole))
