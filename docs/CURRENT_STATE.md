@@ -11,6 +11,7 @@
 - 主工作台：实际页面在`automatic_print/batch_ui/` 和
   `automatic_print/ui/workbench/overview/`；旧的
   `ui/label_quick_panel.py`仅保留稳定兼容导入。
+- 图片目录浏览起点由`ui/folder_dialog_paths.py`统一选择：可用的上次浏览目录和用户已保存来源优先，最后回退`\\192.168.11.28\dtf`。设置页只把共享盘显示为输入提示，不将它写入来源或输出设置；`ui/cold_batch_benchmark.py`的DTF来源默认使用同一路径。
 - 生产批次工作台目录直接对应界面和执行层级：`batch_ui/local/`拥有本地排版页，
   `platform/`拥有已接单与生产批次页，`task/`拥有后台任务生命周期，`shell/`拥有窗口外壳；
   根目录`dialog.py`只装配这些区域。`shell/view.py`只构造公共控件，`results.py`只展示任务结果，

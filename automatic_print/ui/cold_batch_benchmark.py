@@ -15,6 +15,7 @@ from PySide6.QtWidgets import (
     QDialog, QFileDialog, QFormLayout, QHBoxLayout, QLabel, QLineEdit,
     QMessageBox, QPlainTextEdit, QPushButton, QVBoxLayout,
 )
+from .folder_dialog_paths import DEFAULT_DTF_SHARE
 
 
 class ColdBatchBenchmarkDialog(QDialog):
@@ -34,7 +35,7 @@ class ColdBatchBenchmarkDialog(QDialog):
         note.setWordWrap(True)
         layout.addWidget(note)
         form = QFormLayout()
-        self.root = QLineEdit("Z:\\")
+        self.root = QLineEdit(str(DEFAULT_DTF_SHARE))
         self.destination = QLineEdit(str(Path.home() / "Documents"))
         source = QHBoxLayout()
         source.addWidget(self.root)

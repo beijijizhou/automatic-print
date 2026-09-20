@@ -1,13 +1,50 @@
 import os
 os.environ.setdefault('QT_QPA_PLATFORM', 'offscreen')
+from pathlib import Path
 from PySide6.QtCore import QSettings
 from PySide6.QtWidgets import QApplication, QFileDialog
 from automatic_print.ui.main_window import MainWindow
 from automatic_print.ui.bulk_film_analysis import BulkFilmAnalysisDialog
+from automatic_print.ui.cold_batch_benchmark import ColdBatchBenchmarkDialog
+from automatic_print.ui import folder_dialog_paths
 from automatic_print.ui.folder_dialog_paths import KEY, image_dialog_start
 
 APP = QApplication.instance() or QApplication([])
 OWNERS = []
+
+
+def test_dtf_share_is_default_browse_location_without_selecting_a_source(tmp_path, monkeypatch):
+    assert folder_dialog_paths.DEFAULT_DTF_SHARE == Path(r'\\192.168.11.28\dtf')
+    share = tmp_path/'dtf'
+    share.mkdir()
+    monkeypatch.setattr(folder_dialog_paths, 'DEFAULT_DTF_SHARE', share)
+    window = MainWindow(QSettings(str(tmp_path/'fresh.ini'), QSettings.IniFormat))
+    window.startup_update_timer.stop()
+    OWNERS.append(window)
+    window.settings_dialog.show()
+    window.print_settings_tabs.setCurrentIndex(3)
+    APP.processEvents()
+    assert window.folder.isVisible()
+    assert window.folder.text() == ''
+    assert image_dialog_start(window) == str(share)
+    assert window.folder.placeholderText().endswith(str(share))
+    starts = []
+    monkeypatch.setattr(QFileDialog, 'getExistingDirectory',
+                        lambda *_args: starts.append(_args[2]) or '')
+    assert not window.choose_folder()
+    assert starts == [str(share)]
+    assert window.folder.text() == ''
+    window.close()
+
+
+def test_cold_batch_benchmark_defaults_to_unc_share(tmp_path):
+    window = MainWindow(QSettings(str(tmp_path/'cold.ini'), QSettings.IniFormat))
+    window.startup_update_timer.stop()
+    dialog = ColdBatchBenchmarkDialog(window)
+    OWNERS.extend((window, dialog))
+    assert Path(dialog.root.text()) == folder_dialog_paths.DEFAULT_DTF_SHARE
+    dialog.close()
+    window.close()
 
 
 def setup(tmp_path):

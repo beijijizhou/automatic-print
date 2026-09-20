@@ -32,9 +32,11 @@ from ..spinbox_style import double_spinbox
 
 
 def _build_parameter_controls(window) -> QFormLayout:
+    from ..folder_dialog_paths import DEFAULT_DTF_SHARE
     window.folder = QLineEdit(
         window.preferences.value("source_location", "", str)
     )
+    window.folder.setPlaceholderText(f"默认共享盘：{DEFAULT_DTF_SHARE}")
     browse = QPushButton("选择图片文件夹…")
     browse.clicked.connect(window.choose_folder)
     folder_row = QHBoxLayout()
