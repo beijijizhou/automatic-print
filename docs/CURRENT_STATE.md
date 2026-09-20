@@ -115,7 +115,7 @@
   `layout_engine/planning/knife/optimizer.py`、`layout_engine/planning/columns/adaptive_knife.py`、`layout_engine/planning/zones/zone_optimizer.py`、`layout_engine/planning/rotation/rotation_zones.py`。列数由膜宽与真实占位
   动态形成；物理上无法容纳整批或无法实际使用全部列的候选在进入排版动态规划前淘汰，列分配使用有记忆匹配而非全排列。`layout_engine/planning/columns/adaptive_knife.py` 唯一组装“并排区 + 剩余旋转区”，旋转仍超宽时复用 `layout_engine/planning/zones/width_fit.py` 缩小缓存。
   混色订单不参与单色区域边界比较，避免错误清空已经成立的多数并排区。
-  `layout_engine/planning/columns/order_lane_trial.py` 是独立的双列几何诊断：仅对完整多件订单估算左右单列占位高度并分配整单，双面作为同列单元；记录每侧件数、长度差和无法放入的订单，不接入生产坐标、渲染或输出。
+  `layout_engine/planning/columns/order_lane_trial.py` 是独立的多件批次单列几何诊断：整批订单在一个无中间纵刀的全宽列内连续排放，双面作为不可拆单元；记录整批估算长度、件数、无法放入的订单及不可靠文件名身份，不接入生产坐标、渲染或输出，旧双列策略保持不变。
 - 主界面默认开启的并排等比缩小、可勾选尺码（默认S–XL）及可编辑310毫米原宽上限由 `layout_engine/planning/zones/pair_width.py` 唯一计算；通过单图尺寸覆盖交给既有
   测量、刀位、预览和渲染链路，不生成或修改源图片副本。
 - 旋转与超宽恢复：`layout_engine/planning/rotation/rotation_compare.py`、`layout_engine/planning/rotation/whole_rotation.py`、`layout_engine/planning/rotation/tail_rotation.py`、

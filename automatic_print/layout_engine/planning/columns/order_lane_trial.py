@@ -1,14 +1,14 @@
-"""Geometry-only trial: keep every multi-piece order in one cutter lane."""
+"""Geometry-only trial for an entire multi-piece batch in one uncut column."""
 from collections import OrderedDict
 
 from automatic_print.layout_engine.orders.order_groups import order_key, is_double_pair
 from .column_solver import group_rows
 
 
-def compare_multi_order_lanes(groups, lanes, spacing):
-    """Balance measured lane heights, without creating printable placements."""
-    if len(lanes) != 2:
-        raise ValueError('多件单列试验只比较固定刀位的左右两列。')
+def trial_single_column_multi_batch(groups, lane, spacing):
+    """Keep every order in one full-width lane; never create printable placements."""
+    if lane[0] != 0 or lane[2] is not None:
+        raise ValueError('整批单列试验只能使用没有中间纵刀的完整可打印宽度。')
     orders = OrderedDict()
     for group in groups:
         if not group:
@@ -21,39 +21,20 @@ def compare_multi_order_lanes(groups, lanes, spacing):
             raise ValueError('多图单元必须是同件商品的完整双面。')
         orders.setdefault(key, []).append(group)
 
-    candidates, infeasible = [], []
+    rows, blocked = [], []
     for key, units in orders.items():
-        if len(units) == 1:
-            continue  # This first trial deliberately excludes single-piece orders.
-        heights = []
-        for lane in lanes:
-            rows = [group_rows(group, [lane], spacing) for group in units]
-            heights.append(None if any(not row for row in rows) else
-                           sum(row[0].height for row in rows) + spacing * (len(rows)-1))
-        if all(height is None for height in heights):
-            infeasible.append(key)
-        else:
-            candidates.append((key, units, heights))
-
-    # Place lane-constrained orders before flexible ones, then larger orders first.
-    candidates.sort(key=lambda entry: (sum(h is not None for h in entry[2]),
-                                       -max(h for h in entry[2] if h is not None), entry[0]))
-    totals, pieces, assignments = [0, 0], [0, 0], []
-    for key, units, heights in candidates:
-        feasible = [index for index, height in enumerate(heights) if height is not None]
-        lane = min(feasible, key=lambda index: (
-            abs(totals[index] + heights[index] + (spacing if totals[index] else 0)
-                - totals[1-index]),
-            max(totals[index] + heights[index] + (spacing if totals[index] else 0),
-                totals[1-index]),
-            pieces[index], index,
-        ))
-        height = heights[lane]
-        totals[lane] += height + (spacing if totals[lane] else 0)
-        pieces[lane] += len(units)
-        assignments.append({'order': key, 'lane': lane, 'pieces': len(units),
-                            'images': sum(map(len, units)), 'height_px': height})
-    return {'assignments': assignments, 'lane_heights_px': totals,
-            'lane_pieces': pieces, 'height_gap_px': abs(totals[0]-totals[1]),
-            'unplaceable_orders': infeasible,
-            'excluded_single_orders': sum(len(units) == 1 for units in orders.values())}
+        options = [group_rows(group, [lane], spacing) for group in units]
+        if any(not choice for choice in options):
+            blocked.append(key)
+            continue
+        height = sum(choice[0].height for choice in options) + spacing * (len(units)-1)
+        rows.append({'order': key, 'pieces': len(units),
+                     'images': sum(map(len, units)), 'height_px': height})
+    # An incomplete batch is only a diagnostic, never an accepted layout.
+    height = (sum(row['height_px'] for row in rows) + spacing * (len(rows)-1)
+              if not blocked and rows else 0 if not blocked else None)
+    return {'orders': rows, 'order_count': len(orders),
+            'piece_count': sum(len(units) for units in orders.values()),
+            'image_count': sum(len(group) for units in orders.values() for group in units),
+            'height_px': height, 'unplaceable_orders': blocked,
+            'uncertain_order_keys': [key for key in orders if key.startswith('无图印花cvc')]}
