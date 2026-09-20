@@ -59,7 +59,7 @@
 | 后台只读任务 | `batch_ui/task/reads.py`, `batch_ui/local/scanning.py` | 复用现有Worker线程和取消信号；目录和图片名称在后台读取，界面按来源范围及选中批次核对返回数据，过期结果不得覆盖当前选择。 |
 | ERP工作台壳层 | `batch_ui/local/`, `platform/`, `task/`, `shell/` | 目录直接对应本地排版、平台批次、任务执行和公共窗口外壳；根对话框只装配，控件构造、结果展示和批次表映射各有唯一所有者。 |
 | 蜂鸟ERP接口 | `automation/api/erp/gateway.py`, `items.py`, `batches.py`, `records.py` | 页面桥接、生产项与规则、生产批次、响应转换按请求对象分离；调用方直接复用提供商接口，不保留根目录转发模块。 |
-| Haloo已生产底款分类与生成 | `automation/batches/completed.py`, `automation/batches/classification.py`, `automation/api/erp/items.py`, `batch_ui/platform/completed.py`, `batch_ui/task/reads.py` | 状态9快照逐项读取实际生产图`A面/B面`；单项单件按物流、底款、颜色、面别和尺码档形成显式ID及数量计划；多件订单不按底款或颜色拆分。“自动化生成计划”复用同一后台读取，自动勾选未补单候选分组，不调用生成接口；所选范围以外不在计划内。选中分组分别走补单接口；提交前用`order_id`精确读取整单并核对状态、来源批次、数量、项目集合及既有补单，写后从生产项确认唯一批次号。 |
+| 蜂鸟ERP已生产订单计划与生成 | `automation/batches/completed.py`, `automation/batches/classification.py`, `automation/api/erp/items.py`, `batch_ui/platform/completed.py`, `batch_ui/task/reads.py` | 隆丰、莆田和Haloo按各自已登录生产项页面读取状态9快照及实际生产图`A面/B面`；单项单件按物流、底款、颜色、面别和尺码档形成显式ID及数量计划；多件订单不按底款或颜色拆分。“自动化生成计划”共用同一后台读取，自动勾选未补单候选分组，不调用生成接口；所选范围以外不在计划内，结果按平台核对。选中分组分别走补单接口；提交前用`order_id`精确读取整单并核对状态、来源批次、数量、项目集合及既有补单，写后从生产项确认唯一批次号。 |
 | S2B接口 | `automation/api/s2b/metadata/`, `production/` | 批次身份、共享颜色尺码元数据与本地匹配归元数据层；生产列表、人员标签、导出请求和下载归生产层；两者复用同一Supabase受限网关客户端，原始Token不进入客户端。 |
 | S2B生产图下载 | `automation/api/s2b/production/gateway.py`, `downloads.py`, `archive_io.py`, `automation/browser/batches.py` | 优先由Supabase服务端代理生产批次、导出和记录查询，用户选择后按实际件数补发缺失导出，轮询真实下载地址；`archive_io.py`唯一负责下载、ZIP路径校验与解压，网关不可用才回退已登录页面，下载标记接口不承担文件传输。 |
 | 自动化批次规则与本地身份 | `automation/batches/classification.py`, `local.py`, `naming.py`, `rules.py` | 分类、扫描、命名和生成规则按批次域集中；界面只调用这些共享能力，不自行解析或改名。 |

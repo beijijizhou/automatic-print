@@ -85,10 +85,10 @@ class AutomationDialog(
             self.main_tabs.addTab(
                 build_production_page(self, self.output_row), "生产批次"
             )
-            if self.platform_names == ('Haloo',):
-                from .platform.completed import CompletedHalooPage
-                self.completed_haloo_page = CompletedHalooPage(self)
-                self.main_tabs.addTab(self.completed_haloo_page, '已生产底款分类')
+            if len(self.platform_names) == 1 and self.platform_names[0] in ERP_PLATFORMS:
+                from .platform.completed import CompletedErpPage
+                self.completed_page = CompletedErpPage(self, self.platform_names[0])
+                self.main_tabs.addTab(self.completed_page, '已生产订单计划')
             else:
                 self.main_tabs.tabBar().hide()
             return

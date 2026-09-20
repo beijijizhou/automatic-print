@@ -1,4 +1,4 @@
-"""Plan Haloo test batches from already-produced items."""
+"""Plan Hummingbird ERP batches from already-produced items."""
 
 from __future__ import annotations
 
@@ -36,7 +36,7 @@ class CompletedBatchGroup:
     order_ids: tuple[str, ...] = ()
 
 
-def load_completed_haloo_snapshot(
+def load_completed_erp_snapshot(
     page, *, page_size: int = 200, progress=None
 ) -> tuple[list[dict], dict[str, dict]]:
     """Read a bounded, newest-first completed snapshot plus exact face data."""
@@ -52,7 +52,7 @@ def load_completed_haloo_snapshot(
     return rows, details
 
 
-def plan_completed_haloo_batches(
+def plan_completed_erp_batches(
     rows: list[dict], image_details: dict[str, dict]
 ) -> tuple[CompletedBatchGroup, ...]:
     """Group an immutable completed snapshot; never calls a write endpoint."""
@@ -157,7 +157,7 @@ def verify_completed_group(page, expected: CompletedBatchGroup) -> list[dict]:
     if len({str(row["id"]) for row in rows}) != len(rows):
         raise RuntimeError("订单查询返回重复生产项。")
     details = {str(row["id"]): production_item_images(page, str(row["id"])) for row in rows}
-    actual = plan_completed_haloo_batches(rows, details)
+    actual = plan_completed_erp_batches(rows, details)
     fields = ("logistics_code", "order_composition", "face", "style_id", "style_name",
               "color", "size_group")
     if len(actual) != 1 or any(getattr(actual[0], field) != getattr(expected, field)

@@ -1,12 +1,13 @@
 import os
 from types import SimpleNamespace
+import pytest
 
 os.environ.setdefault('QT_QPA_PLATFORM', 'offscreen')
 
 from PySide6.QtWidgets import QApplication, QWidget
 
-from automatic_print.automation.batches.completed import plan_completed_haloo_batches
-from automatic_print.batch_ui.platform.completed import CompletedHalooPage
+from automatic_print.automation.batches.completed import plan_completed_erp_batches
+from automatic_print.batch_ui.platform.completed import CompletedErpPage
 
 
 APP = QApplication.instance() or QApplication([])
@@ -20,16 +21,18 @@ def _row(item, order, *, supplemented=False):
                 if supplemented else [])
 
 
-def test_auto_plan_button_reads_completed_items_and_selects_only_eligible_groups():
+@pytest.mark.parametrize('platform_name', ('隆丰', '莆田', 'Haloo'))
+def test_auto_plan_button_reads_completed_items_and_selects_only_eligible_groups(platform_name):
     owner = QWidget()
     owner.thread = None
     workers = []
     owner._start_worker = workers.append
-    page = CompletedHalooPage(owner)
+    page = CompletedErpPage(owner, platform_name)
 
     page.plan_button.click()
     assert len(workers) == 1
-    assert workers[0].kind == 'completed_haloo'
+    assert workers[0].kind == 'completed_erp'
+    assert workers[0].platform_name == platform_name
     assert workers[0].value == page.limit.value()
     assert page.auto_plan_pending
 
@@ -37,9 +40,9 @@ def test_auto_plan_button_reads_completed_items_and_selects_only_eligible_groups
     rows[1]['color'] = '白色'
     details = {row['id']: {'production_images': [{'name': 'A面'}]}
                for row in rows}
-    groups = plan_completed_haloo_batches(rows, details)
+    groups = plan_completed_erp_batches(rows, details)
     page.setEnabled(False)  # The worker lifecycle disables the tab during delivery.
-    page.show_result(dict(scope=30, data=dict(
+    page.show_result(dict(platform=platform_name, scope=30, data=dict(
         count=2, groups=groups, supplemented=('2',),
         rules=[SimpleNamespace(id=7, name='默认规则', is_default=True)])))
     page.setEnabled(True)
@@ -59,7 +62,7 @@ def test_auto_plan_button_reads_completed_items_and_selects_only_eligible_groups
 
     page.plan_button.click()
     blocked_group = next(group for group in groups if '2' in group.item_ids)
-    page.show_result(dict(scope=31, data=dict(
+    page.show_result(dict(platform=platform_name, scope=31, data=dict(
         count=1, groups=(blocked_group,), supplemented=('2',),
         rules=[SimpleNamespace(id=7, name='默认规则', is_default=True)])))
     assert '自动候选计划 0 组' in page.summary.text()

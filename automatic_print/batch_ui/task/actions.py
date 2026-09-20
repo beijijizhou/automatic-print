@@ -42,7 +42,7 @@ class ThreadActionsMixin:
             "status_and_list": worker.batches_loaded,
             "preview_rules": worker.plan_loaded,
             "generate_rules": worker.completed,
-            "generate_completed_haloo": worker.completed,
+            "generate_completed_erp": worker.completed,
             "download": worker.completed,
             "process": worker.completed,
         }[worker.action]
@@ -93,12 +93,12 @@ class ThreadActionsMixin:
 
     @Slot(object)
     def action_finished(self, result: dict) -> None:
-        if result.get('type') == 'completed_haloo_generated':
-            self.completed_haloo_page.show_generation_result(result)
+        if result.get('type') == 'completed_erp_generated':
+            self.completed_page.show_generation_result(result)
             return
         if result.get('type') == 'read':
-            if result['kind'] == 'completed_haloo':
-                self.completed_haloo_page.show_result(result)
+            if result['kind'] == 'completed_erp':
+                self.completed_page.show_result(result)
             else:
                 self.local_read_finished(result)
             return
@@ -136,8 +136,8 @@ class ThreadActionsMixin:
         for widget in widgets:
             if widget is not None:
                 widget.setEnabled(enabled)
-        if hasattr(self, 'completed_haloo_page'):
-            self.completed_haloo_page.set_actions_enabled(enabled)
+        if hasattr(self, 'completed_page'):
+            self.completed_page.set_actions_enabled(enabled)
         plan = self.pending_batch_plan
         if hasattr(self, "generate_rules_button"):
             self.generate_rules_button.setEnabled(

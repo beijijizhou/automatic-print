@@ -1,4 +1,4 @@
-"""Select completed Haloo style groups for separate supplement batches."""
+"""Select completed ERP order groups for separate supplement batches."""
 
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import (
@@ -10,10 +10,11 @@ from .pages import table_widget
 from ..task.reads import CompletedGenerateWorker, ReadWorker
 
 
-class CompletedHalooPage(QWidget):
-    def __init__(self, owner):
+class CompletedErpPage(QWidget):
+    def __init__(self, owner, platform_name):
         super().__init__(owner)
         self.owner = owner
+        self.platform_name = platform_name
         self.groups = ()
         self.boxes = []
         self.auto_plan_pending = False
@@ -84,11 +85,11 @@ class CompletedHalooPage(QWidget):
         self.auto_plan_pending = auto_plan
         self.summary.setText('正在读取已生产项和实际生产图面别，形成候选计划…'
                              if auto_plan else '正在读取已生产项和实际生产图面别…')
-        self.owner._start_worker(ReadWorker('Haloo', 'completed_haloo',
+        self.owner._start_worker(ReadWorker(self.platform_name, 'completed_erp',
                                            self.limit.value(), self.limit.value()))
 
     def show_result(self, result):
-        if result['scope'] != self.limit.value():
+        if result['scope'] != self.limit.value() or result['platform'] != self.platform_name:
             return
         data = result['data']
         self.groups = tuple(data['groups'])
@@ -189,9 +190,12 @@ class CompletedHalooPage(QWidget):
         layout.addWidget(buttons)
         if dialog.exec() != QDialog.DialogCode.Accepted:
             return
-        self.owner._start_worker(CompletedGenerateWorker(groups, self.rule.currentData()))
+        self.owner._start_worker(CompletedGenerateWorker(
+            self.platform_name, groups, self.rule.currentData()))
 
     def show_generation_result(self, result):
+        if result['platform'] != self.platform_name:
+            return
         codes = result['codes']
         self.invalidate()
         self.summary.setText('已确认生成批次：' + ', '.join(codes) + '。请刷新生产批次列表下载。')
