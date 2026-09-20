@@ -7,6 +7,7 @@ from .progress_format import file_size_text
 
 class BatchStatusBoard(QWidget):
     currentIndexChanged = Signal(int)
+    userSelected = Signal(int)
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -157,4 +158,6 @@ class BatchStatusBoard(QWidget):
     def choose(self, tree):
         selected = tree.selectedItems()
         if selected:
-            self.setCurrentIndex(selected[0].data(0, Qt.UserRole))
+            index = selected[0].data(0, Qt.UserRole)
+            self.setCurrentIndex(index)
+            self.userSelected.emit(index)

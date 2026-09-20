@@ -39,7 +39,12 @@ class BulkWorkbench(QObject):
         self.selector.setToolTip('切换当前批次，查看同一主界面的进度、耗时、预览与总结。')
         self.panel.summary.layout().insertWidget(0, self.selector)
         self.selector.currentIndexChanged.connect(self.select)
+        self.selector.userSelected.connect(self.pin_timing_batch)
+        self.follow_active_batch = True
+    def pin_timing_batch(self, _index):
+        self.follow_active_batch = False
     def begin(self, parent, prepared_scan=None):
+        self.follow_active_batch = True
         self.root, self.folders, self.inventory = parent, [], {}
         self.payloads, self.records, self.stages, self.timing_data = {}, {}, {}, {}
         self.window.run_log.clear()
@@ -149,6 +154,11 @@ class BulkWorkbench(QObject):
     @Slot(int, object)
     def timings(self, index, data):
         self.timing_data[index] = data
+        selected = self.selector.currentIndex()
+        selected_data = self.timing_data.get(selected, {})
+        if (self.follow_active_batch and index != selected and
+                data['status'] == '运行中' and selected_data.get('status') != '运行中'):
+            self.selector.setCurrentIndex(index)
         if index == self.selector.currentIndex():
             self.panel.timings.receive(data)
     @Slot(int,str,str,object,object,str)

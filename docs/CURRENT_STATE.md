@@ -68,6 +68,8 @@
 - 多批次生成控制：`automatic_print/controllers/bulk_generation.py` 管理线程、取消和释放；
   `ui/batch_folder_selection.py`在后台扫描并提供批次勾选，`ui/bulk_workbench.py`、
   `bulk_generation_worker.py`、`batch_status_board.py`分别负责展示编排、任务执行和状态视图。
+  单批次、多批次与开发者随机10批共用`ui/operation_timing.py`的实时分步耗时表；多批次默认
+  自动跟随正在运行的批次，手动点选批次后固定展示所选批次耗时。
   主界面以一个“开始排版”入口统一处理单批次目录和多批次上级目录；扫描层跳过“切膜机文件”，
   用户勾选后的批次清单决定实际队列及“合并所有子文件夹”的输入范围。
 - 隆丰生产平台页的“多批次共用刀位生成PRN”独立入口一次下载、读取所选批次，再用当前固定纵刀
