@@ -27,12 +27,15 @@ def test_main_start_uses_unified_batch_entry_without_settings(tmp_path, monkeypa
     source.mkdir()
     monkeypatch.setattr(QFileDialog, 'getExistingDirectory', lambda *_: str(source))
     calls = []
+    scan = {'batches': [], 'errors': [], 'directories': 1, 'platform': ''}
+    monkeypatch.setattr('automatic_print.ui.batch_folder_selection.choose_batch_folders',
+                        lambda *_args: scan)
     monkeypatch.setattr(
         'automatic_print.ui.bulk_workbench.start_bulk',
-        lambda owner, directory: calls.append((owner, directory)),
+        lambda owner, directory, selected: calls.append((owner, directory, selected)),
     )
     window.automation_home.start_layout_button.click()
-    assert calls == [(window, str(source))]
+    assert calls == [(window, str(source), scan)]
     assert not window.settings_dialog.isVisible()
     for control in (window.progress, window.status, window.current_file):
         assert not control.isVisible()

@@ -38,6 +38,9 @@ def test_main_bulk_checkbox_runs_without_another_window(tmp_path, monkeypatch):
     owner.automation_home.preview_only.setChecked(True)
     monkeypatch.setattr(owner, '_layout_settings', lambda: replace(settings(), compare_film_sizes=False))
     monkeypatch.setattr(QFileDialog, 'getExistingDirectory', lambda *_: str(tmp_path))
+    from automatic_print.layout_engine.intake.discovery.batch_discovery import scan_batches
+    monkeypatch.setattr('automatic_print.ui.batch_folder_selection.choose_batch_folders',
+                        lambda _owner, root: scan_batches(root))
     monkeypatch.setattr('automatic_print.ui.workers.GenerateWorker._save_history', lambda *_: None)
     owner.automation_home.start_layout_button.click()
     from time import monotonic
@@ -76,6 +79,9 @@ def test_unified_action_accepts_a_single_batch_folder(tmp_path, monkeypatch):
     monkeypatch.setattr(owner, '_layout_settings',
                         lambda: replace(settings(), compare_film_sizes=False))
     monkeypatch.setattr(QFileDialog, 'getExistingDirectory', lambda *_: str(folder))
+    from automatic_print.layout_engine.intake.discovery.batch_discovery import scan_batches
+    monkeypatch.setattr('automatic_print.ui.batch_folder_selection.choose_batch_folders',
+                        lambda _owner, root: scan_batches(root))
     monkeypatch.setattr('automatic_print.ui.workers.GenerateWorker._save_history', lambda *_: None)
     owner.automation_home.start_layout_button.click()
     from time import monotonic

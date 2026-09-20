@@ -108,7 +108,7 @@ def test_double_batch_greedy_rotation_scales_blocked_pair_together(tmp_path):
         allow_rotation=False, cutter_majority_two_zone=True,
         cutter_safety_mm=3, cutter_knife_mm=290,
         platform_name='隆丰', platform_font_height_mm=6,
-        label_machine_enabled=True,
+        label_machine_enabled=True, number_images=False,
     )
     normal = gap_fallback.plan_with_gap_fallback(
         paths, replace(settings, auto_fit_width=False), [], None, None,

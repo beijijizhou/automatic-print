@@ -27,7 +27,7 @@ def config():
         cutter_compare_whole_rotation=True,cutter_left_marker_external=True,
         cutter_knife_dots=False,
         cutter_left_marker_lift_mm=1.5,preserve_header_gap=True,
-        platform_name='隆丰',platform_font_height_mm=6)
+        platform_name='隆丰',platform_font_height_mm=6,number_images=False)
 
 
 def test_fast_path_chooses_shorter_dynamic_column_rotation(tmp_path):
@@ -48,8 +48,9 @@ def test_gap_validator_rejects_text_moved_inside_rotated_source(tmp_path):
     settings=config()
     plan=plan_layout(paths,settings,None)
     path,p=plan[0][0]
-    unsafe=replace(p,number_x_px=p.x_px+40,number_y_px=p.y_px+10)
-    with pytest.raises(ValueError,match='禁用区域|覆盖原图|超出膜标签高度范围'):
+    unsafe=replace(p,number_x_px=p.x_px+40,number_y_px=p.y_px+10,
+                   number_width_px=12,number_height_px=6)
+    with pytest.raises(ValueError,match='禁用区域|覆盖原图|膜标签安全空白'):
         validate_embedded_marks([(path,unsafe)],settings)
 
 

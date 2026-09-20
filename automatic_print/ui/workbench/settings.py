@@ -131,7 +131,7 @@ def build_settings(window) -> None:
 
     window.settings_dialog = QDialog(window)
     window.settings_dialog.setWindowTitle("自动排版参数设置")
-    window.settings_dialog.resize(820, 560)
+    window.settings_dialog.resize(820, 620)
 
     def save_and_return() -> None:
         window.save_layout_preferences()

@@ -27,11 +27,14 @@ def test_s2b_is_platform_and_uses_the_unified_layout_action(tmp_path,monkeypatch
     selected=make_s2b_root(tmp_path/'S2B批次')/'L'
     owner.folder.setText(str(selected))
     monkeypatch.setattr(owner,'choose_folder',lambda:True)
+    scan = {'batches': [], 'errors': [], 'directories': 1, 'platform': 'S2B'}
+    monkeypatch.setattr('automatic_print.ui.batch_folder_selection.choose_batch_folders',
+                        lambda *_args: scan)
     calls=[]
     monkeypatch.setattr('automatic_print.ui.bulk_workbench.start_bulk',
-                        lambda window,path:calls.append((window,path)))
+                        lambda window,path,selected_scan:calls.append((window,path,selected_scan)))
     owner.choose_and_generate()
-    assert calls==[(owner,str(selected))]
+    assert calls==[(owner,str(selected),scan)]
     owner.save_layout_preferences(notify=False)
     owner.close()
     restored=window(tmp_path/'prefs.ini')

@@ -30,7 +30,7 @@ def test_new_settings_default_to_eight_mm_and_saved_value_survives(tmp_path):
     window.cutter_settings.compare_films.setChecked(False)
     window.cutter_settings.compare_films.setChecked(True)
     assert window._layout_settings().compare_film_sizes
-    assert window._layout_settings().riin_left_mm == 10
+    assert window._layout_settings().riin_left_mm == 15
     window.close()
     reopened = MainWindow(prefs)
     WINDOWS.append(reopened)

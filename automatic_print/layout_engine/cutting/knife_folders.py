@@ -1,6 +1,6 @@
 """Assign independently verified cutter files to fixed/change-knife folders."""
 
-from automatic_print.layout_engine.cutting.geometry.knife_signature import (
+from automatic_print.layout_engine.cutting.knife_signature import (
     actual_knife_signatures, knife_signature,
 )
 

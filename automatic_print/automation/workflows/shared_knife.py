@@ -4,7 +4,7 @@ from dataclasses import replace
 from dataclasses import dataclass
 
 from ...layout_engine.domain.models import LayoutSettings, mm_to_px
-from ...layout_engine.cutting.geometry.knife_signature import actual_knife_signatures
+from ...layout_engine.cutting.knife_signature import actual_knife_signatures
 
 
 def locked_knife_settings(settings: LayoutSettings) -> LayoutSettings:

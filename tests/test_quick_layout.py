@@ -2,7 +2,6 @@ import os
 os.environ.setdefault('QT_QPA_PLATFORM', 'offscreen')
 
 from pathlib import Path
-from threading import get_ident
 from time import monotonic, sleep
 from PIL import Image
 from PySide6.QtCore import QSettings
@@ -38,7 +37,7 @@ def test_quick_default_overrides_old_rotation_and_persists(tmp_path):
     reopened.close()
 
 
-def test_one_background_scan_no_automatic_preview(tmp_path, monkeypatch):
+def test_selected_scan_is_reused_without_automatic_preview(tmp_path, monkeypatch):
     source = tmp_path/'orders'/'batch'
     source.mkdir(parents=True)
     paths = []
@@ -53,11 +52,11 @@ def test_one_background_scan_no_automatic_preview(tmp_path, monkeypatch):
     WINDOWS.append(window)
     window.startup_update_timer.stop()
     window.show()
-    scans, threads, errors = [], [], []
+    scans, errors = [], []
     original = batch_discovery.scan_batches
+    selected_scan = original(source)
     def scan(folder, *args, **kwargs):
         scans.append(folder)
-        threads.append(get_ident())
         return original(folder, *args, **kwargs)
     monkeypatch.setattr(batch_discovery, 'scan_batches', scan)
     # Whole-batch rotation comparisons are now allowed; folder loading stays explicit.
@@ -73,6 +72,8 @@ def test_one_background_scan_no_automatic_preview(tmp_path, monkeypatch):
     assert not preview.refresh_timer.isActive()
     from PySide6.QtWidgets import QFileDialog
     monkeypatch.setattr(QFileDialog, 'getExistingDirectory', lambda *args: str(source))
+    monkeypatch.setattr('automatic_print.ui.batch_folder_selection.choose_batch_folders',
+                        lambda *_args: selected_scan)
     window.automation_home.start_layout_button.click()
     deadline = monotonic()+5
     while (not hasattr(window, 'bulk_controller')
@@ -81,11 +82,10 @@ def test_one_background_scan_no_automatic_preview(tmp_path, monkeypatch):
         APP.processEvents()
         sleep(0.01)
     assert not errors
-    assert scans == [source]
-    assert threads[0] != get_ident()
+    assert scans == []
     assert window.bulk_controller.worker is None
     assert len(preview.planned) == 2
     assert window.generation_preview.payload['order_check']['double_pairs'] == 1
-    assert list(Path(window.job_path.text()).glob('*.png'))
+    assert list(Path(window.job_path.text()).rglob('*.png'))
     assert '2 张' in window.automation_home.label_quick_panel.summary.info.text()
     window.close()

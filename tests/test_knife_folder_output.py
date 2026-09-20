@@ -4,7 +4,7 @@ from PIL import Image
 import numpy as np
 
 from automatic_print.layout_engine import LayoutSettings
-from automatic_print.layout_engine.cutting.geometry.knife_signature import actual_knife_signatures
+from automatic_print.layout_engine.cutting.knife_signature import actual_knife_signatures
 from automatic_print.layout_engine.cutting.validation.cut_validation import corridor_checks
 from automatic_print.ui.workers import GenerateWorker
 

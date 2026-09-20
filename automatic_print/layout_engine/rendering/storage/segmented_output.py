@@ -93,7 +93,7 @@ def generate_segments(paths, output_dir, settings, progress, plan_ready,
     reading = perf_counter()-started
     rendering = perf_counter()
     batch_quantity = production_quantity(paths, payload['analysis'])
-    from .segment_worker import render_segment_job, segment_settings
+    from ..segment_worker import render_segment_job, segment_settings
     def spec(index):
         members, height = plans[index]
         end_notice = '批次结束' if index == len(parts)-1 else '分段结束'

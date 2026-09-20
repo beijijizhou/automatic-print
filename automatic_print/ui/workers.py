@@ -127,7 +127,7 @@ class GenerateWorker(QObject):
             from ..layout_engine.output.output_name import (
                 finish_output_files, output_log_path, remap_result_files,
             )
-            from ..layout_engine.output.knife_folders import knife_output_folders
+            from ..layout_engine.cutting.knife_folders import knife_output_folders
             self._progress('整理输出文件夹',0,1,'将合格排版图移入切膜机文件')
             files = result.get('files') or [result['filename']]
             folders = knife_output_folders(result)

@@ -10,7 +10,11 @@ def test_bulk_root_highlights_immediately_and_survives_cancel_and_restart(tmp_pa
     owner = window(prefs)
     panel = owner.automation_home.label_quick_panel
     starts = []
-    monkeypatch.setattr(BulkWorkbench, 'begin', lambda self, path: starts.append(path))
+    monkeypatch.setattr(BulkWorkbench, 'begin',
+                        lambda self, path, _scan=None: starts.append(path))
+    monkeypatch.setattr('automatic_print.ui.batch_folder_selection.choose_batch_folders',
+                        lambda *_args: {'batches': [], 'errors': [],
+                                        'directories': 1, 'platform': ''})
     monkeypatch.setattr(QFileDialog, 'getExistingDirectory', lambda *_: str(parent))
     owner.automation_home.start_layout_button.click()
     assert starts == [parent]

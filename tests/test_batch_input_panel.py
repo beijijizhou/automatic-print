@@ -33,19 +33,22 @@ def test_preview_uses_current_folder_or_selects_one_without_printing(tmp_path, m
     from PySide6.QtWidgets import QFileDialog
     owner = window(tmp_path/'prefs.ini')
     calls = []
+    scan = {'batches': [], 'errors': [], 'directories': 1, 'platform': ''}
+    monkeypatch.setattr('automatic_print.ui.batch_folder_selection.choose_batch_folders',
+                        lambda *_args: scan)
     monkeypatch.setattr('automatic_print.ui.bulk_workbench.start_bulk',
-                        lambda window, path: calls.append((window, path)))
+                        lambda window, path, selected: calls.append((window, path, selected)))
     owner.automation_home.preview_only.setChecked(True)
     monkeypatch.setattr(QFileDialog, 'getExistingDirectory', lambda *_: str(tmp_path))
     owner.automation_home.start_layout_button.click()
-    assert calls == [(owner, str(tmp_path))]
+    assert calls == [(owner, str(tmp_path), scan)]
     owner.folder.clear()
     monkeypatch.setattr(QFileDialog, 'getExistingDirectory', lambda *_: '')
     owner.automation_home.start_layout_button.click()
     assert len(calls) == 1
     monkeypatch.setattr(QFileDialog, 'getExistingDirectory', lambda *_: str(tmp_path))
     owner.automation_home.start_layout_button.click()
-    assert calls == [(owner, str(tmp_path)), (owner, str(tmp_path))]
+    assert calls == [(owner, str(tmp_path), scan), (owner, str(tmp_path), scan)]
     owner.thread = object()
     owner.automation_home.start_layout_button.click()
     assert len(calls) == 2
@@ -87,8 +90,11 @@ def test_primary_action_selects_then_generates_and_cancel_never_reuses_old_folde
     owner = window(tmp_path/'prefs.ini')
     home = owner.automation_home
     calls = []
+    scan = {'batches': [], 'errors': [], 'directories': 1, 'platform': ''}
+    monkeypatch.setattr('automatic_print.ui.batch_folder_selection.choose_batch_folders',
+                        lambda *_args: scan)
     monkeypatch.setattr('automatic_print.ui.bulk_workbench.start_bulk',
-                        lambda _window, path: calls.append(path))
+                        lambda _window, path, _selected: calls.append(path))
     monkeypatch.setattr(QFileDialog, 'getExistingDirectory', lambda *_: str(tmp_path))
     home.start_layout_button.click()
     assert calls == [str(tmp_path)]

@@ -59,7 +59,7 @@
 - 生成完成弹窗由 `layout_engine/output/output_file_info.py` 汇总最终生产结果；膜规格表把当前膜行替换为
   同一最终计划的真实统计，输出名由 `layout_engine/output/output_name.py` 同时写入订单数和件数。
 - `layout_engine/output/output_name.py` 统一管理输出落点：生成期间写入 `排版日志/.处理中` 隔离目录，
-  安全检查完成后由`layout_engine/output/knife_folders.py`复核逐文件实际刀位，将普通切膜PNG分别
+  安全检查完成后由`layout_engine/cutting/knife_folders.py`复核逐文件实际刀位，将普通切膜PNG分别
   移入`切膜机文件/常规`或`切膜机文件/旋转`；非切膜PNG直接进入`切膜机文件`。
   文本报告保存在平级 `排版日志`，不写输出JSON。
 - 多批次生成控制：`automatic_print/controllers/bulk_generation.py` 管理线程、取消和释放；
@@ -112,11 +112,12 @@
   `layout_engine/labeling/platform/platform_label.py`、`layout_engine/labeling/base/header_region.py`、`layout_engine/labeling/platform/transparent_search.py`。生产标签的机器号、批次正倒序及原图订单尺码共用同一模板和占位；优先在刀码与膜标签之间搜索已验证透明空白，空间不足时由整批回退在刀码与原图之间扩出真实占位的透明走廊，重新规划并验证刀位。平台尺码文字只放入原图二维码卡片内部
   已验证的未印刷白色或透明空位，绝不放到卡片与图案之间，使用不超过二维码卡片高度的最大字号；先在原图坐标确定位置，再与二维码一起旋转，预览与输出复用同一坐标。生产标签未旋转时搜索卡片左侧透明带；旋转90度时由`layout_engine/labeling/platform/short_edge_space.py`沿卡片短边搜索上方或下方的整块透明位，位置仍在原图占位内。二维码卡片没有经过最终像素验证的安全空位时，仅跳过该图的平台尺码文字、记录异常并继续，不阻断整批。整批复用透明带失败时由`layout_engine/planning/zones/gap_fallback.py`
   扩出刀码与原图之间的透明走廊，计入真实占位、重算刀位并记录完整恢复诊断；旋转和未旋转的标签分别限制在经过验证的短边与高度带安全空白内。最终坐标越界等不可恢复安全冲突不得猜值绕过，文字不能进入膜标签与图案之间。
-- 开发者排版隔离：换刀与批次结束600毫米停止距离只有开发者模式显式传入正数时才进入规划、候选比较和独立开发者缓存版本；普通模式不调用该逻辑，使用算法缓存版本7，缓存键也不包含开发者紧凑排版与停止距离字段。
+- 开发者排版隔离：换刀与批次结束600毫米停止距离只有开发者模式显式传入正数时才进入规划、候选比较和独立开发者缓存版本；普通模式不调用该逻辑，使用算法缓存版本8，缓存键也不包含开发者紧凑排版与停止距离字段。
 - 标签字体加载与线程内有界缓存由`layout_engine/labeling/text/fonts.py`唯一拥有；`layout_engine/labeling/base/labels.py`只负责标签内容、
   换行和徽标渲染。单图排版对象`LayoutItem`与`Placement`统一归`layout_engine/domain/models.py`。
 - 渲染与编码：`layout_engine/rendering/engines/pillow_renderer.py`、`layout_engine/rendering/engines/vips_renderer.py`、`layout_engine/rendering/png/`、
   `layout_engine/rendering/storage/plan_partition.py`、`layout_engine/rendering/storage/segmented_output.py`、
+  `layout_engine/rendering/segment_worker.py`、
   `layout_engine/rendering/storage/atomic_png.py`、`layout_engine/rendering/storage/atomic_tiff.py`。分段边界由`plan_partition.py`按完整订单和排版行计算，共刀回退额外强制不同实际刀位分文件。超长 PNG 由 `layout_engine/rendering/png/row_stream.py`
   按排版行依次解码、合成、固定 UP 滤波、无损 RLE 压缩和写入，每行只求值一次且不生成中间图片；同一行的最终
   alpha 像素在压缩前同步核对全部刀位，PNG 发布后顺序读取数据块并核对 CRC、尺寸和 RGBA 格式，

@@ -1,7 +1,7 @@
 """Split an already verified plan only at complete-order and row boundaries."""
 
 from automatic_print.layout_engine.orders.order_groups import order_key
-from automatic_print.layout_engine.cutting.geometry.knife_signature import knife_signature
+from automatic_print.layout_engine.cutting.knife_signature import knife_signature
 
 
 def partition_plan(planned, count, split_by_knife=False):

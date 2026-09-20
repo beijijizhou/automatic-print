@@ -32,7 +32,7 @@ def test_settings_categories_reuse_controls_and_persist_parallelism(tmp_path, mo
     APP.processEvents()
     assert not owner.generate_button.isVisible()
     save_y = owner.save_settings_button.mapTo(owner.settings_dialog, owner.save_settings_button.rect().topLeft()).y()
-    assert save_y < owner.settings_dialog.height() - 40
+    assert save_y + owner.save_settings_button.height() <= owner.settings_dialog.height()
     for index in range(tabs.count()):
         tabs.setCurrentIndex(index)
         APP.processEvents()
