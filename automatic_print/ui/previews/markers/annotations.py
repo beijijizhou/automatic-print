@@ -17,7 +17,7 @@ def annotated_example(image, data, settings):
         painter.setRenderHint(QPainter.Antialiasing)
         painter.drawImage(left, above, image)
         font = QFont()
-        font.setPixelSize(20)
+        font.setPixelSize(30)
         painter.setFont(font)
         ix, iy = left+item.image_rx*scale, above+(item.image_ry-top)*scale
         bx, by = left+item.block_rx*scale, above+(item.block_ry-top)*scale
@@ -26,6 +26,15 @@ def annotated_example(image, data, settings):
         painter.drawRect(QRectF(ix, iy, item.width*scale, item.height*scale))
         painter.setPen(QPen(QColor('#dc2626'), 2))
         painter.drawRect(QRectF(bx, by, item.block_width*scale, item.block_height*scale))
+        if item.label_width and item.label_height:
+            # Keep the true badge at its production coordinates, but identify
+            # its tiny preview footprint for the readable callout below.
+            lx = left + item.label_rx*scale
+            ly = above + (item.label_ry-top)*scale
+            lw = item.label_width*scale
+            lh = item.label_height*scale
+            painter.setPen(QPen(QColor('#a21caf'), 4))
+            painter.drawRect(QRectF(lx-4, ly-4, max(12, lw+8), max(12, lh+8)))
         painter.setPen(QPen(QColor('#64748b'), 1, Qt.DashLine))
         painter.drawLine(QPointF(25, by), QPointF(bx, by))
         painter.drawLine(QPointF(25, iy), QPointF(ix, iy))

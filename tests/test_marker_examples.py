@@ -174,13 +174,14 @@ def test_main_page_examples_start_after_show_and_refresh_on_parameters(tmp_path,
                for (picture, _), readout in zip(examples.cards, examples.label_readouts))
     assert all(readout.geometry().bottom() < caption.y()
                for (_, caption), readout in zip(examples.cards, examples.label_readouts))
-    assert all(QFontMetrics(caption.font()).height() >= 16
+    assert all(QFontMetrics(caption.font()).height() >= 19
                for _, caption in examples.cards)
     for row, readout in zip(examples.results, examples.label_readouts):
-        assert QFontMetrics(readout.font()).height() >= 18
+        assert QFontMetrics(readout.font()).height() >= 26
         assert readout.textFormat() == Qt.PlainText
         if row['label_text']:
             assert row['label_text'] in readout.text()
+            assert '紫框标签文字放大' in readout.text()
     assert window.automation_home.label_quick_panel.preview_tabs.tabText(0) == '标签与刀码位置（默认）'
     assert window.automation_home.label_quick_panel.preview_tabs.tabText(1) == '批次排版预览'
     assert all(not r['production'] for r in examples.results)
@@ -247,6 +248,11 @@ def test_annotation_is_preview_only_and_keeps_raw_pixels(tmp_path):
     assert output.height()==raw.height()+155
     assert data['pixels']==original
     assert any(output.pixelColor(x,70).name()=='#c2410c' for x in range(output.width()))
+    item = data['item']
+    scale = min(900/item.footprint_width, 650/(item.footprint_height-min(0, item.block_ry)))
+    label_x = round(100+item.label_rx*scale-4)
+    label_y = round(100+(item.label_ry-min(0, item.block_ry))*scale-4)
+    assert output.pixelColor(label_x, label_y).name() == '#a21caf'
 
 
 @pytest.mark.parametrize('mode',['free','single','dual'])

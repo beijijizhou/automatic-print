@@ -33,21 +33,23 @@ class MarkerExamples(QGroupBox):
         for index, (side, degrees) in enumerate(CASES):
             card = QGroupBox(('膜标签在左' if side == 'left' else '膜标签在右')+
                              (' · 向左旋转90°' if degrees else ' · 不旋转'))
-            card.setMinimumHeight(560)
+            card.setMinimumHeight(760)
             picture, caption = QLabel('准备中…'), QLabel()
             label_readout = QLabel('标签内容放大阅读：准备中…')
             picture.setAlignment(Qt.AlignCenter)
-            picture.setMinimumHeight(280)
+            picture.setMinimumHeight(390)
             caption.setMinimumHeight(50)
             caption.setWordWrap(True)
             caption.setTextInteractionFlags(Qt.TextSelectableByMouse)
-            caption.setStyleSheet('QLabel { font-size: 16px; }')
+            caption.setStyleSheet('QLabel { font-size: 19px; }')
             label_readout.setWordWrap(True)
             label_readout.setTextFormat(Qt.PlainText)
             label_readout.setTextInteractionFlags(Qt.TextSelectableByMouse)
-            label_readout.setStyleSheet('QLabel { color: #173f73; background: #eff6ff; '
-                                        'font-size: 18px; font-weight: 700; '
-                                        'padding: 7px; border-radius: 4px; }')
+            label_readout.setMinimumHeight(88)
+            label_readout.setStyleSheet('QLabel { color: #581c87; background: #faf5ff; '
+                                        'font-size: 26px; font-weight: 700; '
+                                        'padding: 10px; border: 2px solid #a21caf; '
+                                        'border-radius: 4px; }')
             body = QVBoxLayout(card)
             body.addWidget(picture)
             body.addWidget(label_readout)
@@ -137,7 +139,7 @@ class MarkerExamples(QGroupBox):
             short_reason = reason.split('；', 1)[0][:70] if reason else ''
             caption.setText(kind + (f' · {short_reason}' if short_reason else '') + '\n' + data['detail'])
             label_text = data.get('label_text', '').strip()
-            readout.setText('标签内容放大阅读（非打印比例）：' + label_text if label_text else
+            readout.setText('紫框标签文字放大（非打印比例）：\n' + label_text if label_text else
                             '仅方向示意：当前参数没有可安全定位的标签文字。')
             picture.setToolTip(data['source'] or reason or
                 '示意图使用生产排版模块计算位置，不生成打印文件。')
@@ -175,10 +177,10 @@ class MarkerExamples(QGroupBox):
         body.addWidget(caption)
         label_text = self.results[index].get('label_text', '').strip()
         if label_text:
-            readout = QLabel('标签内容放大阅读（非打印比例）：' + label_text)
+            readout = QLabel('紫框标签文字放大（非打印比例）：\n' + label_text)
             readout.setTextFormat(Qt.PlainText)
             readout.setWordWrap(True)
-            readout.setStyleSheet('QLabel { font-size: 20px; font-weight: 700; }')
+            readout.setStyleSheet('QLabel { color: #581c87; font-size: 28px; font-weight: 700; }')
             readout.setTextInteractionFlags(Qt.TextSelectableByMouse)
             body.addWidget(readout)
         picture = QLabel()
