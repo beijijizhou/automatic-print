@@ -85,6 +85,7 @@ def _render_case(path, settings, side, degrees, production):
         'dpi': config.dpi, 'mode': config.cutter_mode,
         'source': str(original) if production else '', 'item': item,
         'region': region, 'pixels': pixels, 'size': size,
+        'label_text': labels.get(item.index, ''),
         'detail': f'刀码：左基准，距图顶 {(item.block_ry-item.image_ry)*25.4/config.dpi:.1f}毫米'
                   f' · 图外间隙 {(item.image_rx-item.block_rx-item.block_width)*25.4/config.dpi:.1f}毫米'
                   f' · 标签距图顶 {(item.label_ry-item.image_ry)*25.4/config.dpi:.1f}毫米'}

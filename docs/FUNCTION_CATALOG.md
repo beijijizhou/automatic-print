@@ -43,7 +43,7 @@
 | 主界面进度展示 | `ui/busy_spinner.py`, `ui/layout_activity.py`, `ui/operation_timing.py`, `layout_engine/reporting/operation_timing.py`, `generation_panel.py` | 未知总量用旋转指示，已知总量用真实进度条；顶部活动按钮同步显示当前步骤耗时和整次总耗时，TIFF 保存显示已完成 Strip 数及真实高度进度，耗时占比仅保留在提示和耗时表。 |
 | 主窗口可见页面装配 | `ui/main_window.py`, `ui/workbench/home.py`, `activity.py`, `settings.py` | 主窗口只连接应用状态和控制器；首页、任务状态与打印参数按实际UI区域各自拥有控件树，新增可见区域不得重新堆回主窗口。 |
 | 主工作台批次总览 | `ui/workbench/overview/panel.py`, `label_controls.py`, `preview.py`, `bindings.py` | 目录直接对应快捷标签、批次数据、真实预览和参数联动；根目录兼容模块不拥有控件或业务逻辑。 |
-| 刀码方向预览 | `ui/previews/markers/view.py`, `data.py`, `render.py`, `annotations.py`, `assets/haloo-preview-sample.png`, `scripts/build_haloo_preview_asset.py` | 页签、示例数据、像素渲染和尺寸标注分别拥有唯一职责；逐图隔离异常，优先复用生产排版对象和真实坐标，缺侧时使用去标识化 Haloo 样本；安全定位不可行时只显示代码方向图并明确不代表生产坐标。 |
+| 刀码方向预览 | `ui/previews/markers/view.py`, `data.py`, `render.py`, `annotations.py`, `assets/haloo-preview-sample.png`, `scripts/build_haloo_preview_asset.py` | 页签、示例数据、像素渲染和尺寸标注分别拥有唯一职责；逐图隔离异常，优先复用生产排版对象和真实坐标，缺侧时使用去标识化 Haloo 样本；安全定位不可行时只显示代码方向图并明确不代表生产坐标。四格增加可复制的标签内容放大阅读，界面字号与图片区增大但不改变生产徽标和输出坐标。 |
 | 真实排版预览运行时 | `ui/previews/runtime/task.py`, `loader.py`, `inventory.py`, `snapshot.py`, `viewport.py` | 后台计算、结果加载、文件名轻量清单、轻量快照和视口交互分离；耗时计算不进入GUI线程，快速模式只读取清单而不启动排版。 |
 | 批次图片元数据预读 | `layout_engine/measurement/parallel_measurement.py`, `intake/metadata/output_dpi.py`, `intake/metadata/images.py` | 尺寸与DPI按用户线程上限有界并行读取，保持输入顺序并复用批次测量缓存；跟随原图DPI时显示真实完成数，不在网络盘逐张串行后再次读取。 |
 | 错误上下文与复制 | `layout_engine/diagnostics/error_context.py`, `layout_engine/diagnostics/error_parameters.py`, `ui/failure_panel.py` | 所有失败复用完整订单/参数诊断，不散落拼字符串。 |

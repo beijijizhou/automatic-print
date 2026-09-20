@@ -5,7 +5,8 @@ from dataclasses import replace
 from time import monotonic
 import pytest
 from PIL import Image
-from PySide6.QtCore import QSettings
+from PySide6.QtCore import QSettings, Qt
+from PySide6.QtGui import QFontMetrics
 from PySide6.QtWidgets import QApplication
 
 from automatic_print.ui.previews.markers.data import build_examples
@@ -47,6 +48,7 @@ def test_four_cases_use_production_geometry_and_never_modify_sources(tmp_path):
         assert item.block_rx == 0
         assert item.image_rx >= item.block_width+5
         assert len(row['pixels']) == row['size'][0]*row['size'][1]*4
+        assert row['label_text']
         if row['degrees']:
             assert item.block_ry == item.image_ry
             assert item.label_ry-item.image_ry >= row['region'].bottom*item.height
@@ -167,6 +169,18 @@ def test_main_page_examples_start_after_show_and_refresh_on_parameters(tmp_path,
     window.show()
     wait_for(lambda: len(examples.results) == 4 and examples.worker is None)
     assert examples.isVisible()
+    assert all(picture.minimumHeight() >= 280 for picture, _ in examples.cards)
+    assert all(picture.geometry().bottom() < readout.y()
+               for (picture, _), readout in zip(examples.cards, examples.label_readouts))
+    assert all(readout.geometry().bottom() < caption.y()
+               for (_, caption), readout in zip(examples.cards, examples.label_readouts))
+    assert all(QFontMetrics(caption.font()).height() >= 16
+               for _, caption in examples.cards)
+    for row, readout in zip(examples.results, examples.label_readouts):
+        assert QFontMetrics(readout.font()).height() >= 18
+        assert readout.textFormat() == Qt.PlainText
+        if row['label_text']:
+            assert row['label_text'] in readout.text()
     assert window.automation_home.label_quick_panel.preview_tabs.tabText(0) == '标签与刀码位置（默认）'
     assert window.automation_home.label_quick_panel.preview_tabs.tabText(1) == '批次排版预览'
     assert all(not r['production'] for r in examples.results)

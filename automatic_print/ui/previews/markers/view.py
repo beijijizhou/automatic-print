@@ -25,7 +25,7 @@ class MarkerExamples(QGroupBox):
     def __init__(self, window, parent=None):
         super().__init__('刀码与标签 · 四种位置预览', parent)
         self.window, self.paths, self.worker, self.pending = window, [], None, False
-        self.results, self.images, self.cards = [], [], []
+        self.results, self.images, self.cards, self.label_readouts = [], [], [], []
         self.status = QLabel('正在准备示例，不读取上次批次。')
         self.status.setWordWrap(True)
         layout, grid = QVBoxLayout(self), QGridLayout()
@@ -33,14 +33,24 @@ class MarkerExamples(QGroupBox):
         for index, (side, degrees) in enumerate(CASES):
             card = QGroupBox(('膜标签在左' if side == 'left' else '膜标签在右')+
                              (' · 向左旋转90°' if degrees else ' · 不旋转'))
+            card.setMinimumHeight(560)
             picture, caption = QLabel('准备中…'), QLabel()
+            label_readout = QLabel('标签内容放大阅读：准备中…')
             picture.setAlignment(Qt.AlignCenter)
-            picture.setMinimumHeight(190)
+            picture.setMinimumHeight(280)
             caption.setMinimumHeight(50)
             caption.setWordWrap(True)
             caption.setTextInteractionFlags(Qt.TextSelectableByMouse)
+            caption.setStyleSheet('QLabel { font-size: 16px; }')
+            label_readout.setWordWrap(True)
+            label_readout.setTextFormat(Qt.PlainText)
+            label_readout.setTextInteractionFlags(Qt.TextSelectableByMouse)
+            label_readout.setStyleSheet('QLabel { color: #173f73; background: #eff6ff; '
+                                        'font-size: 18px; font-weight: 700; '
+                                        'padding: 7px; border-radius: 4px; }')
             body = QVBoxLayout(card)
             body.addWidget(picture)
+            body.addWidget(label_readout)
             body.addWidget(caption)
             from ...action_icons import action_icon
             enlarge = QPushButton('放大检查')
@@ -49,6 +59,7 @@ class MarkerExamples(QGroupBox):
             body.addWidget(enlarge)
             grid.addWidget(card, index//2, index%2)
             self.cards.append((picture, caption))
+            self.label_readouts.append(label_readout)
         layout.addLayout(grid)
         self.timer = QTimer(self)
         self.timer.setSingleShot(True)
@@ -102,9 +113,10 @@ class MarkerExamples(QGroupBox):
         self.status.setText(f'示例读取失败：{text}')
         if self.results:
             return  # Keep the last valid diagrams visible during a failed refresh.
-        for picture, caption in self.cards:
+        for (picture, caption), readout in zip(self.cards, self.label_readouts):
             picture.setText('示意图暂不可用')
             caption.setText(text)
+            readout.setText('标签内容放大阅读：暂不可用')
 
     def receive(self, results):
         if self.pending:
@@ -112,7 +124,7 @@ class MarkerExamples(QGroupBox):
         self.results, self.images = results, []
         from .annotations import annotated_example
         settings = self.window._layout_settings()
-        for data, (picture, caption) in zip(results, self.cards):
+        for data, (picture, caption), readout in zip(results, self.cards, self.label_readouts):
             image = QImage(data['pixels'], *data['size'], QImage.Format_RGBA8888).copy()
             image = annotated_example(image, data, settings)
             self.images.append(image)
@@ -124,6 +136,9 @@ class MarkerExamples(QGroupBox):
             reason = data['fallback_reason']
             short_reason = reason.split('；', 1)[0][:70] if reason else ''
             caption.setText(kind + (f' · {short_reason}' if short_reason else '') + '\n' + data['detail'])
+            label_text = data.get('label_text', '').strip()
+            readout.setText('标签内容放大阅读（非打印比例）：' + label_text if label_text else
+                            '仅方向示意：当前参数没有可安全定位的标签文字。')
             picture.setToolTip(data['source'] or reason or
                 '示意图使用生产排版模块计算位置，不生成打印文件。')
         count = sum(r['production'] for r in results)
@@ -154,9 +169,18 @@ class MarkerExamples(QGroupBox):
         self.detail_dialog.resize(960, 780)
         body = QVBoxLayout(self.detail_dialog)
         caption = QLabel(self.cards[index][1].text()+'\n'+self.results[index]['source'])
+        caption.setStyleSheet('QLabel { font-size: 16px; }')
         caption.setWordWrap(True)
         caption.setTextInteractionFlags(Qt.TextSelectableByMouse)
         body.addWidget(caption)
+        label_text = self.results[index].get('label_text', '').strip()
+        if label_text:
+            readout = QLabel('标签内容放大阅读（非打印比例）：' + label_text)
+            readout.setTextFormat(Qt.PlainText)
+            readout.setWordWrap(True)
+            readout.setStyleSheet('QLabel { font-size: 20px; font-weight: 700; }')
+            readout.setTextInteractionFlags(Qt.TextSelectableByMouse)
+            body.addWidget(readout)
         picture = QLabel()
         picture.setPixmap(QPixmap.fromImage(self.images[index]))
         scroll = QScrollArea()
