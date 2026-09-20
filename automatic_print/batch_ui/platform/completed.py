@@ -16,6 +16,7 @@ class CompletedHalooPage(QWidget):
         self.owner = owner
         self.groups = ()
         self.boxes = []
+        self.auto_plan_pending = False
         layout = QVBoxLayout(self)
         note = QLabel('已完成的单项单件按物流、底款、颜色、面别和尺码档分别分类。'
                       '多件订单只按物流、订单组成和面别分组，始终保持整单。'
@@ -27,6 +28,9 @@ class CompletedHalooPage(QWidget):
         self.limit.setSuffix(' 个生产项（最多200）')
         self.read_button = QPushButton('读取已生产底款分类')
         self.read_button.clicked.connect(self.load)
+        self.plan_button = QPushButton('自动化生成计划')
+        self.plan_button.setToolTip('读取状态9的已生产项，并将尚未补单的分组加入候选计划；不会提交批次。')
+        self.plan_button.clicked.connect(self.load_plan)
         self.rule = QComboBox()
         self.rule.setMinimumWidth(230)
         self.rule.setPlaceholderText('先读取批次规则')
@@ -34,7 +38,8 @@ class CompletedHalooPage(QWidget):
         self.generate_button.setEnabled(False)
         self.generate_button.clicked.connect(self.generate)
         controls = QHBoxLayout()
-        for widget in (self.limit, self.read_button, self.rule, self.generate_button):
+        for widget in (self.limit, self.read_button, self.plan_button,
+                       self.rule, self.generate_button):
             controls.addWidget(widget)
         self.summary = QLabel('尚未读取。先查看分类，再选择要单独生成的底款组。')
         self.summary.setWordWrap(True)
@@ -57,6 +62,7 @@ class CompletedHalooPage(QWidget):
         self.limit.valueChanged.connect(self.invalidate)
 
     def invalidate(self, *_):
+        self.auto_plan_pending = False
         self.groups = ()
         self.boxes = []
         self.table.setRowCount(0)
@@ -66,10 +72,18 @@ class CompletedHalooPage(QWidget):
         self.selection_preview.clear()
 
     def load(self):
+        self._load(auto_plan=False)
+
+    def load_plan(self):
+        self._load(auto_plan=True)
+
+    def _load(self, *, auto_plan):
         if self.owner.thread is not None:
             return
         self.invalidate()
-        self.summary.setText('正在读取已生产项和实际生产图面别…')
+        self.auto_plan_pending = auto_plan
+        self.summary.setText('正在读取已生产项和实际生产图面别，形成候选计划…'
+                             if auto_plan else '正在读取已生产项和实际生产图面别…')
         self.owner._start_worker(ReadWorker('Haloo', 'completed_haloo',
                                            self.limit.value(), self.limit.value()))
 
@@ -102,9 +116,19 @@ class CompletedHalooPage(QWidget):
             if rule.is_default:
                 self.rule.setCurrentIndex(self.rule.count() - 1)
         included = sum(len(group.item_ids) for group in self.groups)
-        self.summary.setText(f"已读 {data['count']} 项，分类 {len(self.groups)} 组 / {included} 项；"
+        planned = 0
+        was_auto_plan = self.auto_plan_pending
+        if was_auto_plan:
+            for box in self.boxes:
+                if not box.toolTip():
+                    box.setChecked(True)
+                    planned += 1
+        self.auto_plan_pending = False
+        prefix = f'自动候选计划 {planned} 组；' if was_auto_plan else ''
+        self.summary.setText(f"{prefix}已读 {data['count']} 项，分类 {len(self.groups)} 组 / {included} 项；"
                              f"未纳入 {data['count'] - included} 项，"
-                             f"已有补单 {len(blocked)} 项。快照可能跨页不完整，提交前会复核。")
+                             f"已有补单 {len(blocked)} 项。当前仅覆盖所选读取范围，"
+                             f"快照可能跨页不完整，提交前会复核整单。")
         self.update_generate_enabled()
 
     def selected_groups(self):
@@ -135,6 +159,7 @@ class CompletedHalooPage(QWidget):
 
     def set_actions_enabled(self, enabled):
         self.read_button.setEnabled(enabled)
+        self.plan_button.setEnabled(enabled)
         self.limit.setEnabled(enabled)
         self.rule.setEnabled(enabled)
         for box in self.boxes:

@@ -31,6 +31,8 @@ def test_completed_preview_shows_style_and_color_before_generation(tmp_path, mon
     owner.production_platform_download_page.platform_checks['Haloo'].setChecked(True)
     workbench = owner.production_platform_download_page.workbenches['Haloo']
     page = workbench.completed_haloo_page
+    assert page.plan_button.text() == '自动化生成计划'
+    assert workbench.main_tabs.indexOf(page) >= 0
     calls = []
     monkeypatch.setattr(workbench, '_start_worker', calls.append)
     page.read_button.click()
