@@ -110,6 +110,16 @@ class BulkGenerationWorker(QObject):
                         self.cancellation)
                 else:
                     scan = self.prepared_scan
+                from ..layout_engine.orders.batch_analysis import batch_inventory
+                batches = []
+                for batch in scan['batches']:
+                    item = dict(batch)
+                    try:
+                        item['filename_analysis'] = batch_inventory(item['images'])
+                    except Exception as error:
+                        item['filename_warning'] = str(error)
+                    batches.append(item)
+                scan = dict(scan, batches=batches)
                 self.inventory = {b['folder']: b for b in scan['batches']}
                 if scan.get('platform')=='S2B':
                     self.group_outputs=True
@@ -123,6 +133,10 @@ class BulkGenerationWorker(QObject):
                     images=[image for batch in sources for image in batch['images']]
                     combined={'folder':self.source_root, 'relative':self.source_root.relative_to(self.source_root),
                               'images':images, 'image_count':len(images), 'source_batches':sources}
+                    try:
+                        combined['filename_analysis'] = batch_inventory(images)
+                    except Exception as error:
+                        combined['filename_warning'] = str(error)
                     scan=dict(scan,batches=[combined],combined_batch_count=len(sources))
                 self.inventory = {b['folder']: b for b in scan['batches']}
                 self.folders = list(self.inventory)

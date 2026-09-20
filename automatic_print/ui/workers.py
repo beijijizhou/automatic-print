@@ -103,6 +103,12 @@ class GenerateWorker(QObject):
                     raise ValueError(f'所选文件夹没有支持的图片。实际文件类型：{types}')
             self._prefer_local_mirror()
             self.sources_ready.emit(self.images)
+            # Filename-only facts are available before DPI reads or image decoding.
+            try:
+                from ..layout_engine.orders.batch_analysis import batch_inventory
+                self.analysis_ready.emit(batch_inventory(self.images))
+            except Exception as error:
+                self.progress.emit('文件名分组待核对', 0, 0, str(error))
             self.cancellation.check()
             result = generate_layout(
                 self.images, self.output, self.settings, self._progress,

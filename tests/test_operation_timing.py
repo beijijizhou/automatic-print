@@ -59,11 +59,15 @@ def test_worker_reports_scan_through_output_and_persists_timings(tmp_path):
     worker = GenerateWorker(None, source, tmp_path/'out', 'JOB', LayoutSettings(
         dpi=25.4, cutter_mode='dual', cutter_auto_knife=True, number_images=False))
     updates, finished, failures = [], [], []
+    scan_events = []
+    worker.sources_ready.connect(lambda _paths: scan_events.append('来源已扫描'))
+    worker.analysis_ready.connect(lambda report: scan_events.append(report['stage']))
     worker.timings_ready.connect(updates.append)
     worker.finished.connect(lambda output, result: finished.append(result))
     worker.failed.connect(failures.append)
     worker.run()
     assert not failures
+    assert scan_events[:2] == ['来源已扫描', '文件名分析']
     result = finished[0]['operation_timings']
     names = [row['name'] for row in result['steps']]
     assert names[0] == '扫描文件名'

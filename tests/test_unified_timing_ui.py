@@ -5,6 +5,7 @@ from time import perf_counter
 from automatic_print.ui.bulk_workbench import BulkWorkbench
 from automatic_print.ui.cold_batch_benchmark import ColdBatchBenchmarkDialog
 from automatic_print.ui.operation_timing import OperationTimingPanel
+from automatic_print.layout_engine.orders.batch_analysis import batch_inventory
 from test_developer_mode import APP, window
 
 
@@ -58,6 +59,11 @@ def test_single_and_bulk_share_three_column_batch_records(tmp_path):
     assert board.groups['未完成'].topLevelItemCount() == 1
     assert board.items[0].text(0) == source.name
     owner.generation_preview.sources([source/'one.png', source/'two.png'])
+    owner.worker_bridge.layout_analysis.emit(batch_inventory([
+        source/'B1-1-T-Black-S-NO1-1.png',
+        source/'B2-1-T-Black-M-NO1-1.png',
+    ]))
+    assert board.items[0].text(2) == 'S 1件 · M 1件'
     owner.generation_preview.progress('读取图片尺寸', 1, 2, 'one.png')
     APP.processEvents()
     panel = owner.automation_home.label_quick_panel

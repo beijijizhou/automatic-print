@@ -20,6 +20,7 @@ class GenerationPreviewController(QObject):
         bridge.layout_sources.connect(self.sources)
         bridge.layout_analysis.connect(self.panel.analysis.show_report)
         bridge.layout_analysis.connect(self.panel.summary.show_analysis)
+        bridge.layout_analysis.connect(self.analysis)
         bridge.layout_finished.connect(self.panel.summary.finished)
         bridge.layout_progress.connect(self.progress)
         for signal in (bridge.layout_finished, bridge.layout_cancelled):
@@ -66,6 +67,11 @@ class GenerationPreviewController(QObject):
         self.panel.summary.start(self.window.folder.text(), len(paths))
         self.window.run_log.appendPlainText(f'已扫描 {len(paths)} 张图片，开始读取尺寸和排版。')
         self.preview.sources_ready.emit(paths)
+
+    @Slot(object)
+    def analysis(self, report):
+        if self.mode == 'single':
+            self.window.batch_status_board.update_distribution(0, report)
 
     @Slot(object)
     def ready(self, payload):

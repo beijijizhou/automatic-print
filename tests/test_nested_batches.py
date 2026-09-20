@@ -98,7 +98,14 @@ def test_prepared_folder_selection_controls_worker_queue(tmp_path, monkeypatch):
     assert queued == [root]
     assert discovered[0]['combined_batch_count'] == 1
     assert discovered[0]['batches'][0]['image_count'] == 12
-    assert discovered[0]['batches'][0]['source_batches'] == chosen
+    assert discovered[0]['batches'][0]['source_batches'][0]['folder'] == chosen[0]['folder']
+    assert discovered[0]['batches'][0]['source_batches'][0]['images'] == chosen[0]['images']
+    assert discovered[0]['batches'][0]['filename_analysis']['stage'] == '文件名分析'
+    board = BatchStatusBoard()
+    board.reset([root], root, {0: discovered[0]['batches'][0]})
+    assert board.items[0].text(2) != ''
+    assert board.items[0].child(0).text(2) != ''
+    board.close()
 
 
 @pytest.mark.parametrize('engine', ['pillow', 'libvips'])

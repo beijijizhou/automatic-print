@@ -79,6 +79,11 @@ class BatchStatusBoard(QWidget):
                         continue
                     relative=path.relative_to(root).as_posix() if root else path.name
                     child=QTreeWidgetItem([relative,str(source['image_count']),''])
+                    report=source.get('filename_analysis')
+                    if report:
+                        from ..layout_engine.orders.batch_analysis import compact_distribution_text, distribution_text
+                        child.setText(2, compact_distribution_text(report, limit=4))
+                        child.setToolTip(2, distribution_text(report))
                     child.setIcon(0,action_icon('folder','#64748b'))
                     child.setData(0,Qt.UserRole+1,str(path))
                     child_tip=str(path)+'\n'+'\n'.join(p.name for p in source.get('images',()))
@@ -89,6 +94,11 @@ class BatchStatusBoard(QWidget):
             if sources:
                 item.setExpanded(True)
             self.items[index] = item
+            if info.get('filename_analysis'):
+                self.update_distribution(index, info['filename_analysis'])
+            elif info.get('filename_warning'):
+                item.setText(2, '文件名待核对')
+                item.setToolTip(2, info['filename_warning'])
         for tree in self.groups.values():
             tree.blockSignals(False)
         self.counts()
