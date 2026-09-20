@@ -38,7 +38,7 @@ def test_random_selection_requires_ten_valid_batches(tmp_path):
         choose_batches(platform, 10, seed=1)
 
 
-def test_cold_report_keeps_each_batch_and_continues_after_failure(tmp_path, monkeypatch):
+def test_cold_report_keeps_each_batch_and_continues_after_failure(tmp_path, monkeypatch, capsys):
     from dataclasses import asdict
     from PySide6.QtCore import QObject, Signal
     from automatic_print.diagnostics.random_dtf import run
@@ -83,3 +83,48 @@ def test_cold_report_keeps_each_batch_and_continues_after_failure(tmp_path, monk
     assert "本批完整耗时" in readable and "sample failure" in readable
     assert json.loads((tmp_path / "out" / "冷启动10批耗时.json").read_text(encoding="utf-8"))[
         "status"] == "部分失败"
+    events = [json.loads(line) for line in capsys.readouterr().out.splitlines()]
+    assert len([event for event in events if event['event'] == 'timing']) == 2
+
+
+def test_benchmark_dialog_shows_live_phase_timing():
+    from time import perf_counter
+    from PySide6.QtWidgets import QApplication, QWidget
+    from automatic_print.ui.cold_batch_benchmark import ColdBatchBenchmarkDialog
+
+    app = QApplication.instance() or QApplication([])
+    owner = QWidget()
+    dialog = ColdBatchBenchmarkDialog(owner)
+    dialog._started_at = perf_counter() - 2
+    snapshot = {
+        'status': '运行中', 'total_seconds': 1.5, 'captured_at': 0,
+        'active_phase': '标签与刀码测量',
+        'steps': [{'name': '标签与刀码测量', 'seconds': 1.5, 'running': True}],
+    }
+    events = [
+        {'event': 'batch_started', 'index': 1, 'count': 10,
+         'folder': '609181334053', 'images': 125},
+        {'event': 'timing', 'index': 1, 'data': snapshot},
+    ]
+
+    class Output:
+        def readAllStandardOutput(self):
+            return '\n'.join(json.dumps(event, ensure_ascii=False) for event in events).encode() + b'\n'
+
+    dialog.process = Output()
+    dialog._read_output()
+    assert '当前批次' in dialog.elapsed.text()
+    assert '标签与刀码测量' in dialog.timing_panel.summary.text()
+    assert dialog.timing_panel.table.item(0, 1).text().endswith('秒')
+    events[:] = [
+        {'event': 'timing', 'index': 1, 'data': dict(snapshot, status='已完成',
+            steps=[{'name': '标签与刀码测量', 'seconds': 2.0, 'running': False}])},
+        {'event': 'batch_finished', 'index': 1, 'status': '已完成',
+         'wall_seconds': 2.0, 'cumulative_seconds': 2.1},
+    ]
+    dialog._read_output()
+    assert '标签与刀码测量：2.00 秒' in dialog.log.toPlainText()
+    dialog.timing_panel.timer.stop()
+    dialog.process = None
+    dialog.close()
+    owner.close()

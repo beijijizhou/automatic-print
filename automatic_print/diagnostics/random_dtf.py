@@ -135,8 +135,11 @@ def run(root: Path, output: Path, settings_data: dict, count=10, seed=None):
                 previous_stage[0] = stage
                 _emit("progress", index=index, count=count, folder=str(folder),
                       stage=stage, current=current, total=total, detail=detail)
+        def on_timing(data):
+            timing.append(data)
+            _emit("timing", index=index, data=data)
         worker.progress.connect(on_progress, Qt.ConnectionType.DirectConnection)
-        worker.timings_ready.connect(timing.append, Qt.ConnectionType.DirectConnection)
+        worker.timings_ready.connect(on_timing, Qt.ConnectionType.DirectConnection)
         worker.finished.connect(lambda path, result: done.append((path, result)), Qt.ConnectionType.DirectConnection)
         worker.failed.connect(failures.append, Qt.ConnectionType.DirectConnection)
         batch_started = perf_counter()

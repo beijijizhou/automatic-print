@@ -7,24 +7,31 @@ import sys
 from dataclasses import asdict
 from datetime import datetime
 from pathlib import Path
+from time import perf_counter
 from uuid import uuid4
 
-from PySide6.QtCore import QProcess, QUrl
+from PySide6.QtCore import QProcess, QTimer, QUrl, Signal
 from PySide6.QtGui import QDesktopServices
 from PySide6.QtWidgets import (
     QDialog, QFileDialog, QFormLayout, QHBoxLayout, QLabel, QLineEdit,
     QMessageBox, QPlainTextEdit, QPushButton, QVBoxLayout,
 )
 from .folder_dialog_paths import DEFAULT_DTF_SHARE
+from .operation_timing import OperationTimingPanel
 
 
 class ColdBatchBenchmarkDialog(QDialog):
+    layout_timings = Signal(object)
+
     def __init__(self, window):
         super().__init__(window)
         self.window = window
         self.process = None
         self.output = None
         self._buffer = ""
+        self._started_at = None
+        self._batch_started_at = None
+        self._completed = False
         self.setWindowTitle("开发者 · DTF 随机10批冷启动测试")
         self.resize(850, 600)
         layout = QVBoxLayout(self)
@@ -53,6 +60,10 @@ class ColdBatchBenchmarkDialog(QDialog):
         self.status = QLabel("尚未开始")
         self.status.setWordWrap(True)
         layout.addWidget(self.status)
+        self.elapsed = QLabel("总计 0.00 秒 · 等待开始")
+        layout.addWidget(self.elapsed)
+        self.timing_panel = OperationTimingPanel(self, self)
+        layout.addWidget(self.timing_panel)
         self.log = QPlainTextEdit()
         self.log.setReadOnly(True)
         layout.addWidget(self.log)
@@ -66,6 +77,21 @@ class ColdBatchBenchmarkDialog(QDialog):
         actions.addWidget(self.open_button)
         actions.addStretch()
         layout.addLayout(actions)
+        self.clock = QTimer(self)
+        self.clock.setInterval(500)
+        self.clock.timeout.connect(self._refresh_elapsed)
+
+    def _refresh_elapsed(self):
+        if self._started_at is None:
+            return
+        now = perf_counter()
+        total = now - self._started_at
+        if self._batch_started_at is None:
+            state = "测试结束" if self._completed else "正在扫描或整理结果"
+            self.elapsed.setText(f"总计 {total:.2f} 秒 · {state}")
+        else:
+            self.elapsed.setText(
+                f"总计 {total:.2f} 秒 · 当前批次 {now-self._batch_started_at:.2f} 秒")
 
     def is_running(self):
         return self.process is not None and self.process.state() != QProcess.NotRunning
@@ -116,7 +142,12 @@ class ColdBatchBenchmarkDialog(QDialog):
         process.finished.connect(self._finished)
         self.process = process
         self._buffer = ""
+        self._started_at = perf_counter()
+        self._batch_started_at = None
+        self._completed = False
         self.log.clear()
+        self.timing_panel.reset()
+        self.clock.start()
         self.start_button.setEnabled(False)
         self.open_button.setEnabled(False)
         self.status.setText("正在启动独立冷缓存测试进程…")
@@ -126,6 +157,7 @@ class ColdBatchBenchmarkDialog(QDialog):
             "--settings-json", json.dumps(asdict(settings), ensure_ascii=False),
         ])
         if not process.waitForStarted(3000):
+            self.clock.stop()
             self.status.setText(f"测试进程未启动：{process.errorString()}")
             self.start_button.setEnabled(True)
 
@@ -140,13 +172,23 @@ class ColdBatchBenchmarkDialog(QDialog):
                     self.log.appendPlainText(line)
                 continue
             event = data.get("event")
+            if event == "timing":
+                timing = dict(data["data"])
+                # The worker runs in another process; advance its snapshot on
+                # the GUI clock rather than assuming equal perf_counter epochs.
+                timing["captured_at"] = perf_counter()
+                self.layout_timings.emit(timing)
+                continue
             if event == "scan":
                 message = f"正在扫描：{data['folder']}"
             elif event == "batch_started":
+                self._batch_started_at = perf_counter()
+                self.timing_panel.reset()
                 message = f"第{data['index']}/{data['count']}批 · {Path(data['folder']).name} · {data['images']}张 · 开始"
             elif event == "progress":
                 message = f"第{data['index']}/{data['count']}批 · {data['stage']} · {data['detail']}"
             elif event == "batch_finished":
+                self._batch_started_at = None
                 message = (f"第{data['index']}批 {data['status']} · "
                            f"本批{data['wall_seconds']:.2f}秒 · 累计{data['cumulative_seconds']:.2f}秒")
             elif event == "finished":
@@ -156,6 +198,11 @@ class ColdBatchBenchmarkDialog(QDialog):
                 message = data.get("error", line)
             self.status.setText(message)
             self.log.appendPlainText(message)
+            if event == "batch_finished" and self.timing_panel.data:
+                for row in self.timing_panel.data.get('steps', ()):
+                    self.log.appendPlainText(
+                        f"  {row['name']}：{row['seconds']:.2f} 秒")
+            self._refresh_elapsed()
 
     def _read_error(self):
         detail = bytes(self.process.readAllStandardError()).decode("utf-8", "replace").strip()
@@ -165,6 +212,11 @@ class ColdBatchBenchmarkDialog(QDialog):
     def _finished(self, exit_code, _exit_status):
         self._read_output()
         self._read_error()
+        self._completed = True
+        self.clock.stop()
+        self._refresh_elapsed()
+        if self.timing_panel.data and self.timing_panel.data.get('status') == '运行中':
+            self.timing_panel.timer.stop()
         self.start_button.setEnabled(True)
         self.open_button.setEnabled(bool(self.output and self.output.exists()))
         if exit_code and not self.status.text().startswith(("部分失败", "扫描失败")):

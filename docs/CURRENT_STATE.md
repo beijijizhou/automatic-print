@@ -53,7 +53,7 @@
   `ui/thread_lifecycle.py`仅保留旧调用方兼容导入。
 - 开发者 DTF 随机10批冷启动测试位于`ui/cold_batch_benchmark.py`，独立子进程复用
   `diagnostics/random_dtf.py`、`diagnostics/benchmark_report.py`、共享批次扫描与`GenerateWorker`；只读扫描日期/HL目录，逐批生成到本机
-  隔离目录并持续保存阶段耗时JSON及可读TXT，不写生产历史或触发RIIN。
+  隔离目录并持续保存阶段耗时JSON及可读TXT。子进程实时发送原有`OperationTiming`快照，测试窗口复用主界面分步耗时表，另显示本批和整次计时；不写生产历史或触发RIIN。
 - 单批生成、仅预览及批量分析的每个批次均由 `layout_engine/measurement/measurement_session.py` 建立一份数据
   快照；DPI、尺寸、膜标签位置和各方向刀码占位在后续方案与报告中直接复用。
 - 主工作台处理共享盘批次时，若平台下载目录中存在同批本地副本且图片数量、文件名和字节数全部一致，
