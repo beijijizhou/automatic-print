@@ -77,6 +77,25 @@ def test_row_encoder_rejects_final_alpha_inside_corridor(tmp_path):
              LayoutSettings(dpi=25.4), [], [], None, check)
 
 
+def test_prefetched_rows_match_serial_output_across_transparent_gap(tmp_path):
+    from automatic_print.layout_engine.rendering.png.row_stream import save
+    from hashlib import sha256
+
+    red = pyvips.Image.black(20, 10, bands=4).new_from_image([255, 0, 0, 255])
+    blue = pyvips.Image.black(20, 10, bands=4).new_from_image([0, 0, 255, 255])
+    rows = [(0, 10, red), (30, 10, blue)]
+    serial = tmp_path/'serial.png'
+    parallel = tmp_path/'parallel.png'
+    save(rows, serial, 20, 50, LayoutSettings(worker_threads=1), [], [], None)
+    save(rows, parallel, 20, 50, LayoutSettings(worker_threads=2), [], [], None)
+
+    assert sha256(serial.read_bytes()).digest() == sha256(parallel.read_bytes()).digest()
+    with Image.open(parallel) as image:
+        assert image.getpixel((0, 0)) == (255, 0, 0, 255)
+        assert image.getpixel((0, 15)) == (0, 0, 0, 0)
+        assert image.getpixel((0, 30)) == (0, 0, 255, 255)
+
+
 def test_saved_png_reader_rejects_alpha_inside_corridor(tmp_path):
     from automatic_print.layout_engine.rendering.png.corridor_reader import validate
     path = tmp_path/'occupied.png'

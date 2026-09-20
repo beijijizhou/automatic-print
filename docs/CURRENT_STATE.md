@@ -119,12 +119,12 @@
   `layout_engine/rendering/storage/plan_partition.py`、`layout_engine/rendering/storage/segmented_output.py`、
   `layout_engine/rendering/segment_worker.py`、
   `layout_engine/rendering/storage/atomic_png.py`、`layout_engine/rendering/storage/atomic_tiff.py`。分段边界由`plan_partition.py`按完整订单和排版行计算，共刀回退额外强制不同实际刀位分文件。超长 PNG 由 `layout_engine/rendering/png/row_stream.py`
-  按排版行依次解码、合成、固定 UP 滤波、无损 RLE 压缩和写入，每行只求值一次且不生成中间图片；同一行的最终
+  按排版行依次解码、合成、固定 UP 滤波、无损 RLE 压缩和写入，每行只求值一次且不生成中间图片；内存预算允许时预读下一排，与当前排的编码重叠；无装饰的纯透明空白直接编码；同一行的最终
   alpha 像素在压缩前同步核对全部刀位，PNG 发布后顺序读取数据块并核对 CRC、尺寸和 RGBA 格式，
   不再完整解压刚刚验证并编码的超长像素流；不再为每条刀位重复触发超长延迟画布合成，
   也不依赖 libvips 二次打开大图，
   避免超长PNG二次解码触发原生库崩溃。保存计时包含 libvips 延迟合成、编码与写入，不能解释成纯磁盘耗时。多个 Python
-  工作线程的 libvips 外层延迟任务由共享门禁协调，原生库内部仍保留并行，并在正常退出时完成清理。
+  工作线程的 libvips 延迟像素求值由共享门禁协调，非流式任务仍在外层串行，原生库内部保留并行，并在正常退出时完成清理。
   开发者模式可在主界面“输出”参数组直接选择 PNG 或并行分块 BigTIFF，并与完整打印参数双向同步；
   BigTIFF 画布按整幅宽度和内存预算选择256至4096行 Strip 有界生成，
   tifffile/imagecodecs 多线程压缩，单一写入器登记块偏移；每个 Strip 在压缩前同步核对真实 alpha 刀位，

@@ -1,8 +1,11 @@
 $ErrorActionPreference = "Stop"
 $ProgressPreference = "SilentlyContinue"
 
+# Update this marker when publishing a new bootstrap entry URL with a cache query.
+$bootstrapCacheVersion = "0.1.308"
 $repositoryUrl = "https://github.com/beijijizhou/automatic-print.git"
 $installRoot = Join-Path ([Environment]::GetFolderPath("MyDocuments")) "AutomaticPrint"
+Write-Host "Bootstrap cache version: $bootstrapCacheVersion"
 
 function Find-CommandPath {
     param(

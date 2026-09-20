@@ -17,10 +17,11 @@ def render_output(planned, labels, width, height, settings, progress,
     phase('图片准备与合成')
     output_format, streaming, use_vips = encoder_plan(settings, width, height)
     native_validation = use_vips or (settings.png_fast_encoding and available())
-    with demand_lock if native_validation else nullcontext():
-        row_streaming = streaming and use_vips
+    row_streaming = streaming and use_vips
+    with demand_lock if native_validation and not row_streaming else nullcontext():
         if row_streaming:
-            rows = build_vips_rows(planned, labels, width, settings, progress)
+            with demand_lock:
+                rows = build_vips_rows(planned, labels, width, settings, progress)
             canvas = None
         else:
             builder = build_vips_canvas if use_vips else build_pillow_canvas
@@ -74,7 +75,8 @@ def render_output(planned, labels, width, height, settings, progress,
                 raise
         if native_validation:
             import pyvips
-            pyvips.cache_set_max(0)
+            with demand_lock:
+                pyvips.cache_set_max(0)
     return (output_format, use_vips, save_details, combining_seconds,
             saving_seconds, validation_seconds, guide_spans, guide_boxes,
             missing_guides, transitions)
