@@ -13,6 +13,7 @@ class GenerationPreviewController(QObject):
         self.panel = window.automation_home.label_quick_panel
         self.preview = self.panel.preview
         self.payload = None
+        self.mode = None
         bridge = window.worker_bridge
         bridge.layout_preview.connect(self.ready)
         bridge.layout_sources.connect(self.sources)
@@ -30,9 +31,13 @@ class GenerationPreviewController(QObject):
         show_busy(self.window)
         self.window.layout_activity.start(mode)
         self.panel.marker_examples.clear_batch()
-        bulk = getattr(self.window, 'bulk_controller', None)
-        if bulk:
-            bulk.selector.hide()
+        self.mode = mode
+        board = self.window.batch_status_board
+        if mode == 'single':
+            board.reset([Path(self.window.folder.text().strip())])
+        else:
+            board.reset([])
+        board.show()
         self.panel.timings.reset()
         self.payload = None
         self.panel.analysis.clear()
@@ -55,12 +60,16 @@ class GenerationPreviewController(QObject):
 
     @Slot(object)
     def sources(self, paths):
+        if self.mode == 'single':
+            self.window.batch_status_board.items[0].setText(1, str(len(paths)))
         self.panel.summary.start(self.window.folder.text(), len(paths))
         self.window.run_log.appendPlainText(f'已扫描 {len(paths)} 张图片，开始读取尺寸和排版。')
         self.preview.sources_ready.emit(paths)
 
     @Slot(object)
     def ready(self, payload):
+        if self.mode == 'single':
+            self.window.batch_status_board.update_distribution(0, payload.get('analysis', {}))
         self.panel.marker_examples.use_batch(payload)
         self.panel.preview_tabs.setCurrentIndex(0)
         self.payload = payload
@@ -100,6 +109,8 @@ class GenerationPreviewController(QObject):
     def progress(self, stage, current, total, filename):
         if not self.preview.production_active:
             return
+        if self.mode == 'single':
+            self.window.batch_status_board.update_batch(0, stage, current, total, filename)
         self.window.layout_activity.update_progress(stage, current, total)
         filename=filename.split('\t',1)[-1]
         if stage == '膜规格比较' and current == 0:
@@ -127,6 +138,8 @@ class GenerationPreviewController(QObject):
 
     @Slot(str)
     def failed(self, message):
+        if self.mode == 'single':
+            self.window.batch_status_board.update_batch(0, '批次失败：'+message, group='未完成')
         self.panel.summary.show_failure(message)
         self.panel.analysis.failed(message)
         self.panel.summary.progress.setText('生成未完成；原因和可选处理见独立诊断区。')
@@ -135,4 +148,6 @@ class GenerationPreviewController(QObject):
 
     @Slot()
     def cancelled(self):
+        if self.mode == 'single':
+            self.window.batch_status_board.update_batch(0, '批次已停止', group='未完成')
         self.panel.summary.progress.setText('当前排版已停止；已计算的本批次信息和未完成结果均已保留。')

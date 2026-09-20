@@ -3,7 +3,6 @@ from pathlib import Path
 from PySide6.QtCore import QObject, Slot
 from PySide6.QtWidgets import QFileDialog
 from ..controllers import BulkGenerationController
-from .batch_status_board import BatchStatusBoard
 from .folder_dialog_paths import image_dialog_start, remember_image_directory
 from .bulk_generation_worker import BulkGenerationWorker
 from .busy_spinner import show_busy, show_progress
@@ -35,13 +34,13 @@ class BulkWorkbench(QObject):
         self.thread = self.worker = None
         self.task_control = BulkGenerationController(self)
         self.folders, self.inventory = [], {}
-        self.selector = BatchStatusBoard()
-        self.selector.setToolTip('切换当前批次，查看同一主界面的进度、耗时、预览与总结。')
-        self.panel.summary.layout().insertWidget(0, self.selector)
+        self.selector = window.batch_status_board
         self.selector.currentIndexChanged.connect(self.select)
         self.selector.userSelected.connect(self.pin_timing_batch)
         self.follow_active_batch = True
     def pin_timing_batch(self, _index):
+        if self.window.generation_preview.mode != 'multiple':
+            return
         self.follow_active_batch = False
     def begin(self, parent, prepared_scan=None):
         self.follow_active_batch = True
@@ -96,6 +95,8 @@ class BulkWorkbench(QObject):
             f"已扫描{scan['directories']}个目录，发现{len(self.folders)}个图片批次，开始滚动处理")
     @Slot(int)
     def select(self, index):
+        if self.window.generation_preview.mode != 'multiple':
+            return
         if index < 0 or index >= len(self.folders):
             return
         view = self.window.generation_preview

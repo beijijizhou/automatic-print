@@ -19,6 +19,9 @@ from ...recent_output import remember_recent_output
 
 def generation_finished(window, output, result) -> None:
     window.clock.stop()
+    if window.generation_preview.mode == 'single':
+        window.batch_status_board.update_batch(
+            0, '批次预览完成' if result.get('preview_only') else '批次生成完成')
     if result.get("preview_only"):
         _show_preview_result(window)
         return

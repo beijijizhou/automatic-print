@@ -2,6 +2,7 @@
 from PySide6.QtWidgets import (
     QGroupBox, QHBoxLayout, QPlainTextEdit, QPushButton, QVBoxLayout,
 )
+from .batch_status_board import BatchStatusBoard
 
 
 def build_data_panel(window, summary, timings):
@@ -32,6 +33,10 @@ def build_data_panel(window, summary, timings):
     right.addWidget(timings)
     columns.addLayout(right, 1)
     layout.insertLayout(0, columns)
+    window.batch_status_board = BatchStatusBoard(summary)
+    window.batch_status_board.setToolTip('选择批次，查看对应进度、分步耗时和排版结果。')
+    window.batch_status_board.hide()
+    layout.insertWidget(0, window.batch_status_board)
     records = QGroupBox('批次处理记录 · 当前任务')
     record_layout = QVBoxLayout(records)
     window.batch_record = QPlainTextEdit()

@@ -20,6 +20,7 @@ def test_single_bulk_and_random_ten_share_live_table(tmp_path):
     panel = owner.automation_home.label_quick_panel.timings
     assert isinstance(panel, OperationTimingPanel)
     controller = BulkWorkbench(owner)
+    owner.generation_preview.mode = 'multiple'
     controller.folders = [Path(tmp_path/'one'), Path(tmp_path/'two')]
     controller.inventory = {}
     controller.payloads, controller.records, controller.stages = {}, {}, {}
@@ -43,4 +44,46 @@ def test_single_bulk_and_random_ten_share_live_table(tmp_path):
     dialog.layout_timings.emit(snapshot('运行中'))
     assert dialog.timing_panel.table.item(0, 2).text().endswith('进行中')
     dialog.close()
+    owner.close()
+
+
+def test_single_and_bulk_share_three_column_batch_records(tmp_path):
+    owner = window(tmp_path/'batch-board.ini')
+    source = tmp_path/'single-batch'
+    source.mkdir()
+    owner.folder.setText(str(source))
+    board = owner.batch_status_board
+    owner.generation_preview.start()
+    assert board.isVisibleTo(owner)
+    assert board.groups['未完成'].topLevelItemCount() == 1
+    assert board.items[0].text(0) == source.name
+    owner.generation_preview.sources([source/'one.png', source/'two.png'])
+    owner.generation_preview.progress('读取图片尺寸', 1, 2, 'one.png')
+    assert board.groups['进行中'].topLevelItemCount() == 1
+    assert board.items[0].text(1) == '2'
+    assert 'one.png' in board.items[0].toolTip(0)
+    APP.processEvents()
+    assert board.grab().save(str(tmp_path/'unified-single-board.png'))
+    owner.worker_bridge.layout_finished.emit(str(tmp_path), {'preview_only': True})
+    assert board.groups['已完成'].topLevelItemCount() == 1
+
+    controller = BulkWorkbench(owner)
+    assert controller.selector is board
+    owner.generation_preview.start('multiple')
+    assert board.groups['已完成'].topLevelItemCount() == 0
+    controller.selector.reset([source, tmp_path/'second-batch'])
+    assert board.groups['未完成'].topLevelItemCount() == 2
+    owner.close()
+
+
+def test_single_failed_batch_stays_visible_with_reason(tmp_path):
+    owner = window(tmp_path/'failed-board.ini')
+    source = tmp_path/'failed-batch'
+    owner.folder.setText(str(source))
+    owner.generation_preview.start()
+    owner.generation_preview.progress('测量标签与刀码', 1, 4, 'problem.png')
+    owner.generation_preview.failed('problem.png 标签位置不足')
+    board = owner.batch_status_board
+    assert board.groups['未完成'].topLevelItemCount() == 1
+    assert 'problem.png 标签位置不足' in board.items[0].toolTip(0)
     owner.close()
