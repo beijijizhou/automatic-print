@@ -7,12 +7,13 @@ def test_costs_are_developer_only_and_copyable_without_image_read(tmp_path):
     owner = window(tmp_path/'prefs.ini')
     panel = owner.automation_home.label_quick_panel
     details = panel.details_dialog
-    assert not panel.algorithm_costs_button.isVisible()
+    assert not panel.test_tools_button.isVisible()
     details.open_algorithm_costs()
     assert not hasattr(details, 'algorithm_page')
     owner.developer_mode_checkbox.setChecked(True)
-    assert panel.algorithm_costs_button.isVisible()
-    panel.algorithm_costs_button.click()
+    assert panel.test_tools_button.isVisible()
+    next(action for action in panel.test_tools_button.menu().actions()
+         if action.text() == '算法诊断').trigger()
     page = details.algorithm_page
     assert details.tabs.currentWidget() is page
     assert page.table.rowCount() == len(STEPS)
@@ -38,6 +39,6 @@ def test_costs_are_developer_only_and_copyable_without_image_read(tmp_path):
     assert page.grab().save(str(tmp_path/'real-benchmark.png'))
     owner.developer_mode_checkbox.setChecked(False)
     assert not details.tabs.isTabVisible(details.tabs.indexOf(page))
-    assert not panel.algorithm_costs_button.isVisible()
+    assert not panel.test_tools_button.isVisible()
     details.close()
     owner.close()

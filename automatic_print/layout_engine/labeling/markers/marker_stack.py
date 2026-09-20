@@ -118,16 +118,34 @@ def validate_stack(path, p, settings):
         return
     if (settings.cutter_left_marker_external and settings.platform_reuse_qr
             and p.number_width_px):
-        # The recovered external corridor stacks the label *below* the cutter
-        # mark. It is outside the source image, so the source QR-card height
-        # is not a constraint here. The previous horizontal/band check
-        # rejected this safe fallback for real batches.
+        # The external corridor has two verified arrangements: a horizontal
+        # label inside the original header band, or a vertical label below the
+        # cutter mark, entirely outside the source image. Neither geometry
+        # may intrude into the artwork.
         gap = mm_to_px(settings.number_gap_mm, settings.dpi)
-        if (p.number_x_px != p.color_block_x_px
-                or p.number_y_px != p.color_block_y_px+p.color_block_height_px+gap
-                or p.color_block_x_px+p.color_block_width_px > p.x_px
-                or p.number_x_px+p.number_width_px > p.x_px):
-            raise ValueError(f'{path.name}：标签文字未位于刀码与膜标签之间的安全空白，禁止输出。')
+        outside = (p.color_block_x_px+p.color_block_width_px <= p.x_px
+                   and p.number_x_px+p.number_width_px <= p.x_px)
+        vertical = (p.number_x_px == p.color_block_x_px
+                    and p.number_y_px == p.color_block_y_px+p.color_block_height_px+gap)
+        horizontal = p.number_x_px >= p.color_block_x_px+p.color_block_width_px
+        if horizontal and outside:
+            from automatic_print.layout_engine.cutting.geometry.cut_guide_geometry import detect_guide_band
+            band = detect_guide_band(path)
+            if band is not None:
+                band = band.rotated(p.rotation_degrees)
+                top = p.y_px+round(band.top*p.height_px)
+                bottom = p.y_px+round(band.bottom*p.height_px)
+                horizontal = top <= p.number_y_px and p.number_y_px+p.number_height_px <= bottom
+            else:
+                horizontal = False
+        if not outside or not (vertical or horizontal):
+            raise ValueError(
+                f'{path.name}：标签文字未位于刀码与膜标签之间的安全空白，禁止输出。'
+                f'刀码=({p.color_block_x_px},{p.color_block_y_px},'
+                f'{p.color_block_width_px},{p.color_block_height_px})；'
+                f'标签=({p.number_x_px},{p.number_y_px},'
+                f'{p.number_width_px},{p.number_height_px})；原图左边界={p.x_px}。'
+            )
         return
     y = p.color_block_y_px+p.color_block_height_px+mm_to_px(settings.number_gap_mm, settings.dpi)
     if p.platform_width_px and not settings.platform_reuse_qr:

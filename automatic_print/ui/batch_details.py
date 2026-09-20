@@ -49,6 +49,16 @@ class BatchDetailsDialog(QDialog):
         self.cold_benchmark_dialog.raise_()
         self.cold_benchmark_dialog.activateWindow()
 
+    def open_label_position_test(self):
+        if not getattr(self.parent(), 'developer_mode_enabled', False):
+            return
+        if not hasattr(self, 'label_position_test_dialog'):
+            from .label_position_test import LabelPositionTestDialog
+            self.label_position_test_dialog = LabelPositionTestDialog(self.parent())
+        self.label_position_test_dialog.show()
+        self.label_position_test_dialog.raise_()
+        self.label_position_test_dialog.activateWindow()
+
     def open_algorithm_costs(self):
         if not getattr(self.parent(), 'developer_mode_enabled', False):
             return

@@ -119,12 +119,10 @@ def build_batch_tools(panel):
     row.addStretch()
     panel.developer_tools_label = QLabel('开发者功能：')
     row.addWidget(panel.developer_tools_label)
-    for button in (
-        panel.history_button, panel.bulk_analysis_button, panel.cold_benchmark_button,
-        panel.algorithm_costs_button,
-    ):
+    for button in (panel.history_button, panel.test_tools_button):
         row.addWidget(button)
     navigation.setStyleSheet(
         'QWidget#pinnedWorkbenchNavigation { background: transparent; border: none; } '
-        'QWidget#pinnedWorkbenchNavigation QPushButton { padding: 5px 10px; }')
+        'QWidget#pinnedWorkbenchNavigation QPushButton, '
+        'QWidget#pinnedWorkbenchNavigation QToolButton { padding: 5px 10px; }')
     return navigation

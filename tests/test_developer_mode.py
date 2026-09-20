@@ -44,8 +44,7 @@ def test_default_shows_production_layout_but_hides_diagnostic_tools(tmp_path, mo
     assert owner.quick_force_small_pair.isVisible()
     assert owner.quick_force_small_pair.isChecked()
     assert owner._layout_settings().force_small_pair_width
-    assert not panel.history_button.isVisible() and not panel.bulk_analysis_button.isVisible()
-    assert not panel.cold_benchmark_button.isVisible()
+    assert not panel.history_button.isVisible() and not panel.test_tools_button.isVisible()
     assert not panel.source_order.isVisible() and not panel.reference_films_label.isVisible()
     navigation_before = owner.automation_home.batch_tools.mapTo(owner, owner.rect().topLeft())
     panel.details_dialog.open_history()
@@ -66,7 +65,8 @@ def test_default_shows_production_layout_but_hides_diagnostic_tools(tmp_path, mo
         for row in range(feature_dialog.tree.topLevelItem(group).childCount())
     ]
     assert features == [
-        '排版历史', '批量分析文件夹', 'DTF随机10批冷启动测试', '算法诊断',
+        '排版历史', '批量分析文件夹', '标签位置安全短测',
+        'DTF随机10批冷启动测试', '算法诊断',
         '切膜刀码开关', '平台＋尺码标签开关', '批次顺序标注',
         'S2B 批次信息查询', '批次下载与自动化打印', '隆丰 ERP 下载', 'S2B 生产图下载',
         '莆田平台', '并行分块 TIFF',
@@ -199,9 +199,9 @@ def test_toggle_persists_and_existing_history_tab_hides(tmp_path, monkeypatch):
     assert owner.quick_membrane_gap.value() == 42
     assert panel.summary.film_table.rowCount() == 4
     assert owner._layout_settings().compare_reference_films
-    assert panel.history_button.isVisible() and panel.bulk_analysis_button.isVisible()
-    assert panel.cold_benchmark_button.isVisible()
-    assert panel.algorithm_costs_button.isVisible()
+    assert panel.history_button.isVisible() and panel.test_tools_button.isVisible()
+    assert [action.text() for action in panel.test_tools_button.menu().actions()] == [
+        '标签位置安全短测…', 'DTF随机10批冷启动测试…', '批量分析文件夹…', '算法诊断']
     assert panel.source_order.isVisible() and panel.reference_films_label.isVisible()
     assert owner.grab().save(str(tmp_path/'developer-tools-visible.png'))
     panel.history_button.click()
@@ -217,7 +217,7 @@ def test_toggle_persists_and_existing_history_tab_hides(tmp_path, monkeypatch):
     assert not owner._layout_settings().compare_reference_films
     assert not details.tabs.isTabVisible(details.tabs.indexOf(details.history_page))
     assert not panel.history_button.isVisible()
-    assert not panel.cold_benchmark_button.isVisible()
+    assert not panel.test_tools_button.isVisible()
     details.close()
     owner.developer_mode_checkbox.setChecked(True)
     owner.close()
@@ -226,7 +226,7 @@ def test_toggle_persists_and_existing_history_tab_hides(tmp_path, monkeypatch):
     assert restored.quick_membrane_gap.value() == 42
     assert restored.quick_membrane_gap_enabled.isChecked()
     assert restored.quick_header_gap_group.isVisible()
-    assert restored.automation_home.label_quick_panel.bulk_analysis_button.isVisible()
+    assert restored.automation_home.label_quick_panel.test_tools_button.isVisible()
     restored.close()
 
 

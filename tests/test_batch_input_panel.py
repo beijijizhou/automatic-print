@@ -20,9 +20,7 @@ def test_input_card_has_one_layout_action_while_tools_stay_pinned(tmp_path):
     assert owner.stop_generation_button.text() == '暂停批次'
     assert not home.batch_tools.isVisible()
     assert not panel.history_button.isVisible()
-    assert not panel.bulk_analysis_button.isVisible()
-    assert not panel.cold_benchmark_button.isVisible()
-    assert not panel.algorithm_costs_button.isVisible()
+    assert not panel.test_tools_button.isVisible()
     assert not panel.source_order.isVisible()
     APP.processEvents()
     assert owner.grab().save(str(tmp_path/'batch-input-cards.png'))

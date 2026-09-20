@@ -11,6 +11,9 @@
 - 主工作台：实际页面在`automatic_print/batch_ui/` 和
   `automatic_print/ui/workbench/overview/`；旧的
   `ui/label_quick_panel.py`仅保留稳定兼容导入。
+- 开发者导航将标签位置短测、随机10批冷启动、批量膜分析与算法诊断集中在一个
+  “测试与诊断”按钮；`ui/label_position_test.py`在独立子进程运行39组小样本安全检查，
+  主界面保持可操作。排版历史保留独立入口。
 - 图片目录浏览起点由`ui/folder_dialog_paths.py`统一选择：可用的上次浏览目录和用户已保存来源优先，最后回退`\\192.168.11.28\dtf`。设置页只把共享盘显示为输入提示，不将它写入来源或输出设置；`ui/cold_batch_benchmark.py`的DTF来源默认使用同一路径。
 - 生产批次工作台目录直接对应界面和执行层级：`batch_ui/local/`拥有本地排版页，
   `platform/`拥有已接单与生产批次页，`task/`拥有后台任务生命周期，`shell/`拥有窗口外壳；
@@ -57,8 +60,8 @@
   冷启动报告中的4个标签安全失败批次及完整运行参数仅保存在本机私有的
   `tests/fixtures/dtf_failed_batches_20260919.json`，公开仓库不包含内部盘路径或原始文件名；
   `tests/test_dtf_failed_batch_regressions.py`可用此清单逐批复现，真实整批生成须明确设置
-  `RUN_DTF_REAL_REGRESSION=1`。外置透明走廊使用纵向刀码/标签堆叠，安全检查按实际外置坐标
-  核验，不再错误要求标签位于原图膜标签高度带内。
+  `RUN_DTF_REAL_REGRESSION=1`。外置透明走廊允许两种经验证的坐标：原膜标签高度带内的横向
+  刀码/标签，或图案左侧的纵向堆叠；两者都不得侵入原图，后者不受原图高度带限制。
 - 单批生成、仅预览及批量分析的每个批次均由 `layout_engine/measurement/measurement_session.py` 建立一份数据
   快照；DPI、尺寸、膜标签位置和各方向刀码占位在后续方案与报告中直接复用。
 - 主工作台处理共享盘批次时，若平台下载目录中存在同批本地副本且图片数量、文件名和字节数全部一致，

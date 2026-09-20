@@ -1,6 +1,6 @@
 """Compose the visible batch overview from its UI regions."""
 
-from PySide6.QtWidgets import QPushButton, QVBoxLayout, QWidget
+from PySide6.QtWidgets import QMenu, QPushButton, QToolButton, QVBoxLayout, QWidget
 
 from ...action_icons import action_icon
 from ...generation_panel import build_data_panel
@@ -32,27 +32,22 @@ class LabelQuickPanel(QWidget):
             "more",
             self.details_dialog.open_history,
         )
-        self.bulk_analysis_button = _tool_button(
-            "批量分析文件夹…",
-            "并行比较多个批次的研究膜规格，不生成打印文件。",
-            "folder",
-            self.details_dialog.open_bulk_analysis,
-        )
         self.bulk_generation_button = _tool_button(
             "多批次排版…", "", "folder", self.details_dialog.open_bulk_generation
         )
-        self.algorithm_costs_button = _tool_button(
-            "算法诊断",
-            "查看排版步骤的复杂度和实际耗时，仅用于开发检查。",
-            "more",
-            self.details_dialog.open_algorithm_costs,
-        )
-        self.cold_benchmark_button = _tool_button(
-            "DTF随机10批冷启动测试…",
-            "从 DTF 盘随机抽取10个HL批次，逐批生成并记录全部分阶段耗时。",
-            "folder",
-            self.details_dialog.open_cold_benchmark,
-        )
+        self.test_tools_button = QToolButton(self)
+        self.test_tools_button.setText('测试与诊断…')
+        self.test_tools_button.setIcon(action_icon('more'))
+        self.test_tools_button.setPopupMode(QToolButton.InstantPopup)
+        menu = QMenu(self.test_tools_button)
+        for label, action in (
+            ('标签位置安全短测…', self.details_dialog.open_label_position_test),
+            ('DTF随机10批冷启动测试…', self.details_dialog.open_cold_benchmark),
+            ('批量分析文件夹…', self.details_dialog.open_bulk_analysis),
+            ('算法诊断', self.details_dialog.open_algorithm_costs),
+        ):
+            menu.addAction(label, action)
+        self.test_tools_button.setMenu(menu)
 
 
 def _tool_button(text, tooltip, icon, action):

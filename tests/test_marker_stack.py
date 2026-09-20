@@ -85,6 +85,29 @@ def test_external_corridor_accepts_vertical_stack_but_rejects_image_overlap():
             validate_stack(Path('batch.png'), SimpleNamespace(**(vars(placement) | changed)), settings)
 
 
+def test_external_corridor_accepts_horizontal_header_but_checks_band(monkeypatch):
+    from automatic_print.layout_engine.cutting.geometry import cut_guide_geometry
+    from automatic_print.layout_engine.labeling.platform.membrane_region import MembraneRegion
+    monkeypatch.setattr(cut_guide_geometry, 'detect_guide_band',
+                        lambda _path: MembraneRegion(.2, 0, .8, .5))
+    settings = LayoutSettings(
+        dpi=25.4, cutter_mode='dual', preserve_header_gap=False,
+        platform_below_marker=True, platform_reuse_qr=True,
+        cutter_left_marker_external=True,
+    )
+    placement = SimpleNamespace(
+        color_block_x_px=0, color_block_y_px=0,
+        color_block_width_px=10, color_block_height_px=10,
+        number_x_px=15, number_y_px=3,
+        number_width_px=20, number_height_px=3,
+        x_px=40, y_px=0, height_px=30, rotation_degrees=0,
+    )
+    validate_stack(Path('batch.png'), placement, settings)
+    for changed in (dict(number_x_px=9), dict(number_y_px=14), dict(x_px=34)):
+        with pytest.raises(ValueError, match='标签文字未位于'):
+            validate_stack(Path('batch.png'), SimpleNamespace(**(vars(placement) | changed)), settings)
+
+
 @pytest.mark.parametrize('mode', ['free', 'single', 'dual'])
 @pytest.mark.parametrize('side', ['left', 'right'])
 @pytest.mark.parametrize('degrees', [0, 90, -90, 180])

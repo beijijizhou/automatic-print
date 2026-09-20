@@ -137,7 +137,7 @@ def test_narrow_header_uses_verified_gutter_between_mark_and_source(tmp_path, de
         assert placement['number_x_px']+placement['number_width_px'] <= placement['x_px']
         with pytest.raises(ValueError, match='刀码与膜标签之间的安全空白'):
             validate_embedded_marks([(
-                path, replace(planned, number_x_px=planned.color_block_x_px),
+                path, replace(planned, number_y_px=planned.number_y_px-1),
             )], replace(config, preserve_header_gap=False))
     with Image.open(tmp_path/'out'/result['filename']) as output:
         box = (placement['number_x_px'], placement['number_y_px'],

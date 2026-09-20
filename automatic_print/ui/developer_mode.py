@@ -17,6 +17,7 @@ DEVELOPER_FEATURES = (
     ('诊断与记录', (
         ('排版历史', '查看历史批次的膜方案、面积、占位率和耗时'),
         ('批量分析文件夹', '比较多个批次的用膜数据，不生成打印文件'),
+        ('标签位置安全短测', '用小样本验证外置标签、方向、侧别和刀位安全坐标'),
         ('DTF随机10批冷启动测试', '随机选择10个HL批次，逐批生成并记录每一步及总耗时'),
         ('算法诊断', '查看排版步骤、复杂度和实际耗时'),
     )),
@@ -109,11 +110,13 @@ def developer_task_active(window):
     production = getattr(details, 'production_bulk_dialog', None)
     erp = getattr(window, 'longfeng_erp_dialog', None)
     benchmark = getattr(details, 'cold_benchmark_dialog', None)
+    label_test = getattr(details, 'label_position_test_dialog', None)
     return bool(
         (dialog and dialog.thread is not None)
         or (production and production.thread is not None)
         or (erp and erp.thread is not None)
         or (benchmark and benchmark.is_running())
+        or (label_test and label_test.is_running())
     )
 
 
@@ -167,9 +170,7 @@ def build_developer_mode(window, footer):
             window.batch_record_group.setVisible(True)
             panel.summary.gap_loss.setVisible(True)
             panel.history_button.setVisible(enabled)
-            panel.bulk_analysis_button.setVisible(enabled)
-            panel.cold_benchmark_button.setVisible(enabled)
-            panel.algorithm_costs_button.setVisible(enabled)
+            panel.test_tools_button.setVisible(enabled)
             panel.developer_tools_label.setVisible(enabled)
             panel.source_order.setVisible(enabled)
             panel.source_order_group.setVisible(enabled)
