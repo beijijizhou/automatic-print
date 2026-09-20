@@ -1,7 +1,5 @@
 """One data surface for live progress, phase timings and batch results."""
-from PySide6.QtWidgets import (
-    QGroupBox, QHBoxLayout, QPlainTextEdit, QPushButton, QVBoxLayout,
-)
+from PySide6.QtWidgets import QHBoxLayout, QVBoxLayout
 from .batch_status_board import BatchStatusBoard
 
 
@@ -36,20 +34,4 @@ def build_data_panel(window, summary, timings):
     window.batch_status_board = BatchStatusBoard(summary.parent())
     window.batch_status_board.setToolTip('选择批次，查看对应进度、分步耗时和排版结果。')
     window.batch_status_board.hide()
-    records = QGroupBox('批次处理记录 · 当前任务')
-    record_layout = QVBoxLayout(records)
-    window.batch_record = QPlainTextEdit()
-    window.batch_record.setReadOnly(True)
-    window.batch_record.setDocument(window.run_log.document())
-    window.batch_record.setMaximumHeight(140)
-    copy = QPushButton('复制批次记录')
-    copy.clicked.connect(lambda: window.batch_record.selectAll())
-    copy.clicked.connect(window.batch_record.copy)
-    actions = QHBoxLayout()
-    actions.addStretch()
-    actions.addWidget(copy)
-    record_layout.addLayout(actions)
-    record_layout.addWidget(window.batch_record)
-    window.batch_record_group = records
-    layout.insertWidget(1, records)
     return summary

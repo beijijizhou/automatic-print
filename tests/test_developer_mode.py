@@ -31,7 +31,7 @@ def test_default_shows_production_layout_but_hides_diagnostic_tools(tmp_path, mo
     assert owner.layout_rules_form.isRowVisible(owner.membrane_gap)
     assert owner.layout_rules_form.isRowVisible(owner.cutter_settings.two_zone)
     assert owner._layout_settings().cutter_majority_two_zone
-    assert owner.batch_record_group.isVisible()
+    assert not hasattr(owner, 'batch_record_group')
     assert panel.summary.gap_loss.isVisible()
     assert owner.membrane_gap.value() == 40
     assert owner._layout_settings().membrane_gap_mm == 0

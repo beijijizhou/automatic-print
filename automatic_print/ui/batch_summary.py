@@ -39,6 +39,7 @@ class BatchSummaryPanel(QGroupBox):
         self.cutting.setMaximumHeight(110)
         self.cutting.setMinimumHeight(65)
         self.cutting.hide()
+        self.inline_cutting = True
         layout = QVBoxLayout(self)
         for label in (self.info, self.metrics, self.progress):
             label.setWordWrap(True)
@@ -116,7 +117,7 @@ class BatchSummaryPanel(QGroupBox):
         if report.get('stage') == '排版结果' and not report.get('film_comparison'):
             self.film_table.reset_rows('比较未启用')
         comparison = report.get('rotation_comparison')
-        if comparison:
+        if comparison and self.inline_cutting:
             normal = comparison['normal_m']
             normal_text = f'{normal:.3f} 米' if normal is not None else '无安全方案'
             saved = comparison['saved_m']
@@ -132,13 +133,15 @@ class BatchSummaryPanel(QGroupBox):
             anomaly_text(result.get('analysis', {})), result.get('history_warning', '')))))
         self.anomalies.setVisible(bool(self.anomalies.text()))
         if result.get('preview_only'):
-            self.progress.setText('整批预览完成，未生成文件；完整排版报告已显示，可直接复制。')
+            self.progress.setText('整批预览完成，未生成文件；可在批次记录查看并复制完整排版报告。'
+                                  if not self.inline_cutting else
+                                  '整批预览完成，未生成文件；完整排版报告已显示，可直接复制。')
             report = result.get('report_text')
             if not report and result.get('placements') and result.get('output_dpi'):
                 report = cutting_report(result)
             self.cutting.setPlainText(report or '仅预览完成；本次未生成输出文件。')
             self.cutting.setMaximumHeight(260)
-            self.cutting.show()
+            self.cutting.setVisible(self.inline_cutting)
             return
         self.metrics.setText(f"排版长度 {result['height_mm']/1000:.3f} 米"
                              f" · 常规基准 {result['baseline_height_mm']/1000:.3f} 米"
@@ -156,13 +159,14 @@ class BatchSummaryPanel(QGroupBox):
             self.metrics.setText(self.metrics.text()+f" · 可用宽度 {result['maximum_width_mm']:g} 毫米")
         if 'output_dpi' in result:
             self.cutting.setPlainText(cutting_report(result))
-            self.cutting.show()
+            self.cutting.setVisible(self.inline_cutting)
         self._show_quality(result.get('dual_quality', {}))
         self._show_comparison(result.get('analysis', {}))
-        from ..layout_engine.rendering.png.fast import timing_text
         from ..layout_engine.output.output_file_info import result_file_report
         self.save_report = result_file_report(result)
-        self.metrics.setText(self.metrics.text()+'\n'+timing_text(result.get('png_save_details')))
+        if self.inline_cutting:
+            from ..layout_engine.rendering.png.fast import timing_text
+            self.metrics.setText(self.metrics.text()+'\n'+timing_text(result.get('png_save_details')))
 
     def _show_quality(self, quality):
         if quality:

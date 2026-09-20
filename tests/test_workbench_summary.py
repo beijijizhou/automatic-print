@@ -66,8 +66,17 @@ def test_current_batch_preview_and_summary_are_visible_and_retained(tmp_path):
     assert '节省用膜' in panel.summary.metrics.text()
     assert result['filename'] in panel.summary.progress.text()
     assert result['filename'] in panel.summary.cutting.toPlainText()
-    assert panel.summary.cutting.isVisible()
+    assert not panel.summary.cutting.isVisible()
+    assert '保存阶段' not in panel.summary.metrics.text()
+    assert not hasattr(window, 'batch_record')
     assert panel.summary.isAncestorOf(panel.summary.cutting)
+    assert panel.summary.layout().indexOf(panel.summary.cutting) >= 0
+    app.processEvents()
+    assert panel.summary.grab().save(str(tmp_path/'summary-after-finish.png'))
+    window.batch_status_board.open_record.click()
+    assert result['filename'] in controller.record_dialog.details.toPlainText()
+    assert '输出文件信息' in controller.record_dialog.details.toPlainText()
+    controller.record_dialog.close()
     assert len(panel.preview.planned) == 4
     panel.summary.finished('', {'preview_only': True})
     assert '未生成文件' in panel.summary.progress.text()

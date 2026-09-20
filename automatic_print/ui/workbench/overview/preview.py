@@ -65,8 +65,7 @@ def build_preview(panel, window, label, block):
     )
     stop_preview = QPushButton("停止后台预览计算")
     stop_preview.clicked.connect(panel.preview.stop_loading)
-    panel.summary.layout().removeWidget(panel.summary.cutting)
-    panel.summary.cutting.setMaximumHeight(16777215)
+    panel.summary.inline_cutting = False
     for internal in (
         panel.analysis,
         panel.manual_rotation,

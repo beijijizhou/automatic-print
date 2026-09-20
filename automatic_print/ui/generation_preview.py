@@ -174,8 +174,20 @@ class GenerationPreviewController(QObject):
         if timings:
             lines.append(f"耗时：{timings['status']} · 总计 {timings['total_seconds']:.2f} 秒")
             lines.extend(f"{step['name']}：{step['seconds']:.2f} 秒" for step in timings['steps'])
+        report = self.panel.summary.cutting.toPlainText()
+        if report:
+            lines.append('完整排版报告：\n'+report)
+        if self.panel.summary.save_report:
+            lines.append('输出文件信息：\n'+self.panel.summary.save_report)
         if self.mode == 'single':
             lines.append('批次处理记录：\n'+self.window.run_log.toPlainText())
+        elif bulk is not None and index < len(bulk.folders):
+            folder = bulk.folders[index]
+            names = (folder.name+'：', str(folder)+'：')
+            entries = [line for line in self.window.run_log.toPlainText().splitlines()
+                       if line.startswith(names)]
+            if entries:
+                lines.append('本批处理记录：\n'+'\n'.join(entries))
         if not hasattr(self, 'record_dialog'):
             from .batch_record_dialog import BatchRecordDialog
             self.record_dialog = BatchRecordDialog(self.window)

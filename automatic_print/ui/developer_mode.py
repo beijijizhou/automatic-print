@@ -167,7 +167,6 @@ def build_developer_mode(window, footer):
             window.quick_output_format_group.setVisible(enabled)
             window.output_parallel_form.setRowVisible(window.output_format, enabled)
             panel = window.automation_home.label_quick_panel
-            window.batch_record_group.setVisible(True)
             panel.summary.gap_loss.setVisible(True)
             panel.history_button.setVisible(enabled)
             panel.test_tools_button.setVisible(enabled)

@@ -23,7 +23,7 @@ def test_removed_batch_details_leave_only_developer_pages(tmp_path):
     assert not details.isVisible() and not details.isModal()
     for tool in (panel.summary, panel.timings, panel.preview_tabs):
         assert tool.isVisible()
-    assert window.batch_record.document() is window.run_log.document()
+    assert not hasattr(window, 'batch_record')
     assert panel.preview_tabs.count() == 2
     assert panel.preview_tabs.tabText(0) == '标签与刀码位置（默认）'
     assert panel.preview_tabs.tabText(1) == '批次排版预览'
