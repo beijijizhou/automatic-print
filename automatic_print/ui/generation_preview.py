@@ -40,6 +40,8 @@ class GenerationPreviewController(QObject):
         else:
             board.reset([])
         board.show()
+        from .generation_panel import refresh_batch_record
+        refresh_batch_record(self.window)
         self.panel.timings.reset()
         self.payload = None
         self.panel.analysis.clear()

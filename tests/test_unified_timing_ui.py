@@ -1,6 +1,8 @@
 """All generation entry points use the same live timing table."""
 from pathlib import Path
 from time import perf_counter
+from PySide6.QtCore import QPoint
+from PySide6.QtWidgets import QApplication, QPushButton
 
 from automatic_print.ui.bulk_workbench import BulkWorkbench
 from automatic_print.ui.cold_batch_benchmark import ColdBatchBenchmarkDialog
@@ -100,4 +102,42 @@ def test_single_failed_batch_stays_visible_with_reason(tmp_path):
     board = owner.batch_status_board
     assert board.groups['未完成'].topLevelItemCount() == 1
     assert 'problem.png 标签位置不足' in board.items[0].toolTip(0)
+    owner.close()
+
+
+def test_summary_shows_copyable_selected_batch_record(tmp_path):
+    owner = window(tmp_path/'visible-record.ini')
+    record = owner.batch_record_view
+    summary = owner.automation_home.label_quick_panel.summary
+    assert summary.isAncestorOf(record)
+    assert record.isVisible() and record.height() <= 160
+    timings = owner.automation_home.label_quick_panel.timings
+    assert record.geometry().top() > timings.mapTo(summary, QPoint(0, timings.height())).y()
+    assert '尚无批次记录' in record.toPlainText()
+
+    owner.generation_preview.start('single')
+    owner.run_log.appendPlainText('开始：读取图片尺寸')
+    assert '开始：读取图片尺寸' in record.toPlainText()
+
+    first, second = tmp_path/'first', tmp_path/'second'
+    controller = BulkWorkbench(owner)
+    owner.bulk_controller = controller
+    controller.folders = [first, second]
+    controller.inventory = {}
+    controller.payloads, controller.records, controller.stages = {}, {}, {}
+    controller.timing_data = {}
+    owner.generation_preview.start('multiple')
+    controller.selector.reset(controller.folders)
+    owner.run_log.clear()
+    owner.run_log.appendPlainText('first：读取图片尺寸')
+    owner.run_log.appendPlainText('second：保存输出图片')
+    assert 'first：读取图片尺寸' in record.toPlainText()
+    assert 'second：保存输出图片' not in record.toPlainText()
+    controller.selector.setCurrentIndex(1)
+    assert 'second：保存输出图片' in record.toPlainText()
+    assert 'first：读取图片尺寸' not in record.toPlainText()
+    copy_button = next(button for button in summary.findChildren(QPushButton)
+        if button.text() == '复制记录')
+    copy_button.click()
+    assert QApplication.clipboard().text() == record.toPlainText()
     owner.close()

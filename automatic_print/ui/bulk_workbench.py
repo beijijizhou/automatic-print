@@ -99,6 +99,8 @@ class BulkWorkbench(QObject):
             return
         if index < 0 or index >= len(self.folders):
             return
+        from .generation_panel import refresh_batch_record
+        refresh_batch_record(self.window)
         view = self.window.generation_preview
         view.payload = None
         view.preview.clear_for_generation()
