@@ -15,4 +15,5 @@ downloads/
 installer-dist/
 .restart-request
 .update-in-progress
+tests/fixtures/dtf_failed_batches_20260919.json
 supabase/.temp/

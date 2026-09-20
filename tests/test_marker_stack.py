@@ -2,6 +2,7 @@ import os
 os.environ.setdefault('QT_QPA_PLATFORM', 'offscreen')
 from dataclasses import replace
 from pathlib import Path
+from types import SimpleNamespace
 import numpy as np
 import pytest
 from PIL import Image
@@ -60,6 +61,28 @@ def test_reused_qr_badge_does_not_expand_external_marker_column():
     )
     assert bx == lx == -17
     assert px == 42
+
+
+def test_external_corridor_accepts_vertical_stack_but_rejects_image_overlap():
+    settings = LayoutSettings(
+        dpi=25.4, cutter_mode='dual', preserve_header_gap=False,
+        platform_below_marker=True, platform_reuse_qr=True,
+        cutter_left_marker_external=True, number_gap_mm=5,
+    )
+    placement = SimpleNamespace(
+        color_block_x_px=0, color_block_y_px=0,
+        color_block_width_px=10, color_block_height_px=10,
+        number_x_px=0, number_y_px=15,
+        number_width_px=12, number_height_px=3,
+        x_px=20,
+    )
+    validate_stack(Path('batch.png'), placement, settings)
+    for changed in (
+        dict(number_y_px=14), dict(number_x_px=1),
+        dict(x_px=11), dict(color_block_width_px=21),
+    ):
+        with pytest.raises(ValueError, match='标签文字未位于'):
+            validate_stack(Path('batch.png'), SimpleNamespace(**(vars(placement) | changed)), settings)
 
 
 @pytest.mark.parametrize('mode', ['free', 'single', 'dual'])

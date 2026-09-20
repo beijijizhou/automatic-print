@@ -118,20 +118,15 @@ def validate_stack(path, p, settings):
         return
     if (settings.cutter_left_marker_external and settings.platform_reuse_qr
             and p.number_width_px):
-        # The fallback reserves a real horizontal corridor. The platform badge
-        # remains in the source QR card, so the old vertical-stack rule below
-        # must not reject this independently verified label position.
-        from automatic_print.layout_engine.cutting.geometry.cut_guide_geometry import detect_guide_band
-        band = detect_guide_band(path)
-        if band is None:
-            raise ValueError(f'{path.name}：未能可靠识别膜标签高度范围，禁止输出新增文字。')
-        band = band.rotated(p.rotation_degrees)
-        top = p.y_px+round(band.top*p.height_px)
-        bottom = p.y_px+round(band.bottom*p.height_px)
-        if (p.number_x_px < p.color_block_x_px+p.color_block_width_px
-                or p.number_x_px+p.number_width_px > p.x_px
-                or p.number_y_px < top
-                or p.number_y_px+p.number_height_px > bottom):
+        # The recovered external corridor stacks the label *below* the cutter
+        # mark. It is outside the source image, so the source QR-card height
+        # is not a constraint here. The previous horizontal/band check
+        # rejected this safe fallback for real batches.
+        gap = mm_to_px(settings.number_gap_mm, settings.dpi)
+        if (p.number_x_px != p.color_block_x_px
+                or p.number_y_px != p.color_block_y_px+p.color_block_height_px+gap
+                or p.color_block_x_px+p.color_block_width_px > p.x_px
+                or p.number_x_px+p.number_width_px > p.x_px):
             raise ValueError(f'{path.name}：标签文字未位于刀码与膜标签之间的安全空白，禁止输出。')
         return
     y = p.color_block_y_px+p.color_block_height_px+mm_to_px(settings.number_gap_mm, settings.dpi)
