@@ -7,6 +7,10 @@ def format_report(report: dict) -> str:
              f"口径：{report['cache_policy']}", f"状态：{report['status']}"]
     if "scan_seconds" in report:
         lines.append(f"发现与抽样：{report['scan_seconds']:.3f} 秒；候选批次 {report.get('candidate_count', 0)} 个")
+    if report.get("selected"):
+        lines.append("本次随机抽中的批次（按运行顺序）：")
+        lines.extend(f"  {index:02d}. {item['folder']} · {item['images']}张"
+                     for index, item in enumerate(report["selected"], 1))
     for item in report["batches"]:
         lines.extend(("", f"第{item['index']:02d}批 · {item['folder']} · {item['images']}张 · {item['status']}",
                       f"本批完整耗时：{item['wall_seconds']:.3f} 秒 · 累计：{item['cumulative_seconds']:.3f} 秒",
@@ -31,4 +35,7 @@ def format_report(report: dict) -> str:
                      sorted(totals.items(), key=lambda pair: -pair[1]))
     if report.get("error"):
         lines.append("错误：" + report["error"])
+    if report.get("interrupted"):
+        item = report["interrupted"]
+        lines.append(f"用户停止于第{item['index']}批：{item['folder']}；未计为成功。")
     return "\n".join(lines) + "\n"

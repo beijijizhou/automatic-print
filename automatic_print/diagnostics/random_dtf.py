@@ -144,7 +144,18 @@ def run(root: Path, output: Path, settings_data: dict, count=10, seed=None):
         worker.failed.connect(failures.append, Qt.ConnectionType.DirectConnection)
         batch_started = perf_counter()
         _emit("batch_started", index=index, count=count, folder=str(folder), images=batch["image_count"])
-        worker.run()
+        try:
+            worker.run()
+        except KeyboardInterrupt:
+            report.update(status="已停止", completed=sum(
+                item["status"] == "已完成" for item in report["batches"]),
+                failed=sum(item["status"] == "失败" for item in report["batches"]),
+                total_seconds=round(perf_counter() - started, 3),
+                interrupted={"index": index, "folder": str(folder),
+                             "images": batch["image_count"]})
+            _write_report(report_path, report)
+            _emit("stopped", index=index, folder=str(folder), report=str(report_path))
+            return report
         item = {"index": index, "folder": str(folder), "images": batch["image_count"],
                 "cache_directory": str(cache), "worker_threads": settings.worker_threads,
                 "wall_seconds": round(perf_counter() - batch_started, 3),

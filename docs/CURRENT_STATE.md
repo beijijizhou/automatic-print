@@ -57,7 +57,7 @@
   `ui/thread_lifecycle.py`仅保留旧调用方兼容导入。
 - 开发者 DTF 随机10批冷启动测试位于`ui/cold_batch_benchmark.py`，其子进程事件解析归`ui/cold_batch_events.py`，独立子进程复用
   `diagnostics/random_dtf.py`、`diagnostics/benchmark_report.py`、共享批次扫描与`GenerateWorker`；只读扫描日期/HL目录，逐批生成到本机
-  隔离目录并持续保存阶段耗时JSON及可读TXT。子进程实时发送原有`OperationTiming`快照，测试窗口复用主界面分步耗时表，另显示本批和整次计时；不写生产历史或触发RIIN。
+  隔离目录并持续保存阶段耗时JSON及可读TXT，含随机种子、候选数、抽中批次及停止时的未完成批次。子进程实时发送原有`OperationTiming`快照，测试窗口复用主界面分步耗时表，另显示本批和整次计时；不写生产历史或触发RIIN。
   冷启动报告中的4个标签安全失败批次及完整运行参数仅保存在本机私有的
   `tests/fixtures/dtf_failed_batches_20260919.json`，公开仓库不包含内部盘路径或原始文件名；
   `tests/test_dtf_failed_batch_regressions.py`可用此清单逐批复现，真实整批生成须明确设置

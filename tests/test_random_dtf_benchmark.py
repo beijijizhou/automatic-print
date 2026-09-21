@@ -81,10 +81,55 @@ def test_cold_report_keeps_each_batch_and_continues_after_failure(tmp_path, monk
     assert (tmp_path / "out" / "冷启动10批耗时.json").is_file()
     readable = (tmp_path / "out" / "冷启动10批耗时.txt").read_text(encoding="utf-8")
     assert "本批完整耗时" in readable and "sample failure" in readable
+    assert "本次随机抽中的批次" in readable
+    assert readable.count("张 · ") >= 2
     assert json.loads((tmp_path / "out" / "冷启动10批耗时.json").read_text(encoding="utf-8"))[
         "status"] == "部分失败"
     events = [json.loads(line) for line in capsys.readouterr().out.splitlines()]
     assert len([event for event in events if event['event'] == 'timing']) == 2
+
+
+def test_stopped_random_batch_keeps_completed_result_and_selected_list(
+        tmp_path, monkeypatch, capsys):
+    from dataclasses import asdict
+    from PySide6.QtCore import QObject, Signal
+    from automatic_print.diagnostics.random_dtf import run
+    from automatic_print.layout_engine.domain.models import LayoutSettings
+    import automatic_print.ui.workers as workers
+
+    root = tmp_path / "HL"
+    for index in range(2):
+        batch = root / f"609192100{index:03d}"
+        batch.mkdir(parents=True)
+        (batch / "image.png").write_bytes(b"test")
+
+    class FakeWorker(QObject):
+        progress = Signal(str, object, object, str)
+        timings_ready = Signal(object)
+        finished = Signal(str, object)
+        failed = Signal(str)
+        calls = 0
+
+        def __init__(self, images, source, output, job, settings, batch_name):
+            super().__init__()
+            self.source, self.output = source, output
+
+        def run(self):
+            type(self).calls += 1
+            if type(self).calls == 1:
+                self.finished.emit(str(self.output), {"files": ["sample.png"]})
+            else:
+                raise KeyboardInterrupt
+
+    monkeypatch.setattr(workers, "GenerateWorker", FakeWorker)
+    report = run(root, tmp_path / "out", asdict(LayoutSettings()), count=2, seed=7)
+    assert report["status"] == "已停止"
+    assert report["completed"] == 1 and report["failed"] == 0
+    assert len(report["selected"]) == 2 and len(report["batches"]) == 1
+    assert report["interrupted"]["index"] == 2
+    readable = (tmp_path / "out" / "冷启动10批耗时.txt").read_text(encoding="utf-8")
+    assert "本次随机抽中的批次" in readable and "未计为成功" in readable
+    assert any(json.loads(line)["event"] == "stopped" for line in capsys.readouterr().out.splitlines())
 
 
 def test_benchmark_dialog_shows_live_phase_timing():
