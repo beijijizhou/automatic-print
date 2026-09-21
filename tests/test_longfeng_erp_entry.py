@@ -70,7 +70,7 @@ def test_platform_download_is_multi_select_and_preview_only(tmp_path):
     longfeng.main_tabs.setCurrentIndex(1)
     APP.processEvents()
     assert longfeng.generation_sections.tabText(0) == "已接单筛选预览"
-    assert longfeng.generation_sections.tabText(1) == "已生产补单计划"
+    assert longfeng.generation_sections.tabText(1) == "生产中批次策略"
     assert longfeng.generation_sections.widget(1) is longfeng.completed_page
     assert longfeng.route_preview_table.horizontalHeaderItem(3).text() == "件数"
     assert longfeng.route_preview_button.text() == "读取工艺路线"

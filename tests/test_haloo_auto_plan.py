@@ -21,6 +21,32 @@ def _row(item, order, *, supplemented=False):
                 if supplemented else [])
 
 
+def test_production_preview_blocks_incomplete_order_before_submission():
+    owner = QWidget()
+    owner.thread = None
+    workers = []
+    owner._start_worker = workers.append
+    page = CompletedErpPage(owner, '隆丰')
+    page.plan_button.click()
+    assert workers[0].source_status == 5
+    row = _row('1', 'partial')
+    row['status'] = 5
+    groups = plan_completed_erp_batches(
+        [row], {'1': {'production_images': [{'name': 'A面'}]}},
+        source_status=5)
+    page.show_result(dict(platform='隆丰', scope=30, source_status=5,
+                          data=dict(count=1, groups=groups, supplemented=(),
+                                    order_issues={'partial': '整单不完整'},
+                                    rules=[SimpleNamespace(id=7, name='默认规则',
+                                                           is_default=True)])))
+    assert not page.boxes[0].isEnabled()
+    assert not page.generate_button.isEnabled()
+    assert '整单异常 1 单' in page.summary.text()
+    page.source.setCurrentIndex(1)
+    assert page.table.rowCount() == 0
+    assert not page.generate_button.isEnabled()
+
+
 @pytest.mark.parametrize('platform_name', ('隆丰', '莆田', 'Haloo'))
 def test_auto_plan_button_reads_completed_items_and_selects_only_eligible_groups(platform_name):
     owner = QWidget()
@@ -28,6 +54,7 @@ def test_auto_plan_button_reads_completed_items_and_selects_only_eligible_groups
     workers = []
     owner._start_worker = workers.append
     page = CompletedErpPage(owner, platform_name)
+    page.source.setCurrentIndex(1)
 
     page.plan_button.click()
     assert len(workers) == 1

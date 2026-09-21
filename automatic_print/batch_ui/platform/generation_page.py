@@ -19,7 +19,7 @@ def build_batch_generation_page(owner, platform_name: str) -> QWidget:
     received_layout.addStretch()
     sections.addTab(received, "已接单筛选预览")
     owner.completed_page = CompletedErpPage(owner, platform_name)
-    sections.addTab(owner.completed_page, "已生产补单计划")
+    sections.addTab(owner.completed_page, "生产中批次策略")
     layout.addWidget(sections)
     owner.generation_sections = sections
     return page

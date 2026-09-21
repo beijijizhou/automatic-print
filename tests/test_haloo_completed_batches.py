@@ -137,8 +137,25 @@ def test_supplement_batch_generation_calls_exact_item_quantities() -> None:
 def test_non_completed_snapshot_is_rejected() -> None:
     row = _row("1", "a")
     row["status"] = 5
-    with pytest.raises(RuntimeError, match="非“已生产”"):
+    with pytest.raises(RuntimeError, match="其他订单状态"):
         plan_completed_erp_batches([row], {"1": _detail("A面")})
+
+
+def test_production_and_completed_sources_share_the_same_grouping_strategy() -> None:
+    rows = [_row("1", "a", composition=3), _row("2", "a", composition=3),
+            _row("3", "b", color="白色")]
+    details = {row["id"]: _detail("A面") for row in rows}
+    completed = plan_completed_erp_batches(rows, details)
+    for row in rows:
+        row["status"] = 5
+    production = plan_completed_erp_batches(rows, details, source_status=5)
+    assert [(group.item_ids, group.logistics_code, group.order_composition,
+             group.face, group.style_id, group.color, group.size_group)
+            for group in production] == [
+            (group.item_ids, group.logistics_code, group.order_composition,
+             group.face, group.style_id, group.color, group.size_group)
+            for group in completed]
+    assert {group.source_status for group in production} == {5}
 
 
 def test_multi_item_orders_do_not_split_by_style_or_color() -> None:
@@ -210,3 +227,27 @@ def test_generation_rejects_existing_supplement() -> None:
                return_value=_detail("A面")):
         with pytest.raises(RuntimeError, match="已有补单"):
             verify_completed_group(object(), group)
+
+
+def test_production_a05_cannot_use_generic_supplement_submission() -> None:
+    row = _row('1', 'a')
+    row.update(status=5, process_route_code='A05')
+    group = plan_completed_erp_batches(
+        [row], {'1': _detail('A面')}, source_status=5)[0]
+    with patch('automatic_print.automation.api.erp.items.list_production_items',
+               return_value={'list': [row], 'total': 1}):
+        with pytest.raises(RuntimeError, match='A05 无印花'):
+            verify_completed_group(object(), group)
+
+
+def test_generation_rejects_mixed_order_sources_before_write() -> None:
+    produced = _row('1', 'a')
+    production = _row('2', 'b')
+    production['status'] = 5
+    groups = (
+        plan_completed_erp_batches([produced], {'1': _detail('A面')})[0],
+        plan_completed_erp_batches([production], {'2': _detail('A面')},
+                                   source_status=5)[0],
+    )
+    with pytest.raises(ValueError, match='不同订单入口'):
+        generate_completed_groups(object(), groups, 1)

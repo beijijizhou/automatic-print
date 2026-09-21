@@ -8,9 +8,7 @@ from dataclasses import dataclass
 from ..api.erp import (
     generate_supplement_batch,
     list_batch_rules,
-    list_production_items,
     production_item_images,
-    production_item_payload,
 )
 from ..api.erp.items import list_order_items
 from .classification import (
@@ -19,7 +17,7 @@ from .classification import (
     size_band,
 )
 
-COMPLETED_STATUS = 9
+from .source import COMPLETED_STATUS, SUPPLEMENT_SOURCES, special_strategy_issue
 
 
 @dataclass(frozen=True)
@@ -35,29 +33,15 @@ class CompletedBatchGroup:
     source_batch_codes: tuple[str, ...] = ()
     item_quantities: tuple[tuple[str, int], ...] = ()
     order_ids: tuple[str, ...] = ()
-
-
-def load_completed_erp_snapshot(
-    page, *, page_size: int = 200, progress=None
-) -> tuple[list[dict], dict[str, dict]]:
-    """Read a bounded, newest-first completed snapshot plus exact face data."""
-    if page_size < 1 or page_size > 200:
-        raise ValueError("已生产测试快照每次只允许读取 1–200 项。")
-    payload = production_item_payload(status=("9",), page_size=page_size)
-    rows = list(list_production_items(page, payload).get("list") or [])
-    details = {}
-    for index, row in enumerate(rows, start=1):
-        if progress:
-            progress(f"[{index}/{len(rows)}] 正在读取实际生产图面别")
-        details[str(row["id"])] = production_item_images(page, str(row["id"]))
-    return rows, details
+    source_status: int = COMPLETED_STATUS
 
 
 def plan_completed_erp_batches(
-    rows: list[dict], image_details: dict[str, dict]
+    rows: list[dict], image_details: dict[str, dict], *,
+    source_status: int = COMPLETED_STATUS,
 ) -> tuple[CompletedBatchGroup, ...]:
-    """Group an immutable completed snapshot; never calls a write endpoint."""
-    _validate_completed_snapshot(rows, image_details)
+    """Apply one supplement grouping strategy to either order source."""
+    _validate_completed_snapshot(rows, image_details, source_status)
     grouped: dict[tuple[str, ...], list[dict]] = defaultdict(list)
     order_rows: dict[str, list[dict]] = defaultdict(list)
     for row in rows:
@@ -99,18 +83,23 @@ def plan_completed_erp_batches(
                 for row in members
             ),
             tuple(dict.fromkeys(str(row["order_id"]) for row in members)),
+            source_status,
         )
         for key, members in sorted(grouped.items())
         if members
     )
 
 
-def _validate_completed_snapshot(rows, image_details) -> None:
+def _validate_completed_snapshot(rows, image_details, source_status: int) -> None:
     if not rows:
-        raise RuntimeError("没有已生产测试数据。")
+        raise RuntimeError("所选订单入口没有可测试的生产项。")
+    if source_status not in SUPPLEMENT_SOURCES:
+        raise ValueError("补单订单入口必须是生产中或已生产。")
+    if len({str(row.get('id') or '') for row in rows}) != len(rows):
+        raise RuntimeError("订单入口快照包含重复生产项，禁止生成测试计划。")
     for row in rows:
-        if int(row.get("status") or 0) != COMPLETED_STATUS:
-            raise RuntimeError("快照包含非“已生产”生产项，禁止生成测试计划。")
+        if int(row.get("status") or 0) != source_status:
+            raise RuntimeError("快照混入其他订单状态，禁止生成测试计划。")
         item_id = str(row.get("id") or "")
         if not item_id or item_id not in image_details:
             raise RuntimeError("生产项缺少实际生产图面别详情，禁止猜测。")
@@ -149,8 +138,11 @@ def verify_completed_group(page, expected: CompletedBatchGroup) -> list[dict]:
     rows = [row for order_id in expected.order_ids for row in _whole_order(page, order_id)]
     if len({str(row["id"]) for row in rows}) != len(rows):
         raise RuntimeError("订单查询返回重复生产项。")
+    if issue := special_strategy_issue(rows):
+        raise RuntimeError(issue)
     details = {str(row["id"]): production_item_images(page, str(row["id"])) for row in rows}
-    actual = plan_completed_erp_batches(rows, details)
+    actual = plan_completed_erp_batches(rows, details,
+                                        source_status=expected.source_status)
     fields = ("logistics_code", "order_composition", "face", "style_id", "style_name",
               "color", "size_group")
     if len(actual) != 1 or any(getattr(actual[0], field) != getattr(expected, field)
@@ -172,6 +164,8 @@ def generate_completed_groups(page, groups: tuple[CompletedBatchGroup, ...],
     if len({item_id for group in groups for item_id in group.item_ids}) != sum(
             len(group.item_ids) for group in groups):
         raise ValueError("所选分组包含重复生产项。")
+    if len({group.source_status for group in groups}) != 1:
+        raise ValueError("所选分组混入不同订单入口，不能一起提交。")
     if str(rule_id) not in {str(rule.id) for rule in list_batch_rules(page)}:
         raise RuntimeError("批次规则已变化，请重新读取。")
     created = []

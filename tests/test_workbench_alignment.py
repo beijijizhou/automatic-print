@@ -32,6 +32,7 @@ def test_completed_preview_shows_style_and_color_before_generation(tmp_path, mon
     owner.production_platform_download_page.platform_checks['Haloo'].setChecked(True)
     workbench = owner.production_platform_download_page.workbenches['Haloo']
     page = workbench.completed_page
+    page.source.setCurrentIndex(1)
     assert page.plan_button.text() == '自动化生成计划'
     assert workbench.main_tabs.tabText(1) == '批次生成'
     assert workbench.generation_sections.indexOf(page) == 1
@@ -92,7 +93,8 @@ def test_completed_plan_tab_is_available_on_every_erp_platform(tmp_path, platfor
     assert workbench.main_tabs.tabText(1) == '批次生成'
     assert workbench.generation_sections.tabText(
         workbench.generation_sections.indexOf(page)
-    ) == '已生产补单计划'
+    ) == '生产中批次策略'
+    assert page.source.currentData() == 5
     assert page.plan_button.text() == '自动化生成计划'
     assert page.plan_button.isVisibleTo(page)
     owner.close()

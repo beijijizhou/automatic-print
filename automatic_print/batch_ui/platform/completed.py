@@ -5,6 +5,7 @@ from PySide6.QtWidgets import (
     QPlainTextEdit, QPushButton, QSpinBox, QTableWidgetItem, QVBoxLayout, QWidget,
 )
 from .pages import table_widget
+from .completed_view import selected_description, style_label
 from ..task.reads import CompletedGenerateWorker, ReadWorker
 
 
@@ -17,18 +18,21 @@ class CompletedErpPage(QWidget):
         self.boxes = []
         self.auto_plan_pending = False
         layout = QVBoxLayout(self)
-        note = QLabel('已完成的单项单件按物流、底款、颜色、面别和尺码档分别分类。'
+        note = QLabel('生产中与已生产共用补单分组策略：单项单件按物流、底款、颜色、面别和尺码档分类。'
                       '多件订单只按物流、订单组成和面别分组，始终保持整单。'
                       '选中的每一组会单独生成一个补单批次。')
         note.setWordWrap(True)
+        self.source = QComboBox()
+        self.source.addItem('生产中', 5)
+        self.source.addItem('已生产', 9)
         self.limit = QSpinBox()
         self.limit.setRange(1, 200)
         self.limit.setValue(30)
         self.limit.setSuffix(' 个生产项（最多200）')
-        self.read_button = QPushButton('读取已生产底款分类')
+        self.read_button = QPushButton('读取订单分类')
         self.read_button.clicked.connect(self.load)
         self.plan_button = QPushButton('自动化生成计划')
-        self.plan_button.setToolTip('读取状态9的已生产项，并将尚未补单的分组加入候选计划；不会提交批次。')
+        self.plan_button.setToolTip('按所选订单状态读取，并将完整、未补单的分组加入候选计划；不会提交批次。')
         self.plan_button.clicked.connect(self.load_plan)
         self.rule = QComboBox()
         self.rule.setMinimumWidth(230)
@@ -37,7 +41,7 @@ class CompletedErpPage(QWidget):
         self.generate_button.setEnabled(False)
         self.generate_button.clicked.connect(self.generate)
         controls = QHBoxLayout()
-        for widget in (self.limit, self.read_button, self.plan_button,
+        for widget in (self.source, self.limit, self.read_button, self.plan_button,
                        self.rule, self.generate_button):
             controls.addWidget(widget)
         self.summary = QLabel('尚未读取。先查看分类，再选择要单独生成的底款组。')
@@ -59,6 +63,7 @@ class CompletedErpPage(QWidget):
                        self.selection_preview, warning):
             layout.addWidget(widget)
         self.limit.valueChanged.connect(self.invalidate)
+        self.source.currentIndexChanged.connect(self.invalidate)
 
     def invalidate(self, *_):
         self.auto_plan_pending = False
@@ -81,29 +86,36 @@ class CompletedErpPage(QWidget):
             return
         self.invalidate()
         self.auto_plan_pending = auto_plan
-        self.summary.setText('正在读取已生产项和实际生产图面别，形成候选计划…'
-                             if auto_plan else '正在读取已生产项和实际生产图面别…')
+        self.summary.setText(
+            f'正在读取{self.source.currentText()}生产项与实际生产图面别…')
         self.owner._start_worker(ReadWorker(self.platform_name, 'completed_erp',
-                                           self.limit.value(), self.limit.value()))
+                                           self.limit.value(), self.limit.value(),
+                                           source_status=self.source.currentData()))
 
     def show_result(self, result):
-        if result['scope'] != self.limit.value() or result['platform'] != self.platform_name:
+        if (result['scope'] != self.limit.value()
+                or result['platform'] != self.platform_name
+                or result.get('source_status', 9) != self.source.currentData()):
             return
         data = result['data']
         self.groups = tuple(data['groups'])
         blocked = set(data.get('supplemented') or ())
+        order_issues = data.get('order_issues') or {}
         self.table.setRowCount(len(self.groups))
         self.boxes = []
         for row, group in enumerate(self.groups):
             box = QCheckBox()
-            if blocked.intersection(group.item_ids):
+            issues = [order_issues[order_id] for order_id in getattr(group, 'order_ids', ())
+                      if order_id in order_issues]
+            if blocked.intersection(group.item_ids) or issues:
                 box.setEnabled(False)
-                box.setToolTip('该组含已有补单的生产项，不能重复生成。')
+                box.setToolTip('；'.join(issues) if issues else
+                               '该组含已有补单的生产项，不能重复生成。')
             box.toggled.connect(self.update_generate_enabled)
             self.table.setCellWidget(row, 0, box)
             self.boxes.append(box)
             values = (group.logistics_code, group.order_composition,
-                      self._style_label(group),
+                      style_label(group),
                       group.color or '未记录', group.face, group.size_group or '未记录',
                       str(len(group.item_ids)), ', '.join(group.source_batch_codes) or '未记录',
                       ', '.join(group.item_ids))
@@ -124,33 +136,19 @@ class CompletedErpPage(QWidget):
                     planned += 1
         self.auto_plan_pending = False
         prefix = f'自动候选计划 {planned} 组；' if was_auto_plan else ''
-        self.summary.setText(f"{prefix}已读 {data['count']} 项，分类 {len(self.groups)} 组 / {included} 项；"
+        self.summary.setText(f"{prefix}{self.source.currentText()}已读 {data['count']} 项，"
+                             f"分类 {len(self.groups)} 组 / {included} 项；"
                              f"未纳入 {data['count'] - included} 项，"
-                             f"已有补单 {len(blocked)} 项。当前仅覆盖所选读取范围，"
-                             f"快照可能跨页不完整，提交前会复核整单。")
+                             f"已有补单 {len(blocked)} 项，整单异常 {len(order_issues)} 单。"
+                             f"异常组已禁用，提交前仍会复核整单。")
         self.update_generate_enabled()
 
     def selected_groups(self):
         return tuple(group for group, box in zip(self.groups, self.boxes) if box.isChecked())
 
-    @staticmethod
-    def _style_label(group):
-        if group.order_composition != '单项单件':
-            return '多件整单（不按底款拆分）'
-        return f'{group.style_name or "名称未记录"}（ID: {group.style_id or "未记录"}）'
-
-    def _selected_description(self, groups):
-        return '\n'.join(
-            f'{index}. {self._style_label(group)}｜颜色：'
-            f'{group.color or "未记录" if group.order_composition == "单项单件" else "多件整单"}'
-            f'｜物流：{group.logistics_code}｜面别：{group.face}'
-            f'｜{len(group.item_ids)} 项 / {sum(qty for _, qty in group.item_quantities)} 件'
-            for index, group in enumerate(groups, 1)
-        )
-
     def update_generate_enabled(self, *_):
         groups = self.selected_groups()
-        self.selection_preview.setPlainText(self._selected_description(groups))
+        self.selection_preview.setPlainText(selected_description(groups))
         self.generate_button.setEnabled(
             self.owner.thread is None and bool(groups)
             and self.rule.currentData() is not None
@@ -159,6 +157,7 @@ class CompletedErpPage(QWidget):
     def set_actions_enabled(self, enabled):
         self.read_button.setEnabled(enabled)
         self.plan_button.setEnabled(enabled)
+        self.source.setEnabled(enabled)
         self.limit.setEnabled(enabled)
         self.rule.setEnabled(enabled)
         for box in self.boxes:
@@ -174,9 +173,10 @@ class CompletedErpPage(QWidget):
         dialog.setWindowTitle('生成前核对底款与颜色')
         dialog.resize(740, 360)
         layout = QVBoxLayout(dialog)
-        label = QLabel(f'将下列 {len(groups)} 个分组分别生成批次。请先核对真实底款和颜色：')
+        label = QLabel(f'{self.source.currentText()}来源的 {len(groups)} 个分组将分别生成补单批次。'
+                       '请先核对真实底款和颜色：')
         layout.addWidget(label)
-        details = QPlainTextEdit(self._selected_description(groups))
+        details = QPlainTextEdit(selected_description(groups))
         details.setReadOnly(True)
         layout.addWidget(details)
         buttons = QDialogButtonBox(QDialogButtonBox.StandardButton.Ok |
