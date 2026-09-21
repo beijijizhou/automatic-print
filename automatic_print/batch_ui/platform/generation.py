@@ -18,6 +18,7 @@ from ...automation.batches.classification import (
 )
 from ...automation.batches.rules import RuleBatchPlan
 from ...automation.batches.routes import RouteBatchPlan
+from ...automation.batches.default_multi import DefaultMultiPlan
 from ..task.worker import AutomationWorker
 
 
@@ -80,6 +81,9 @@ class GenerationActionsMixin:
 
     @Slot(object)
     def generation_plan_finished(self, plan: RuleBatchPlan) -> None:
+        if isinstance(plan, DefaultMultiPlan):
+            self.default_multi_plan_finished(plan)
+            return
         if isinstance(plan, RouteBatchPlan):
             self.route_plan_finished(plan)
             return

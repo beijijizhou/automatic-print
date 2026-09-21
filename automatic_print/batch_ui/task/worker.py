@@ -15,6 +15,7 @@ from ...automation.batches.rules import (
     RuleBatchPlan,
 )
 from ...automation.batches.routes import RouteBatchPlan
+from ...automation.batches.default_multi import DefaultMultiPlan
 from ...layout_engine import LayoutSettings
 from ..local.processing import process_local_batches
 from .generation_actions import GENERATION_ACTIONS, run_generation_action
@@ -38,7 +39,7 @@ class AutomationWorker(QObject):
         settings: LayoutSettings | None = None,
         sample_limit: int | None = None,
         batch_plan: RuleBatchPlan | None = None,
-        route_plan: RouteBatchPlan | None = None,
+        route_plan: RouteBatchPlan | DefaultMultiPlan | None = None,
         route_label: str = "A05-无印花",
         generation_rule: str = "按有面单生成批次规则",
         range_start: str = "",

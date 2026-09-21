@@ -54,6 +54,7 @@ class AutomationDialog(
         self.records = []
         self.pending_batch_plan = None
         self.pending_route_plan = None
+        self.pending_default_multi_plan = None
         self.preferences = (
             parent.preferences if parent is not None and hasattr(parent, "preferences")
             else QSettings("AutomaticPrint", "AutomaticPrint")
@@ -115,6 +116,7 @@ class AutomationDialog(
     def platform_changed(self, name: str) -> None:
         self.pending_batch_plan = None
         self.pending_route_plan = None
+        self.pending_default_multi_plan = None
         self.records = []
         self.table.setRowCount(0)
         self.summary.setText(f"尚未读取 {name} 已生成批次。")

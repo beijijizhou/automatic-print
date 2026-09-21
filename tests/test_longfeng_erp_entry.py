@@ -41,6 +41,9 @@ def test_platform_download_is_multi_select_and_preview_only(tmp_path):
     longfeng.main_tabs.setCurrentIndex(1)
     APP.processEvents()
     assert longfeng.route_preview_button.text() == "读取工艺路线"
+    assert longfeng.default_multi_preview_button.text() == "读取默认路线多项多件"
+    assert longfeng.default_multi_generate_button.text() == "直接生成批次"
+    assert not longfeng.default_multi_generate_button.isEnabled()
     assert longfeng.route_generate_button.text() == "按筛选生成批次"
     assert not longfeng.route_generate_button.isEnabled()
     longfeng.main_tabs.setCurrentIndex(0)
