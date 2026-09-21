@@ -3,6 +3,8 @@ name: Build Windows installer
 on:
   workflow_dispatch:
   push:
+    branches:
+      - codex/uv-test-installer
     tags:
       - "v*"
 
@@ -23,7 +25,12 @@ jobs:
           cache: pip
 
       - name: Install build dependencies
-        run: python -m pip install -r requirements-build.txt
+        run: python -m pip install -r requirements-build.txt pytest
+
+      - name: Run UV and merge regression tests
+        env:
+          QT_QPA_PLATFORM: offscreen
+        run: python -m pytest -q tests/test_shared_knife_workflow.py tests/test_longfeng_erp_entry.py tests/test_project_governance.py tests/test_version_display.py tests/test_putian_platform.py tests/test_developer_mode.py tests/test_uv_sheet.py tests/test_ydwx_download.py
 
       - name: Inject shared S2B gateway key
         shell: pwsh
@@ -42,6 +49,13 @@ jobs:
             automatic_print/automation/api/s2b/deployment.py `
             "S2B_BATCH_INFO_KEY = $pythonLiteral"
 
+      - name: Verify YDWX shared login through packaged key
+        run: >-
+          python -c "from automatic_print.automation.api.ydwx import list_batches;
+          batches = list_batches();
+          assert batches, 'YDWX returned no production batches';
+          print(f'YDWX shared login succeeded: {len(batches)} batches')"
+
       - name: Build application
         run: pyinstaller --noconfirm --clean AutomaticPrint.spec
 
@@ -52,7 +66,9 @@ jobs:
         shell: pwsh
         run: |
           $version = "${{ github.ref_name }}".TrimStart("v")
-          if (-not $version -or $version -eq "main") { $version = "0.1.0-dev" }
+          if ('${{ github.ref_type }}' -ne 'tag') {
+            $version = "0.1.333-uv-test.${{ github.run_number }}"
+          }
           & "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" "/DMyAppVersion=$version" "installer\automatic-print.iss"
 
       - name: Upload installer artifact
