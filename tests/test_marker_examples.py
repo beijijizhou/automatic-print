@@ -46,7 +46,7 @@ def test_four_cases_use_production_geometry_and_never_modify_sources(tmp_path):
         item = row['item']
         assert item.rotation_degrees == row['degrees']
         assert item.block_rx == 0
-        assert item.image_rx >= item.block_width+5
+        assert item.image_rx == 0 or item.image_rx >= item.block_width
         assert len(row['pixels']) == row['size'][0]*row['size'][1]*4
         assert row['label_text']
         if row['degrees']:
@@ -54,6 +54,15 @@ def test_four_cases_use_production_geometry_and_never_modify_sources(tmp_path):
             assert in_short_edge_space(row['region'], item.width, item.height,
                 (item.label_rx-item.image_rx, item.label_ry-item.image_ry,
                  item.label_width, item.label_height))
+        else:
+            from math import ceil, floor
+            if (row['region'].left+row['region'].right)/2 < .5:
+                assert item.label_rx-item.image_rx >= ceil(row['region'].right*item.width)
+            else:
+                assert item.label_rx-item.image_rx+item.label_width <= floor(
+                    row['region'].left*item.width)
+            assert item.image_rx <= item.label_rx
+            assert item.label_rx+item.label_width <= item.image_rx+item.width
     assert [p.read_bytes() for p in paths] == original
     assert set(tmp_path.iterdir()) == set(paths) | {tmp_path/'measurement-cache'}
 

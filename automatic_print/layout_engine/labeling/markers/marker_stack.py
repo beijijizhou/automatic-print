@@ -6,17 +6,14 @@ from automatic_print.layout_engine.domain.models import mm_to_px
 def header_safe_coordinates(
     path, settings, image_size, degrees, block, label, platform,
 ):
-    """Use verified space between the left cutter mark and source label card."""
+    """Keep batch text on the card's image-facing side without extra width."""
     rotated_short_edge = degrees % 180 != 0
-    if (settings.cutter_mode == 'free' or not label[2] or not label[3]
-            or (not settings.preserve_header_gap and not rotated_short_edge)):
+    if settings.cutter_mode == 'free' or not label[2] or not label[3]:
         return block, label, platform
     from automatic_print.layout_engine.cutting.geometry.cut_guide_geometry import detect_guide_band
     region = detect_guide_band(path)
     if region is None:
-        raise ValueError(
-            f'{path.name}：未能可靠识别膜标签高度范围，禁止把文字放入膜标签与图案之间。'
-        )
+        return block, label, platform
     _width, height = image_size
     region = region.rotated(degrees)
     top, bottom = round(region.top*height), round(region.bottom*height)
@@ -40,18 +37,22 @@ def header_safe_coordinates(
         available_height = bottom-top
     if lh > available_height:
         raise ValueError(f'{path.name}：标签文字无法完整放入膜标签高度范围，禁止输出。')
-    # First use source-header transparency before the card. A missing rectangle
-    # triggers the shared, full-batch external-gutter fallback.
-    block_x = -bw if bw else 0
+    # A left card uses its right side; a right card uses its left side. Both
+    # positions stay inside the original image footprint.
+    block_x = _bx if not settings.preserve_header_gap else (-bw if bw else 0)
     from automatic_print.layout_engine.labeling.platform.platform_space import (
         card_rect_clear, header_space,
     )
     from automatic_print.layout_engine.labeling.platform.short_edge_space import short_edge_space
     reserved = ()
     if pw and ph:
-        if ph > available_height and not settings.platform_reuse_qr:
+        if not settings.preserve_header_gap and not rotated_short_edge:
+            reserved = ((px, py, pw, ph),)
+        elif ph > available_height and not settings.platform_reuse_qr:
             raise ValueError(f'{path.name}：平台文字无法完整放入膜标签高度范围，禁止输出。')
-        if settings.platform_reuse_qr:
+        if not settings.preserve_header_gap and not rotated_short_edge:
+            pass  # Preserve the explicit external platform stack, if configured.
+        elif settings.platform_reuse_qr:
             if not card_rect_clear(path, image_size[0], height, degrees,
                                    (px, py, pw, ph)):
                 # A platform badge is optional. Keep the source image and the
@@ -79,10 +80,10 @@ def header_safe_coordinates(
     else:
         label_x = header_space(
             path, region, image_size[0], height, lw, lh, 0, degrees,
-            reserved=reserved, between_marker_and_card=True,
+            reserved=reserved, inward_from_card=True,
         )
         if label_x is None:
-            raise ValueError(f'{path.name}：膜标签高度带内没有批次标签的透明空位，禁止输出。')
+            raise ValueError(f'{path.name}：膜标签朝图片内部一侧没有批次标签的透明空位，禁止输出。')
         label_y = top
     from automatic_print.layout_engine.cutting.geometry.rotated_marks import marker_top
     block_y = marker_top(region, height) if bh else 0
@@ -125,16 +126,35 @@ def stacked_coordinates(settings, block, label, platform):
 
 
 def validate_stack(path, p, settings):
+    if (settings.cutter_mode != 'free' and p.number_width_px and p.number_height_px
+            and not getattr(p, 'rotation_degrees', 0) % 180):
+        from automatic_print.layout_engine.cutting.geometry.cut_guide_geometry import detect_guide_band
+        band = detect_guide_band(path)
+        if band is not None:
+            band = band.rotated(getattr(p, 'rotation_degrees', 0))
+            card_left = p.x_px+floor(band.left*p.width_px)
+            card_right = p.x_px+ceil(band.right*p.width_px)
+            card_top = p.y_px+round(band.top*p.height_px)
+            card_bottom = p.y_px+round(band.bottom*p.height_px)
+            card_on_left = (band.left+band.right)/2 < .5
+            inward = (p.number_x_px >= card_right if card_on_left else
+                      p.number_x_px+p.number_width_px <= card_left)
+            if (inward and p.x_px <= p.number_x_px and
+                    p.number_x_px+p.number_width_px <= p.x_px+p.width_px and
+                    card_top <= p.number_y_px and
+                    p.number_y_px+p.number_height_px <= card_bottom):
+                return
+            raise ValueError(f'{path.name}：标签文字未在膜标签朝图片内部一侧的安全位置，禁止输出。')
     if (settings.cutter_mode != 'free' and getattr(p, 'rotation_degrees', 0) % 180
             and p.number_width_px and p.number_height_px):
         from automatic_print.layout_engine.cutting.geometry.cut_guide_geometry import detect_guide_band
         band = detect_guide_band(path)
-        if (band is None or not in_short_edge_space(
+        if band is not None and not in_short_edge_space(
                 band.rotated(p.rotation_degrees), p.width_px, p.height_px,
                 (p.number_x_px-p.x_px, p.number_y_px-p.y_px,
-                 p.number_width_px, p.number_height_px))):
+                 p.number_width_px, p.number_height_px)):
             raise ValueError(f'{path.name}：旋转标签未在膜标签安全空白的短边，禁止输出。')
-        if (not settings.preserve_header_gap and settings.platform_below_marker
+        if (band is not None and not settings.preserve_header_gap and settings.platform_below_marker
                 and not settings.platform_reuse_qr
                 and p.color_block_width_px and p.platform_width_px):
             platform_y = (p.color_block_y_px+p.color_block_height_px+
@@ -142,7 +162,8 @@ def validate_stack(path, p, settings):
             if (p.platform_x_px != p.color_block_x_px
                     or p.platform_y_px != platform_y):
                 raise ValueError(f'{path.name}：平台文字未在刀码正下方，禁止输出。')
-        return
+        if band is not None:
+            return
     if ((settings.preserve_header_gap and settings.cutter_mode != 'free')
             or not settings.platform_below_marker or not p.color_block_width_px):
         return

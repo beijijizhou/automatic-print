@@ -75,7 +75,7 @@ def test_blank_rotated_header_does_not_scan_remaining_image(tmp_path, monkeypatc
     result = rotated_marks.rotated_marks(path, 600, 300, 90,
         LayoutSettings(dpi=25.4, cutter_mode='dual', number_gap_mm=1),
         (-11, 0, 10, 10), (-11, 11, 10, 10), (0, 0, 0, 0))
-    assert result == (0, 0, 0, 92)
+    assert result == (0, 0, -11, 11)
 
 
 def test_font_cache_reuses_within_thread_but_does_not_share_faces(monkeypatch):

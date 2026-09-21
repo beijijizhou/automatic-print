@@ -8,40 +8,34 @@ from automatic_print.layout_engine.measurement.measurement_timing import measure
 @measured('普通标签文字测量')
 def source_label_badge(text, settings, path, degrees=0):
     if settings.cutter_mode != "free":
-        maximum = mm_to_px(settings.color_block_width_mm, settings.dpi)
-        if (not settings.preserve_header_gap and settings.platform_below_marker
-                and settings.platform_reuse_qr and settings.cutter_left_marker_external):
-            size = print_dimensions(path, settings.dpi)
-            available_mm = (size.height_mm if degrees % 180 else size.width_mm)
-            maximum = max(maximum, mm_to_px(available_mm, settings.dpi))
+        region = detect_membrane_region(path)
+        if region is None:
+            maximum = mm_to_px(settings.color_block_width_mm, settings.dpi)
+            if (not settings.preserve_header_gap and settings.platform_below_marker
+                    and settings.platform_reuse_qr
+                    and settings.cutter_left_marker_external):
+                size = print_dimensions(path, settings.dpi)
+                available_mm = size.height_mm if degrees % 180 else size.width_mm
+                maximum = max(maximum, mm_to_px(available_mm, settings.dpi))
             return label_badge(text, settings.dpi, settings.number_font_size_mm, maximum)
-        if settings.preserve_header_gap or degrees % 180:
-            region = detect_membrane_region(path)
-            if region is None:
-                raise ValueError(
-                    f"{path.name}：未能可靠识别膜标签高度范围，禁止把文字放入膜标签与图案之间。"
-                )
-            size = print_dimensions(path, settings.dpi)
-            width = mm_to_px(size.width_mm, settings.dpi)
-            height = mm_to_px(size.height_mm, settings.dpi)
-            if degrees % 180:
-                width, height = height, width
-            region = region.rotated(degrees)
-            maximum = max(1, round((region.right-region.left)*width))
-            available_height = max(1, round(
-                (region.top if (region.top+region.bottom)/2 >= .5 else 1-region.bottom)*height
-                if degrees % 180 else (region.bottom-region.top)*height
-            ))
-            badge = label_badge(
-                text, settings.dpi, settings.number_font_size_mm, maximum
+        size = print_dimensions(path, settings.dpi)
+        width = mm_to_px(size.width_mm, settings.dpi)
+        height = mm_to_px(size.height_mm, settings.dpi)
+        if degrees % 180:
+            width, height = height, width
+        region = region.rotated(degrees)
+        maximum = max(1, round((region.right-region.left)*width))
+        available_height = max(1, round(
+            (region.top if (region.top+region.bottom)/2 >= .5 else 1-region.bottom)*height
+            if degrees % 180 else (region.bottom-region.top)*height
+        ))
+        badge = label_badge(text, settings.dpi, settings.number_font_size_mm, maximum)
+        if badge.height > available_height:
+            badge.close()
+            raise ValueError(
+                f"{path.name}：标签文字无法完整放入膜标签高度范围，禁止输出。"
             )
-            if badge.height > available_height:
-                badge.close()
-                raise ValueError(
-                    f"{path.name}：标签文字无法完整放入膜标签高度范围，禁止输出。"
-                )
-            return badge
-        return label_badge(text, settings.dpi, settings.number_font_size_mm, maximum)
+        return badge
     if not settings.label_detect_region:
         return settings_label_badge(text, settings)
     region = detect_membrane_region(path)

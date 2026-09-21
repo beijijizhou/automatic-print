@@ -1,4 +1,5 @@
 from dataclasses import replace
+from math import ceil, floor
 import numpy as np
 from PIL import Image
 import pytest
@@ -37,6 +38,7 @@ def test_mixed_full_batch_embeds_without_covering_any_original_ink(tmp_path, eng
         png_engine=engine, output_parts=parts, save_memory_unlimited=True)
     payloads = []
     result = generate_layout(paths, tmp_path/'out', settings, plan_ready=payloads.append)
+    # Text faces inward from either card edge and adds no horizontal footprint.
     assert result['dual_quality']['paired_rows'] == 8
     assert result['dual_quality']['embedded_marks'] == 12
     assert not result['dual_quality']['needs_review']
@@ -92,16 +94,15 @@ def test_added_text_stays_inside_membrane_label_height_and_never_below_it(tmp_pa
     assert placement.number_y_px+placement.number_height_px <= bottom
     assert placement.x_px <= placement.number_x_px
     assert placement.number_x_px+placement.number_width_px <= (
-        placement.x_px+placement.width_px
+        placement.color_block_x_px+placement.footprint_width_px
     )
     assert placement.color_block_x_px+placement.color_block_width_px == placement.x_px
     assert '尺码 M' in label
     assert 'M1' in label and '609162025022' in label
-    assert placement.color_block_x_px+placement.color_block_width_px <= placement.number_x_px
     assert placement.number_x_px+placement.number_width_px <= (
-        placement.x_px+round(band.left*placement.width_px)
+        placement.x_px+floor(band.left*placement.width_px)
     )
-    with pytest.raises(ValueError, match='膜标签安全空白'):
+    with pytest.raises(ValueError, match='图片内部一侧'):
         validate_embedded_marks([
             (path, replace(placement, number_y_px=bottom+1))
         ], config)
@@ -133,11 +134,11 @@ def test_narrow_header_uses_verified_gutter_between_mark_and_source(tmp_path, de
         assert planned.number_y_px >= planned.y_px
         assert planned.number_y_px+planned.number_height_px <= planned.y_px+planned.height_px
     else:
-        assert result['analysis']['header_space_recovery']
-        assert placement['number_x_px']+placement['number_width_px'] <= placement['x_px']
-        with pytest.raises(ValueError, match='刀码与膜标签之间的安全空白'):
+        band = detect_guide_band(path)
+        assert placement['number_x_px'] >= placement['x_px']+ceil(band.right*placement['width_px'])
+        with pytest.raises(ValueError, match='图片内部一侧'):
             validate_embedded_marks([(
-                path, replace(planned, number_y_px=planned.number_y_px-1),
+                path, replace(planned, number_x_px=planned.x_px),
             )], replace(config, preserve_header_gap=False))
     with Image.open(tmp_path/'out'/result['filename']) as output:
         box = (placement['number_x_px'], placement['number_y_px'],

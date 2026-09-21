@@ -122,22 +122,37 @@ def card_rect_clear(path, width, height, degrees, rect):
 @measured('平台透明空位搜索')
 def header_space(
         path, qr, width, height, badge_width, badge_height, gap, degrees,
-        reserved=(), between_marker_and_card=False):
+        reserved=(), inward_from_card=False):
     top = round(qr.top*height)
     right = ceil(qr.right*width)+gap
     left = floor(qr.left*width)-gap-badge_width
     left_candidates = tuple(left-step for step in range(0, max(8, badge_height), 2))
-    candidates = (left_candidates if between_marker_and_card else
-                  tuple(right+step for step in range(0, max(8, badge_height), 2))
-                  + left_candidates)
+    right_candidates = tuple(right+step for step in range(0, max(8, badge_height), 2))
+    card_on_left = (qr.left+qr.right)/2 < .5
+    if inward_from_card and card_on_left:
+        right_candidates += tuple(
+            rx+rw+step for rx, ry, rw, rh in reserved
+            if rw and rh and ry < top+badge_height and ry+rh > top
+            for step in range(2, max(10, badge_height+2), 2)
+        )
+    elif inward_from_card:
+        left_candidates += tuple(
+            rx-badge_width-step for rx, ry, rw, rh in reserved
+            if rw and rh and ry < top+badge_height and ry+rh > top
+            for step in range(2, max(10, badge_height+2), 2)
+        )
+    candidates = ((right_candidates if card_on_left else left_candidates)
+                  if inward_from_card else right_candidates+left_candidates)
     with source_pixels(path) as source:
         if 'A' not in source.getbands():
             return None
         # Keep the exact candidate order and the source resampling padding.
         def find(options):
             options = tuple(x for x in options if (
-                (not between_marker_and_card or
-                 (0 <= x and x+badge_width <= floor(qr.left*width)))
+                (not inward_from_card or (
+                    ceil(qr.right*width) <= x and x+badge_width <= width
+                    if card_on_left else 0 <= x and x+badge_width <= floor(qr.left*width)
+                ))
                 and not _overlaps_reserved(
                     (x, top, badge_width, badge_height), reserved)))
             rectangles = tuple((x, top, badge_width, badge_height) for x in options)
@@ -151,7 +166,7 @@ def header_space(
         if found is not None:
             return found
         return find(_free_band_candidates(source, qr, width, height,
-                                         badge_width, badge_height, degrees))
+                                          badge_width, badge_height, degrees))
     return None
 
 

@@ -124,10 +124,9 @@
   单件批次以完整尺码后缀比较多排区与旋转区分界；已有末尾旋转区时，可把交界前的完整尺码组整体并入旋转区，但同尺码绝不跨区。旋转区的竖图保持横向旋转，超出当前动态安全宽度时再等比缩小；整批旋转被个别超宽图阻断时，
   `layout_engine/planning/zones/gap_fallback.py` 用虚拟尺寸覆盖重跑完整订单局部比较，双面同倍率且整批仍最多只有并排区和旋转区两个区域。
 - 标签与刀码：`layout_engine/labeling/base/labels.py`、`layout_engine/labeling/base/dynamic_label.py`、`layout_engine/labeling/text/templates.py`、`layout_engine/labeling/markers/marker_stack.py`、`layout_engine/labeling/markers/left_marker.py`、
-  `layout_engine/labeling/platform/platform_label.py`、`layout_engine/labeling/base/header_region.py`、`layout_engine/labeling/platform/transparent_search.py`。生产标签的机器号、批次正倒序及原图订单尺码共用同一模板和占位；未旋转时优先搜索刀码与膜标签之间已验证的透明空白，不足时整批扩出计入真实占位的透明走廊并重算刀位。平台尺码文字只放入原图二维码卡片内部
-  已验证的未印刷白色或透明空位，绝不放到卡片与图案之间，使用不超过二维码卡片高度的最大字号；先在原图坐标确定位置，再与二维码一起旋转，预览与输出复用同一坐标。旋转90度时不论透明带选项或回退状态，`layout_engine/labeling/platform/short_edge_space.py`均只搜索卡片短边上方或下方的整块透明位，位置仍在原图占位内；不足时不得改放刀码旁。二维码卡片没有经过最终像素验证的安全空位时，仅跳过该图的平台尺码文字、记录异常并继续，不阻断整批。非旋转图复用透明带失败时由`layout_engine/planning/zones/gap_fallback.py`
-  扩出刀码与原图之间的透明走廊，计入真实占位、重算刀位并记录完整恢复诊断。最终坐标越界等不可恢复安全冲突不得猜值绕过，文字不能进入膜标签与图案之间。
-- 开发者排版隔离：换刀与批次结束600毫米停止距离只有开发者模式显式传入正数时才进入规划、候选比较和独立开发者缓存版本；普通模式不调用该逻辑，使用算法缓存版本9，缓存键也不包含开发者紧凑排版与停止距离字段。
+  `layout_engine/labeling/platform/platform_label.py`、`layout_engine/labeling/base/header_region.py`、`layout_engine/labeling/platform/transparent_search.py`。生产标签的机器号、批次正倒序及原图订单尺码共用同一模板和占位；未旋转时按膜标签侧别搜索朝图片内部的透明空白（左卡右放、右卡左放），文字始终留在原图宽度内且不增加排版占位。平台尺码文字只放入原图二维码卡片内部
+  已验证的未印刷白色或透明空位，绝不放到卡片与图案之间，使用不超过二维码卡片高度的最大字号；先在原图坐标确定位置，再与二维码一起旋转，预览与输出复用同一坐标。旋转90度时不论透明带选项或回退状态，`layout_engine/labeling/platform/short_edge_space.py`均只搜索卡片短边上方或下方的整块透明位，位置仍在原图占位内；不足时不得改放刀码旁。二维码卡片没有经过最终像素验证的安全空位时，仅跳过该图的平台尺码文字、记录异常并继续，不阻断整批。最终坐标越界等不可恢复安全冲突不得猜值绕过，文字不能进入膜标签与图案之间，也不能扩出原图宽度。
+- 开发者排版隔离：换刀与批次结束600毫米停止距离只有开发者模式显式传入正数时才进入规划、候选比较和独立开发者缓存版本；普通模式不调用该逻辑，使用算法缓存版本10，缓存键也不包含开发者紧凑排版与停止距离字段。
 - 标签字体加载与线程内有界缓存由`layout_engine/labeling/text/fonts.py`唯一拥有；`layout_engine/labeling/base/labels.py`只负责标签内容、
   换行和徽标渲染。单图排版对象`LayoutItem`与`Placement`统一归`layout_engine/domain/models.py`。
 - 渲染与编码：`layout_engine/rendering/engines/pillow_renderer.py`、`layout_engine/rendering/engines/vips_renderer.py`、`layout_engine/rendering/png/`、

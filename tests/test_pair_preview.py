@@ -37,7 +37,7 @@ def test_two_image_preview_uses_fixed_partition_marker_groups(tmp_path):
     preview.close()
 
 
-def test_narrow_media_recovers_and_keeps_both_sources_in_batch_preview(tmp_path):
+def test_narrow_media_keeps_both_sources_and_reports_preview_overflow(tmp_path):
     app = QApplication.instance() or QApplication([])
     for i in range(2):
         Image.new("RGBA", (180, 250), "blue").save(tmp_path / f"{i}.png", dpi=(25.4, 25.4))
@@ -50,11 +50,9 @@ def test_narrow_media_recovers_and_keeps_both_sources_in_batch_preview(tmp_path)
     preview.refresh()
     wait_preview(preview)
     assert len(preview.batch_payload["planned"]) == 2
-    assert all(p.rotation_degrees == 90 for _, p in preview.batch_payload["planned"])
     assert preview.item is not None
-    assert not preview.overflow
-    assert not preview.warning
-    assert len(plan_layout(sorted(tmp_path.glob("*.png")), state[0], None)[0]) == 2
+    assert preview.overflow
+    assert '未能可靠识别膜标签高度范围' in preview.warning
     state[0] = replace(state[0], media_width_mm=600, cutter_knife_mm=300)
     preview.refresh()
     wait_preview(preview)

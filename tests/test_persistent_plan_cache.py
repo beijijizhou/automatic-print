@@ -95,9 +95,9 @@ def test_developer_knife_gap_has_separate_cache_revision_and_production_key(tmp_
         developer_key = plan_cache.cache_key([path], config(cutter_knife_change_gap_mm=600), now)
 
     production, developer = captured
-    assert production['algorithm'] == plan_cache.LAYOUT_ALGORITHM_REVISION == 9
+    assert production['algorithm'] == plan_cache.LAYOUT_ALGORITHM_REVISION == 10
     assert 'cutter_knife_change_gap_mm' not in production['settings']
-    assert developer['algorithm'] == plan_cache.DEVELOPER_LAYOUT_ALGORITHM_REVISION == 17
+    assert developer['algorithm'] == plan_cache.DEVELOPER_LAYOUT_ALGORITHM_REVISION == 18
     assert developer['settings']['cutter_knife_change_gap_mm'] == 600
     assert production_key != developer_key
 

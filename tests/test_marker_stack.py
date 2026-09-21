@@ -63,7 +63,11 @@ def test_reused_qr_badge_does_not_expand_external_marker_column():
     assert px == 42
 
 
-def test_external_corridor_accepts_vertical_stack_but_rejects_image_overlap():
+def test_old_cutter_side_vertical_stack_is_rejected(monkeypatch):
+    from automatic_print.layout_engine.cutting.geometry import cut_guide_geometry
+    from automatic_print.layout_engine.labeling.platform.membrane_region import MembraneRegion
+    monkeypatch.setattr(cut_guide_geometry, 'detect_guide_band',
+                        lambda _path: MembraneRegion(0, 0, .2, .5))
     settings = LayoutSettings(
         dpi=25.4, cutter_mode='dual', preserve_header_gap=False,
         platform_below_marker=True, platform_reuse_qr=True,
@@ -74,18 +78,13 @@ def test_external_corridor_accepts_vertical_stack_but_rejects_image_overlap():
         color_block_width_px=10, color_block_height_px=10,
         number_x_px=0, number_y_px=15,
         number_width_px=12, number_height_px=3,
-        x_px=20,
+        x_px=20, y_px=0, width_px=100, height_px=30, rotation_degrees=0,
     )
-    validate_stack(Path('batch.png'), placement, settings)
-    for changed in (
-        dict(number_y_px=14), dict(number_x_px=1),
-        dict(x_px=11), dict(color_block_width_px=21),
-    ):
-        with pytest.raises(ValueError, match='标签文字未位于'):
-            validate_stack(Path('batch.png'), SimpleNamespace(**(vars(placement) | changed)), settings)
+    with pytest.raises(ValueError, match='图片内部一侧'):
+        validate_stack(Path('batch.png'), placement, settings)
 
 
-def test_external_corridor_accepts_horizontal_header_but_checks_band(monkeypatch):
+def test_horizontal_label_uses_card_side_facing_image_interior(monkeypatch):
     from automatic_print.layout_engine.cutting.geometry import cut_guide_geometry
     from automatic_print.layout_engine.labeling.platform.membrane_region import MembraneRegion
     monkeypatch.setattr(cut_guide_geometry, 'detect_guide_band',
@@ -98,13 +97,13 @@ def test_external_corridor_accepts_horizontal_header_but_checks_band(monkeypatch
     placement = SimpleNamespace(
         color_block_x_px=0, color_block_y_px=0,
         color_block_width_px=10, color_block_height_px=10,
-        number_x_px=15, number_y_px=3,
+        number_x_px=40, number_y_px=3,
         number_width_px=20, number_height_px=3,
-        x_px=40, y_px=0, height_px=30, rotation_degrees=0,
+        x_px=40, y_px=0, width_px=100, height_px=30, rotation_degrees=0,
     )
     validate_stack(Path('batch.png'), placement, settings)
-    for changed in (dict(number_x_px=9), dict(number_y_px=14), dict(x_px=34)):
-        with pytest.raises(ValueError, match='标签文字未位于'):
+    for changed in (dict(number_x_px=41), dict(number_y_px=14), dict(x_px=39)):
+        with pytest.raises(ValueError, match='图片内部一侧'):
             validate_stack(Path('batch.png'), SimpleNamespace(**(vars(placement) | changed)), settings)
 
 
@@ -185,7 +184,15 @@ def test_platform_and_label_stay_in_safe_header_band(tmp_path, mode, side, degre
             assert top <= p.number_y_px < p.number_y_px+p.number_height_px <= bottom
             assert top <= p.platform_y_px < p.platform_y_px+p.platform_height_px <= bottom
         assert p.x_px <= p.number_x_px
-        assert p.number_x_px+p.number_width_px <= p.x_px+p.width_px
+        if degrees % 180:
+            assert p.number_x_px+p.number_width_px <= p.x_px+p.width_px
+        else:
+            from math import ceil, floor
+            if (band.left+band.right)/2 < .5:
+                assert p.number_x_px >= p.x_px+ceil(band.right*p.width_px)
+            else:
+                assert p.number_x_px+p.number_width_px <= p.x_px+floor(band.left*p.width_px)
+            assert p.number_x_px+p.number_width_px <= p.x_px+p.width_px
         assert p.x_px <= p.platform_x_px
         assert p.platform_x_px+p.platform_width_px <= p.x_px+p.width_px
         assert (p.number_x_px+p.number_width_px <= p.platform_x_px
@@ -204,7 +211,7 @@ def test_platform_and_label_stay_in_safe_header_band(tmp_path, mode, side, degre
         with pytest.raises(ValueError, match='平台文字未在刀码正下方'):
             validate_stack(path, replace(p, platform_x_px=p.platform_x_px+1), settings)
     elif payloads[0]['settings'].preserve_header_gap:
-        with pytest.raises(ValueError, match='膜标签安全空白'):
+        with pytest.raises(ValueError, match='膜标签安全空白|图片内部一侧'):
             validate_embedded_marks([
                 (path, replace(p, number_y_px=p.y_px+p.height_px))
             ], payloads[0]['settings'])
@@ -232,7 +239,7 @@ def test_segmented_double_batch_stack_and_full_saved_corridors(tmp_path, engine)
             for row in part['placements']:
                 from automatic_print.layout_engine.domain.models import Placement
                 p = Placement(**row)
-                validate_stack(Path(p.source), p, settings)
+                validate_stack(tmp_path/p.source, p, settings)
                 if not result['analysis'].get('header_space_recovery'):
                     assert p.x_px <= p.platform_x_px
                     assert p.platform_x_px+p.platform_width_px <= p.x_px+p.width_px

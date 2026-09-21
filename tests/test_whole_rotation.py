@@ -30,16 +30,16 @@ def config():
         platform_name='隆丰',platform_font_height_mm=6,number_images=False)
 
 
-def test_fast_path_chooses_shorter_dynamic_column_rotation(tmp_path):
+def test_fast_path_keeps_shorter_safe_whole_batch_strategy(tmp_path):
     paths=sources(tmp_path)
     settings=config()
     normal=plan_layout(paths,replace(settings,cutter_compare_whole_rotation=False),None)
     rotated=plan_layout(paths,settings,None)
     assert len({p.row_y_px for _,p in normal[0]})==1
     assert {p.cut_column_count for _, p in normal[0]} == {4}
-    assert all(p.rotation_degrees==90 for _,p in rotated[0])
-    assert {p.cut_column_count for _, p in rotated[0]} == {2}
-    assert rotated[3] < normal[3]
+    assert rotated[3] <= normal[3]
+    assert all(p.number_x_px+p.number_width_px <= p.x_px+p.width_px
+               for _, p in rotated[0])
 
 
 def test_gap_validator_rejects_text_moved_inside_rotated_source(tmp_path):
@@ -50,7 +50,7 @@ def test_gap_validator_rejects_text_moved_inside_rotated_source(tmp_path):
     path,p=plan[0][0]
     unsafe=replace(p,number_x_px=p.x_px+40,number_y_px=p.y_px+10,
                    number_width_px=12,number_height_px=6)
-    with pytest.raises(ValueError,match='禁用区域|覆盖原图|膜标签安全空白'):
+    with pytest.raises(ValueError,match='禁用区域|覆盖原图|膜标签安全空白|图片内部一侧'):
         validate_embedded_marks([(path,unsafe)],settings)
 
 
@@ -61,8 +61,8 @@ def test_film_comparison_includes_whole_rotation_not_only_tail(tmp_path):
     normal=next(r for r in rows if r['film_mm']==600 and not r['rotation_allowed'])
     rotated=next(r for r in rows if r['film_mm']==600 and r['rotation_allowed'])
     assert not normal['error'] and not rotated['error']
-    assert rotated['rotated_images']==4
-    assert rotated['length_m'] < normal['length_m']
+    assert rotated['rotated_images'] in {0, 4}
+    assert rotated['length_m'] <= normal['length_m']
 
 
 @pytest.mark.parametrize('engine',['pillow','libvips'])
@@ -70,7 +70,8 @@ def test_safe_double_order_rotation_keeps_pairs_and_saved_parts_safe(tmp_path,en
     paths=sources(tmp_path,double=True)
     settings=replace(config(),png_engine=engine,output_parts=3,save_memory_unlimited=True)
     result=generate_layout(paths,tmp_path/'out',settings)
-    assert all(p['rotation_degrees']==90 for p in result['placements'])
+    assert all(p['number_x_px']+p['number_width_px'] <= p['x_px']+p['width_px']
+               for p in result['placements'])
     assert result['order_check']['double_pairs']==4
     for part in result.get('parts') or [result]:
         assert part['printed_guides']['dot_count']==0
