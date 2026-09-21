@@ -182,7 +182,7 @@ def test_generation_rechecks_whole_order_and_confirms_one_code() -> None:
     page = object()
     with patch("automatic_print.automation.batches.completed.list_batch_rules",
                return_value=[type("Rule", (), {"id": 1})()]), \
-         patch("automatic_print.automation.batches.completed.list_production_items",
+             patch("automatic_print.automation.api.erp.items.list_production_items",
                side_effect=[{"list": [row], "total": 1}, {"list": [after], "total": 1}]), \
          patch("automatic_print.automation.batches.completed.production_item_images",
                return_value=_detail("A面")), \
@@ -194,7 +194,7 @@ def test_generation_rechecks_whole_order_and_confirms_one_code() -> None:
 def test_generation_rejects_partial_order_before_write() -> None:
     rows = [_row("1", "a", composition=3), _row("2", "a", composition=3)]
     group = plan_completed_erp_batches(rows, {"1": _detail("A面"), "2": _detail("A面")})[0]
-    with patch("automatic_print.automation.batches.completed.list_production_items",
+    with patch("automatic_print.automation.api.erp.items.list_production_items",
                return_value={"list": rows[:1], "total": 2}):
         with pytest.raises(RuntimeError, match="未完整返回"):
             verify_completed_group(object(), group)
@@ -204,7 +204,7 @@ def test_generation_rejects_existing_supplement() -> None:
     row = _row("1", "a")
     group = plan_completed_erp_batches([row], {"1": _detail("A面")})[0]
     row["supplement_detail_list"] = [{"production_batch_code": "old"}]
-    with patch("automatic_print.automation.batches.completed.list_production_items",
+    with patch("automatic_print.automation.api.erp.items.list_production_items",
                return_value={"list": [row], "total": 1}), \
          patch("automatic_print.automation.batches.completed.production_item_images",
                return_value=_detail("A面")):

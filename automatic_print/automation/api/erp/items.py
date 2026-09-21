@@ -89,6 +89,19 @@ def list_all_received_items(page) -> tuple[list[dict[str, Any]], int]:
     return rows, total
 
 
+def list_order_items(page, order_id: str) -> list[dict[str, Any]]:
+    """Read one entire order across production statuses for exact validation."""
+    payload = production_item_payload(status=(), page_size=200)
+    payload["order_id"] = str(order_id)
+    result = list_production_items(page, payload)
+    rows = list(result.get("list") or [])
+    if not rows or len(rows) != int(result.get("total") or 0):
+        raise RuntimeError(f"订单 {order_id} 未完整返回，不能生成批次。")
+    if any(str(row.get("order_id")) != str(order_id) for row in rows):
+        raise RuntimeError(f"订单 {order_id} 查询结果混入其他订单。")
+    return rows
+
+
 def list_batch_rules(page) -> tuple[BatchRule, ...]:
     rows = call_module(
         page,

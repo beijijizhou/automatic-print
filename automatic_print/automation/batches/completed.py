@@ -12,6 +12,7 @@ from ..api.erp import (
     production_item_images,
     production_item_payload,
 )
+from ..api.erp.items import list_order_items
 from .classification import (
     BASE_COMPOSITIONS,
     classify_production_face,
@@ -134,15 +135,7 @@ def completed_batch_request(
 
 
 def _whole_order(page, order_id: str) -> list[dict]:
-    payload = production_item_payload(status=(), page_size=200)
-    payload["order_id"] = order_id
-    result = list_production_items(page, payload)
-    rows = list(result.get("list") or [])
-    if not rows or len(rows) != int(result.get("total") or 0):
-        raise RuntimeError(f"订单 {order_id} 未完整返回，不能生成批次。")
-    if any(str(row.get("order_id")) != order_id for row in rows):
-        raise RuntimeError(f"订单 {order_id} 查询结果混入其他订单。")
-    return rows
+    return list_order_items(page, order_id)
 
 def _supplement_codes(row: dict) -> set[str]:
     return {str(detail["production_batch_code"])
