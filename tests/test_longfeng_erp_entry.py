@@ -48,14 +48,19 @@ def test_platform_download_is_multi_select_and_preview_only(tmp_path):
     assert not longfeng.shared_knife_button.isHidden()
     assert not longfeng.order_side_checkbox.isChecked()
     assert not longfeng.order_side_checkbox.isHidden()
+    main_order_side = owner.automation_home.label_quick_panel.order_side_checkbox
+    assert not main_order_side.isHidden()
+    assert not main_order_side.isChecked()
     selected_modes = []
     original_download = longfeng._download_selected
     longfeng._download_selected = lambda *, auto_print: selected_modes.append(auto_print)
     longfeng.shared_knife_button.click()
-    longfeng.order_side_checkbox.setChecked(True)
+    main_order_side.setChecked(True)
+    assert longfeng.order_side_checkbox.isChecked()
     longfeng.shared_knife_button.click()
     assert selected_modes == ['shared_knife', 'shared_knife_order_side']
     assert not longfeng.order_side_checkbox.isChecked()
+    assert not main_order_side.isChecked()
     longfeng._download_selected = original_download
     assert longfeng.open_download_folder.text() == "下载完成后打开文件夹"
     assert longfeng.open_download_folder.isChecked()

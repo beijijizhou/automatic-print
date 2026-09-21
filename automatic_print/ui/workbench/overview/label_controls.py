@@ -83,6 +83,14 @@ def build_label_controls(panel, label, block, window):
         '关闭后不测量、不绘制新增的平台和尺码文字；切膜刀码及原图二维码保持不变。'
     )
     panel.cutter_marker_enabled = _cutter_marker_toggle(window)
+    panel.order_side_checkbox = QCheckBox(
+        '整单归侧双排（隆丰共刀，仅本次任务）'
+    )
+    panel.order_side_checkbox.setChecked(False)
+    panel.order_side_checkbox.setToolTip(
+        '用于下一次隆丰“多批次共用刀位生成PRN”：同一订单的全部件与双面只在固定刀位一侧；'
+        '不符合的完整订单进入旋转文件夹。任务启动后自动关闭。'
+    )
     panel.platform_font_height = QDoubleSpinBox()
     panel.platform_font_height.setRange(0, 50)
     panel.platform_font_height.setDecimals(1)

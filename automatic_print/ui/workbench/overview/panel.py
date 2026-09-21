@@ -20,6 +20,7 @@ class LabelQuickPanel(QWidget):
         layout = QVBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
         layout.addLayout(form)
+        layout.addWidget(self.order_side_checkbox)
         layout.addWidget(build_data_panel(window, self.summary, self.timings))
         layout.insertWidget(1, window.batch_status_board)
         layout.addWidget(self.summary.failure_panel)
