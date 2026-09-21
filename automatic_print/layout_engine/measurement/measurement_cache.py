@@ -8,7 +8,7 @@ from threading import RLock
 from time import time
 
 
-ITEM_SCHEMA = 3
+ITEM_SCHEMA = 4
 DIMENSION_SCHEMA = 2
 TRANSPARENT_RECT_SCHEMA = 1
 HEADER_REGION_SCHEMA = 1

@@ -50,8 +50,10 @@ def test_four_cases_use_production_geometry_and_never_modify_sources(tmp_path):
         assert len(row['pixels']) == row['size'][0]*row['size'][1]*4
         assert row['label_text']
         if row['degrees']:
-            assert item.block_ry == item.image_ry
-            assert item.label_ry-item.image_ry >= row['region'].bottom*item.height
+            from automatic_print.layout_engine.labeling.markers.marker_stack import in_short_edge_space
+            assert in_short_edge_space(row['region'], item.width, item.height,
+                (item.label_rx-item.image_rx, item.label_ry-item.image_ry,
+                 item.label_width, item.label_height))
     assert [p.read_bytes() for p in paths] == original
     assert set(tmp_path.iterdir()) == set(paths) | {tmp_path/'measurement-cache'}
 
@@ -110,9 +112,10 @@ def test_missing_bundled_asset_uses_code_diagram(tmp_path, monkeypatch):
     assert all(row['pixels'] for row in rows)
 
 
-def test_rotated_labels_use_card_short_edge_without_extra_image_footprint():
+@pytest.mark.parametrize('preserve_header_gap', [False, True])
+def test_rotated_labels_use_card_short_edge_without_extra_image_footprint(preserve_header_gap):
     from automatic_print.layout_engine.labeling.markers.marker_stack import in_short_edge_space
-    config = replace(settings(), preserve_header_gap=True,
+    config = replace(settings(), preserve_header_gap=preserve_header_gap,
                      cutter_left_marker_external=True)
     rows = build_examples([], config)
     for row in rows:

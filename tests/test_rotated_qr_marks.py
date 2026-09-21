@@ -43,10 +43,11 @@ def test_rotated_whole_batch_qr_label_and_fixed_marker(tmp_path, engine, parts, 
     path, placement = previews[0]['planned'][0]
     with pytest.raises(ValueError, match='安全基准高度'):
         validate_embedded_marks([(path, replace(placement,
-            color_block_y_px=placement.color_block_y_px+1))])
-    with pytest.raises(ValueError, match='未放在二维码下方'):
+            color_block_y_px=placement.color_block_y_px+1))], settings)
+    with pytest.raises(ValueError, match='膜标签安全空白'):
+        band = detect_guide_band(path).rotated(placement.rotation_degrees)
         validate_embedded_marks([(path, replace(placement,
-            number_x_px=placement.number_x_px+1))])
+            number_y_px=placement.y_px+round((band.top+band.bottom)*placement.height_px/2)))], settings)
     # A right-lane fixed marker is also external to its source image. Its X is
     # the vertical knife rather than zero, but it follows the same lift rule.
     shifted_x = 100
@@ -74,9 +75,10 @@ def test_rotated_whole_batch_qr_label_and_fixed_marker(tmp_path, engine, parts, 
                 assert p['color_block_y_px'] == p['y_px']+expected_y
                 if bottom_qr:
                     assert (p['x_px'] > 0) == (int(p['source'].split('-')[0][1:]) == 5)
-                assert p['number_x_px'] == p['x_px']+round(band.left*p['width_px'])
-                assert p['number_y_px'] >= p['y_px']+band.bottom*p['height_px']
-                assert p['number_y_px']+p['number_height_px'] <= p['y_px']+p['height_px']
+                from automatic_print.layout_engine.labeling.markers.marker_stack import in_short_edge_space
+                assert in_short_edge_space(band, p['width_px'], p['height_px'],
+                    (p['number_x_px']-p['x_px'], p['number_y_px']-p['y_px'],
+                     p['number_width_px'], p['number_height_px']))
                 assert output.getpixel((0, p['color_block_y_px'])) == (255, 0, 0, 255)
                 with Image.open(path) as source:
                     original = np.asarray(source.rotate(90, expand=True))

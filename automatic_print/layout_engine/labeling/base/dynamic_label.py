@@ -15,7 +15,7 @@ def source_label_badge(text, settings, path, degrees=0):
             available_mm = (size.height_mm if degrees % 180 else size.width_mm)
             maximum = max(maximum, mm_to_px(available_mm, settings.dpi))
             return label_badge(text, settings.dpi, settings.number_font_size_mm, maximum)
-        if settings.preserve_header_gap:
+        if settings.preserve_header_gap or degrees % 180:
             region = detect_membrane_region(path)
             if region is None:
                 raise ValueError(

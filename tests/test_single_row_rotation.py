@@ -46,7 +46,7 @@ def test_single_rotation_can_use_full_width_without_second_knife_safety(tmp_path
     settings=LayoutSettings(dpi=25.4,media_width_mm=430,cutter_mode='single',
         cutter_single_row_rotation=True,cutter_compare_whole_rotation=True,
         cutter_left_marker_external=True,cutter_left_marker_lift_mm=1.5,
-        cutter_knife_dots=False,preserve_header_gap=False)
+        cutter_knife_dots=False,preserve_header_gap=False,number_images=False)
     planned,_,width,*_=plan_layout([path],settings,None)
     assert width==430
     assert planned[0][1].rotation_degrees==90

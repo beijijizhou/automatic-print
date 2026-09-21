@@ -108,6 +108,47 @@ def test_external_corridor_accepts_horizontal_header_but_checks_band(monkeypatch
             validate_stack(Path('batch.png'), SimpleNamespace(**(vars(placement) | changed)), settings)
 
 
+@pytest.mark.parametrize('degrees', [90, -90])
+@pytest.mark.parametrize('side', ['left', 'right'])
+def test_rotated_external_marker_keeps_label_on_card_short_edge(tmp_path, side, degrees):
+    path = sources(tmp_path)[0 if side == 'left' else 1]
+    settings = LayoutSettings(
+        dpi=25.4, media_width_mm=580, cutter_mode='single',
+        cutter_left_marker_external=True, preserve_header_gap=False,
+        label_text_template='M1 {编号}', allow_rotation=False,
+        manual_rotations=((str(path.resolve()), degrees),),
+    )
+    result = generate_layout([path], tmp_path/'out', settings)
+    from automatic_print.layout_engine.domain.models import Placement
+    p = Placement(**result['placements'][0])
+    band = detect_guide_band(path).rotated(degrees)
+    assert p.color_block_x_px+p.color_block_width_px <= p.x_px
+    assert in_short_edge_space(band, p.width_px, p.height_px,
+        (p.number_x_px-p.x_px, p.number_y_px-p.y_px,
+         p.number_width_px, p.number_height_px))
+    with pytest.raises(ValueError, match='膜标签安全空白'):
+        validate_embedded_marks([(path, replace(p, number_x_px=p.color_block_x_px))], settings)
+    with Image.open(path) as source, Image.open(tmp_path/'out'/result['filename']) as output:
+        with source.rotate(degrees, expand=True) as rotated:
+            original = np.asarray(rotated)
+        actual = np.asarray(output.crop((p.x_px, p.y_px,
+            p.x_px+p.width_px, p.y_px+p.height_px)))
+        assert np.array_equal(actual[original[:, :, 3] > 0],
+                              original[original[:, :, 3] > 0])
+
+
+def test_rotated_label_never_falls_back_between_card_and_knife(tmp_path, monkeypatch):
+    from automatic_print.layout_engine.labeling.markers.marker_stack import header_safe_coordinates
+    from automatic_print.layout_engine.labeling.platform import short_edge_space
+    path = sources(tmp_path)[0]
+    monkeypatch.setattr(short_edge_space, 'short_edge_space', lambda *_args, **_kwargs: None)
+    settings = LayoutSettings(dpi=25.4, cutter_mode='single',
+        cutter_left_marker_external=True, preserve_header_gap=False)
+    with pytest.raises(ValueError, match='禁止改放到刀码旁'):
+        header_safe_coordinates(path, settings, (300, 270), 90,
+            (-10, 0, 10, 10), (0, 0, 19, 10), (0, 0, 0, 0))
+
+
 @pytest.mark.parametrize('mode', ['free', 'single', 'dual'])
 @pytest.mark.parametrize('side', ['left', 'right'])
 @pytest.mark.parametrize('degrees', [0, 90, -90, 180])

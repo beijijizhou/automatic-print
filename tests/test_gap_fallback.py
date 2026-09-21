@@ -122,6 +122,22 @@ def test_missing_header_space_retries_with_external_label_footprint(monkeypatch)
     assert progress[-1][0] == '膜标签透明空位恢复'
 
 
+def test_rotated_short_edge_shortage_never_retries_knife_side_corridor(monkeypatch):
+    calls = []
+
+    def plan(_paths, settings, _progress, _ready):
+        calls.append(settings.preserve_header_gap)
+        raise ValueError('image.png：膜标签短边没有批次标签的透明空位，禁止输出。')
+
+    monkeypatch.setattr(gap_fallback, 'plan_layout', plan)
+    with pytest.raises(ValueError, match='膜标签短边没有批次标签'):
+        gap_fallback.plan_with_gap_fallback(
+            [Path('/tmp/image.png')],
+            LayoutSettings(preserve_header_gap=True, cutter_mode='dual'), [],
+        )
+    assert calls == [True]
+
+
 def test_header_space_recovery_still_compares_rotated_overflow(monkeypatch):
     from dataclasses import replace
     from automatic_print.layout_engine.planning.zones import width_fit

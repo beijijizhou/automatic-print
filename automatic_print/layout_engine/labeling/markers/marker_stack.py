@@ -7,8 +7,9 @@ def header_safe_coordinates(
     path, settings, image_size, degrees, block, label, platform,
 ):
     """Use verified space between the left cutter mark and source label card."""
-    if (not settings.preserve_header_gap or settings.cutter_mode == 'free'
-            or not label[2] or not label[3]):
+    rotated_short_edge = degrees % 180 != 0
+    if (settings.cutter_mode == 'free' or not label[2] or not label[3]
+            or (not settings.preserve_header_gap and not rotated_short_edge)):
         return block, label, platform
     from automatic_print.layout_engine.cutting.geometry.cut_guide_geometry import detect_guide_band
     region = detect_guide_band(path)
@@ -22,6 +23,17 @@ def header_safe_coordinates(
     _bx, _by, bw, bh = block
     _lx, _ly, lw, lh = label
     px, py, pw, ph = platform
+    if rotated_short_edge and not settings.preserve_header_gap:
+        from automatic_print.layout_engine.labeling.platform.short_edge_space import short_edge_space
+        reserved = ((px, py, pw, ph),) if pw and ph else ()
+        position = short_edge_space(path, region, image_size[0], height,
+                                    lw, lh, degrees, reserved=reserved)
+        if position is None:
+            raise ValueError(f'{path.name}：旋转膜标签短边没有批次标签的安全透明位，禁止改放到刀码旁。')
+        if settings.cutter_left_marker_external and bw:
+            block = (-bw-max(1, mm_to_px(settings.color_block_gap_mm, settings.dpi)),
+                     _by, bw, bh)
+        return block, (*position, lw, lh), platform
     if degrees % 180:
         available_height = top if (region.top+region.bottom)/2 >= .5 else height-bottom
     else:
@@ -113,6 +125,24 @@ def stacked_coordinates(settings, block, label, platform):
 
 
 def validate_stack(path, p, settings):
+    if (settings.cutter_mode != 'free' and getattr(p, 'rotation_degrees', 0) % 180
+            and p.number_width_px and p.number_height_px):
+        from automatic_print.layout_engine.cutting.geometry.cut_guide_geometry import detect_guide_band
+        band = detect_guide_band(path)
+        if (band is None or not in_short_edge_space(
+                band.rotated(p.rotation_degrees), p.width_px, p.height_px,
+                (p.number_x_px-p.x_px, p.number_y_px-p.y_px,
+                 p.number_width_px, p.number_height_px))):
+            raise ValueError(f'{path.name}：旋转标签未在膜标签安全空白的短边，禁止输出。')
+        if (not settings.preserve_header_gap and settings.platform_below_marker
+                and not settings.platform_reuse_qr
+                and p.color_block_width_px and p.platform_width_px):
+            platform_y = (p.color_block_y_px+p.color_block_height_px+
+                          mm_to_px(settings.number_gap_mm, settings.dpi))
+            if (p.platform_x_px != p.color_block_x_px
+                    or p.platform_y_px != platform_y):
+                raise ValueError(f'{path.name}：平台文字未在刀码正下方，禁止输出。')
+        return
     if ((settings.preserve_header_gap and settings.cutter_mode != 'free')
             or not settings.platform_below_marker or not p.color_block_width_px):
         return

@@ -83,7 +83,9 @@ def validate_embedded_marks(planned, settings=None):
             (p.number_width_px and p.number_height_px)
             or (p.platform_width_px and p.platform_height_px)
         )
-        if settings and settings.preserve_header_gap and has_added_text:
+        if (settings and has_added_text and
+                (settings.preserve_header_gap or
+                 (settings.cutter_mode != 'free' and p.rotation_degrees % 180))):
             from automatic_print.layout_engine.cutting.geometry.cut_guide_geometry import detect_guide_band
             header = detect_guide_band(path)
             if not header:
@@ -95,6 +97,8 @@ def validate_embedded_marks(planned, settings=None):
             header_bottom = p.y_px+round(header.bottom*p.height_px)
             for kind,x,y,w,h in (('标签',p.number_x_px,p.number_y_px,p.number_width_px,p.number_height_px),
                           ('平台',p.platform_x_px,p.platform_y_px,p.platform_width_px,p.platform_height_px)):
+                if kind == '平台' and not settings.preserve_header_gap:
+                    continue
                 if p.rotation_degrees % 180:
                     from .marker_stack import in_short_edge_space
                     valid = in_short_edge_space(header, p.width_px, p.height_px,
@@ -144,6 +148,8 @@ def validate_embedded_marks(planned, settings=None):
                     and p.number_x_px+p.number_width_px <= p.x_px
                 )
                 if (p.number_width_px and not preserve_header
+                        and not (settings and settings.cutter_mode != 'free'
+                                 and p.rotation_degrees % 180)
                         and not outside_label and (
                     p.number_x_px != p.x_px+round(qr.left*p.width_px)
                     or p.number_y_px < p.y_px+ceil(qr.bottom*p.height_px)

@@ -8,7 +8,10 @@ def external_left_item(item):
     gap = item.left_marker_gap_px
     if not gap or not item.block_width:
         return item
-    if item.preserve_header_gap:
+    if (item.preserve_header_gap or
+            (item.rotation_degrees % 180 and item.label_width
+             and item.image_rx <= item.label_rx
+             and item.label_rx+item.label_width <= item.image_rx+item.width)):
         block_y = item.image_ry-item.left_marker_lift_px
         return replace(
             item,

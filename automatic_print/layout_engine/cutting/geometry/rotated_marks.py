@@ -18,16 +18,23 @@ def rotated_marks(path, width, height, degrees, settings, block, label, platform
     _, _, lw, lh = label
     px, py, pw, ph = platform
     by = marker_top(qr, height)
-    if settings.preserve_header_gap:
-        gap = max(1, round(settings.number_gap_mm*settings.dpi/25.4))
-        return bx, by, bx, by+bh+gap
-    lx = max(0, round(qr.left*width))
-    ly = ceil(qr.bottom*height) + max(1, round(settings.number_gap_mm*settings.dpi/25.4))
 
     def clear(rect):
         x, y, w, h = rect
         return transparent_rect(path, width, height, degrees, rect) and not (
             pw and w and h and x < px+pw and x+w > px and y < py+ph and y+h > py)
+
+    if degrees % 180:
+        # The shared header-safe placement owns the rotated label. Do not
+        # search below the QR here and then discard that obsolete coordinate.
+        if not (pw and px < 0) and clear((0, by, bw, bh)):
+            bx = 0
+        return bx, by, label[0], label[1]
+    if settings.preserve_header_gap:
+        gap = max(1, round(settings.number_gap_mm*settings.dpi/25.4))
+        return bx, by, bx, by+bh+gap
+    lx = max(0, round(qr.left*width))
+    ly = ceil(qr.bottom*height) + max(1, round(settings.number_gap_mm*settings.dpi/25.4))
 
     # Search only directly below the QR, never horizontally away from it.
     if lw and lh:
