@@ -92,6 +92,10 @@ class GenerationActionsMixin:
             (item.shipping_method, item.order_composition): item.item_count
             for item in plan.items
         }
+        pieces = {
+            (item.shipping_method, item.order_composition): item.piece_count
+            for item in plan.items
+        }
         excluded = {
             item.shipping_method: item.item_count
             for item in plan.excluded_items
@@ -107,6 +111,12 @@ class GenerationActionsMixin:
             )
             self.generation_table.setItem(
                 row, 1, QTableWidgetItem(str(count))
+            )
+            self.generation_table.setItem(
+                row, 2, QTableWidgetItem(
+                    "—" if is_excluded or (count and not pieces.get((method, composition)))
+                    else str(pieces.get((method, composition), 0))
+                )
             )
             status = QTableWidgetItem(
                 "物流无法生成—已剔除"
@@ -157,7 +167,7 @@ class GenerationActionsMixin:
             return
         details = "\n".join(
             f"{item.shipping_method} / {item.order_composition}："
-            f"{item.item_count} 项"
+            f"{item.item_count} 项、{item.piece_count} 件"
             for item in plan.nonempty_items
         )
         dialog = QDialog(self)

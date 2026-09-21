@@ -57,7 +57,7 @@
 | 批次及膜历史 | `history/store.py`, `history/batch_queue.py`, `history/bulk_analysis.py` | 历史格式由存储模块维护，UI不直接写日志文件。 |
 | ERP生产批次读取与下载 | `automation/browser/batches.py`, `automation/api/erp/records.py`, `automation/transfer/exports.py`, `automation/transfer/downloads.py`, `automation/transfer/export_record.py` | 浏览器流程、导出记录定位、文件传输与响应映射分离；批次列表时间只映射平台批次的 `created`/`created_at` 生成时间，不使用导出完成或下载时间。页面缺少旧批次下载入口时复用最新已完成导出记录中的受信任 ZIP 地址，仍由公共安全解压入口处理。外层工厂页面与内嵌生产模块共用一个批次内容定位入口。 |
 | 共享盘批次本地镜像 | `automation/transfer/local_mirror.py`, `ui/workers.py` | 共享盘批次存在平台下载目录中的同批本地副本时，按批次号、图片数量、文件名和字节数完整核对后复用本地图片完成尺寸、标签、刀码、排版和合成；任何缺失、重名或大小不一致都回退原共享盘，不猜测映射。输出目录和历史来源仍保留用户选择的位置。 |
-| 生产平台下载入口 | `ui/erp_download_entry.py`, `batch_ui/dialog.py`, `batch_ui/platform/`, `batch_ui/task/`, `batch_ui/shell/results.py` | 多选平台后分别显示独立工作区；起止批次号使用可编辑下拉框，复用已读取批次列表并允许粘贴/复制；“下载并解压”只保存生产图，“下载、排版并生成打印文件”显式复用当前参数继续本地排版，并按批次顺序交给RIIN。默认按页面选项在仅下载完成后打开对应平台文件夹。 |
+| 生产平台下载入口 | `ui/erp_download_entry.py`, `batch_ui/dialog.py`, `batch_ui/platform/generation_page.py`, `batch_ui/platform/route_view.py`, `batch_ui/platform/`, `batch_ui/task/`, `batch_ui/shell/results.py` | 多选平台后分别显示独立工作区；每个蜂鸟ERP工作区在“生产批次”之外提供“批次生成”页，复用现有已接单物流分类、隆丰工艺路线及已生产补单计划，先读取筛选条件与候选订单/项目/件数再允许提交；实际编号从批次管理回查。起止批次号使用可编辑下拉框，复用已读取批次列表并允许粘贴/复制；“下载并解压”只保存生产图，“下载、排版并生成打印文件”显式复用当前参数继续本地排版，并按批次顺序交给RIIN。默认按页面选项在仅下载完成后打开对应平台文件夹。 |
 | 后台只读任务 | `batch_ui/task/reads.py`, `batch_ui/local/scanning.py` | 复用现有Worker线程和取消信号；目录和图片名称在后台读取，界面按来源范围及选中批次核对返回数据，过期结果不得覆盖当前选择。 |
 | ERP工作台壳层 | `batch_ui/local/`, `platform/`, `task/`, `shell/` | 目录直接对应本地排版、平台批次、任务执行和公共窗口外壳；根对话框只装配，控件构造、结果展示和批次表映射各有唯一所有者。 |
 | 蜂鸟ERP接口 | `automation/api/erp/gateway.py`, `items.py`, `batches.py`, `records.py` | 页面桥接、生产项与规则、生产批次、响应转换按请求对象分离；调用方直接复用提供商接口，不保留根目录转发模块。 |

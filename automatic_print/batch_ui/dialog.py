@@ -9,7 +9,8 @@ from ..ui.worker_bridge import BatchWorkerBridge
 from ..ui.layout_values import settings_from_window
 from .platform.actions import BatchActionsMixin
 from .platform.generation import GenerationActionsMixin
-from .platform.routes import RouteActionsMixin, build_route_page
+from .platform.routes import RouteActionsMixin
+from .platform.generation_page import build_batch_generation_page
 from .local.actions import LocalActionsMixin
 from .local.page import build_local_page
 from .platform.pages import (
@@ -65,7 +66,7 @@ class AutomationDialog(
         self._build_layout()
         self.platform.currentTextChanged.connect(self.platform_changed)
         self.main_tabs.currentChanged.connect(self.main_tab_changed)
-        if not self.download_only:
+        if hasattr(self, "batch_rule_summary"):
             self.show_platform_batch_rules(self.platform.currentData())
         if hasattr(self, "route_summary"):
             self.show_route_controls(self.platform.currentData())
@@ -91,12 +92,11 @@ class AutomationDialog(
             self.main_tabs.addTab(
                 build_production_page(self, self.output_row), "生产批次"
             )
-            if self.platform_names == ("隆丰",):
-                self.main_tabs.addTab(build_route_page(self), "已接单生成批次")
             if len(self.platform_names) == 1 and self.platform_names[0] in ERP_PLATFORMS:
-                from .platform.completed import CompletedErpPage
-                self.completed_page = CompletedErpPage(self, self.platform_names[0])
-                self.main_tabs.addTab(self.completed_page, '已生产订单计划')
+                self.main_tabs.addTab(
+                    build_batch_generation_page(self, self.platform_names[0]),
+                    "批次生成",
+                )
             else:
                 self.main_tabs.tabBar().hide()
             return

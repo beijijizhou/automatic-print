@@ -1,4 +1,5 @@
 import os
+import time
 from pathlib import Path
 
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
@@ -10,9 +11,37 @@ from automatic_print.automation.browser.batches import BatchRecord
 from automatic_print.ui.main_window import MainWindow
 from automatic_print.batch_ui.local.processing import process_local_batches
 from automatic_print.batch_ui.task.worker import AutomationWorker
+from automatic_print.automation.batches.default_multi import DefaultMultiPlan
 
 
 APP = QApplication.instance() or QApplication([])
+
+
+def test_default_multi_preview_worker_finishes_in_generation_tab(tmp_path, monkeypatch):
+    owner = MainWindow(QSettings(str(tmp_path / "prefs.ini"), QSettings.IniFormat))
+    owner.startup_update_timer.stop()
+    owner.developer_mode_checkbox.setChecked(True)
+    page = owner.production_platform_download_page.workbenches["隆丰"]
+    page.main_tabs.setCurrentIndex(1)
+    plan = DefaultMultiPlan(
+        "741283", 3, (("item", 2),), (("order", ("item",)),)
+    )
+    monkeypatch.setattr(
+        "automatic_print.batch_ui.task.generation_actions.preview_default_multi",
+        lambda: plan,
+    )
+
+    page.default_multi_preview_button.click()
+    deadline = time.monotonic() + 5
+    while page.thread is not None and time.monotonic() < deadline:
+        APP.processEvents()
+        time.sleep(0.01)
+
+    assert page.thread is None
+    assert page.pending_default_multi_plan == plan
+    assert page.default_multi_generate_button.isEnabled()
+    assert page.route_preview_table.item(0, 3).text() == "2"
+    owner.close()
 
 
 def test_platform_download_is_multi_select_and_preview_only(tmp_path):
@@ -37,15 +66,29 @@ def test_platform_download_is_multi_select_and_preview_only(tmp_path):
     assert page.platform_tabs.count() == 1
     longfeng = page.workbenches["隆丰"]
     assert longfeng.platform.currentData() == "隆丰"
-    assert longfeng.main_tabs.tabText(1) == "已接单生成批次"
+    assert longfeng.main_tabs.tabText(1) == "批次生成"
     longfeng.main_tabs.setCurrentIndex(1)
     APP.processEvents()
+    assert longfeng.generation_sections.tabText(0) == "已接单筛选预览"
+    assert longfeng.generation_sections.tabText(1) == "已生产补单计划"
+    assert longfeng.generation_sections.widget(1) is longfeng.completed_page
+    assert longfeng.route_preview_table.horizontalHeaderItem(3).text() == "件数"
     assert longfeng.route_preview_button.text() == "读取工艺路线"
     assert longfeng.default_multi_preview_button.text() == "读取默认路线多项多件"
     assert longfeng.default_multi_generate_button.text() == "直接生成批次"
     assert not longfeng.default_multi_generate_button.isEnabled()
     assert longfeng.route_generate_button.text() == "按筛选生成批次"
     assert not longfeng.route_generate_button.isEnabled()
+    assert longfeng.preview_rules_button.text() == "读取分类数量"
+    longfeng.default_multi_plan_finished(DefaultMultiPlan(
+        "741283", 4, (("item-a", 2),), (("order-a", ("item-a",)),)
+    ))
+    assert longfeng.route_preview_table.item(0, 1).text() == "1"
+    assert longfeng.route_preview_table.item(0, 2).text() == "1"
+    assert longfeng.route_preview_table.item(0, 3).text() == "2"
+    assert longfeng.candidate_orders_label.text().endswith("1 个候选订单")
+    assert longfeng.candidate_orders_table.item(0, 0).text() == "order-a"
+    assert longfeng.candidate_orders_table.item(0, 2).text() == "2"
     longfeng.main_tabs.setCurrentIndex(0)
     assert longfeng.download_preview_only.isChecked()
     assert not longfeng.download_preview_only.isEnabled()
@@ -109,6 +152,7 @@ def test_platform_download_is_multi_select_and_preview_only(tmp_path):
     APP.processEvents()
     assert page.platform_tabs.count() == 2
     assert page.workbenches["莆田"].platform.currentData() == "莆田"
+    assert page.workbenches["莆田"].main_tabs.tabText(1) == "批次生成"
     page.platform_checks["隆丰"].setChecked(False)
     assert page.platform_tabs.count() == 1
     assert page.platform_tabs.tabText(0) == "莆田"

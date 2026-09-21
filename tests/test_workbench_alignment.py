@@ -33,7 +33,8 @@ def test_completed_preview_shows_style_and_color_before_generation(tmp_path, mon
     workbench = owner.production_platform_download_page.workbenches['Haloo']
     page = workbench.completed_page
     assert page.plan_button.text() == '自动化生成计划'
-    assert workbench.main_tabs.indexOf(page) >= 0
+    assert workbench.main_tabs.tabText(1) == '批次生成'
+    assert workbench.generation_sections.indexOf(page) == 1
     calls = []
     monkeypatch.setattr(workbench, '_start_worker', calls.append)
     page.read_button.click()
@@ -84,10 +85,14 @@ def test_completed_plan_tab_is_available_on_every_erp_platform(tmp_path, platfor
     owner.production_platform_download_page.platform_checks[platform_name].setChecked(True)
     workbench = owner.production_platform_download_page.workbenches[platform_name]
     page = workbench.completed_page
-    workbench.main_tabs.setCurrentWidget(page)
+    workbench.main_tabs.setCurrentIndex(1)
+    workbench.generation_sections.setCurrentWidget(page)
     APP.processEvents()
     assert page.platform_name == platform_name
-    assert workbench.main_tabs.tabText(workbench.main_tabs.indexOf(page)) == '已生产订单计划'
+    assert workbench.main_tabs.tabText(1) == '批次生成'
+    assert workbench.generation_sections.tabText(
+        workbench.generation_sections.indexOf(page)
+    ) == '已生产补单计划'
     assert page.plan_button.text() == '自动化生成计划'
     assert page.plan_button.isVisibleTo(page)
     owner.close()

@@ -1,62 +1,12 @@
 """Received-item process route controls for Longfeng."""
 
 from PySide6.QtCore import Slot
-from PySide6.QtWidgets import (
-    QComboBox, QHBoxLayout, QLabel, QMessageBox, QPushButton, QVBoxLayout,
-    QWidget,
-)
+from PySide6.QtWidgets import QMessageBox
 
 from ...automation.batches.routes import RouteBatchPlan
 from ...automation.batches.default_multi import DefaultMultiPlan
 from ..task.worker import AutomationWorker
-
-
-def build_route_controls(owner) -> QWidget:
-    panel = QWidget()
-    layout = QVBoxLayout(panel)
-    owner.route_summary = QLabel("隆丰：尚未读取工艺路线。")
-    owner.route_summary.setWordWrap(True)
-    owner.route_selector = QComboBox()
-    owner.route_selector.setEnabled(False)
-    owner.route_selector.currentIndexChanged.connect(
-        owner.preview_process_route
-    )
-    owner.route_preview_button = QPushButton("读取工艺路线")
-    owner.route_preview_button.clicked.connect(owner.preview_process_route)
-    owner.route_generate_button = QPushButton("按筛选生成批次")
-    owner.route_generate_button.setEnabled(False)
-    owner.route_generate_button.clicked.connect(owner.confirm_process_route)
-    route_actions = QHBoxLayout()
-    route_actions.addWidget(owner.route_selector)
-    route_actions.addWidget(owner.route_preview_button)
-    route_actions.addWidget(owner.route_generate_button)
-    layout.addWidget(owner.route_summary)
-    layout.addLayout(route_actions)
-    return panel
-
-
-def build_route_page(owner) -> QWidget:
-    page = QWidget()
-    layout = QVBoxLayout(page)
-    intro = QLabel("隆丰已接单可按默认工艺路线＋多项多件直接生成批次。")
-    intro.setWordWrap(True)
-    layout.addWidget(intro)
-    owner.default_multi_summary = QLabel("默认工艺路线 / 多项多件：尚未读取。")
-    owner.default_multi_summary.setWordWrap(True)
-    owner.default_multi_preview_button = QPushButton("读取默认路线多项多件")
-    owner.default_multi_preview_button.clicked.connect(owner.preview_default_multi)
-    owner.default_multi_generate_button = QPushButton("直接生成批次")
-    owner.default_multi_generate_button.setEnabled(False)
-    owner.default_multi_generate_button.clicked.connect(owner.confirm_default_multi)
-    default_actions = QHBoxLayout()
-    default_actions.addWidget(owner.default_multi_preview_button)
-    default_actions.addWidget(owner.default_multi_generate_button)
-    layout.addWidget(owner.default_multi_summary)
-    layout.addLayout(default_actions)
-    layout.addWidget(QLabel("其他工艺路线："))
-    layout.addWidget(build_route_controls(owner))
-    layout.addStretch()
-    return page
+from .route_view import preview_row, show_orders
 
 
 class RouteActionsMixin:
@@ -78,6 +28,12 @@ class RouteActionsMixin:
         self.route_selector.clear()
         self.route_selector.setEnabled(False)
         self.route_selector.blockSignals(False)
+        preview_row(self.route_preview_table, 0,
+                     ("默认路线 A00 / 多项多件", "—", "—", "—", "尚未读取"))
+        preview_row(self.route_preview_table, 1,
+                     ("其他工艺路线 / 全部组成", "—", "—", "—", "尚未读取"))
+        self.candidate_orders_table.setRowCount(0)
+        self.candidate_orders_label.setText("候选订单明细：尚未读取。")
         if visible:
             self.route_summary.setText("读取全部工艺路线后，默认选择 A05-无印花。")
 
@@ -87,12 +43,29 @@ class RouteActionsMixin:
         self.pending_default_multi_plan = None
         self.default_multi_generate_button.setEnabled(False)
         self.default_multi_summary.setText("正在读取默认工艺路线 / 多项多件…")
+        preview_row(self.route_preview_table, 0,
+                     ("默认路线 A00 / 多项多件", "—", "—", "—", "正在读取"))
+        self.candidate_orders_table.setRowCount(0)
+        self.candidate_orders_label.setText("正在读取默认路线的候选订单…")
         self._start_worker(AutomationWorker("preview_default_multi", "隆丰"))
 
     @Slot(object)
     def default_multi_plan_finished(self, plan: DefaultMultiPlan) -> None:
         self.pending_default_multi_plan = plan
         self.default_multi_generate_button.setEnabled(plan.item_count > 0)
+        preview_row(self.route_preview_table, 0, (
+            "默认路线 A00 / 多项多件", str(len(plan.order_items)),
+            str(plan.item_count), str(plan.piece_count),
+            "可生成" if plan.item_count else "无待生成项目",
+        ))
+        quantities = dict(plan.item_quantities)
+        show_orders(self.candidate_orders_table, tuple(
+            (order_id, len(item_ids), sum(quantities[item_id] for item_id in item_ids))
+            for order_id, item_ids in plan.order_items
+        ))
+        self.candidate_orders_label.setText(
+            f"默认路线 A00 / 多项多件：{len(plan.order_items)} 个候选订单"
+        )
         self.default_multi_summary.setText(
             f"已接单共 {plan.received_count} 项；默认工艺路线 / 多项多件 "
             f"{plan.item_count} 项、{plan.piece_count} 件。"
@@ -123,6 +96,10 @@ class RouteActionsMixin:
         self.route_generate_button.setEnabled(False)
         label = self.route_selector.currentText() or "A05-无印花"
         self.route_summary.setText(f"正在读取 {label}…")
+        preview_row(self.route_preview_table, 1,
+                     (f"{label} / 全部组成", "—", "—", "—", "正在读取"))
+        self.candidate_orders_table.setRowCount(0)
+        self.candidate_orders_label.setText(f"正在读取 {label} 的候选订单…")
         self._start_worker(AutomationWorker(
             "preview_route", "隆丰", route_label=label,
         ))
@@ -137,9 +114,19 @@ class RouteActionsMixin:
         self.route_selector.setEnabled(True)
         self.route_selector.blockSignals(False)
         self.route_generate_button.setEnabled(plan.item_count > 0)
+        preview_row(self.route_preview_table, 1, (
+            f"{plan.selected_route} / 全部组成", str(plan.order_count),
+            str(plan.item_count), str(plan.piece_count),
+            "可生成" if plan.item_count else "无待生成项目",
+        ))
+        show_orders(self.candidate_orders_table, plan.order_details)
+        self.candidate_orders_label.setText(
+            f"{plan.selected_route}：{plan.order_count} 个候选订单"
+        )
         self.route_summary.setText(
             f"已接单共 {plan.all_received_count} 项；"
-            f"{plan.selected_route} 有 {plan.item_count} 项。"
+            f"{plan.selected_route} 有 {plan.order_count} 单、"
+            f"{plan.item_count} 项、{plan.piece_count} 件。"
             "按筛选直接生成，不按底款、物流或面别拆分。"
         )
 

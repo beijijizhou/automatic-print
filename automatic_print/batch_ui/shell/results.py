@@ -19,6 +19,9 @@ def present_action_result(owner, result: dict) -> None:
             "\n批次管理状态：\n" + "\n".join(result['status'])
         )
         owner.default_multi_summary.setText(text)
+        owner.route_preview_table.item(0, 4).setText(
+            "已生成：" + "、".join(result['codes'])
+        )
         owner.log.appendPlainText(text)
         QMessageBox.information(owner, '批次生成完成', text)
         return
@@ -32,6 +35,7 @@ def present_action_result(owner, result: dict) -> None:
             "\n批次管理状态：\n" + "\n".join(result['status'])
         )
         owner.route_summary.setText(text)
+        owner.route_preview_table.item(1, 4).setText("已生成：" + codes)
         owner.log.appendPlainText(text)
         QMessageBox.information(owner, '批次生成完成', text)
         return

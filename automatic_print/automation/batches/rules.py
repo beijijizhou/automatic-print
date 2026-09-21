@@ -25,6 +25,7 @@ class RuleBatchItem:
     shipping_method: str
     order_composition: str
     item_count: int
+    piece_count: int = 0
 
 
 @dataclass(frozen=True)
@@ -108,16 +109,19 @@ def _preview_plan_from_api(page, platform, report) -> RuleBatchPlan:
         for name in platform.shipping_categories
     }
     grouped = Counter()
+    pieces = Counter()
     for row in rows:
         shipping_code = str(row.get("logistics_sorting_code") or "")
         shipping_name = reverse_shipping.get(shipping_code, shipping_code)
         composition = classify_order_composition(row)
         grouped[(shipping_name, composition)] += 1
+        pieces[(shipping_name, composition)] += int(row.get("qty") or 0)
     items = tuple(
         RuleBatchItem(
             shipping,
             composition,
             grouped[(shipping, composition)],
+            pieces[(shipping, composition)],
         )
         for shipping in platform.shipping_categories
         for composition in detailed_compositions(

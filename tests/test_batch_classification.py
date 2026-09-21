@@ -75,6 +75,25 @@ def test_unknown_face_is_left_unmatched_for_safety(monkeypatch) -> None:
     assert plan.received_count == 2
 
 
+def test_received_preview_counts_real_pieces_per_filter(monkeypatch) -> None:
+    rows = [
+        {"logistics_sorting_code": "UPS_CODE", "order_composition": 3,
+         "qty": 2},
+        {"logistics_sorting_code": "UPS_CODE", "order_composition": 3,
+         "qty": 4},
+    ]
+    monkeypatch.setattr(
+        "automatic_print.automation.batches.rules._load_all_received_rows",
+        lambda _page: (rows, 2),
+    )
+
+    plan = _preview_plan_from_api(None, Platform(), lambda _text: None)
+
+    group = next(item for item in plan.items
+                 if item.order_composition == "多项多件")
+    assert (group.item_count, group.piece_count) == (2, 6)
+
+
 def test_generation_payload_filters_double_face(monkeypatch) -> None:
     captured = {}
 

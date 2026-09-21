@@ -30,6 +30,9 @@ class RouteBatchPlan:
     route_id: str
     item_count: int
     all_received_count: int
+    order_count: int = 0
+    piece_count: int = 0
+    order_details: tuple[tuple[str, int, int], ...] = ()
 
 
 @dataclass(frozen=True)
@@ -63,8 +66,20 @@ def _preview(page, route_label: str) -> RouteBatchPlan:
         raise RuntimeError(
             f"{route_label} 列表显示 {visible_count} 项，接口返回 {len(matching)} 项。"
         )
+    if any(not row.get("order_id") or int(row.get("qty") or 0) <= 0
+           for row in matching):
+        raise RuntimeError(f"{route_label} 缺少订单身份或有效件数，不能预览批次。")
+    by_order: dict[str, tuple[int, int]] = {}
+    for row in matching:
+        order_id = str(row["order_id"])
+        count, pieces = by_order.get(order_id, (0, 0))
+        by_order[order_id] = (count + 1, pieces + int(row["qty"]))
     return RouteBatchPlan(
-        routes, route_label, ids.pop() if ids else "", len(matching), total
+        routes, route_label, ids.pop() if ids else "", len(matching), total,
+        len(by_order),
+        sum(int(row["qty"]) for row in matching),
+        tuple(sorted((order_id, count, pieces)
+                     for order_id, (count, pieces) in by_order.items())),
     )
 
 

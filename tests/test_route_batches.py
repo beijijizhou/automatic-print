@@ -18,9 +18,9 @@ class _Frame:
 def test_route_preview_uses_exact_a05_and_all_page_options(monkeypatch):
     rows = [
         {"process_route_code": "A05", "process_route_id": 768786,
-         "production_batch_id": None},
+         "production_batch_id": None, "order_id": "a", "qty": 2},
         {"process_route_code": "A05", "process_route_id": 768786,
-         "production_batch_id": None},
+         "production_batch_id": None, "order_id": "b", "qty": 3},
         {"process_route_code": "A00", "process_route_id": 741283,
          "production_batch_id": None},
     ]
@@ -41,6 +41,8 @@ def test_route_preview_uses_exact_a05_and_all_page_options(monkeypatch):
     assert (plan.route_id, plan.item_count, plan.all_received_count) == (
         "768786", 2, 3
     )
+    assert (plan.order_count, plan.piece_count) == (2, 5)
+    assert plan.order_details == (("a", 1, 2), ("b", 1, 3))
     assert selected == [("工艺路线", "A05-无印花")]
 
 
