@@ -1,0 +1,1 @@
+"""Marker geometry validation."""

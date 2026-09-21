@@ -73,7 +73,7 @@ def _compose(canvas, planned, labels, settings, progress, workers):
                 )
                 canvas.alpha_composite(badge, (placement.platform_x_px, placement.platform_y_px))
                 badge.close()
-            if settings.number_images:
+            if placement.number_width_px and placement.number_height_px:
                 badge = source_label_badge(
                     labels[placement.sequence_number],
                     settings,

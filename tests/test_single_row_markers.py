@@ -27,7 +27,7 @@ def test_all_single_rows_have_left_edge_marker_in_saved_png(tmp_path, engine, mo
     with Image.open(tmp_path/'out'/result['filename']) as image:
         for p in result['placements']:
             assert p['color_block_x_px'] == 0
-            assert p['number_x_px'] == 0
+            assert p['number_width_px'] == p['number_height_px'] == 0
             assert image.convert('RGBA').getpixel((0, p['color_block_y_px'])) == (255, 0, 0, 255)
         if mode == 'dual':
             check = result['cut_corridor']

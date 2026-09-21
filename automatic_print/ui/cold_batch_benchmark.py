@@ -162,47 +162,8 @@ class ColdBatchBenchmarkDialog(QDialog):
             self.start_button.setEnabled(True)
 
     def _read_output(self):
-        self._buffer += bytes(self.process.readAllStandardOutput()).decode("utf-8", "replace")
-        while "\n" in self._buffer:
-            line, self._buffer = self._buffer.split("\n", 1)
-            try:
-                data = json.loads(line)
-            except ValueError:
-                if line.strip():
-                    self.log.appendPlainText(line)
-                continue
-            event = data.get("event")
-            if event == "timing":
-                timing = dict(data["data"])
-                # The worker runs in another process; advance its snapshot on
-                # the GUI clock rather than assuming equal perf_counter epochs.
-                timing["captured_at"] = perf_counter()
-                self.layout_timings.emit(timing)
-                continue
-            if event == "scan":
-                message = f"正在扫描：{data['folder']}"
-            elif event == "batch_started":
-                self._batch_started_at = perf_counter()
-                self.timing_panel.reset()
-                message = f"第{data['index']}/{data['count']}批 · {Path(data['folder']).name} · {data['images']}张 · 开始"
-            elif event == "progress":
-                message = f"第{data['index']}/{data['count']}批 · {data['stage']} · {data['detail']}"
-            elif event == "batch_finished":
-                self._batch_started_at = None
-                message = (f"第{data['index']}批 {data['status']} · "
-                           f"本批{data['wall_seconds']:.2f}秒 · 累计{data['cumulative_seconds']:.2f}秒")
-            elif event == "finished":
-                message = (f"{data['status']} · 成功{data['completed']}批 · 失败{data['failed']}批"
-                           f" · 总计{data['total_seconds']:.2f}秒 · 报告：{data['report']}")
-            else:
-                message = data.get("error", line)
-            self.status.setText(message)
-            self.log.appendPlainText(message)
-            if event == "batch_finished" and self.timing_panel.data:
-                for row in self.timing_panel.data.get('steps', ()):
-                    self.log.appendPlainText(
-                        f"  {row['name']}：{row['seconds']:.2f} 秒")
-            self._refresh_elapsed()
+        from .cold_batch_events import consume_output
+        consume_output(self)
 
     def _read_error(self):
         detail = bytes(self.process.readAllStandardError()).decode("utf-8", "replace").strip()

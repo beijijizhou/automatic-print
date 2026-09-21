@@ -1,11 +1,9 @@
 """Select completed ERP order groups for separate supplement batches."""
-
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import (
     QCheckBox, QComboBox, QDialog, QDialogButtonBox, QHBoxLayout, QLabel,
     QPlainTextEdit, QPushButton, QSpinBox, QTableWidgetItem, QVBoxLayout, QWidget,
 )
-
 from .pages import table_widget
 from ..task.reads import CompletedGenerateWorker, ReadWorker
 

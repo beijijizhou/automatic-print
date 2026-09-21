@@ -101,7 +101,7 @@ def build_vips_rows(
                 xs.append(placement.platform_x_px)
                 ys.append(placement.platform_y_px-row_y)
                 badge.close()
-            if settings.number_images:
+            if placement.number_width_px and placement.number_height_px:
                 badge = source_label_badge(
                     labels[placement.sequence_number],
                     settings,

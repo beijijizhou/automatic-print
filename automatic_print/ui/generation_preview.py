@@ -1,9 +1,7 @@
 from PySide6.QtCore import QObject, Slot
 from pathlib import Path
-
 from .previews.runtime.snapshot import install_snapshot
 from ..layout_engine.orders.order_groups import detail_members
-
 
 class GenerationPreviewController(QObject):
     """GUI-thread-only presentation of immutable worker layout data."""

@@ -27,8 +27,8 @@ def test_two_image_preview_uses_fixed_partition_marker_groups(tmp_path):
     assert left.color_block_x_px == 0
     assert right.color_block_x_px == round(303 * 100 / 25.4)
     for p in (left, right):
-        assert p.number_x_px == p.color_block_x_px
-        assert p.number_y_px >= p.color_block_y_px + p.color_block_height_px
+        assert p.number_width_px == p.number_height_px == 0
+        assert p.number_x_px == p.x_px
     preview.resize(960, 620)
     canvas = QImage(preview.size(), QImage.Format_ARGB32)
     canvas.fill(0)
@@ -51,8 +51,8 @@ def test_narrow_media_keeps_both_sources_and_reports_preview_overflow(tmp_path):
     wait_preview(preview)
     assert len(preview.batch_payload["planned"]) == 2
     assert preview.item is not None
-    assert preview.overflow
-    assert '未能可靠识别膜标签高度范围' in preview.warning
+    assert not preview.overflow
+    assert all(p.number_width_px == 0 for _, p in preview.planned)
     state[0] = replace(state[0], media_width_mm=600, cutter_knife_mm=300)
     preview.refresh()
     wait_preview(preview)

@@ -4,8 +4,8 @@ from automatic_print.layout_engine.domain.models import mm_to_px
 from automatic_print.layout_engine.labeling.markers.left_marker import head_margin
 from automatic_print.layout_engine.orders.order_groups import order_key
 from automatic_print.layout_engine.planning.packing.units import build_units
-from .cutter_planner import cutter_output_width
-from .order_lane_trial import plan_order_sides_rows, trial_order_sides
+from ..cutter_planner import cutter_output_width
+from ..order_lane_trial import plan_order_sides_rows, trial_order_sides
 
 
 def plan_order_side_zone(orders, items, lanes, spacing, settings, labels, color_boundary):

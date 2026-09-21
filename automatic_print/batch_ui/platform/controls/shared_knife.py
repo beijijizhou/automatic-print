@@ -1,6 +1,6 @@
 """Run-scoped opt-in control for the whole-order shared-knife strategy."""
 from PySide6.QtWidgets import QPushButton
-from ...ui.copyable_text import copyable_checkbox
+from ....ui.copyable_text import copyable_checkbox
 
 
 def add_shared_knife_controls(owner):

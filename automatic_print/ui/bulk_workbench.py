@@ -1,30 +1,10 @@
 """Rolling batch jobs presented by the same main workbench as single jobs."""
 from pathlib import Path
 from PySide6.QtCore import QObject, Slot
-from PySide6.QtWidgets import QFileDialog
 from ..controllers import BulkGenerationController
-from .folder_dialog_paths import image_dialog_start, remember_image_directory
 from .bulk_generation_worker import BulkGenerationWorker
 from .busy_spinner import show_busy, show_progress
-def open_bulk(window):
-    if window.has_active_tasks():
-        return
-    directory = QFileDialog.getExistingDirectory(window, '选择包含多个批次的上级目录',
-                                                 image_dialog_start(window))
-    if not directory:
-        return
-    start_bulk(window,Path(directory))
-def start_bulk(window,directory,prepared_scan=None):
-    directory = Path(directory)
-    remember_image_directory(window, str(directory))
-    from .quick_fields import show_selected_source
-    show_selected_source(window.automation_home.label_quick_panel, str(directory), 'layout', window)
-    if not hasattr(window, 'bulk_controller'):
-        window.bulk_controller = BulkWorkbench(window)
-    if prepared_scan is None:
-        window.bulk_controller.begin(Path(directory))
-    else:
-        window.bulk_controller.begin(Path(directory), prepared_scan)
+from .bulk_start import open_bulk, start_bulk
 
 class BulkWorkbench(QObject):
     def __init__(self, window):
@@ -95,8 +75,6 @@ class BulkWorkbench(QObject):
             f"已扫描{scan['directories']}个目录，发现{len(self.folders)}个图片批次，开始滚动处理")
     @Slot(int)
     def select(self, index):
-        if self.window.generation_preview.mode != 'multiple':
-            return
         if index < 0 or index >= len(self.folders):
             return
         from .generation_panel import refresh_batch_record

@@ -32,7 +32,7 @@ def plan_adaptive_knife_zones(paths, settings, progress, prepared=None):
     spacing = mm_to_px(base.spacing_mm, base.dpi)
     orders = complete_orders(paths)
     if fixed and settings.order_side_shared_knife:
-        from .order_side_zone import plan_order_side_zone
+        from .order_side.zone import plan_order_side_zone
         double_orders, leftovers, normal = plan_order_side_zone(
             orders, items, lanes, spacing, base, labels, _color_boundary)
     else:

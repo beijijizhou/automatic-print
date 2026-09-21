@@ -39,7 +39,8 @@ def recover_normal_width(paths,settings,progress,error):
     width=cutter_output_width(planned,settings,maximum)
     validate_order_placements(paths,planned)
     validate_cut_corridor(planned,settings,width)
-    validate_embedded_marks(planned,settings)
+    marker_settings = replace(settings, cutter_mode='single') if settings.cutter_mode == 'free' else settings
+    validate_embedded_marks(planned, marker_settings)
     if progress:
         if dual:
             progress('批次刀位已确定',rotated[3],settings.dpi,'原尺寸旋转单排；整批统一刀位，订单与双面相邻')

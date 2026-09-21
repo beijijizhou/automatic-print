@@ -30,11 +30,10 @@ def source_label_badge(text, settings, path, degrees=0):
             if degrees % 180 else (region.bottom-region.top)*height
         ))
         badge = label_badge(text, settings.dpi, settings.number_font_size_mm, maximum)
-        if badge.height > available_height:
-            badge.close()
-            raise ValueError(
-                f"{path.name}：标签文字无法完整放入膜标签高度范围，禁止输出。"
-            )
+        # Keep measurement available to the final pixel-space placement pass.
+        # If the complete badge does not fit, that pass drops only this added
+        # text and records a recoverable image anomaly; it must not stop the
+        # batch before cutter geometry can be produced.
         return badge
     if not settings.label_detect_region:
         return settings_label_badge(text, settings)

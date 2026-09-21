@@ -55,7 +55,7 @@
   取消和释放；`controllers/generation_progress.py` 提供纯进度计算。界面启动、实时进度和最终结果分别位于
   `ui/workbench/generation/start.py`、`progress.py`和`results.py`；`ui/generation_actions.py`与
   `ui/thread_lifecycle.py`仅保留旧调用方兼容导入。
-- 开发者 DTF 随机10批冷启动测试位于`ui/cold_batch_benchmark.py`，独立子进程复用
+- 开发者 DTF 随机10批冷启动测试位于`ui/cold_batch_benchmark.py`，其子进程事件解析归`ui/cold_batch_events.py`，独立子进程复用
   `diagnostics/random_dtf.py`、`diagnostics/benchmark_report.py`、共享批次扫描与`GenerateWorker`；只读扫描日期/HL目录，逐批生成到本机
   隔离目录并持续保存阶段耗时JSON及可读TXT。子进程实时发送原有`OperationTiming`快照，测试窗口复用主界面分步耗时表，另显示本批和整次计时；不写生产历史或触发RIIN。
   冷启动报告中的4个标签安全失败批次及完整运行参数仅保存在本机私有的
@@ -75,7 +75,7 @@
   移入`切膜机文件/常规`或`切膜机文件/旋转`；非切膜PNG直接进入`切膜机文件`。
   文本报告保存在平级 `排版日志`，不写输出JSON。
 - 多批次生成控制：`automatic_print/controllers/bulk_generation.py` 管理线程、取消和释放；
-  `ui/batch_folder_selection.py`在后台扫描并提供批次勾选，`ui/bulk_workbench.py`、
+  `ui/batch_folder_selection.py`在后台扫描并提供批次勾选，`ui/bulk_start.py`负责入口与目录状态，`ui/bulk_workbench.py`、
   `bulk_generation_worker.py`、`batch_status_board.py`分别负责展示编排、任务执行和状态视图。
   单批次和多批次共用主界面独立于“排版数据”卡片的“已完成／进行中／未完成”三栏状态板；单批次扫描后立即用文件名分析填写图片数和尺码/订单群，多批次后台扫描完成即填全部批次及合并来源，后续进度、完成、失败、停止更新同一条记录；“排版数据”卡片内有界显示并可复制所选批次处理记录，切换批次同步切换记录，双击或点击详情按钮打开完整排版报告和输出文件信息，主界面不重复展示长报告及编码细节，合并来源与父文件夹相同时不重复显示“.”。单批次、多批次与开发者随机10批共用`ui/operation_timing.py`的实时分步耗时表；多批次默认
   自动跟随正在运行的批次，手动点选批次后固定展示所选批次耗时。
@@ -116,16 +116,16 @@
   `layout_engine/planning/knife/optimizer.py`、`layout_engine/planning/columns/adaptive_knife.py`、`layout_engine/planning/zones/zone_optimizer.py`、`layout_engine/planning/rotation/rotation_zones.py`。列数由膜宽与真实占位
   动态形成；物理上无法容纳整批或无法实际使用全部列的候选在进入排版动态规划前淘汰，列分配使用有记忆匹配而非全排列。`layout_engine/planning/columns/adaptive_knife.py` 唯一组装“并排区 + 剩余旋转区”，旋转仍超宽时复用 `layout_engine/planning/zones/width_fit.py` 缩小缓存。
   混色订单不参与单色区域边界比较，避免错误清空已经成立的多数并排区。
-  主界面以独立复选框和可选择复制的文字常驻显示默认关闭、每次共刀任务启动后自动复位的“整单归侧双排”，并与隆丰共刀页的同名开关双向同步；未勾选时旧共刀策略不变。勾选后由`layout_engine/planning/columns/order_lane_trial.py`分配完整订单，`order_side_zone.py`同步左右排版行，并把宽度不符、右侧刀码缺左侧同行基准或颜色分区后移的完整订单交给旋转区；`cutting/validation/order_side_validation.py`分别复核左右订单、双面、颜色、尺码与两区域边界，最终文件仍须通过实际像素刀位检查。文件按刀位和区域分别归档常规／旋转；订单身份不可靠时新策略不猜测，安全回退的完整结果只归旋转待人工核查。
+  主界面以独立复选框和可选择复制的文字常驻显示默认关闭、每次共刀任务启动后自动复位的“整单归侧双排”，并与隆丰共刀页的同名开关双向同步；未勾选时旧共刀策略不变。勾选后由`layout_engine/planning/columns/order_lane_trial.py`分配完整订单，`layout_engine/planning/columns/order_side/zone.py`同步左右排版行，并把宽度不符、右侧刀码缺左侧同行基准或颜色分区后移的完整订单交给旋转区；`cutting/validation/order_side_validation.py`分别复核左右订单、双面、颜色、尺码与两区域边界，最终文件仍须通过实际像素刀位检查。文件按刀位和区域分别归档常规／旋转；订单身份不可靠时新策略不猜测，安全回退的完整结果只归旋转待人工核查。
 - 主界面默认开启的并排等比缩小、可勾选尺码（默认S–XL）及可编辑310毫米原宽上限由 `layout_engine/planning/zones/pair_width.py` 唯一计算；通过单图尺寸覆盖交给既有
   测量、刀位、预览和渲染链路，不生成或修改源图片副本。
 - 旋转与超宽恢复：`layout_engine/planning/rotation/rotation_compare.py`、`layout_engine/planning/rotation/whole_rotation.py`、`layout_engine/planning/rotation/tail_rotation.py`、
   `layout_engine/planning/rotation/single_rotation.py`、`layout_engine/planning/zones/width_fit.py`、`layout_engine/planning/zones/gap_fallback.py`。
   单件批次以完整尺码后缀比较多排区与旋转区分界；已有末尾旋转区时，可把交界前的完整尺码组整体并入旋转区，但同尺码绝不跨区。旋转区的竖图保持横向旋转，超出当前动态安全宽度时再等比缩小；整批旋转被个别超宽图阻断时，
   `layout_engine/planning/zones/gap_fallback.py` 用虚拟尺寸覆盖重跑完整订单局部比较，双面同倍率且整批仍最多只有并排区和旋转区两个区域。
-- 标签与刀码：`layout_engine/labeling/base/labels.py`、`layout_engine/labeling/base/dynamic_label.py`、`layout_engine/labeling/text/templates.py`、`layout_engine/labeling/markers/marker_stack.py`、`layout_engine/labeling/markers/left_marker.py`、
+- 标签与刀码：`layout_engine/labeling/base/labels.py`、`layout_engine/labeling/base/dynamic_label.py`、`layout_engine/labeling/text/templates.py`、`layout_engine/labeling/markers/marker_stack.py`、`layout_engine/labeling/markers/validation/stack.py`、`layout_engine/labeling/markers/left_marker.py`、
   `layout_engine/labeling/platform/platform_label.py`、`layout_engine/labeling/base/header_region.py`、`layout_engine/labeling/platform/transparent_search.py`。生产标签的机器号、批次正倒序及原图订单尺码共用同一模板和占位；未旋转时按膜标签侧别搜索朝图片内部的透明空白（左卡右放、右卡左放），文字始终留在原图宽度内且不增加排版占位。平台尺码文字只放入原图二维码卡片内部
-  已验证的未印刷白色或透明空位，绝不放到卡片与图案之间，使用不超过二维码卡片高度的最大字号；先在原图坐标确定位置，再与二维码一起旋转，预览与输出复用同一坐标。旋转90度时不论透明带选项或回退状态，`layout_engine/labeling/platform/short_edge_space.py`均只搜索卡片短边上方或下方的整块透明位，位置仍在原图占位内；不足时不得改放刀码旁。二维码卡片没有经过最终像素验证的安全空位时，仅跳过该图的平台尺码文字、记录异常并继续，不阻断整批。最终坐标越界等不可恢复安全冲突不得猜值绕过，文字不能进入膜标签与图案之间，也不能扩出原图宽度。
+  已验证的未印刷白色或透明空位，绝不放到卡片与图案之间，使用不超过二维码卡片高度的最大字号；先在原图坐标确定位置，再与二维码一起旋转，预览与输出复用同一坐标。旋转90度时不论透明带选项或回退状态，`layout_engine/labeling/platform/short_edge_space.py`均只搜索卡片短边上方或下方的整块透明位，位置仍在原图占位内；不足时不得改放刀码旁。批次或平台文字没有经过最终像素验证的安全空位时，仅跳过该图对应文字、保留刀码和原图、记录可复制异常并继续，不阻断整批；渲染器只绘制最终坐标仍有有效尺寸的文字。最终刀位或原图坐标越界等不可恢复安全冲突不得猜值绕过，文字不能进入膜标签与图案之间，也不能扩出原图宽度。
 - 开发者排版隔离：换刀与批次结束600毫米停止距离只有开发者模式显式传入正数时才进入规划、候选比较和独立开发者缓存版本；普通模式不调用该逻辑，使用算法缓存版本10，缓存键也不包含开发者紧凑排版与停止距离字段。
 - 标签字体加载与线程内有界缓存由`layout_engine/labeling/text/fonts.py`唯一拥有；`layout_engine/labeling/base/labels.py`只负责标签内容、
   换行和徽标渲染。单图排版对象`LayoutItem`与`Placement`统一归`layout_engine/domain/models.py`。

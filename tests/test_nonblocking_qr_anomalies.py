@@ -35,11 +35,17 @@ def test_missing_qr_keeps_whole_orders_and_actual_pixels(tmp_path, engine, parts
                 qr_image(path)
             paths.append(path)
     settings = LayoutSettings(dpi=25.4, cutter_mode='dual', cutter_auto_knife=True,
-        cutter_rotation_zone=True, allow_rotation=False, platform_name='隆丰',
+        cutter_rotation_zone=True, cutter_knife_dots=False,
+        allow_rotation=False, platform_name='隆丰',
         output_parts=parts, save_parallelism=3, save_memory_unlimited=True,
         compare_film_sizes=True, png_engine=engine)
     result = generate_layout(paths, tmp_path/'out', settings)
-    assert {r['source'] for r in result['analysis']['image_anomalies']} == set(missing)
+    anomalies = result['analysis']['image_anomalies']
+    assert {r['source'] for r in anomalies} == {path.name for path in paths}
+    assert all('继续完成排版' in r['action'] for r in anomalies)
+    assert all(any(r['source'] == name and '未找到可靠膜标签区域' in r['kind']
+                   for r in anomalies)
+               for name in missing)
     assert all(not r['error'] for r in result['analysis']['film_comparison']['rows'])
     assert all(name in cutting_report(result) for name in missing)
     all_sources = []
@@ -60,7 +66,19 @@ def test_missing_qr_keeps_whole_orders_and_actual_pixels(tmp_path, engine, parts
                 actual = np.asarray(image.crop((p.x_px, p.y_px,
                                                 p.x_px+p.width_px, p.y_px+p.height_px)))
                 ink = original[:, :, 3] == 255
-                assert np.array_equal(original[ink], actual[ink])
+                for x, y, width, height in (
+                    (p.platform_x_px, p.platform_y_px,
+                     p.platform_width_px, p.platform_height_px),
+                    (p.number_x_px, p.number_y_px,
+                     p.number_width_px, p.number_height_px),
+                ):
+                    if width and height:
+                        left, top = x-p.x_px, y-p.y_px
+                        ink[max(0, top):top+height, max(0, left):left+width] = False
+                if not np.array_equal(original[ink], actual[ink]):
+                    raise AssertionError(
+                        f'{path.name}: {original[2, 3].tolist()} -> '
+                        f'{actual[2, 3].tolist()}')
     assert sorted(all_sources) == sorted(p.name for p in paths)
     for order in range(3):
         assert any(all(any(p['source'] == f'B{order}-1-T-Black-M-NO1-{side}.png'

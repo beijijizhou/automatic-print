@@ -27,12 +27,18 @@ def external_left_item(item):
              and item.image_rx <= item.label_rx
              and item.label_rx+item.label_width <= item.image_rx+item.width)):
         block_y = item.image_ry-item.left_marker_lift_px
+        platform_y = item.platform_ry
+        if (not item.preserve_header_gap and item.platform_below_marker
+                and not item.platform_reuse_qr):
+            platform_y += block_y-item.block_ry
         return replace(
             item,
             block_ry=block_y,
+            platform_ry=platform_y,
             footprint_height=max(
                 item.footprint_height,
                 block_y+item.block_height,
+                platform_y+item.platform_height if item.platform_width else 0,
             ),
         )
     dx = max(0, item.block_width+gap-item.image_rx)
