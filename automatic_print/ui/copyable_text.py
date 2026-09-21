@@ -5,12 +5,30 @@ from PySide6.QtGui import QTextDocumentFragment
 import re
 from PySide6.QtWidgets import (QApplication, QLabel, QAbstractButton, QGroupBox,
     QProgressBar, QComboBox, QTabBar, QHeaderView, QAbstractItemView, QMenu,
-    QLineEdit, QTextEdit, QPlainTextEdit, QAbstractSpinBox, QWidget, QSplashScreen)
+    QLineEdit, QTextEdit, QPlainTextEdit, QAbstractSpinBox, QWidget, QSplashScreen,
+    QCheckBox, QHBoxLayout)
 
 
 def selectable(label):
     label.setTextInteractionFlags(label.textInteractionFlags() |
         Qt.TextSelectableByMouse | Qt.TextSelectableByKeyboard)
+
+
+def copyable_checkbox(text, tooltip='', parent=None):
+    """Keep the toggle compact while making its visible caption selectable."""
+    container = QWidget(parent)
+    layout = QHBoxLayout(container)
+    layout.setContentsMargins(0, 0, 0, 0)
+    checkbox = QCheckBox(container)
+    label = QLabel(text, container)
+    selectable(label)
+    if tooltip:
+        for widget in (container, checkbox, label):
+            widget.setToolTip(tooltip)
+    layout.addWidget(checkbox)
+    layout.addWidget(label)
+    layout.addStretch()
+    return container, checkbox, label
 
 
 def clean_caption(text):

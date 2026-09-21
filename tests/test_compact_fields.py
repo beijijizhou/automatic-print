@@ -1,7 +1,7 @@
 import os
 os.environ.setdefault('QT_QPA_PLATFORM', 'offscreen')
 
-from PySide6.QtCore import QSettings, QPoint
+from PySide6.QtCore import QSettings, QPoint, Qt
 from PySide6.QtWidgets import QApplication
 
 from automatic_print.ui.main_window import MainWindow
@@ -26,7 +26,8 @@ def test_one_row_highlight_and_default_comparison_migration(tmp_path):
     assert all(c.isVisible() for c in controls)
     assert panel.order_side_checkbox.isVisible()
     assert not panel.order_side_checkbox.isChecked()
-    assert '隆丰共刀' in panel.order_side_checkbox.text()
+    assert '隆丰共刀' in panel.order_side_label.text()
+    assert panel.order_side_label.textInteractionFlags() & Qt.TextSelectableByMouse
     assert 'BATCH123' in panel.selected_source.text()
     assert '#dbeafe' in panel.selected_source.styleSheet()
     assert not panel.preview.loader.active and not panel.preview.batch_payload

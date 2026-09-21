@@ -192,7 +192,7 @@ def build_production_page(owner, output_row: QHBoxLayout) -> QWidget:
     layout.addWidget(owner.test_mode)
     layout.addWidget(owner.download_preview_only)
     layout.addWidget(owner.merge_batches)
-    layout.addWidget(owner.order_side_checkbox)
+    layout.addWidget(owner.order_side_control)
     layout.addLayout(actions)
     if not getattr(owner, "local_only", False):
         layout.addWidget(owner.log)

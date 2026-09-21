@@ -6,7 +6,9 @@ from PySide6.QtTest import QTest
 from PySide6.QtWidgets import (QApplication, QLabel, QCheckBox, QPushButton,
     QGroupBox, QTabBar, QComboBox, QTableWidget, QTableWidgetItem, QLineEdit,
     QMenu, QProgressBar)
-from automatic_print.ui.copyable_text import install_text_copying, text_at, selected_text
+from automatic_print.ui.copyable_text import (
+    copyable_checkbox, install_text_copying, selected_text, text_at,
+)
 
 APP = QApplication.instance() or QApplication([])
 OWNERS = []
@@ -69,6 +71,16 @@ def test_checkbox_and_button_right_copy_does_not_activate():
     assert calls == []
     QTest.mouseClick(button, Qt.LeftButton)
     assert calls == [True]
+
+
+def test_copyable_checkbox_uses_selectable_visible_caption():
+    control, checkbox, label = copyable_checkbox('整单归侧双排')
+    show(control)
+    assert checkbox.text() == ''
+    assert label.text() == '整单归侧双排'
+    flags = label.textInteractionFlags()
+    assert flags & Qt.TextSelectableByMouse
+    assert flags & Qt.TextSelectableByKeyboard
 
 
 def test_titles_tabs_progress_and_dropdown_are_copyable():

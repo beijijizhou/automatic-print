@@ -3,7 +3,7 @@ from pathlib import Path
 
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
-from PySide6.QtCore import QSettings
+from PySide6.QtCore import QSettings, Qt
 from PySide6.QtWidgets import QApplication
 
 from automatic_print.automation.browser.batches import BatchRecord
@@ -48,6 +48,7 @@ def test_platform_download_is_multi_select_and_preview_only(tmp_path):
     assert not longfeng.shared_knife_button.isHidden()
     assert not longfeng.order_side_checkbox.isChecked()
     assert not longfeng.order_side_checkbox.isHidden()
+    assert longfeng.order_side_label.textInteractionFlags() & Qt.TextSelectableByMouse
     main_order_side = owner.automation_home.label_quick_panel.order_side_checkbox
     assert not main_order_side.isHidden()
     assert not main_order_side.isChecked()
