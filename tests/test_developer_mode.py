@@ -8,12 +8,17 @@ APP = QApplication.instance() or QApplication([])
 OWNERS = []
 
 
-def window(path):
+def window(path, department='dtf'):
     result = MainWindow(QSettings(str(path), QSettings.IniFormat))
     OWNERS.append(result)
     result.startup_update_timer.stop()
     result.show()
     APP.processEvents()
+    if department is not None:
+        result.department_selector.setCurrentIndex(
+            result.department_selector.findData(department)
+        )
+        APP.processEvents()
     return result
 
 

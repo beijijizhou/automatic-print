@@ -123,7 +123,7 @@ def test_platform_600_item_limit_skips_only_oversized_batch(tmp_path, monkeypatc
 def test_uv_download_page_lists_ydwx_without_dtf_layout_controls(tmp_path):
     from test_developer_mode import window
 
-    owner = window(tmp_path / "ydwx.ini")
+    owner = window(tmp_path / "ydwx.ini", department=None)
     page = owner.production_platform_download_page
     assert page.platform_checks["亿点万象"].isChecked()
     ydwx = page.workbenches["亿点万象"]

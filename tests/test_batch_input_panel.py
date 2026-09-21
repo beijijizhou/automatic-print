@@ -3,7 +3,7 @@ from PySide6.QtCore import Qt
 
 
 def test_department_navigation_defaults_to_independent_uv_workspace(tmp_path):
-    owner = window(tmp_path/'departments.ini')
+    owner = window(tmp_path/'departments.ini', department=None)
     selector = owner.department_selector
     assert [selector.itemData(index) for index in range(selector.count())] == [
         'dtf', 'uv', '3d'
