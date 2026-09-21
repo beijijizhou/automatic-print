@@ -141,6 +141,37 @@ def test_batch_prns_continue_after_one_riin_failure(tmp_path, monkeypatch):
     assert completed[0]["output"].endswith("two.prn")
 
 
+def test_stop_skips_remaining_groups_after_current_riin_task(tmp_path, monkeypatch):
+    from automatic_print.automation.api.riin import jobs
+
+    output = tmp_path / "PROCESSED"
+    for batch in ("one", "two"):
+        folder = output / batch
+        folder.mkdir(parents=True)
+        (folder / "final.png").write_bytes(b"png")
+    monkeypatch.setattr(jobs, "_print_groups", lambda result, route: [
+        ("one", ["final.png"]), ("two", ["final.png"]),
+    ])
+    generated = []
+    monkeypatch.setattr(jobs, "generate_prn", lambda files, target, progress:
+                        generated.append(str(target)) or {"output": str(target)})
+    checks = []
+    def stop_requested():
+        checks.append(True)
+        return len(checks) >= 3
+
+    completed, errors, skipped = jobs.generate_batch_prns({
+        "output_folder": str(output),
+        "batches": [("one", {"filename": "final.png"}),
+                    ("two", {"filename": "final.png"})],
+    }, lambda _message: None, stop_requested)
+
+    assert len(generated) == 1
+    assert len(completed) == 1
+    assert errors == []
+    assert skipped == ["one", "two"]
+
+
 def test_available_prn_path_never_overwrites_existing_file(tmp_path):
     from automatic_print.automation.api.riin.jobs import available_prn_path
 

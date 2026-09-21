@@ -95,21 +95,34 @@ def riin_output_task(output):
 
 
 def wait_for_print_file(output, timeout=7200):
-    """Wait for real RIIN progress and a non-placeholder PRN, or completion."""
+    """Wait for RIIN progress, while detecting a cancelled or lost file task."""
     target = Path(output).resolve()
-    deadline = time.monotonic() + timeout
+    started = time.monotonic()
+    deadline = started + timeout
     previous_size = -1
     stable_reads = 0
-    while time.monotonic() < deadline:
+    seen_task = False
+    missing_since = None
+    while (now := time.monotonic()) < deadline:
         task = riin_output_task(target)
         if task and task['state'] in {'打印出错', '停止'}:
             raise RuntimeError(
                 f"RIIN文件任务{task['state']}：{target}"
             )
+        if task:
+            seen_task = True
+            missing_since = None
+        elif seen_task:
+            missing_since = now if missing_since is None else missing_since
         try:
             size = target.stat().st_size
         except FileNotFoundError:
             size = 0
+        if task is None:
+            if missing_since is not None and now - missing_since >= 15:
+                raise RuntimeError(f'RIIN文件任务已消失，可能已由用户停止：{target}')
+            if not seen_task and now - started >= 120:
+                raise RuntimeError(f'RIIN未建立文件任务，可能已取消画布超限提示：{target}')
         if task and task['state'] == '正在打印...' and size >= 1024:
             percent = str(task.get('percent') or '').strip().rstrip('%').strip()
             try:

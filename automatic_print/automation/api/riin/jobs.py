@@ -125,6 +125,9 @@ def generate_batch_prns(processed, progress, stop_requested=lambda: False):
             progress(f"{batch}：分区清单不安全，未导入RIIN · {error}")
             continue
         for segment, (relative, names) in enumerate(groups, 1):
+            if stop_requested():
+                skipped.extend(name for name, _result in batches[index - 1:])
+                return completed, errors, skipped
             try:
                 folder = output_root / relative
                 files = generated_pngs(folder, {'files': names})

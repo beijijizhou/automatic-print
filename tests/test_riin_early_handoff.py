@@ -39,6 +39,46 @@ def test_stable_file_without_exact_riin_task_is_not_handed_off(tmp_path, monkeyp
         output.wait_for_print_file(target, timeout=1)
 
 
+def test_cancelled_riin_file_task_does_not_wait_two_hours(tmp_path, monkeypatch):
+    target = tmp_path / 'batch.prn'
+    times = iter((0, 1, 121))
+    monkeypatch.setattr(output, 'riin_output_task', lambda _target: None)
+    monkeypatch.setattr(output.time, 'monotonic', lambda: next(times))
+    monkeypatch.setattr(output.time, 'sleep', lambda _seconds: None)
+
+    with pytest.raises(RuntimeError, match='未建立文件任务'):
+        output.wait_for_print_file(target)
+
+
+def test_disappeared_riin_task_is_reported_after_grace_period(tmp_path, monkeypatch):
+    target = tmp_path / 'batch.prn'
+    times = iter((0, 1, 2, 18))
+    tasks = iter(({'state': '等待打印...'}, None, None))
+    monkeypatch.setattr(output, 'riin_output_task', lambda _target: next(tasks))
+    monkeypatch.setattr(output.time, 'monotonic', lambda: next(times))
+    monkeypatch.setattr(output.time, 'sleep', lambda _seconds: None)
+
+    with pytest.raises(RuntimeError, match='文件任务已消失'):
+        output.wait_for_print_file(target)
+
+
+def test_visible_queued_riin_task_can_wait_beyond_two_minutes(tmp_path, monkeypatch):
+    target = tmp_path / 'batch.prn'
+    times = iter((0, 1, 121))
+    polls = []
+    def task(_target):
+        polls.append(True)
+        if len(polls) == 2:
+            target.write_bytes(b'x' * 1500)
+        return {'state': '等待打印...' if len(polls) == 1 else '正在打印...',
+                'percent': '0%' if len(polls) == 1 else '1%'}
+    monkeypatch.setattr(output, 'riin_output_task', task)
+    monkeypatch.setattr(output.time, 'monotonic', lambda: next(times))
+    monkeypatch.setattr(output.time, 'sleep', lambda _seconds: None)
+
+    assert output.wait_for_print_file(target)['state'] == 'prn_writing'
+
+
 def test_workflow_loads_early_prn_and_reports_writing(tmp_path, monkeypatch):
     image = tmp_path / 'a.png'
     image.write_bytes(b'png')

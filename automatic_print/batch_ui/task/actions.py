@@ -83,7 +83,7 @@ class ThreadActionsMixin:
         self.worker.request_cancel()
         self.stop_button.setEnabled(False)
         self.loading_label.setText(
-            "正在安全停止；如果正在保存大图，将在当前文件写完后结束…"
+            "正在安全停止；已提交的 RIIN 文件任务结束后收尾，后续批次不会启动…"
         )
         self.log.appendPlainText("已请求停止当前处理。")
 
