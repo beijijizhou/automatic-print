@@ -2,6 +2,79 @@ from test_developer_mode import window, APP
 from PySide6.QtCore import Qt
 
 
+def test_department_navigation_defaults_to_independent_uv_workspace(tmp_path):
+    owner = window(tmp_path/'departments.ini')
+    selector = owner.department_selector
+    assert [selector.itemData(index) for index in range(selector.count())] == [
+        'dtf', 'uv', '3d'
+    ]
+    assert selector.currentData() == 'uv'
+    assert owner.department_workspace.currentWidget() is owner.uv_workspace
+    assert owner.department_workspace.currentWidget() is not owner.automation_home
+    assert owner.windowTitle() == 'UV 自动化打印工作台'
+    assert owner.uv_workspace.generate_button.text() == '生成一张UV合成TIFF'
+    assert [
+        owner.uv_workspace.material.itemText(index)
+        for index in range(owner.uv_workspace.material.count())
+    ] == [
+        '1040', '2030铁', '2030铝', '2030木板', '圆铁', '原铝', '3040',
+        '挂钟2525', '挂钟3030', '车牌', '亚克力',
+    ]
+    owner.uv_workspace.material.setCurrentIndex(
+        owner.uv_workspace.material.findData('license_plate')
+    )
+    assert owner.uv_workspace.finished_size.text() == '30.8 × 15.7 cm'
+    assert owner.uv_workspace.placement_size.text() == '30.8 × 15.7 cm'
+    assert owner.uv_workspace.capacity.text() == '8 张 / 64 张'
+    assert any(
+        '右下角' in label.text()
+        for label in owner.uv_workspace.findChildren(type(owner.uv_workspace.status))
+    )
+    assert not owner.automation_home.settings_button.isEnabled()
+    assert not owner.automation_home.settings_button.isVisible()
+
+    selector.setCurrentIndex(selector.findData('dtf'))
+    assert owner.department_key == 'dtf'
+    assert owner.department_workspace.currentWidget() is owner.automation_home
+    assert owner.automation_home.settings_button.isEnabled()
+    assert owner.automation_home.settings_button.isVisible()
+    assert owner.preferences.value('department/current') == 'dtf'
+
+    selector.setCurrentIndex(selector.findData('uv'))
+    assert owner.department_workspace.currentWidget() is owner.uv_workspace
+    assert not owner.automation_home.settings_button.isEnabled()
+    owner.close()
+
+
+def test_department_change_keeps_running_dtf_task_visible(tmp_path):
+    owner = window(tmp_path/'active-department.ini')
+    owner.department_selector.setCurrentIndex(
+        owner.department_selector.findData('dtf')
+    )
+    owner.automation_home.thread = object()
+    owner.department_selector.setCurrentIndex(
+        owner.department_selector.findData('uv')
+    )
+    assert owner.department_selector.currentData() == 'dtf'
+    assert owner.department_workspace.currentWidget() is owner.automation_home
+    assert '任务仍在运行' in owner.status.text()
+    owner.automation_home.thread = None
+    owner.close()
+
+
+def test_shared_download_does_not_lock_department_navigation(tmp_path):
+    owner = window(tmp_path/'shared-download.ini')
+    workbench = owner.production_platform_download_page.workbenches['隆丰']
+    workbench.thread = object()
+    owner.department_selector.setCurrentIndex(
+        owner.department_selector.findData('dtf')
+    )
+    assert owner.department_selector.currentData() == 'dtf'
+    assert owner.department_workspace.currentWidget() is owner.automation_home
+    workbench.thread = None
+    owner.close()
+
+
 def test_input_card_has_one_layout_action_while_tools_stay_pinned(tmp_path):
     owner = window(tmp_path/'prefs.ini')
     home = owner.automation_home

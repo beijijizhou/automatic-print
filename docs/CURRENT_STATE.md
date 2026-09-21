@@ -4,6 +4,17 @@
 
 ## 入口与编排
 
+- 顶层部门导航：`automatic_print/ui/departments.py`唯一维护 `DTF / UV / 3D` 分类、持久化选择和
+  部门工作区隔离；既有 `automation_home` 及其本地排版、参数和历史归属 DTF。当前代码
+  默认显示全新的 UV 工作区，UV 不读取或复用 DTF 状态；3D 使用独立占位页。运行中的部门任务
+  不允许被部门切换隐藏或终止。
+- 生产平台下载位于部门工作区之外的共享页签，继续由 `ui/erp_download_entry.py` 装配同一个
+  `ProductionPlatformDownloadPage`；UV 可直接使用，DTF 仍受开发者模式门禁。普通下载不自动排版；
+  蜂鸟平台保留用户显式启动的 DTF 下载、排版及 PRN 流程，亿点万象下载不自动启动 UV 排版。
+- 亿点万象（跨项目规范名“忆点万象”）：`automation/api/ydwx/gateway.py` 经 `automation/api/gateway_credentials.py` 复用 Windows 构建已注入的受限客户端密钥，访问独立 `ydwx-production` Edge Function；服务端从 `YDWX_FACTORY_LOGIN_JSON` Secret 登录 SDS，桌面端不接收平台账号或 token。`batches.py` 读取按日期分组的生产批次；平台兼有 UV 和 DTF 订单，当前不从平台名推断具体批次部门；`downloads.py` 按勾选批次重新核对身份后下载并校验 ZIP，不解压或排版；`ui/ydwx_download.py` 以独立后台任务管理批次表、进度和错误。Edge Function 代码已加入本仓库；部署时需关闭平台默认 JWT 校验并使用函数内部 `AUTOMATIC_PRINT_API_KEY` 校验，配置 `YDWX_FACTORY_LOGIN_JSON`（含 `contact_tel`、`factory_code`、`password`、`extraInfo`）与相同的客户端密钥。部署和配置 Secret 前共享服务不可用。
+- UV固定画布：`layout_engine/uv/sheet.py`唯一维护11种材质的成品尺寸、容量、方向和右下起排坐标；
+  `layout_engine/uv/render.py`使用libvips合成、复用并行分块原子BigTIFF保存并复核RGBA、画布尺寸和每个图位实际像素；
+  `controllers/uv_generation.py`拥有后台线程，`ui/uv_workspace.py`只负责选择目录、进度和结果展示。
 - 应用入口：`automatic_print/__main__.py`、`automatic_print/app.py`。
 - 主窗口：`automatic_print/ui/main_window.py`只负责应用级状态、控制器装配和窗口生命周期；
   界面上可见的工作台首页、任务状态和打印参数分别映射到`automatic_print/ui/workbench/home.py`、
@@ -216,7 +227,7 @@
 - `automation/batches/received_sizes.py`及`production_multi.py`保留按尺码重组的开发操作能力，不接入默认入口；此前生产中补单实测跨尺码394项一次提交被平台拆成200项和194项两批。补单记录不可因追求单一批次而重复生成。
 - ERP生产批次读取兼容顶层表格与工厂外壳中的`fnsz-sale`内嵌表格；莆田从首页“生产 / 批量生产”进入后可复用同一列表、搜索和下载通路。批次范围的起止编号可从当前列表下拉选择或直接粘贴，列表显示平台批次记录的生成时间。
 - 蜂鸟ERP原始批次行到中立`BatchRecord`的转换集中在`automation/api/erp/records.py`，浏览器模块只负责页面与请求流程。
-- “生产平台下载”作为主工作台独立页签，仅随开发者模式显示；支持多选已配置平台，每个平台独立显示批次、下载进度和日志。普通“下载并解压”不触发排版；显式“下载、排版并生成打印文件”复用当前参数继续处理。隆丰、莆田和Haloo复用蜂鸟ERP通路；S2B优先通过Supabase受限网关读取平台批次、人员标签、触发生产图导出并取得真实下载地址，原始S2B Token只在服务端解密；网关不可用时才回退专用浏览器登录。`production/downloads.py`负责编排，`production/archive_io.py`负责下载、校验及安全解压到`S2B/ARCHIVES`和`S2B/BATCHES`。两种动作都不自动创建生产批次。
+- “生产平台下载”作为跨部门共享页签；UV 工作区直接显示，DTF 工作区仍随开发者模式显示。支持多选已配置平台，每个平台独立显示批次、下载进度和日志。普通下载不触发排版；蜂鸟平台的显式“下载、排版并生成打印文件”复用当前参数继续处理。隆丰、莆田和Haloo复用蜂鸟ERP通路；S2B优先通过Supabase受限网关读取平台批次、人员标签、触发生产图导出并取得真实下载地址，原始S2B Token只在服务端解密；网关不可用时才回退专用浏览器登录。`production/downloads.py`负责编排，`production/archive_io.py`负责下载、校验及安全解压到`S2B/ARCHIVES`和`S2B/BATCHES`。亿点万象只下载具体勾选批次中的新增稿件，与UV排版分开。下载和自动打印动作都不自动创建生产批次。
 - 蜂鸟ERP批次若已完成生产图导出但当前表格没有完整显示三个旧版下载入口，下载器复用已登录页面加载的导出记录，校验受信任HTTPS主机后流式保存同一ZIP；旧版三按钮下载继续作为兼容路径，不能因页面入口缺失拒绝已有完整导出。
 - 生产平台工作台启动本地排版时，以当前工作台所选平台覆盖主界面的旧平台值；Haloo和莆田同时固定采用其40毫米默认补距，避免从下载页进入排版时因主界面残留选择而漏补。
 - 冷启动时图片尺寸和DPI按用户线程上限并行预读，再一次批量查询单图测量缓存；只影响整批摆放的开发者算法开关不进入单图标签/刀码缓存键，切换开发者模式或升级该排版策略不会无故重解码原图。
