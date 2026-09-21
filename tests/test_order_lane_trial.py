@@ -6,7 +6,9 @@ import pytest
 
 from automatic_print.layout_engine.domain.models import LayoutItem
 from automatic_print.layout_engine.orders.order_groups import order_key
-from automatic_print.layout_engine.planning.columns.order_lane_trial import trial_order_sides
+from automatic_print.layout_engine.planning.columns.order_lane_trial import (
+    plan_order_sides_rows, trial_order_sides,
+)
 
 
 def item(order, number, height, side=1, width=80, color='Black', size='S'):
@@ -76,3 +78,16 @@ def test_unplaceable_order_invalidates_complete_trial_coordinates():
 def test_trial_rejects_single_lane_without_middle_knife():
     with pytest.raises(ValueError, match='两列'):
         trial_order_sides([[item('A', 1, 40)]], [(0, 200, None)], 5, 100)
+
+
+def test_printable_rows_align_both_lanes_without_splitting_orders():
+    groups = [[item('A', 1, 60)], [item('B', 1, 40)],
+              [item('A', 2, 70)], [item('B', 2, 50)]]
+    planned, height, trial = plan_order_sides_rows(
+        groups, [(0, 100, None), (100, 200, 100)], 5, 100, 10)
+    assert trial['unplaceable_orders'] == []
+    assert len(planned) == 4
+    assert [placement.row_y_px for _path, placement in planned] == [10, 10, 75, 75]
+    assert height == 155
+    assert Counter(path for path, _placement in planned) == Counter(
+        source.path for group in groups for source in group)

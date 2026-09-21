@@ -144,6 +144,7 @@ class BatchActionsMixin:
             for record in self.records
             if record.batch_number in selected
         }
+        shared_mode = auto_print in ('shared_knife', 'shared_knife_order_side')
         options = {
             "output": Path(self.output.text().strip()),
             "batch_numbers": selected,
@@ -153,16 +154,14 @@ class BatchActionsMixin:
         if auto_print or not self.download_only:
             options.update(
                 settings=self._current_layout_settings(),
-                sample_limit=5 if self.test_mode.isChecked() else None,
-                merge_batches=self.merge_batches.isChecked() and auto_print != 'shared_knife',
+                sample_limit=(5 if self.test_mode.isChecked() and
+                              auto_print != 'shared_knife_order_side' else None),
+                merge_batches=self.merge_batches.isChecked() and not shared_mode,
                 preview_only=(False if auto_print
                               else self.download_preview_only.isChecked()),
             )
-        self._start_worker(
-            AutomationWorker(
-                "download", self.platform.currentData(), **options
-            )
-        )
+        self._start_worker(AutomationWorker(
+            "download", self.platform.currentData(), **options))
 
     def process_batches(self) -> None:
         output = Path(self.output.text().strip())

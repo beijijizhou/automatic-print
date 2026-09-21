@@ -11,9 +11,15 @@ from automatic_print.layout_engine.labeling.markers.marker_space import (
 
 
 def validate_plan(paths, planned, settings, width, height, preview_only):
-    warning, order_check = '', {}
+    warning, order_check, cut_check = '', {}, {}
     try:
-        order_check = validate_order_placements(paths, planned)
+        if settings.order_side_shared_knife:
+            from automatic_print.layout_engine.cutting.validation.order_side_validation import validate_order_side_placements
+            from automatic_print.layout_engine.domain.models import mm_to_px
+            order_check = validate_order_side_placements(
+                paths, planned, mm_to_px(settings.cutter_knife_mm, settings.dpi))
+        else:
+            order_check = validate_order_placements(paths, planned)
         cut_check = validate_cut_corridor(
             planned, settings, width, canvas_height=height,
         )

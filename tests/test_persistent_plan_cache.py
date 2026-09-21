@@ -65,6 +65,18 @@ def test_file_parameters_date_and_algorithm_revision_invalidate_cache_key(tmp_pa
     assert key() != before
 
 
+def test_opt_in_order_side_has_separate_shared_knife_cache_key(tmp_path):
+    path = tmp_path / 'B1-1-T-Black-M-NO1-1.png'
+    path.write_bytes(b'original')
+    now = datetime(2026, 9, 20)
+    common = config(strict_fixed_knife=True)
+    with measurement_session():
+        old = plan_cache.cache_key([path], common, now)
+        opted_in = plan_cache.cache_key([path], replace(
+            common, order_side_shared_knife=True), now)
+    assert old != opted_in
+
+
 def test_developer_knife_gap_has_separate_cache_revision_and_production_key(tmp_path, monkeypatch):
     path = tmp_path/'B1-1-T-Black-M-NO1-1.png'
     path.write_bytes(b'original')

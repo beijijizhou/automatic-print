@@ -117,6 +117,7 @@ class LayoutSettings:
     manual_rotations: tuple[tuple[str, int], ...] = ()
     cutter_auto_knife: bool = False
     strict_fixed_knife: bool = False  # Shared-knife queue must never re-plan at a new knife.
+    order_side_shared_knife: bool = False  # Explicit per-run opt-in; never changes normal layouts.
     cutter_rotation_zone: bool = False
     cutter_majority_two_zone: bool = False
     cutter_tail_rotation: bool = False

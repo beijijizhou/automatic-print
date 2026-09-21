@@ -189,7 +189,8 @@ class AutomationWorker(QObject):
             self.merge_batches,
             self._report,
             preview_only=self.preview_only,
-            shared_knife=self.auto_print == 'shared_knife',
+            shared_knife=self.auto_print in ('shared_knife', 'shared_knife_order_side'),
+            order_side=self.auto_print == 'shared_knife_order_side',
         )
 
     def _save_batch_types(self) -> None:

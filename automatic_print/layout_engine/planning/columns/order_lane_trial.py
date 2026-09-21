@@ -1,6 +1,7 @@
 """Isolated two-lane trial: a complete order never crosses the middle knife."""
 from collections import Counter, OrderedDict
 from dataclasses import replace
+from itertools import zip_longest
 
 from automatic_print.layout_engine.orders.order_groups import order_key, is_double_pair
 from automatic_print.layout_engine.planning.base.row_optimizer import _place_choice
@@ -77,6 +78,34 @@ def trial_order_sides(groups, lanes, spacing, knife_x):
     if Counter(path for path, _placement in planned) != expected:
         raise ValueError('试验坐标丢失或重复源图片。')
     return _report(orders, assigned, lane_heights, pieces, blocked, planned)
+
+
+def plan_order_sides_rows(groups, lanes, spacing, knife_x, margin):
+    """Synchronize the two side queues into non-overlapping printable rows."""
+    trial = trial_order_sides(groups, lanes, spacing, knife_x)
+    if trial['unplaceable_orders']:
+        raise ValueError('完整订单无法进入固定刀位：' + '、'.join(
+            trial['unplaceable_orders']))
+    assigned = {entry['order']: entry['lane'] for entry in trial['assignments']}
+    rows = [[], []]
+    for group in groups:
+        lane_index = assigned[order_key(group[0].path)]
+        options = group_rows(group, [lanes[lane_index]], spacing)
+        if not options:
+            raise ValueError('归侧试验与生产排版的可放入结果不一致。')
+        rows[lane_index].append(options[0])
+    planned, y = [], margin
+    for left, right in zip_longest(*rows):
+        active = [row for row in (left, right) if row is not None]
+        for row in active:
+            planned.extend((path, replace(placement, cut_zone='并排区',
+                cut_knife_x_px=knife_x, cut_knife_xs_px=(knife_x,),
+                cut_column_count=2)) for path, placement in _place_choice(row, 0, y))
+        y += max(row.height for row in active) + spacing
+    expected = Counter(item.path for group in groups for item in group)
+    if Counter(path for path, _placement in planned) != expected:
+        raise ValueError('同步排版丢失或重复源图片。')
+    return planned, y - spacing + margin, trial
 
 
 def _report(orders, assigned, heights, pieces, blocked, planned):

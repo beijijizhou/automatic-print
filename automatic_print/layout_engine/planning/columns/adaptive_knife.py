@@ -30,8 +30,14 @@ def plan_adaptive_knife_zones(paths, settings, progress, prepared=None):
                            cutter_knife_mm=(base.cutter_knife_mm if fixed else base.media_width_mm/2)),
                    mm_to_px(base.media_width_mm, base.dpi))
     spacing = mm_to_px(base.spacing_mm, base.dpi)
-    double_orders, leftovers = _partition(
-        complete_orders(paths), items, lanes, spacing, fixed=fixed)
+    orders = complete_orders(paths)
+    if fixed and settings.order_side_shared_knife:
+        from .order_side_zone import plan_order_side_zone
+        double_orders, leftovers, normal = plan_order_side_zone(
+            orders, items, lanes, spacing, base, labels, _color_boundary)
+    else:
+        double_orders, leftovers = _partition(orders, items, lanes, spacing, fixed=fixed)
+        normal = None
     normal_paths = [path for order in double_orders for path in order]
     rotated_paths = [path for order in leftovers for path in order]
     if not fixed and len(normal_paths) <= len(rotated_paths):
@@ -43,11 +49,12 @@ def plan_adaptive_knife_zones(paths, settings, progress, prepared=None):
             effective[0] = replace(base, cutter_knife_mm=current*25.4/total)
         if progress:
             progress('并排区：'+stage, current, total, filename)
-    normal = (plan_cutter_layout(
-        normal_paths, base, report,
-        prepared=([[items[path]] for path in normal_paths], labels),
-        preserve_sequence=True,
-    ) if normal_paths else None)
+    if normal is None and normal_paths:
+        normal = (plan_cutter_layout(
+            normal_paths, base, report,
+            prepared=([[items[path]] for path in normal_paths], labels),
+            preserve_sequence=True,
+        ))
 
     if not rotated_paths:
         knife = mm_to_px(effective[0].cutter_knife_mm, base.dpi)
@@ -113,6 +120,10 @@ def _partition(orders, items, lanes, spacing, fixed=False):
     for order in orders:
         (double if _pairable(order, items, lanes, spacing, require_pair=not fixed)
          else leftovers).append(order)
+    return _color_boundary(double, leftovers)
+
+
+def _color_boundary(double, leftovers):
     # The physical output is double zone followed by rotation zone. Once one
     # colour reaches the second zone, later colours must also stay there so the
     # output never returns to an earlier colour after the zone boundary.

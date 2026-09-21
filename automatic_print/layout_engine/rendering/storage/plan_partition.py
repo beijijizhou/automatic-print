@@ -22,9 +22,11 @@ def partition_plan(planned, count, split_by_knife=False):
         return _partition_blocks(planned, blocks, min(max(1, count), len(blocks)))
     runs = []
     for block in blocks:
-        signatures = {knife_signature(placement) for _path, placement in block[2]}
+        signatures = {(knife_signature(placement),
+                       getattr(placement, 'cut_zone', '') == '旋转区')
+                      for _path, placement in block[2]}
         if len(signatures) != 1:
-            raise ValueError('同一完整订单跨越不同刀位，不能拆成独立打印文件。')
+            raise ValueError('同一完整订单跨越不同刀位或区域，不能拆成独立打印文件。')
         signature = next(iter(signatures))
         if not runs or runs[-1][0] != signature:
             runs.append((signature, [block]))

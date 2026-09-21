@@ -7,7 +7,12 @@ from automatic_print.layout_engine.cutting.validation.cut_validation import vali
 
 
 def checked_plan(paths, settings, result, knife):
-    validate_order_placements(paths, result[0])
+    if settings.order_side_shared_knife:
+        from automatic_print.layout_engine.cutting.validation.order_side_validation import validate_order_side_placements
+        from automatic_print.layout_engine.domain.models import mm_to_px
+        validate_order_side_placements(paths, result[0], mm_to_px(knife, settings.dpi))
+    else:
+        validate_order_placements(paths, result[0])
     validate_cut_corridor(
         result[0], replace(settings, cutter_knife_mm=knife), result[2],
         canvas_height=result[3],

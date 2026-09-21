@@ -132,10 +132,8 @@ def build_production_page(owner, output_row: QHBoxLayout) -> QWidget:
         "按当前打印参数生成最终PNG，再逐批交给RIIN生成PRN并加入PrinterExp；"
         "不会启动物理打印。"
     )
-    owner.shared_knife_button = QPushButton('多批次共用刀位生成PRN')
-    owner.shared_knife_button.clicked.connect(lambda: owner._download_selected(auto_print='shared_knife'))
-    owner.shared_knife_button.setToolTip('一次读取所选批次，优先使用当前固定刀位；同批次不同刀位的输出文件分别归入常规和旋转文件夹，按实际刀位分别生成PRN。不比较四种膜规格，也不启动物理打印。')
-    owner.shared_knife_button.setVisible(owner.platform_names == ('隆丰',))
+    from .shared_knife_controls import add_shared_knife_controls
+    add_shared_knife_controls(owner)
     owner.open_download_folder = QCheckBox("下载完成后打开文件夹")
     owner.open_download_folder.setChecked(True)
     owner.process_button = QPushButton("重新排版已下载批次")
@@ -194,6 +192,7 @@ def build_production_page(owner, output_row: QHBoxLayout) -> QWidget:
     layout.addWidget(owner.test_mode)
     layout.addWidget(owner.download_preview_only)
     layout.addWidget(owner.merge_batches)
+    layout.addWidget(owner.order_side_checkbox)
     layout.addLayout(actions)
     if not getattr(owner, "local_only", False):
         layout.addWidget(owner.log)

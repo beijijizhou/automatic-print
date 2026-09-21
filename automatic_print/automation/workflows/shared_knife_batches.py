@@ -37,7 +37,7 @@ def _promote_files(staged, destinations):
         raise
 
 
-def _route_parts(result, locked, root, run_name):
+def _route_parts(result, locked, root, run_name, force_rotation=False):
     """Route each independently verified PNG by its actual complete knife signature."""
     parts = result.get('parts') or [result]
     routes, destinations = [], []
@@ -48,6 +48,9 @@ def _route_parts(result, locked, root, run_name):
         signatures = actual_knife_signatures(part)
         if len(signatures) != 1:
             raise ValueError(f'{part.get("filename", "输出文件")} 含不同实际刀位，不能合并打印。')
+        if force_rotation and eligible:
+            eligible = False
+            reason = '整单归侧不可用；按原策略生成，归入旋转待人工核查'
         category = '常规' if eligible else '旋转'
         folder = root / category / run_name
         routes.append({
@@ -59,11 +62,14 @@ def _route_parts(result, locked, root, run_name):
     return routes, destinations
 
 
-def render_shared_knife_batches(platform_root, platform_name, prepared, settings, progress):
+def render_shared_knife_batches(platform_root, platform_name, prepared, settings, progress,
+                                order_side=False):
     """Keep batches separate while all unattended files inherit one knife setting."""
     # This operator workflow prioritizes unchanged knife setup and fast output,
     # not a second four-film optimization pass.
-    settings = replace(settings, output_format='png', compare_film_sizes=False)
+    settings = replace(settings, output_format='png', compare_film_sizes=False,
+                       order_side_shared_knife=order_side, output_parts=1 if order_side
+                       else settings.output_parts)
     locked = locked_knife_settings(settings)
     token = datetime.now().strftime('%m%d%H%M') + '_' + uuid4().hex[:6]
     root = Path(platform_root) / '切膜机文件'
@@ -93,10 +99,12 @@ def render_shared_knife_batches(platform_root, platform_name, prepared, settings
             try:
                 fallback_stage = root / '旋转' / run_name / f'待检验_{index}'
                 fallback_stage.mkdir(parents=True, exist_ok=False)
-                result = generate_layout(images, fallback_stage, settings,
+                fallback_settings = replace(settings, order_side_shared_knife=False)
+                result = generate_layout(images, fallback_stage, fallback_settings,
                                          _layout_progress(progress, batch), batch_name=batch,
                                          split_by_knife=True)
-                part_routes, destinations = _route_parts(result, locked, root, run_name)
+                part_routes, destinations = _route_parts(
+                    result, locked, root, run_name, force_rotation=order_side)
                 _promote_files(fallback_stage, destinations)
                 reason += ('；原策略按实际刀位分文件复核：' + '；'.join(
                     dict.fromkeys(route['reason'] for route in part_routes)))
