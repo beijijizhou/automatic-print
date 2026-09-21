@@ -5,6 +5,7 @@ from PySide6.QtCore import Qt
 from PySide6.QtWidgets import QGroupBox, QLabel, QPlainTextEdit, QVBoxLayout, QPushButton
 from ..layout_engine.output.output_sizes import cutting_report
 from ..layout_engine.intake.metadata.image_anomalies import anomaly_text
+from .image_anomaly_actions import ImageAnomalyActions
 
 
 class BatchSummaryPanel(QGroupBox):
@@ -27,6 +28,7 @@ class BatchSummaryPanel(QGroupBox):
         self.anomalies.setTextInteractionFlags(Qt.TextSelectableByMouse)
         self.anomalies.setStyleSheet('color: #a35400; background: #fff3d6; padding: 6px;')
         self.anomalies.hide()
+        self.anomaly_actions = ImageAnomalyActions(self)
         self.failure_message = ''
         self.current_folder = None
         from .failure_panel import FailurePanel
@@ -48,6 +50,7 @@ class BatchSummaryPanel(QGroupBox):
         layout.addWidget(self.cutting)
         layout.addWidget(self.gap_loss)
         layout.addWidget(self.anomalies)
+        layout.addWidget(self.anomaly_actions)
         layout.addWidget(self.film_table)
 
     def start(self, folder, count=None):
@@ -58,6 +61,7 @@ class BatchSummaryPanel(QGroupBox):
         self.cutting.setMaximumHeight(110)
         self.anomalies.clear()
         self.anomalies.hide()
+        self.anomaly_actions.clear()
         self.failure_message = ''
         self.failure_panel.reset()
         self.cutting.hide()
@@ -111,6 +115,7 @@ class BatchSummaryPanel(QGroupBox):
         self._show_comparison(report)
         self.anomalies.setText(anomaly_text(report))
         self.anomalies.setVisible(bool(self.anomalies.text()))
+        self.anomaly_actions.show_rows(report.get('image_anomalies', ()), self.current_folder)
 
     def _show_comparison(self, report):
         self.film_table.show_comparison(report.get('film_comparison'), report)
@@ -132,6 +137,8 @@ class BatchSummaryPanel(QGroupBox):
         self.anomalies.setText('\n'.join(filter(None, (
             anomaly_text(result.get('analysis', {})), result.get('history_warning', '')))))
         self.anomalies.setVisible(bool(self.anomalies.text()))
+        self.anomaly_actions.show_rows(
+            result.get('analysis', {}).get('image_anomalies', ()), self.current_folder)
         if result.get('preview_only'):
             self.progress.setText('整批预览完成，未生成文件；可在批次记录查看并复制完整排版报告。'
                                   if not self.inline_cutting else

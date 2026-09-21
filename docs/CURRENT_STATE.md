@@ -26,7 +26,7 @@
   由 `ui/header_gap.py` 的独立开关控制，保存的毫米数值本身不会自动启用；`layout_engine/labeling/base/header_gap.py`负责批次编排，`layout_engine/labeling/gap/virtual.py`让Haloo、S2B、莆田和隆丰持久缓存间距几何并在最终合成时插入透明像素，不创建中间大图；其他平台仍由`layout_engine/labeling/gap/preparation.py`生成兼容副本，`layout_engine/labeling/gap/cache_files.py`负责Windows占用重试和临时文件回收。卡片内部空位搜索保持原有安全顺序与空白约束，按行数组化检查以缩短首次标签测量；补距会越过Haloo标签不属于白色卡片连通域的彩色底栏，再从真实透明分界补足40毫米。批次预览和最终报告显示总数、实际扩充、原本已满足、未能扩充及新增毫米范围。开发者模式显示算法
   诊断、排版历史、批量膜分析和批次顺序标注；补距的有界透明缝搜索覆盖标签卡片下方的短不透明尾栏，
   可选单图标签预测失败不再撤销已成功的补距，正式排版仍负责处理实际标签冲突。主界面底部的功能列表按分类展示全部开发者功能
-  及当前开启状态；膜规格比较固定为45/60厘米四套方案。
+  及当前开启状态；批次总结的单图异常由`ui/image_anomaly_actions.py`逐张提供“打开原图”，切换批次时清除旧入口；膜规格比较固定为45/60厘米四套方案。
 - 开发者模式主界面“刀码与标签”参数组同时提供切膜刀码和平台尺码标签开关。前者在正常排版与上次
   切膜模式之间切换，后者镜像`label_settings.platform_enabled`并只把`LayoutSettings.platform_name`
   置空；两者互不联动。
