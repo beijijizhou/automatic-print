@@ -79,7 +79,13 @@ Deno.serve(async (request) => {
   if (request.method !== "POST") return json({ error: "Method not allowed" }, 405);
   try {
     const supplied = request.headers.get("x-automatic-print-key") || "";
-    if (!supplied || await digest(supplied) !== await digest(requiredEnv("AUTOMATIC_PRINT_API_KEY"))) {
+    const installerKey = requiredEnv("AUTOMATIC_PRINT_API_KEY");
+    const shareKey = Deno.env.get("YDWX_SHARE_API_KEY")?.trim() || "";
+    const authorized = supplied && (
+      await digest(supplied) === await digest(installerKey) ||
+      (shareKey && await digest(supplied) === await digest(shareKey))
+    );
+    if (!authorized) {
       throw new ClientError("Unauthorized", 401);
     }
     const input = await request.json();

@@ -17,11 +17,17 @@ RIIN 或其他 RIP 软件的 PNG。
 在 PowerShell 运行：
 
 ```powershell
-powershell -ExecutionPolicy Bypass -Command "irm 'https://raw.githubusercontent.com/beijijizhou/automatic-print/main/windows/bootstrap-test-computer.ps1?v=0.1.333' | iex"
+powershell -ExecutionPolicy Bypass -Command "irm 'https://raw.githubusercontent.com/beijijizhou/automatic-print/main/windows/bootstrap-test-computer.ps1?v=0.1.334' | iex"
 ```
 
 该入口用于指定测试电脑拉取已经通过本次相关检查并推送到 `main` 的源码。正式生产电脑使用 GitHub
 Release 安装包；源码更新、Release 和生产验收是三个独立状态。
+
+亿点万象源码模式从工厂共享盘 `\\192.168.11.28\dtf\.automatic-print\ydwx-gateway.key`
+读取受限网关密钥，首次成功后保存在当前 Windows 用户配置目录。各部门电脑无需登录亿点万象；
+共享盘临时断开时已有缓存的电脑仍可访问在线平台，新电脑首次使用仍须能读取共享盘。
+平台断网时无法读取或下载新批次。需要使用其他共享位置时可设置
+`AUTOMATIC_PRINT_YDWX_SHARE_KEY_FILE` 为该文件路径。
 
 ## 本地开发
 

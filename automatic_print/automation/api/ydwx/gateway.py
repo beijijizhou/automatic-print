@@ -5,7 +5,7 @@ import os
 from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
 
-from automatic_print.automation.api.gateway_credentials import gateway_client_key
+from .credentials import client_key
 
 
 DEFAULT_ENDPOINT = (
@@ -14,10 +14,27 @@ DEFAULT_ENDPOINT = (
 
 
 def request_gateway(payload, timeout=120):
-    key = gateway_client_key()
+    key = client_key()
     endpoint = os.environ.get("AUTOMATIC_PRINT_YDWX_URL", DEFAULT_ENDPOINT).strip()
-    if not endpoint or not key:
-        raise RuntimeError("亿点万象共享登录服务尚未配置；请配置服务地址和客户端访问密钥。")
+    if not endpoint:
+        raise RuntimeError("亿点万象共享服务地址未配置。")
+    try:
+        return _request(endpoint, payload, key, timeout)
+    except HTTPError as error:
+        if error.code != 401:
+            raise _gateway_http_error(error) from error
+        refreshed = client_key(refresh_share=True)
+        if refreshed and refreshed != key:
+            try:
+                return _request(endpoint, payload, refreshed, timeout)
+            except HTTPError as retry_error:
+                raise _gateway_http_error(retry_error) from retry_error
+        raise _gateway_http_error(error) from error
+    except (URLError, TimeoutError, OSError) as error:
+        raise RuntimeError(f"无法连接亿点万象共享服务：{error}") from error
+
+
+def _request(endpoint, payload, key, timeout):
     request = Request(
         endpoint,
         data=json.dumps(payload).encode("utf-8"),
@@ -27,13 +44,12 @@ def request_gateway(payload, timeout=120):
             "X-Automatic-Print-Key": key,
         },
     )
+    return urlopen(request, timeout=timeout)
+
+
+def _gateway_http_error(error):
     try:
-        return urlopen(request, timeout=timeout)
-    except HTTPError as error:
-        try:
-            message = json.load(error).get("error") or "服务请求失败"
-        except (ValueError, OSError):
-            message = "服务请求失败"
-        raise RuntimeError(f"亿点万象共享服务返回 {error.code}：{message}") from error
-    except (URLError, TimeoutError, OSError) as error:
-        raise RuntimeError(f"无法连接亿点万象共享服务：{error}") from error
+        message = json.load(error).get("error") or "服务请求失败"
+    except (ValueError, OSError):
+        message = "服务请求失败"
+    return RuntimeError(f"亿点万象共享服务返回 {error.code}：{message}")

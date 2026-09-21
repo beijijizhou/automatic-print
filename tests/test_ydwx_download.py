@@ -1,11 +1,12 @@
 import json
 from io import BytesIO
+from urllib.error import HTTPError
 from zipfile import ZipFile
 
 import pytest
 
 from automatic_print.automation.api.ydwx import YdwxBatch, parse_batches
-from automatic_print.automation.api.ydwx import batches, downloads, gateway
+from automatic_print.automation.api.ydwx import batches, credentials, downloads, gateway
 
 
 def batch(task_id=11, name="K_YX_05_Tie_2030__322", count=2, downloaded=2):
@@ -37,7 +38,7 @@ def test_batch_list_uses_shared_gateway_without_platform_token(monkeypatch):
 
 def test_gateway_reuses_packaged_client_key_without_sds_credentials(monkeypatch):
     seen = []
-    monkeypatch.setattr(gateway, "gateway_client_key", lambda: "restricted-key")
+    monkeypatch.setattr(gateway, "client_key", lambda **_kwargs: "restricted-key")
 
     def open_request(request, timeout):
         seen.append((request, timeout))
@@ -51,6 +52,49 @@ def test_gateway_reuses_packaged_client_key_without_sds_credentials(monkeypatch)
     assert request.get_header("X-automatic-print-key") == "restricted-key"
     assert b"contact_tel" not in request.data
     assert b"password" not in request.data
+
+
+def test_source_gateway_key_is_read_once_from_share_then_cached(tmp_path, monkeypatch):
+    shared = tmp_path / "share" / "ydwx-gateway.key"
+    shared.parent.mkdir()
+    shared.write_text("s" * 48, encoding="utf-8")
+    cached = tmp_path / "profile" / "AutomaticPrint" / "credentials" / "ydwx-gateway.key"
+    monkeypatch.setenv("AUTOMATIC_PRINT_YDWX_SHARE_KEY_FILE", str(shared))
+    monkeypatch.setenv("LOCALAPPDATA", str(tmp_path / "profile"))
+    monkeypatch.delenv("AUTOMATIC_PRINT_YDWX_KEY", raising=False)
+    monkeypatch.delenv("AUTOMATIC_PRINT_S2B_BATCH_INFO_KEY", raising=False)
+    monkeypatch.setattr(credentials, "gateway_client_key", lambda: "")
+    assert credentials.client_key() == "s" * 48
+    assert cached.read_text(encoding="utf-8") == "s" * 48
+    shared.unlink()
+    assert credentials.client_key() == "s" * 48
+
+
+def test_source_gateway_reports_missing_share_without_login(tmp_path, monkeypatch):
+    monkeypatch.setenv("AUTOMATIC_PRINT_YDWX_SHARE_KEY_FILE", str(tmp_path / "missing.key"))
+    monkeypatch.setenv("LOCALAPPDATA", str(tmp_path / "profile"))
+    monkeypatch.delenv("AUTOMATIC_PRINT_YDWX_KEY", raising=False)
+    monkeypatch.setattr(credentials, "gateway_client_key", lambda: "")
+    with pytest.raises(RuntimeError, match="本机缓存尚未建立"):
+        credentials.client_key()
+
+
+def test_gateway_retries_stale_cache_with_current_share_key(monkeypatch):
+    seen = []
+    monkeypatch.setattr(gateway, "client_key", lambda refresh_share=False: (
+        "new-shared-key" if refresh_share else "stale-cached-key"
+    ))
+
+    def open_request(request, timeout):
+        seen.append(request.get_header("X-automatic-print-key"))
+        if len(seen) == 1:
+            raise HTTPError(request.full_url, 401, "Unauthorized", {}, BytesIO(b'{}'))
+        return BytesIO(b'{}')
+
+    monkeypatch.setattr(gateway, "urlopen", open_request)
+    with gateway.request_gateway({"action": "list"}):
+        pass
+    assert seen == ["stale-cached-key", "new-shared-key"]
 
 
 def test_parse_dated_batches_keeps_name_number_and_counts():

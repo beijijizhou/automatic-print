@@ -11,7 +11,7 @@
 - 生产平台下载位于部门工作区之外的共享页签，继续由 `ui/erp_download_entry.py` 装配同一个
   `ProductionPlatformDownloadPage`；UV 可直接使用，DTF 仍受开发者模式门禁。普通下载不自动排版；
   蜂鸟平台保留用户显式启动的 DTF 下载、排版及 PRN 流程，亿点万象下载不自动启动 UV 排版。
-- 亿点万象（跨项目规范名“忆点万象”）：`automation/api/ydwx/gateway.py` 经 `automation/api/gateway_credentials.py` 复用 Windows 构建已注入的受限客户端密钥，访问独立 `ydwx-production` Edge Function；服务端从 `YDWX_FACTORY_LOGIN_JSON` Secret 登录 SDS，桌面端不接收平台账号或 token。`batches.py` 读取按日期分组的生产批次；平台兼有 UV 和 DTF 订单，当前不从平台名推断具体批次部门；`downloads.py` 按勾选批次重新核对身份后下载并校验 ZIP，不解压或排版；`ui/ydwx_download.py` 以独立后台任务管理批次表、进度和错误。Edge Function 代码已加入本仓库；部署时需关闭平台默认 JWT 校验并使用函数内部 `AUTOMATIC_PRINT_API_KEY` 校验，配置 `YDWX_FACTORY_LOGIN_JSON`（含 `contact_tel`、`factory_code`、`password`、`extraInfo`）与相同的客户端密钥。部署和配置 Secret 前共享服务不可用。
+- 亿点万象（跨项目规范名“忆点万象”）：`automation/api/ydwx/gateway.py` 调用 `credentials.py`；正式构建沿用 Windows 注入的受限客户端密钥，公开源码从 `\\192.168.11.28\dtf\.automatic-print\ydwx-gateway.key` 读取独立受限密钥并缓存到当前用户配置目录；共享盘断开时用缓存，401 时重新读取共享盘以接收密钥轮换。独立 `ydwx-production` Edge Function 接受两种受限密钥；服务端从 `YDWX_FACTORY_LOGIN_JSON` Secret 登录 SDS，桌面端不接收平台账号或 token。`batches.py` 读取按日期分组的生产批次；平台兼有 UV 和 DTF 订单，当前不从平台名推断具体批次部门；`downloads.py` 按勾选批次重新核对身份后下载并校验 ZIP，不解压或排版；`ui/ydwx_download.py` 以独立后台任务管理批次表、进度和错误。Edge Function 部署时关闭平台默认 JWT 校验，配置 `AUTOMATIC_PRINT_API_KEY`、`YDWX_SHARE_API_KEY` 和 `YDWX_FACTORY_LOGIN_JSON`。
 - UV固定画布：`layout_engine/uv/sheet.py`唯一维护11种材质的成品尺寸、容量、方向和右下起排坐标；
   `layout_engine/uv/render.py`使用libvips合成、复用并行分块原子BigTIFF保存并复核RGBA、画布尺寸和每个图位实际像素；
   `controllers/uv_generation.py`拥有后台线程，`ui/uv_workspace.py`只负责选择目录、进度和结果展示。
