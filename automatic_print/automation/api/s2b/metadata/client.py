@@ -5,6 +5,7 @@ from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
 
 from automatic_print.automation.api.gateway_credentials import gateway_client_key
+from automatic_print.automation.api.ydwx.credentials import client_key as shared_client_key
 
 
 DEFAULT_TIMEOUT_SECONDS = 20
@@ -18,11 +19,16 @@ class S2BBatchInfoError(RuntimeError):
 
 
 def gateway_config():
+    packaged_key = gateway_client_key()
+    try:
+        key = packaged_key or shared_client_key()
+    except RuntimeError:
+        key = ""
     return (
         os.environ.get(
             "AUTOMATIC_PRINT_S2B_BATCH_INFO_URL", DEFAULT_ENDPOINT
         ).strip(),
-        gateway_client_key(),
+        key,
     )
 
 
@@ -76,6 +82,21 @@ def call_s2b_gateway(
         with urlopen(request, timeout=float(timeout)) as response:
             body = json.loads(response.read().decode("utf-8"))
     except HTTPError as error:
+        if error.code == 401 and access_key == configured_key:
+            refreshed = shared_client_key(refresh_share=True)
+            if refreshed and refreshed != access_key:
+                request.add_header("X-Automatic-Print-Key", refreshed)
+                try:
+                    with urlopen(request, timeout=float(timeout)) as response:
+                        body = json.loads(response.read().decode("utf-8"))
+                except HTTPError as retry_error:
+                    raise S2BBatchInfoError(
+                        f"S2B 批次服务返回 {retry_error.code}："
+                        f"{_error_message(retry_error.read())}"
+                    ) from retry_error
+                if not isinstance(body, dict):
+                    raise S2BBatchInfoError("共享 S2B 服务返回格式异常")
+                return body
         message = _error_message(error.read())
         raise S2BBatchInfoError(
             f"S2B 批次服务返回 {error.code}：{message}"

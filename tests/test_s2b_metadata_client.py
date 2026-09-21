@@ -1,4 +1,6 @@
 import json
+from io import BytesIO
+from urllib.error import HTTPError
 
 from automatic_print.automation.api.s2b.metadata.client import (
     DEFAULT_ENDPOINT,
@@ -42,11 +44,28 @@ def test_gateway_client_posts_batch_and_account(monkeypatch):
 def test_gateway_uses_shared_endpoint_without_per_machine_url(monkeypatch):
     monkeypatch.delenv("AUTOMATIC_PRINT_S2B_BATCH_INFO_URL", raising=False)
     monkeypatch.delenv("AUTOMATIC_PRINT_S2B_BATCH_INFO_KEY", raising=False)
+    monkeypatch.setattr(
+        "automatic_print.automation.api.s2b.metadata.client.shared_client_key",
+        lambda: "factory-shared-key",
+    )
+    assert gateway_config() == (DEFAULT_ENDPOINT, "factory-shared-key")
+
+
+def test_gateway_without_packaged_or_shared_key_is_unavailable(monkeypatch):
+    monkeypatch.delenv("AUTOMATIC_PRINT_S2B_BATCH_INFO_KEY", raising=False)
+    monkeypatch.setattr(
+        "automatic_print.automation.api.s2b.metadata.client.shared_client_key",
+        lambda: (_ for _ in ()).throw(RuntimeError("share unavailable")),
+    )
     assert gateway_config() == (DEFAULT_ENDPOINT, "")
 
 
 def test_gateway_posts_read_only_batch_info_without_client_key(monkeypatch):
     captured = {}
+    monkeypatch.setattr(
+        "automatic_print.automation.api.s2b.metadata.client.gateway_config",
+        lambda: (DEFAULT_ENDPOINT, ""),
+    )
 
     class Response:
         def __enter__(self): return self
@@ -64,3 +83,27 @@ def test_gateway_posts_read_only_batch_info_without_client_key(monkeypatch):
         "ABC123ABC123", endpoint="https://example.test/batch", access_key=""
     )
     assert "X-automatic-print-key" not in captured["headers"]
+
+
+def test_gateway_refreshes_stale_shared_key_after_401(monkeypatch):
+    seen = []
+    monkeypatch.setattr(
+        "automatic_print.automation.api.s2b.metadata.client.gateway_config",
+        lambda: (DEFAULT_ENDPOINT, "stale-key"),
+    )
+    monkeypatch.setattr(
+        "automatic_print.automation.api.s2b.metadata.client.shared_client_key",
+        lambda refresh_share=False: "current-key" if refresh_share else "stale-key",
+    )
+
+    def open_request(request, timeout):
+        seen.append(request.get_header("X-automatic-print-key"))
+        if len(seen) == 1:
+            raise HTTPError(request.full_url, 401, "Unauthorized", {}, BytesIO(b"{}"))
+        return BytesIO(b'{"records": [], "batch_number": "ABC123ABC123"}')
+
+    monkeypatch.setattr(
+        "automatic_print.automation.api.s2b.metadata.client.urlopen", open_request
+    )
+    assert fetch_s2b_batch_info("ABC123ABC123")["records"] == []
+    assert seen == ["stale-key", "current-key"]

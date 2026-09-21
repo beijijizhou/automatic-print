@@ -120,6 +120,7 @@
   排版，在预览、报告和完成确认中显示诊断，由用户选择是否采用结果；文件名不能识别订单时，以批次目录内的订单文件夹作唯一匹配回退，并把接口订单身份
   写回共享订单归组。中心地址随应用提供，正式 Windows 构建从 GitHub Secret
   `AUTOMATIC_PRINT_S2B_BATCH_INFO_KEY` 注入受限客户端密钥；源码树只保留空占位，
+  源码运行则复用工厂共享盘密钥及本机缓存，S2B Edge Function 同时验证这枚受限密钥；
   Supabase service-role 和 S2B 登录凭据都不下发到生产电脑。
 - 订单、双面、颜色与尺码：`layout_engine/orders/order_groups.py`、`layout_engine/orders/batch_analysis.py`、
   `layout_engine/orders/single_order_sequence.py`、`layout_engine/orders/color_policy.py`、`layout_engine/orders/size_policy.py`。
