@@ -23,7 +23,7 @@ def _row(item_id, order_id, composition, size, qty=1):
     }
 
 
-def test_cross_size_first_and_same_size_separate_by_composition():
+def test_cross_size_first_and_single_item_multi_excluded():
     rows = [
         _row("1", "mixed", 3, "M"),
         _row("2", "mixed", 3, "L"),
@@ -36,12 +36,12 @@ def test_cross_size_first_and_same_size_separate_by_composition():
     plan = plan_received_multi(rows)
 
     assert [group.label for group in plan.groups] == [
-        "跨尺码·多项多件", "S·单项多件", "S·多项多件",
+        "跨尺码·多项多件", "S·多项多件",
     ]
     assert [[item.item_id for item in group.items] for group in plan.groups] == [
-        ["1", "2"], ["3"], ["4", "5"],
+        ["1", "2"], ["4", "5"],
     ]
-    assert plan.groups[1].piece_count == 3
+    assert plan.groups[1].piece_count == 2
 
 
 def test_large_cross_size_group_chunks_only_between_orders():

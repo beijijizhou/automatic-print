@@ -1,4 +1,4 @@
-"""Create Longfeng A00 multi-piece batches without splitting orders."""
+"""Create Longfeng A00 multi-item batches without splitting orders."""
 
 from __future__ import annotations
 
@@ -58,7 +58,7 @@ def _item(row: dict) -> ReceivedItem:
     composition = str(row.get("order_composition"))
     size = str(row.get("size") or "").upper().replace("2XL", "XXL")
     qty = int(row.get("qty") or 0)
-    if (composition not in {"2", "3"} or size not in SIZES or qty <= 0 or
+    if (composition != "3" or size not in SIZES or qty <= 0 or
             not row.get("id") or not row.get("order_id")):
         raise RuntimeError("多件生产项缺少可核对的订单组成、尺码或数量。")
     return ReceivedItem(str(row["id"]), str(row["order_id"]), composition,
@@ -70,7 +70,7 @@ def plan_received_multi(rows: list[dict]) -> ReceivedPlan:
         raise RuntimeError("已接单接口返回重复生产项。")
     order_rows: dict[str, list[dict]] = defaultdict(list)
     for row in rows:
-        if str(row.get("order_composition")) in {"2", "3"}:
+        if str(row.get("order_composition")) == "3":
             order_rows[str(row.get("order_id"))].append(row)
     grouped: dict[tuple[str, str], list[tuple[ReceivedItem, ...]]] = defaultdict(list)
     for source in order_rows.values():
@@ -78,16 +78,12 @@ def plan_received_multi(rows: list[dict]) -> ReceivedPlan:
         if len({item.composition for item in order}) != 1:
             raise RuntimeError("同一订单包含不同订单组成。")
         composition = order[0].composition
-        if composition == "2" and len(order) != 1:
-            raise RuntimeError("单项多件订单返回多个生产项。")
         sizes = {item.size for item in order}
         key = ("跨尺码", composition) if len(sizes) > 1 else (next(iter(sizes)), composition)
         grouped[key].append(order)
-    keys = [("跨尺码", "3")] + [
-        (size, composition) for size in SIZES for composition in ("2", "3")
-    ]
+    keys = [("跨尺码", "3")] + [(size, "3") for size in SIZES]
     groups = tuple(ReceivedGroup(
-        f"{size}·{'单项多件' if composition == '2' else '多项多件'}",
+        f"{size}·多项多件",
         tuple(sorted(grouped[(size, composition)], key=lambda order: order[0].order_id)),
     ) for size, composition in keys if grouped[(size, composition)])
     if sum(len(group.items) for group in groups) != sum(map(len, order_rows.values())):
