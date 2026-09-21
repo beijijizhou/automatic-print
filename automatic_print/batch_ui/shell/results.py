@@ -9,6 +9,19 @@ from ...layout_engine.reporting.metrics import saving_text
 
 
 def present_action_result(owner, result: dict) -> None:
+    if result['type'] == 'route_batches_generated':
+        owner.pending_route_plan = None
+        owner.route_generate_button.setEnabled(False)
+        codes = '、'.join(result['codes'])
+        text = (
+            f"{result['platform']} / {result['route']}："
+            f"已生成 {result['items']} 项，批次号 {codes}。"
+            "\n批次管理状态：\n" + "\n".join(result['status'])
+        )
+        owner.route_summary.setText(text)
+        owner.log.appendPlainText(text)
+        QMessageBox.information(owner, '批次生成完成', text)
+        return
     if result['type'] == 'batches_generated':
         owner.pending_batch_plan = None
         owner.generate_rules_button.setEnabled(False)

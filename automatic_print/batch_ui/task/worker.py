@@ -13,11 +13,11 @@ from ...automation.browser.batches import (
 )
 from ...automation.batches.rules import (
     RuleBatchPlan,
-    generate_rule_batches,
-    preview_rule_batch_plan,
 )
+from ...automation.batches.routes import RouteBatchPlan
 from ...layout_engine import LayoutSettings
 from ..local.processing import process_local_batches
+from .generation_actions import GENERATION_ACTIONS, run_generation_action
 
 
 class AutomationWorker(QObject):
@@ -38,6 +38,8 @@ class AutomationWorker(QObject):
         settings: LayoutSettings | None = None,
         sample_limit: int | None = None,
         batch_plan: RuleBatchPlan | None = None,
+        route_plan: RouteBatchPlan | None = None,
+        route_label: str = "A05-无印花",
         generation_rule: str = "按有面单生成批次规则",
         range_start: str = "",
         range_end: str = "",
@@ -54,6 +56,8 @@ class AutomationWorker(QObject):
         self.settings = settings
         self.sample_limit = sample_limit
         self.batch_plan = batch_plan
+        self.route_plan = route_plan
+        self.route_label = route_label
         self.generation_rule = generation_rule
         self.range_start = range_start
         self.range_end = range_end
@@ -117,29 +121,8 @@ class AutomationWorker(QObject):
                     self.batches_loaded,
                     load_batch_records(self.platform_name, self._report)
                 )
-        elif self.action == "preview_rules":
-            self._deliver(
-                self.plan_loaded,
-                preview_rule_batch_plan(
-                    self.platform_name, self._report
-                )
-            )
-        elif self.action == "generate_rules":
-            if self.batch_plan is None:
-                raise RuntimeError("请先读取并确认批次分类数量。")
-            count = generate_rule_batches(
-                self.batch_plan,
-                self.generation_rule,
-                self._report,
-            )
-            self._deliver(
-                self.completed,
-                {
-                    "type": "batches_generated",
-                    "platform": self.platform_name,
-                    "generated": count,
-                }
-            )
+        elif self.action in GENERATION_ACTIONS:
+            run_generation_action(self)
         elif self.action == "download":
             self._download()
         elif self.action == "process":

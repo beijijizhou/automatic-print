@@ -17,6 +17,7 @@ from ...automation.batches.classification import (
     detailed_compositions,
 )
 from ...automation.batches.rules import RuleBatchPlan
+from ...automation.batches.routes import RouteBatchPlan
 from ..task.worker import AutomationWorker
 
 
@@ -79,6 +80,9 @@ class GenerationActionsMixin:
 
     @Slot(object)
     def generation_plan_finished(self, plan: RuleBatchPlan) -> None:
+        if isinstance(plan, RouteBatchPlan):
+            self.route_plan_finished(plan)
+            return
         self.pending_batch_plan = plan
         counts = {
             (item.shipping_method, item.order_composition): item.item_count

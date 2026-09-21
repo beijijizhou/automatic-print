@@ -18,12 +18,12 @@ def batch_page_payload(page: int = 1, page_size: int = 20) -> dict[str, Any]:
     }
 
 
-def list_batches(page) -> list[dict[str, Any]]:
+def list_batches(page, page_size: int = 20) -> list[dict[str, Any]]:
     result = call_module(
         page,
         PROCESS_BATCH_MODULE,
         "g",
-        batch_page_payload(),
+        batch_page_payload(page_size=page_size),
         BATCH_MODULE_FALLBACK,
     )
     return list(result.get("list") or [])

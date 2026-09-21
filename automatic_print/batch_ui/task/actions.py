@@ -41,6 +41,8 @@ class ThreadActionsMixin:
             "status": worker.status_loaded,
             "status_and_list": worker.batches_loaded,
             "preview_rules": worker.plan_loaded,
+            "preview_route": worker.plan_loaded,
+            "generate_route": worker.completed,
             "generate_rules": worker.completed,
             "generate_completed_erp": worker.completed,
             "download": worker.completed,
@@ -126,6 +128,8 @@ class ThreadActionsMixin:
             self.range_button,
             self.settings_button,
             getattr(self, "preview_rules_button", None),
+            getattr(self, "route_preview_button", None),
+            getattr(self, "route_selector", None),
             getattr(self, "local_refresh_button", None),
             getattr(self, "local_select_button", None),
             getattr(self, "local_process_button", None),
@@ -147,6 +151,12 @@ class ThreadActionsMixin:
                 and bool(plan.nonempty_items)
                 and plan.total_items + plan.excluded_count
                 == plan.received_count
+            )
+        route_plan = getattr(self, "pending_route_plan", None)
+        if hasattr(self, "route_generate_button"):
+            self.route_generate_button.setEnabled(
+                enabled and route_plan is not None
+                and route_plan.item_count > 0
             )
 
     @Slot()

@@ -37,6 +37,13 @@ def test_platform_download_is_multi_select_and_preview_only(tmp_path):
     assert page.platform_tabs.count() == 1
     longfeng = page.workbenches["隆丰"]
     assert longfeng.platform.currentData() == "隆丰"
+    assert longfeng.main_tabs.tabText(1) == "已接单生成批次"
+    longfeng.main_tabs.setCurrentIndex(1)
+    APP.processEvents()
+    assert longfeng.route_preview_button.text() == "读取工艺路线"
+    assert longfeng.route_generate_button.text() == "按筛选生成批次"
+    assert not longfeng.route_generate_button.isEnabled()
+    longfeng.main_tabs.setCurrentIndex(0)
     assert longfeng.download_preview_only.isChecked()
     assert not longfeng.download_preview_only.isEnabled()
     assert longfeng.download_button.text() == "下载并解压"

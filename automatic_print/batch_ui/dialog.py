@@ -9,6 +9,7 @@ from ..ui.worker_bridge import BatchWorkerBridge
 from ..ui.layout_values import settings_from_window
 from .platform.actions import BatchActionsMixin
 from .platform.generation import GenerationActionsMixin
+from .platform.routes import RouteActionsMixin, build_route_page
 from .local.actions import LocalActionsMixin
 from .local.page import build_local_page
 from .platform.pages import (
@@ -21,6 +22,7 @@ from .shell import build_controls, build_layout
 
 
 class AutomationDialog(
+    RouteActionsMixin,
     GenerationActionsMixin,
     LocalActionsMixin,
     BatchActionsMixin,
@@ -51,6 +53,7 @@ class AutomationDialog(
         self.worker_bridge = BatchWorkerBridge(self)
         self.records = []
         self.pending_batch_plan = None
+        self.pending_route_plan = None
         self.preferences = (
             parent.preferences if parent is not None and hasattr(parent, "preferences")
             else QSettings("AutomaticPrint", "AutomaticPrint")
@@ -63,6 +66,8 @@ class AutomationDialog(
         self.main_tabs.currentChanged.connect(self.main_tab_changed)
         if not self.download_only:
             self.show_platform_batch_rules(self.platform.currentData())
+        if hasattr(self, "route_summary"):
+            self.show_route_controls(self.platform.currentData())
         self.refresh_current_section()
 
     def _connect_worker_bridge(self) -> None:
@@ -85,6 +90,8 @@ class AutomationDialog(
             self.main_tabs.addTab(
                 build_production_page(self, self.output_row), "生产批次"
             )
+            if self.platform_names == ("隆丰",):
+                self.main_tabs.addTab(build_route_page(self), "已接单生成批次")
             if len(self.platform_names) == 1 and self.platform_names[0] in ERP_PLATFORMS:
                 from .platform.completed import CompletedErpPage
                 self.completed_page = CompletedErpPage(self, self.platform_names[0])
@@ -107,6 +114,7 @@ class AutomationDialog(
 
     def platform_changed(self, name: str) -> None:
         self.pending_batch_plan = None
+        self.pending_route_plan = None
         self.records = []
         self.table.setRowCount(0)
         self.summary.setText(f"尚未读取 {name} 已生成批次。")
@@ -119,6 +127,8 @@ class AutomationDialog(
             f"{name}：尚未读取待生产订单数量。"
         )
         self.show_platform_batch_rules(name)
+        if hasattr(self, "route_summary"):
+            self.show_route_controls(name)
         self.refresh_current_section()
 
     def main_tab_changed(self, _index: int) -> None:
