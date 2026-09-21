@@ -24,9 +24,6 @@ def prepare_paths(paths, settings, progress=None, premeasure=None):
         with measuring_source(path):
             try:
                 result = prepare_one(path, settings)
-                if premeasure is not None:
-                    premeasure(index, path, _record_settings(path, settings, result[1]))
-                return result
             except Exception as error:
                 path = Path(path)
                 return path, {
@@ -37,6 +34,15 @@ def prepare_paths(paths, settings, progress=None, premeasure=None):
                                 '采用值：保留原图间距；影响：仅本张未补足，已继续排版；'
                                 '修改位置：排版设置→膜标签与图案间距'),
                 }
+            if premeasure is not None:
+                try:
+                    premeasure(index, path, _record_settings(path, settings, result[1]))
+                except Exception:
+                    # Premeasurement only warms item geometry. The main planner
+                    # will surface or recover the actual label/layout error.
+                    # Never discard a successfully prepared membrane gap here.
+                    pass
+            return result
 
     with ThreadPoolExecutor(max_workers=workers, thread_name_prefix='header-gap') as pool:
         iterator = iter(enumerate(paths))

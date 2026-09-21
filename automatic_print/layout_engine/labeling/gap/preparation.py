@@ -3,10 +3,15 @@ import numpy as np
 from PIL import Image
 
 
+def _seam_tolerance(width):
+    """Allow a short opaque label footer below the detected QR card."""
+    return max(128, round(width * .12))
+
+
 def gap_geometry(source, region, minimum_px):
     """Return the insertion row and required transparent rows."""
     bottom = min(source.height, max(0, round(region.bottom * source.height)))
-    tolerance = max(96, round(source.width * .08))
+    tolerance = _seam_tolerance(source.width)
     end = min(source.height, bottom + tolerance + minimum_px + 1)
     with source.crop((0, bottom, source.width, end)) as strip:
         with strip.getchannel('A') as alpha:
@@ -35,7 +40,7 @@ def gap_geometry_file(path, region, minimum_px):
         with demand_lock:
             source = pyvips.Image.new_from_file(str(path), access='sequential')
             bottom = min(source.height, max(0, round(region.bottom * source.height)))
-            tolerance = max(96, round(source.width * .08))
+            tolerance = _seam_tolerance(source.width)
             end = min(source.height, bottom + tolerance + minimum_px + 1)
             strip = source.crop(0, bottom, source.width, end - bottom)
             if strip.bands >= 4:

@@ -77,3 +77,22 @@ def test_unexpected_single_image_gap_failure_keeps_other_images_running(tmp_path
     assert 'out of order read' in records[0]['warning']
     assert '已继续排版' in records[0]['warning']
     assert records[1]['added_px'] == 32
+
+
+def test_optional_label_premeasure_failure_keeps_successful_gap(tmp_path):
+    source = sample(tmp_path/'SMALL-1-T-Black-M-NO1-1.png')
+    settings = LayoutSettings(
+        dpi=25.4, membrane_gap_mm=40, platform_name='隆丰',
+    )
+
+    def fail_label_measurement(_index, _path, _settings):
+        raise ValueError('小图平台文字没有安全空位')
+
+    paths, adjusted, records = header_gap.prepare_paths(
+        [source], settings, premeasure=fail_label_measurement,
+    )
+
+    assert paths == [source]
+    assert records[0]['added_px'] == 32
+    assert records[0]['warning'] == ''
+    assert adjusted.header_gap_overrides

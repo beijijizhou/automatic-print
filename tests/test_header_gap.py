@@ -114,6 +114,20 @@ def test_coloured_haloo_card_footer_is_included_before_gap(tmp_path):
     assert added == 190
 
 
+def test_small_image_finds_transparent_seam_below_opaque_label_footer(tmp_path):
+    path = tmp_path/'small-label-footer.png'
+    image = Image.new('RGBA', (100, 250))
+    draw = ImageDraw.Draw(image)
+    draw.rectangle((0, 0, 99, 170), fill=(255, 255, 255, 255))
+    draw.rectangle((0, 190, 99, 249), fill=(20, 80, 160, 255))
+    image.save(path, dpi=(180, 180))
+    region = MembraneRegion(0, 0, 1, 60/250)
+    assert header_gap.gap_geometry(image, region, 283) == (171, 264)
+    from automatic_print.layout_engine.labeling.gap.preparation import gap_geometry_file
+    assert gap_geometry_file(path, region, 283) == (171, 264)
+    image.close()
+
+
 def test_cache_expiry_parameter_change_and_original_freshness(tmp_path, monkeypatch):
     path = sample(tmp_path/'B1-1-T-Black-M-NO1-1.png')
     settings = LayoutSettings(dpi=25.4, membrane_gap_mm=40)
