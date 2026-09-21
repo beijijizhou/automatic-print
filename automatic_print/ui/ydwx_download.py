@@ -1,12 +1,15 @@
 """UV 亿点万象批次选择和下载；网络工作始终在后台线程。"""
 
 from pathlib import Path
+from math import ceil
 
 from PySide6.QtCore import QObject, QThread, Qt, Signal, Slot
 from PySide6.QtWidgets import (
     QCheckBox, QFileDialog, QHeaderView, QHBoxLayout, QLabel, QLineEdit, QPlainTextEdit,
     QPushButton, QTableWidget, QTableWidgetItem, QVBoxLayout, QWidget,
 )
+
+from ..layout_engine.uv import identify_uv_batch_material, uv_sheet_capacity
 
 
 class YdwxWorker(QObject):
@@ -52,16 +55,17 @@ class YdwxDownloadPage(QWidget):
 
         self.refresh = QPushButton("读取生产批次")
         self.refresh.clicked.connect(self.load_batches)
-        self.download = QPushButton("下载选中的批次稿件")
+        self.download = QPushButton("下载并按 UV 材质分组")
         self.download.clicked.connect(self.download_selected)
         self.download.setEnabled(False)
         actions = QHBoxLayout()
         actions.addWidget(self.refresh)
         actions.addWidget(self.download)
         actions.addStretch()
-        self.table = QTableWidget(0, 6)
+        self.table = QTableWidget(0, 8)
         self.table.setHorizontalHeaderLabels(
-            ["选择", "日期", "批次名称", "批次号", "稿件已下载/总数", "产品件数"]
+            ["选择", "日期", "批次名称", "批次号", "稿件已下载/总数", "产品件数",
+             "识别材质", "每画布/预计组数"]
         )
         self.table.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeToContents)
         self.table.horizontalHeader().setSectionResizeMode(2, QHeaderView.Stretch)
@@ -76,6 +80,8 @@ class YdwxDownloadPage(QWidget):
             "当前以 UV 为主；亿点万象也有 DTF 订单。接口未提供可靠的部门字段，"
             "请按具体批次核对归属后勾选。下载与排版分开进行。"
             "平台的“下载剩余/重新下载”可能改变稿件下载计数。"
+            "表格组数按接口稿件数预估，下载后以 ZIP 实际图片数分组；"
+            "例如 1-7 表示第 1 组有 7 张，不是 7 个文件夹。原 ZIP 保留。"
         )
         intro.setWordWrap(True)
         layout.addWidget(intro)
@@ -149,17 +155,22 @@ class YdwxDownloadPage(QWidget):
                 box = QCheckBox()
                 box.setEnabled(record.manuscript_count > 0)
                 self.table.setCellWidget(index, 0, box)
+                spec = identify_uv_batch_material(record.name)
+                capacity = uv_sheet_capacity(spec) if spec else 0
                 for column, text in enumerate((
                     record.date, record.name, record.number,
                     f"{record.downloaded_count}/{record.manuscript_count}",
                     str(record.product_count),
+                    spec.label if spec else "未识别（只存 ZIP）",
+                    (f"{capacity} 张 / 预计 {ceil(record.manuscript_count / capacity)} 组"
+                     if capacity else "待核对"),
                 ), 1):
                     self.table.setItem(index, column, QTableWidgetItem(text))
             self.status.setText(f"已读取 {len(value)} 个批次；请选择名称后下载。")
         else:
             saved, failures = value
             self.status.setText(
-                f"完成：{len(saved)} 个批次已保存，{len(failures)} 个待处理；"
+                f"完成：{len(saved)} 个批次原 ZIP 已保存，{len(failures)} 个分组待处理；"
                 "“新增稿件”仅含本次未下载部分；下载不启动 UV 排版。"
             )
             for name, reason in failures:

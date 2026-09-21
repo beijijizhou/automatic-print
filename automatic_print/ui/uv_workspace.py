@@ -19,7 +19,7 @@ from PySide6.QtWidgets import (
 
 from ..controllers.uv_generation import UvGenerationController
 from ..layout_engine.uv import UV_MATERIALS, UV_MATERIAL_BY_KEY
-from ..layout_engine.uv.sheet import CANVAS_HEIGHT_MM, CANVAS_WIDTH_MM
+from ..layout_engine.uv.sheet import CANVAS_WIDTH_MM, uv_sheet_capacity
 
 
 class UvWorkspace(QWidget):
@@ -88,7 +88,6 @@ class UvWorkspace(QWidget):
     def sync_material(self):
         spec = UV_MATERIAL_BY_KEY[self.material.currentData()]
         columns = int(CANVAS_WIDTH_MM // spec.item_width_mm)
-        rows = int(CANVAS_HEIGHT_MM // spec.item_height_mm)
         self.finished_size.setText(
             f"{spec.width_mm / 10:g} × {spec.length_mm / 10:g} cm"
         )
@@ -96,7 +95,7 @@ class UvWorkspace(QWidget):
             f"{spec.item_width_mm / 10:g} × {spec.item_height_mm / 10:g} cm"
             + ("（横版）" if spec.landscape else "")
         )
-        self.capacity.setText(f"{columns} 张 / {columns * rows} 张")
+        self.capacity.setText(f"{columns} 张 / {uv_sheet_capacity(spec)} 张")
         self.host_window.preferences.setValue("uv/material", spec.key)
         if not self.controller.active:
             self.status.setText(

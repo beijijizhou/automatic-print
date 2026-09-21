@@ -153,6 +153,19 @@ def test_invalid_zip_is_retained_as_incomplete_not_published(tmp_path, monkeypat
     assert len(list(tmp_path.rglob("*.未完成"))) == 1
 
 
+def test_existing_zip_is_reused_only_for_same_batch_snapshot(tmp_path, monkeypatch):
+    source = batch()
+    monkeypatch.setattr(downloads, "request_gateway", lambda *_a, **_k: BytesIO(archive_bytes()))
+    archive = downloads.download_batch(source, tmp_path)
+    monkeypatch.setattr(downloads, "request_gateway", lambda *_a, **_k: (
+        (_ for _ in ()).throw(AssertionError("must not download again"))
+    ))
+    assert downloads.download_batch(source, tmp_path) == archive
+    with pytest.raises(FileExistsError, match="稿件数或状态已变化"):
+        downloads.download_batch(batch(count=3, downloaded=3), tmp_path)
+    assert archive.is_file()
+
+
 def test_platform_600_item_limit_skips_only_oversized_batch(tmp_path, monkeypatch):
     oversized = batch(11, "oversized", 601, 601)
     small = batch(12, "small")
@@ -176,6 +189,8 @@ def test_uv_download_page_lists_ydwx_without_dtf_layout_controls(tmp_path):
     ydwx._finished(("list", [batch()]))
     assert ydwx.table.item(0, 2).text() == "K_YX_05_Tie_2030__322"
     assert ydwx.table.item(0, 4).text() == "2/2"
+    assert ydwx.table.item(0, 6).text() == "2030铁"
+    assert "48 张" in ydwx.table.item(0, 7).text()
     owner.department_selector.setCurrentIndex(owner.department_selector.findData("dtf"))
     assert not page.platform_checks["亿点万象"].isChecked()
     owner.close()

@@ -1,10 +1,13 @@
 """Download selected SDS manuscripts under verified production-task names."""
 
+import json
 from pathlib import Path
 from zipfile import BadZipFile, ZipFile
 
 from automatic_print.layout_engine.output.output_name import label_output_name
+from automatic_print.layout_engine.uv import identify_uv_batch_material, uv_sheet_capacity
 
+from .archive_split import split_uv_archive
 from .batches import YdwxBatch, list_batches
 from .gateway import request_gateway
 
@@ -39,6 +42,22 @@ def download_batches(selected, output_root, progress=None):
             saved.append((live, path))
             if progress:
                 progress(f"[{index}/{len(selected)}] 已保存 {live.name}：{path}")
+            spec = identify_uv_batch_material(live.name)
+            if spec is None:
+                message = "批次名称没有唯一可识别的 UV 材质；原 ZIP 已保留，未猜测尺寸或分组。"
+                failures.append((live.name, message))
+                if progress:
+                    progress(f"[{index}/{len(selected)}] {live.name}：{message}")
+                continue
+            result = split_uv_archive(path, spec, request_count, progress)
+            if progress:
+                progress(
+                    f"[{index}/{len(selected)}] {live.name}：{spec.label} "
+                    f"每张画布 {uv_sheet_capacity(spec)} 张；ZIP 实际 {result.image_count} 张，"
+                    f"已分成 {len(result.folders)} 个文件夹：{result.root}"
+                )
+                if result.warning:
+                    progress(f"[{index}/{len(selected)}] {result.warning}")
         except Exception as error:
             failures.append((original.name, str(error)))
             if progress:
@@ -54,8 +73,34 @@ def download_batch(batch: YdwxBatch, output_root):
     folder.mkdir(parents=True, exist_ok=True)
     target = folder / ("完整稿件.zip" if mode == "redown" else "新增稿件.zip")
     pending = folder / (target.name + ".未完成")
-    if target.exists() or pending.exists():
-        raise FileExistsError(f"本地已有 {target.name} 或未完成文件；未覆盖，请先核对。")
+    identity_path = target.with_suffix(".批次.json")
+    identity = {
+        "task_id": batch.task_id,
+        "number": batch.number,
+        "name": batch.name,
+        "manuscript_count": batch.manuscript_count,
+        "downloaded_count": batch.downloaded_count,
+        "mode": mode,
+    }
+    if pending.exists():
+        raise FileExistsError(f"本地已有未完成文件 {pending}；未覆盖，请先核对。")
+    if target.exists():
+        try:
+            existing_identity = json.loads(identity_path.read_text(encoding="utf-8"))
+        except (OSError, ValueError) as error:
+            raise FileExistsError(
+                f"本地已有 {target.name}，但缺少可核对的批次来源记录；"
+                "未覆盖或复用，请检查旧文件或选择空目录。"
+            ) from error
+        if existing_identity != identity:
+            raise FileExistsError(
+                f"本地已有 {target.name}，但批次稿件数或状态已变化；"
+                "未复用旧稿件，请检查旧文件或选择空目录。"
+            )
+        with ZipFile(target) as existing:
+            if not any(not item.is_dir() for item in existing.infolist()) or existing.testzip():
+                raise ValueError(f"本地已有 {target.name} 但 ZIP 校验失败；未覆盖。")
+        return target
     try:
         with request_gateway({"action": "download", "task_id": batch.task_id, "mode": mode}) as response, pending.open("wb") as stream:
             while chunk := response.read(1024 * 1024):
@@ -75,4 +120,11 @@ def download_batch(batch: YdwxBatch, output_root):
         ) from error
     except (BadZipFile, ValueError) as error:
         raise ValueError(f"{batch.name} 下载内容未通过 ZIP 校验；保留未完成文件：{pending}") from error
+    try:
+        identity_path.write_text(json.dumps(identity, ensure_ascii=False), encoding="utf-8")
+    except OSError as error:
+        raise RuntimeError(
+            f"{batch.name} ZIP 已保存，但批次来源记录失败：{identity_path}；"
+            "请保留文件并核对，不会自动覆盖。"
+        ) from error
     return target

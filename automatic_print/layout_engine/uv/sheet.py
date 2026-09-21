@@ -47,6 +47,13 @@ UV_MATERIAL_BY_KEY = {item.key: item for item in UV_MATERIALS}
 UV_2030_LANDSCAPE = UV_MATERIAL_BY_KEY["2030_iron"]
 
 
+def uv_sheet_capacity(spec):
+    spec = UV_MATERIAL_BY_KEY[spec] if isinstance(spec, str) else spec
+    columns = int(CANVAS_WIDTH_MM // spec.item_width_mm)
+    rows = int(CANVAS_HEIGHT_MM // spec.item_height_mm)
+    return columns * rows
+
+
 @dataclass(frozen=True)
 class UvPlacement:
     source: Path
@@ -92,8 +99,7 @@ def plan_uv_sheet(folder, spec=UV_2030_LANDSCAPE, progress=None):
             f"UV 批次包含不同 DPI；基准 {dpi:g}，不一致文件：{', '.join(mismatched[:5])}"
         )
     columns = int(CANVAS_WIDTH_MM // spec.item_width_mm)
-    row_capacity = int(CANVAS_HEIGHT_MM // spec.item_height_mm)
-    capacity = columns * row_capacity
+    capacity = uv_sheet_capacity(spec)
     if len(paths) > capacity:
         raise ValueError(
             f"{spec.label} 单画布容量为 {capacity} 张，当前有 {len(paths)} 张；"
