@@ -12,6 +12,7 @@ from PySide6.QtWidgets import (
 from ... import __version__, __version_display__
 from ...batch_ui.dialog import AutomationDialog
 from ..developer_mode import build_developer_mode
+from ..departments import build_department_workspace
 from ..erp_download_entry import install_production_platform_tab
 
 
@@ -32,11 +33,17 @@ def build_home(window) -> None:
     footer.addWidget(window.check_update_button)
     build_developer_mode(window, footer)
 
+    department_navigation, department_workspace = build_department_workspace(
+        window, window.automation_home
+    )
     window.workspace_tabs = QTabWidget()
-    window.workspace_tabs.addTab(window.automation_home, "本地排版")
+    window.department_root_tab_index = window.workspace_tabs.addTab(
+        department_workspace, "部门工作区"
+    )
     install_production_platform_tab(window, window.workspace_tabs)
 
     layout = QVBoxLayout()
+    layout.addWidget(department_navigation)
     layout.addWidget(window.build_update_status())
     layout.addWidget(window.workspace_tabs)
     layout.addLayout(footer)

@@ -4,6 +4,8 @@ import os
 from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
 
+from automatic_print.automation.api.gateway_credentials import gateway_client_key
+
 
 DEFAULT_TIMEOUT_SECONDS = 20
 DEFAULT_ENDPOINT = (
@@ -16,18 +18,11 @@ class S2BBatchInfoError(RuntimeError):
 
 
 def gateway_config():
-    packaged_key = ""
-    try:
-        from ..deployment import S2B_BATCH_INFO_KEY
-        packaged_key = str(S2B_BATCH_INFO_KEY).strip()
-    except ImportError:
-        pass
-    configured_key = os.environ.get("AUTOMATIC_PRINT_S2B_BATCH_INFO_KEY", "").strip()
     return (
         os.environ.get(
             "AUTOMATIC_PRINT_S2B_BATCH_INFO_URL", DEFAULT_ENDPOINT
         ).strip(),
-        configured_key or packaged_key,
+        gateway_client_key(),
     )
 
 

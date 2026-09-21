@@ -59,7 +59,10 @@ def build_layout(owner) -> None:
     layout.addWidget(owner.workbench_scroll)
     footer = QHBoxLayout()
     footer.addStretch()
-    footer.addWidget(owner.settings_button)
+    if owner.download_only:
+        owner.settings_button.hide()
+    else:
+        footer.addWidget(owner.settings_button)
     layout.addLayout(footer)
     for label in owner.findChildren(QLabel):
         label.setTextInteractionFlags(Qt.TextSelectableByMouse)

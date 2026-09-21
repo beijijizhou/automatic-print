@@ -5,6 +5,10 @@
 
 | 能力 | 规范所有者 | 复用规则 |
 | --- | --- | --- |
+| 顶层生产部门分类 | `ui/departments.py`, `ui/workbench/home.py` | `DTF / UV / 3D` 是排版、参数、批次任务和历史的共同父级；既有工作区只属于 DTF，`uvbranch` 的 UV 工作区独立建立且不得借用 DTF 状态，3D 使用隔离占位页。生产平台下载位于部门工作区之外共享。运行中部门任务保持可见且不因切换请求被停止。 |
+| UV材质固定画布 | `layout_engine/uv/sheet.py`, `layout_engine/uv/render.py`, `controllers/uv_generation.py`, `ui/uv_workspace.py` | 材质目录唯一维护11种成品尺寸和方向；全部固定2500×1300毫米RGBA画布、右下起排、同行向左、满行向上，界面按材质联动展示尺寸和容量。后台生成一张并行分块原子BigTIFF并复核真实输出，不复用DTF卷材规划。 |
+| 亿点万象批次下载（当前 UV 优先） | `supabase/functions/ydwx-production/`, `automation/api/ydwx/gateway.py`, `batches.py`, `downloads.py`, `ui/ydwx_download.py` | Edge Function 使用服务端 Secret 登录 SDS，受现有受限客户端密钥保护，桌面端不持有平台 token。平台同时有 UV 和 DTF 订单，不得按平台名推断批次部门；当前接口缺少可靠部门字段时由用户核对后选择。读取按日期分组的批次，以 ID、编号、名称、稿件总数重新校验勾选项；仅下载并校验 ZIP 并以批次名存储，部分下载不宣称整批完整，不自动解压或排版。部署与 Secret 配置另行完成。 |
+| Supabase 受限客户端密钥 | `automation/api/gateway_credentials.py` | S2B 和亿点万象网关共用现有 Windows 构建注入的客户端密钥；各平台请求仍归各自 provider，不互相依赖业务客户端。 |
 | 图片发现与嵌套批次扫描 | `layout_engine/intake/discovery/discovery.py`, `layout_engine/intake/discovery/batch_discovery.py` | 单批、多批和分析功能复用，不各自遍历目录。 |
 | 图片尺寸、DPI与源信息 | `layout_engine/intake/metadata/source_metadata.py`, `layout_engine/intake/metadata/images.py`, `layout_engine/intake/metadata/output_dpi.py`, `layout_engine/domain/models.py` | 一次读取形成共享事实；`LayoutItem`与`Placement`集中在模型模块，标签、排版和报告不得重复解码。 |
 | 批次数据快照与并行测量 | `layout_engine/intake/preparation/batch_snapshot.py`, `layout_engine/measurement/measurement_session.py`, `layout_engine/measurement/parallel_measurement.py`, `ui/layout_values.py`, `ui/bulk_generation_worker.py` | 生成、仅预览和批量分析从首次读取到最终报告共享一个批次会话；保持结果原顺序，线程完成顺序不能改变生产顺序；最低线程档自动给单批次最多4线程，多批次按实际并行数均分。 |
@@ -53,7 +57,7 @@
 | 批次及膜历史 | `history/store.py`, `history/batch_queue.py`, `history/bulk_analysis.py` | 历史格式由存储模块维护，UI不直接写日志文件。 |
 | ERP生产批次读取与下载 | `automation/browser/batches.py`, `automation/api/erp/records.py`, `automation/transfer/exports.py`, `automation/transfer/downloads.py`, `automation/transfer/export_record.py` | 浏览器流程、导出记录定位、文件传输与响应映射分离；页面缺少旧批次下载入口时复用最新已完成导出记录中的受信任 ZIP 地址，仍由公共安全解压入口处理。外层工厂页面与内嵌生产模块共用一个批次内容定位入口。 |
 | 共享盘批次本地镜像 | `automation/transfer/local_mirror.py`, `ui/workers.py` | 共享盘批次存在平台下载目录中的同批本地副本时，按批次号、图片数量、文件名和字节数完整核对后复用本地图片完成尺寸、标签、刀码、排版和合成；任何缺失、重名或大小不一致都回退原共享盘，不猜测映射。输出目录和历史来源仍保留用户选择的位置。 |
-| 生产平台下载入口 | `ui/erp_download_entry.py`, `batch_ui/dialog.py`, `batch_ui/platform/`, `batch_ui/task/`, `batch_ui/shell/results.py` | 多选平台后分别显示独立工作区；平台页面与后台任务分层，仅下载、解压已生成批次，绝不自动启动排版；默认按页面选项在完成提示后打开对应平台文件夹。 |
+| 生产平台下载入口 | `ui/erp_download_entry.py`, `batch_ui/dialog.py`, `batch_ui/platform/`, `batch_ui/task/`, `batch_ui/shell/results.py` | 跨部门复用同一页面和任务实例，多选平台后分别显示独立工作区；平台页面与后台任务分层，仅下载、校验、解压已生成批次，不暴露部门打印参数，绝不自动启动排版；默认按页面选项在完成提示后打开对应平台文件夹。 |
 | 后台只读任务 | `batch_ui/task/reads.py`, `batch_ui/local/scanning.py` | 复用现有Worker线程和取消信号；目录和图片名称在后台读取，界面按来源范围及选中批次核对返回数据，过期结果不得覆盖当前选择。 |
 | ERP工作台壳层 | `batch_ui/local/`, `platform/`, `task/`, `shell/` | 目录直接对应本地排版、平台批次、任务执行和公共窗口外壳；根对话框只装配，控件构造、结果展示和批次表映射各有唯一所有者。 |
 | 蜂鸟ERP接口 | `automation/api/erp/gateway.py`, `items.py`, `batches.py`, `records.py` | 页面桥接、生产项与规则、生产批次、响应转换按请求对象分离；调用方直接复用提供商接口，不保留根目录转发模块。 |

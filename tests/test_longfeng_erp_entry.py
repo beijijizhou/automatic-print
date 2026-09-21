@@ -21,6 +21,10 @@ def test_platform_download_is_multi_select_and_preview_only(tmp_path):
     APP.processEvents()
 
     index = owner.production_platform_tab_index
+    assert owner.workspace_tabs.isTabVisible(index)
+    owner.department_selector.setCurrentIndex(
+        owner.department_selector.findData("dtf")
+    )
     assert not owner.workspace_tabs.isTabVisible(index)
     owner.developer_mode_checkbox.setChecked(True)
     APP.processEvents()
@@ -68,6 +72,10 @@ def test_platform_download_is_multi_select_and_preview_only(tmp_path):
     owner.developer_mode_checkbox.setChecked(False)
     assert not owner.workspace_tabs.isTabVisible(index)
     assert owner.workspace_tabs.currentIndex() == 0
+    owner.department_selector.setCurrentIndex(
+        owner.department_selector.findData("uv")
+    )
+    assert owner.workspace_tabs.isTabVisible(index)
     owner.close()
 
 

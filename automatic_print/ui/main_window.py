@@ -72,7 +72,9 @@ class MainWindow(
         )
         return any((self.layout_generation.active, update_applying,
                     self.automation_home.thread is not None, developer_task_active(self),
-                    getattr(getattr(self, 'bulk_controller', None), 'thread', None) is not None))
+                    getattr(getattr(self, 'bulk_controller', None), 'thread', None) is not None,
+                    getattr(getattr(self, 'uv_workspace', None), 'controller', None)
+                    and self.uv_workspace.controller.active))
     def closeEvent(self, event) -> None:
         from .immediate_exit import close_safely
         close_safely(self, event)
