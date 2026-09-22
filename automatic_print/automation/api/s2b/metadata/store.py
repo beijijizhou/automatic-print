@@ -4,7 +4,7 @@ from pathlib import Path
 import re
 from threading import RLock
 
-from .batch_name import find_s2b_batch_folder
+from .batch_name import find_s2b_batch_folder, parse_s2b_image_name
 
 
 _LOCK = RLock()
@@ -78,9 +78,21 @@ def register_batch_records(paths, payload):
     resolved_orders = {}
     records = list(payload.get("records") or ())
     for path in paths:
-        candidates = by_order.get(order_key(path).casefold(), ())
-        if not candidates:
-            candidates = _folder_candidates(path, records)
+        image = parse_s2b_image_name(path)
+        if image:
+            if image.batch_number != str(payload.get("batch_number") or "").upper():
+                continue
+            candidates = [
+                row for row in by_order.get(image.order_code.casefold(), ())
+                if str(row.get("order_item_code") or "").casefold()
+                == image.order_item_code.casefold()
+                and canonical_size(str(row.get("size") or ""))
+                == canonical_size(image.size)
+            ]
+        else:
+            candidates = by_order.get(order_key(path).casefold(), ())
+            if not candidates:
+                candidates = _folder_candidates(path, records)
         if not candidates:
             continue
         orders = {
@@ -90,16 +102,17 @@ def register_batch_records(paths, payload):
         orders.discard("")
         if len(orders) == 1:
             resolved_orders[str(path.resolve())] = (_identity(path), next(iter(orders)))
-        stem = production_stem(path)
-        exact = [row for row in candidates if stem.startswith(
-            str(row.get("order_item_code") or "").strip().casefold() + "-"
-        )]
-        candidates = exact or list(candidates)
-        size = canonical_size(source_size(path))
-        same_size = [row for row in candidates if canonical_size(
-            str(row.get("size") or "")
-        ) == size]
-        candidates = same_size or candidates
+        if not image:
+            stem = production_stem(path)
+            exact = [row for row in candidates if stem.startswith(
+                str(row.get("order_item_code") or "").strip().casefold() + "-"
+            )]
+            candidates = exact or list(candidates)
+            size = canonical_size(source_size(path))
+            same_size = [row for row in candidates if canonical_size(
+                str(row.get("size") or "")
+            ) == size]
+            candidates = same_size or candidates
         colors = {str(row.get("color") or "").strip() for row in candidates}
         colors.discard("")
         if len(colors) == 1:

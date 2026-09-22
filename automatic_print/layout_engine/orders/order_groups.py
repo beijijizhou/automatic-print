@@ -31,6 +31,13 @@ def order_key(path):
     api_order = order_for_path(path)
     if api_order:
         return api_order.casefold()
+    from automatic_print.automation.api.s2b.metadata.batch_name import (
+        find_s2b_batch_folder, parse_s2b_image_name,
+    )
+    if find_s2b_batch_folder(path):
+        image = parse_s2b_image_name(path)
+        if image:
+            return image.order_code.casefold()
     stem = production_stem(path)
     return stem.split("-", 1)[0] if "-" in stem else "未识别订单组"
 
@@ -40,7 +47,11 @@ def pair_identity(path):
     match = SIDE.fullmatch(production_stem(path))
     if match:
         return match['job'], match['side']
-    if not S2B_SIDE.fullmatch(path.stem):
+    from automatic_print.automation.api.s2b.metadata.batch_name import (
+        find_s2b_batch_folder, parse_s2b_image_name,
+    )
+    image = parse_s2b_image_name(path) if find_s2b_batch_folder(path) else None
+    if not S2B_SIDE.fullmatch(path.stem) and not (image and image.view_count == 2):
         return None
     with _S2B_PAIR_LOCK:
         return _S2B_PAIRS.get(str(path.resolve()))
@@ -48,8 +59,18 @@ def pair_identity(path):
 
 def register_s2b_pairs(paths):
     """Register only complete same-product, same-size 1/2 + 2/2 pairs."""
+    from automatic_print.automation.api.s2b.metadata.batch_name import (
+        find_s2b_batch_folder, parse_s2b_image_name,
+    )
     groups = defaultdict(list)
     for path in paths:
+        image = parse_s2b_image_name(path) if find_s2b_batch_folder(path) else None
+        if image and image.view_count == 2:
+            job = ":".join((
+                "s2b", image.batch_number, image.order_item_code, image.size,
+            )).casefold()
+            groups[job].append((path, image.image_number))
+            continue
         match = S2B_SIDE.fullmatch(path.stem)
         if not match:
             continue
@@ -62,7 +83,11 @@ def register_s2b_pairs(paths):
                       for path, _side in members]
     registered = {}
     for job, members in groups.items():
-        if len(members) == 2 and {side for _, side in members} == {'1', '2'}:
+        if len(members) == 2 and all(isinstance(side, int) for _, side in members):
+            if members[0][1] != members[1][1]:
+                for side, (path, _) in enumerate(sorted(members, key=lambda member: member[1]), 1):
+                    registered[str(path.resolve())] = (job, str(side))
+        elif len(members) == 2 and {side for _, side in members} == {'1', '2'}:
             registered.update(
                 (str(path.resolve()), (job, side)) for path, side in members
             )

@@ -1,7 +1,8 @@
 """One shared S2B metadata read before preview or final generation."""
 from collections import Counter
+from dataclasses import replace
 
-from .batch_name import find_s2b_batch_folder
+from .batch_name import find_s2b_batch_folder, image_batch_number
 from .store import color_for_path, register_batch_records
 
 
@@ -20,12 +21,19 @@ def prepare_s2b_metadata(paths, settings, progress=None):
     for path in paths:
         batch = find_s2b_batch_folder(path)
         if batch:
-            grouped.setdefault(batch, []).append(path)
+            code = image_batch_number(path)
+            if code not in grouped:
+                source = batch if code == batch.batch_number else replace(
+                    batch, batch_number=code,
+                    expected_count=0 if batch.batch_number else batch.expected_count,
+                )
+                grouped[code] = (source, [])
+            grouped[code][1].append(path)
     if not grouped:
         return []
     results = [None] * len(grouped)
     pending = []
-    for index, (batch, members) in enumerate(grouped.items(), 1):
+    for index, (batch, members) in enumerate(grouped.values(), 1):
         colors = [color_for_path(path) for path in members]
         if all(colors):
             results[index - 1] = _result(

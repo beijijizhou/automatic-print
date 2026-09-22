@@ -2,7 +2,9 @@
 
 from collections import Counter
 
-from ..automation.api.s2b.metadata.batch_name import find_s2b_batch_folder
+from ..automation.api.s2b.metadata.batch_name import (
+    find_s2b_batch_folder, image_batch_number,
+)
 from ..automation.api.s2b.metadata.prepare import prepare_s2b_metadata
 from ..automation.api.s2b.metadata.store import color_for_path
 
@@ -36,7 +38,9 @@ def read_folder_colors(batches, cancellation, progress=None):
         text = "、".join(f"{name}{count}张" for name, count in sorted(colors.items()))
         if matched < len(images):
             text += ("；" if text else "") + f"未匹配{len(images) - matched}张"
-        summaries[str(batch["folder"])] = (
-            text or "未取得", warnings.get(identity.batch_number, "")
-        )
+        batch_codes = dict.fromkeys(image_batch_number(path) for path in images)
+        warning = "\n".join(filter(None, (
+            warnings.get(code, "") for code in batch_codes
+        )))
+        summaries[str(batch["folder"])] = (text or "未取得", warning)
     return summaries

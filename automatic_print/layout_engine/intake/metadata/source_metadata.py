@@ -17,6 +17,12 @@ def canonical_size(value):
 
 @lru_cache(maxsize=4096)
 def source_size(path):
+    from automatic_print.automation.api.s2b.metadata.batch_name import (
+        parse_s2b_image_name,
+    )
+    image = parse_s2b_image_name(path)
+    if image:
+        return canonical_size(image.size)
     parts = production_stem(path).split('-')
     if len(parts) >= 5 and re.fullmatch(r'no\d+', parts[-2]):
         value = parts[-3]

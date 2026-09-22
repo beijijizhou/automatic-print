@@ -4,7 +4,9 @@ import pytest
 
 from automatic_print.automation.api.s2b.metadata.batch_name import (
     find_s2b_batch_folder,
+    image_batch_number,
     parse_s2b_batch_name,
+    parse_s2b_image_name,
 )
 from automatic_print.automation.api.s2b.metadata.store import (
     color_for_path,
@@ -216,3 +218,149 @@ def test_missing_service_reports_choice_instead_of_stopping(tmp_path, monkeypatc
     assert result[0]["matched_images"] == 0
     assert "继续排版" in result[0]["warning"]
     assert "用户确认" in result[0]["warning"]
+
+
+def test_mixed_underscore_exports_match_each_embedded_batch_and_item(tmp_path, monkeypatch):
+    root = tmp_path / "HS2B011Mt______20_KU7S5B8XMFDW_20260919_232509_qkgzot2a"
+    first = root / "5OIT77_1_6_1_6_棉_M_KU7S5B8XMFDW-4_1.png"
+    second = root / "K3ELXV_1_1_2_6_棉_XL_X64RYCOFJJPJ-5_3.png"
+    wrong_item = root / "5OIT77_2_6_1_6_棉_M_KU7S5B8XMFDW-4_2.png"
+    root.mkdir()
+    for path in (first, second, wrong_item):
+        path.touch()
+    assert image_batch_number(first) == "KU7S5B8XMFDW"
+    assert image_batch_number(second) == "X64RYCOFJJPJ"
+    monkeypatch.setattr(
+        "automatic_print.automation.api.s2b.metadata.prepare.gateway_config",
+        lambda: ("https://example.test", "key"),
+    )
+    calls = []
+
+    def fetch(batch):
+        calls.append(batch)
+        records = {
+            "KU7S5B8XMFDW": [
+                {"order_code": "5OIT77", "order_item_code": "5OIT77-1",
+                 "color": "白色", "size": "M"},
+            ],
+            "X64RYCOFJJPJ": [
+                {"order_code": "K3ELXV", "order_item_code": "K3ELXV-1",
+                 "color": "黑色", "size": "XL"},
+            ],
+        }
+        return {"batch_number": batch, "records": records[batch]}
+
+    monkeypatch.setattr(
+        "automatic_print.automation.api.s2b.metadata.prepare.fetch_s2b_batch_info", fetch,
+    )
+    result = prepare_s2b_metadata([first, second, wrong_item], SimpleNamespace())
+    assert calls == ["KU7S5B8XMFDW", "X64RYCOFJJPJ"]
+    assert [record["matched_images"] for record in result] == [1, 1]
+    assert color_for_path(first) == "白色"
+    assert color_for_path(second) == "黑色"
+    assert color_for_path(wrong_item) is None
+
+
+def test_hyphen_export_in_batch_root_matches_exact_item_and_size(tmp_path):
+    root = tmp_path / "CYS2B001Mt______3_8EIMH54LNIIL_20260919_185954_hr08uhzo"
+    first = root / "8EIMH54LNIIL-1-1-E4G3AP-4-2-1-140-棉-3XL.png"
+    second = root / "8EIMH54LNIIL-1-9-E4G3AP-5-2-1-140-棉-4XL.png"
+    root.mkdir()
+    for path in (first, second):
+        path.touch()
+    payload = {"batch_number": "8EIMH54LNIIL", "records": [
+        {"order_code": "E4G3AP", "order_item_code": "E4G3AP-4",
+         "size": "3XL", "color": "黑色"},
+        {"order_code": "E4G3AP", "order_item_code": "E4G3AP-5",
+         "size": "4XL", "color": "白色"},
+    ]}
+    assert register_batch_records([first, second], payload) == 2
+    assert color_for_path(first) == "黑色"
+    assert color_for_path(second) == "白色"
+    from automatic_print.layout_engine.orders.order_groups import order_key
+    from automatic_print.layout_engine.intake.metadata.source_metadata import source_size
+    assert [order_key(path) for path in (first, second)] == ["e4g3ap"] * 2
+    assert [source_size(path) for path in (first, second)] == ["3XL", "4XL"]
+
+
+def test_filename_size_wins_over_misleading_size_folder(tmp_path):
+    root = tmp_path / "HS2B010Sg_Clr_____31_9DAL9VRKA8LN_20260919_231223_w31kryif"
+    prefixed = root / "5XL" / "3XL_9DAL9VRKA8LN-1-1-7CYTDQ-1-1-1-31-棉.png"
+    suffixed = root / "4XL" / "9DAL9VRKA8LN-17-4-E2WSGC-1-1-1-31-棉-L.png"
+    for path in (prefixed, suffixed):
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.touch()
+    from automatic_print.layout_engine.intake.metadata.source_metadata import source_size
+    assert [source_size(path) for path in (prefixed, suffixed)] == ["3XL", "L"]
+    assert register_batch_records([prefixed, suffixed], {
+        "batch_number": "9DAL9VRKA8LN", "records": [
+            {"order_code": "7CYTDQ", "order_item_code": "7CYTDQ-1",
+             "size": "3XL", "color": "白色"},
+            {"order_code": "E2WSGC", "order_item_code": "E2WSGC-1",
+             "size": "L", "color": "蓝色"},
+        ],
+    }) == 2
+
+
+def test_partial_folder_uses_batch_code_from_image(tmp_path, monkeypatch):
+    root = tmp_path / "H S2B016Sg______19"
+    image = root / "3XL_4JFHMUQ8ZKCV-1-1-INQIHJ-1-1-1-19-棉.png"
+    root.mkdir()
+    image.touch()
+    parsed = find_s2b_batch_folder(image)
+    assert parsed.expected_count == 19
+    assert parsed.batch_number == ""
+    assert image_batch_number(image) == "4JFHMUQ8ZKCV"
+    assert parse_s2b_image_name(image).order_item_code == "INQIHJ-1"
+    monkeypatch.setattr(
+        "automatic_print.automation.api.s2b.metadata.prepare.gateway_config",
+        lambda: ("https://example.test", "key"),
+    )
+    monkeypatch.setattr(
+        "automatic_print.automation.api.s2b.metadata.prepare.fetch_s2b_batch_info",
+        lambda code: {"batch_number": code, "source_total": 19, "records": [
+            {"order_code": "INQIHJ", "order_item_code": "INQIHJ-1",
+             "size": "3XL", "color": "黑色"},
+        ]},
+    )
+    result = prepare_s2b_metadata([image], SimpleNamespace())
+    assert result[0]["batch_number"] == "4JFHMUQ8ZKCV"
+    assert result[0]["folder_count"] == 19
+    assert result[0]["matched_images"] == 1
+
+
+def test_reordered_partial_folder_and_mixed_hyphen_batches(tmp_path, monkeypatch):
+    root = tmp_path / "22_IRORKWQ8MKHZ_20260921_021712_kuqfwpqv_HS2B018Sg______50"
+    image = root / "L_IRORKWQ8MKHZ-1-1-7AFYK3-1-1-1-22-棉.png"
+    root.mkdir()
+    image.touch()
+    assert find_s2b_batch_folder(image).expected_count == 50
+    assert image_batch_number(image) == "IRORKWQ8MKHZ"
+    from automatic_print.layout_engine.intake.metadata.source_metadata import source_size
+    assert source_size(image) == "L"
+
+    mixed_root = tmp_path / "HS2B016Sg______12_PBDUHXTM9NQ9_20260921_012009_mdboi3c7"
+    second = mixed_root / "S_OGNWD9UB7QR3-1-1-ORDER8-1-1-1-1-棉.png"
+    mixed_root.mkdir()
+    second.touch()
+    assert image_batch_number(second) == "OGNWD9UB7QR3"
+    monkeypatch.setattr(
+        "automatic_print.automation.api.s2b.metadata.prepare.gateway_config",
+        lambda: ("https://example.test", "key"),
+    )
+    calls = []
+
+    def fetch(code):
+        calls.append(code)
+        order, size = ("7AFYK3", "L") if code == "IRORKWQ8MKHZ" else ("ORDER8", "S")
+        return {"batch_number": code, "records": [
+            {"order_code": order, "order_item_code": f"{order}-1",
+             "size": size, "color": "黑色"},
+        ]}
+
+    monkeypatch.setattr(
+        "automatic_print.automation.api.s2b.metadata.prepare.fetch_s2b_batch_info", fetch,
+    )
+    result = prepare_s2b_metadata([image, second], SimpleNamespace())
+    assert calls == ["IRORKWQ8MKHZ", "OGNWD9UB7QR3"]
+    assert [record["matched_images"] for record in result] == [1, 1]

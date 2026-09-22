@@ -116,6 +116,23 @@ def test_s2b_two_images_with_one_label_are_recognized_as_double(tmp_path):
     assert is_double_pair(front, back)
 
 
+def test_underscore_s2b_two_view_item_stays_together(tmp_path):
+    root = tmp_path / 'HS2B011Mt______20_KU7S5B8XMFDW_20260919_232509_qkgzot2a'
+    front = root / 'K3ELXV_1_1_2_6_棉_XL_X64RYCOFJJPJ-5_3.png'
+    back = root / 'K3ELXV_1_1_2_6_棉_XL_X64RYCOFJJPJ-5_4.png'
+    from automatic_print.layout_engine.orders.order_groups import (
+        complete_orders, is_double_pair, order_key,
+    )
+    from automatic_print.layout_engine.intake.metadata.source_metadata import source_size
+    complete_orders([back, front])
+    assert order_key(front) == 'k3elxv'
+    assert source_size(front) == 'XL'
+    assert pair_identity(front) == ('s2b:x64rycofjjpj:k3elxv-1:xl', '1')
+    assert pair_identity(back) == ('s2b:x64rycofjjpj:k3elxv-1:xl', '2')
+    assert is_double_pair(front, back)
+    assert ordered_paths([back, front]) == [front, back]
+
+
 def test_s2b_single_image_is_not_invented_as_double(tmp_path):
     image = tmp_path/'S'/'22UJ9KT4VCZA-22-4-ROE6UL-1-1-1-36-棉-S.png'
     from automatic_print.layout_engine.orders.order_groups import complete_orders
