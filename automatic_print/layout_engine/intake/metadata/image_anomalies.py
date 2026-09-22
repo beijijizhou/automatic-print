@@ -4,7 +4,7 @@ from automatic_print.layout_engine.cutting.geometry.cut_guide_geometry import de
 
 def collect_image_anomalies(paths, settings, planned=()):
     want_number = bool(settings.number_images)
-    want_platform = bool(settings.platform_name)
+    want_platform = bool(settings.platform_name and not settings.platform_reuse_qr)
     if not want_number and not want_platform:
         return []
     placements = {str(path): placement for path, placement in planned}
@@ -25,7 +25,10 @@ def collect_image_anomalies(paths, settings, planned=()):
         platform_skipped = want_platform and not placement.platform_width_px
         if not number_skipped and not platform_skipped:
             continue
-        if number_skipped and platform_skipped:
+        if number_skipped and settings.platform_reuse_qr and settings.platform_name:
+            kind = '膜标签短边没有经过像素验证的批次及平台尺码文字空位'
+            action = '原图保留；跳过本张新增文字；刀码及其他图片继续完成排版'
+        elif number_skipped and platform_skipped:
             kind = '膜标签没有经过像素验证的批次及平台文字空位'
             action = '原图保留；跳过本张批次及平台尺码文字；刀码及其他图片继续完成排版'
         elif number_skipped:

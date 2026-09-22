@@ -153,12 +153,14 @@ def planned_output_path(
         settings.label_text_template, 1, paths[0], datetime.now().astimezone(),
         settings.label_date_format, settings.machine_number,
         batch_name=settings.label_batch_name,
+        platform_name=settings.platform_name,
     )
     if settings.label_machine_enabled or settings.label_sequence_enabled:
         label_text = format_label(
             settings.label_text_template, 1, paths[0], datetime.now().astimezone(),
             settings.label_date_format, settings.machine_number,
             batch_name=settings.label_batch_name,
+            platform_name=settings.platform_name,
         )
     ordered = sorted(planned, key=lambda entry: (entry[1].row_y_px, entry[1].x_px))
     sizes = size_range_label([path for path, _placement in ordered])

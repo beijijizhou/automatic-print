@@ -4,7 +4,7 @@ os.environ.setdefault('QT_QPA_PLATFORM', 'offscreen')
 from PySide6.QtWidgets import QApplication
 
 from automatic_print.automation.api.riin import RiinProbeReport, RiinWindow
-from automatic_print.automation.api.riin.window_control import _matching_windows, probe_riin
+from automatic_print.automation.api.riin.desktop_controls.window_control import _matching_windows, probe_riin
 from automatic_print.ui.riin_diagnostic import RiinDiagnosticDialog
 
 
@@ -12,7 +12,7 @@ APP = QApplication.instance() or QApplication([])
 
 
 def test_probe_reports_unsupported_platform(monkeypatch):
-    monkeypatch.setattr('automatic_print.automation.api.riin.window_control.sys.platform', 'darwin')
+    monkeypatch.setattr('automatic_print.automation.api.riin.desktop_controls.window_control.sys.platform', 'darwin')
     report = probe_riin('RIIN')
     assert not report.found
     assert 'Windows' in report.error

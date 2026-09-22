@@ -153,7 +153,7 @@ def wait_for_print_file(output, timeout=7200):
 
 def inspect_printexp():
     from pywinauto import Desktop
-    from .desktop import accessible_inventory, dialog_inventory
+    from .desktop_controls.desktop import accessible_inventory, dialog_inventory
     window = Desktop(backend='win32').window(title='PrintExp').wrapper_object()
     return dict(handle=window.handle, process_id=window.process_id(),
                 controls=accessible_inventory(window.handle),

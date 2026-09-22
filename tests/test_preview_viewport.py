@@ -24,6 +24,7 @@ def test_zoom_expansion_reuses_real_snapshot_and_restores(tmp_path):
         cutter_mode='dual', cutter_auto_knife=True, number_images=False)
     planned, labels, _, _, _ = plan_layout(paths, settings, None)
     window = MainWindow(QSettings(str(tmp_path/'prefs.ini'), QSettings.IniFormat))
+    window.department_selector.setCurrentIndex(window.department_selector.findData('dtf'))
     OWNERS.append(window)
     window.startup_update_timer.stop()
     panel = window.automation_home.label_quick_panel

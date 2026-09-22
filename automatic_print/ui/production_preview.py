@@ -63,6 +63,7 @@ class ProductionPreview(QWidget):
             datetime.now().astimezone(), settings.label_date_format,
             settings.machine_number, 1,
             batch_name=self.batch_name,
+            platform_name=settings.platform_name,
         )
 
     def refresh(self, *_args):

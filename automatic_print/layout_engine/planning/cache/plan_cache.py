@@ -13,7 +13,7 @@ from automatic_print.layout_engine.domain.models import Placement
 
 SCHEMA = 1
 LAYOUT_ALGORITHM_REVISION = 11
-DEVELOPER_LAYOUT_ALGORITHM_REVISION = 19
+DEVELOPER_LAYOUT_ALGORITHM_REVISION = 20
 SHARED_KNIFE_LAYOUT_ALGORITHM_REVISION = 8
 ORDER_SIDE_LAYOUT_ALGORITHM_REVISION = 4
 TTL_SECONDS = 24 * 60 * 60
@@ -67,7 +67,11 @@ def cache_key(paths, settings, created_at, progress=None):
                           if developer_knife_gap or developer_compact
                           else LAYOUT_ALGORITHM_REVISION)
     data = {'schema': SCHEMA, 'algorithm': algorithm_revision, 'files': files,
-            'settings': settings_data, 'date': date}
+            'settings': settings_data, 'date': date, 'font_revision': 1}
+    if settings.platform_reuse_qr:
+        # Old plans placed text into the source membrane card and cached both
+        # its geometry and label strings.  Rebuild only affected plans.
+        data['production_label_revision'] = 2
     return sha256(json.dumps(data, sort_keys=True, ensure_ascii=False).encode()).hexdigest()
 
 

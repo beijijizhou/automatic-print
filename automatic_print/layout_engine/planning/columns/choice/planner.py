@@ -71,7 +71,7 @@ def plan_choice_cutter_layout(
         planned.extend((path, replace(
             placement, cut_knife_x_px=knife,
             cut_knife_xs_px=(knife,), cut_column_count=2,
-            cut_zone='旋转区',
+            cut_zone='常规区',
         )) for path, placement in _place_choice(row, 0, y))
         y += row.height + spacing
         index += count

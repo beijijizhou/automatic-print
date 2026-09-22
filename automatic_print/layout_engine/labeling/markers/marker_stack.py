@@ -27,6 +27,9 @@ def header_safe_coordinates(
     _bx, _by, bw, bh = block
     _lx, _ly, lw, lh = label
     px, py, pw, ph = platform
+    if settings.platform_reuse_qr:
+        # This mode merges platform text into the separate production label.
+        px = py = pw = ph = 0
     if rotated_short_edge and not settings.preserve_header_gap:
         from automatic_print.layout_engine.labeling.platform.short_edge_space import short_edge_space
         reserved = ((px, py, pw, ph),) if pw and ph else ()
@@ -49,25 +52,16 @@ def header_safe_coordinates(
     # A left card uses its right side; a right card uses its left side. Both
     # positions stay inside the original image footprint.
     block_x = _bx if not settings.preserve_header_gap else (-bw if bw else 0)
-    from automatic_print.layout_engine.labeling.platform.platform_space import (
-        card_rect_clear, header_space,
-    )
+    from automatic_print.layout_engine.labeling.platform.platform_space import header_space
     from automatic_print.layout_engine.labeling.platform.short_edge_space import short_edge_space
     reserved = ()
     if pw and ph:
         if not settings.preserve_header_gap and not rotated_short_edge:
             reserved = ((px, py, pw, ph),)
-        elif ph > available_height and not settings.platform_reuse_qr:
+        elif ph > available_height:
             px = py = pw = ph = 0
         if not settings.preserve_header_gap and not rotated_short_edge:
             pass  # Preserve the explicit external platform stack, if configured.
-        elif settings.platform_reuse_qr:
-            if not card_rect_clear(path, image_size[0], height, degrees,
-                                   (px, py, pw, ph)):
-                # A platform badge is optional. Keep the source image and the
-                # cutter geometry unchanged when the QR card has no verified
-                # blank rectangle.
-                px = py = pw = ph = 0
         elif degrees % 180:
             position = short_edge_space(path, region, image_size[0], height,
                                         pw, ph, degrees)
@@ -113,16 +107,13 @@ def stacked_coordinates(settings, block, label, platform):
     bx, by, bw, bh = block
     lx, ly, lw, lh = label
     px, py, pw, ph = platform
+    if settings.platform_reuse_qr:
+        px = py = pw = ph = 0
     if ((settings.preserve_header_gap and settings.cutter_mode != 'free')
             or not settings.platform_below_marker or not bw):
         return bx, by, lx, ly, px, py
     gap = max(1, mm_to_px(settings.color_block_gap_mm, settings.dpi))
-    # A badge reused inside the source QR card is not part of the external
-    # cutter-marker column. Reserving its width here would count it twice and
-    # can incorrectly make otherwise safe multi-column rows impossible.
-    external_platform_width = 0 if settings.platform_reuse_qr else pw
-    x = -max(bw, lw, external_platform_width)-gap
+    x = -max(bw, lw, pw)-gap
     y = by+bh+mm_to_px(settings.number_gap_mm, settings.dpi)
-    external_platform = ph and not settings.platform_reuse_qr
-    label_y = y+ph+mm_to_px(settings.platform_gap_mm, settings.dpi) if external_platform else y
-    return x, by, x, label_y, (px if settings.platform_reuse_qr else x), (py if settings.platform_reuse_qr else y)
+    label_y = y+ph+mm_to_px(settings.platform_gap_mm, settings.dpi) if ph else y
+    return x, by, x, label_y, x, y

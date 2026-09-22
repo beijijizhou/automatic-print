@@ -8,8 +8,8 @@ from uuid import uuid4
 
 from automatic_print.layout_engine.intake.metadata.images import print_dimensions
 from .cache_files import replace_with_busy_retry, unlink_temporary
-from .preparation import gap_geometry_file, save_gap_copy
-from .report import verify_records
+from ..preparation import gap_geometry_file, save_gap_copy
+from ..report import verify_records
 
 TTL = 86400
 
@@ -21,7 +21,7 @@ def cache_root():
 
 def prepare_one(path, settings, root_provider, header_search):
     path = Path(path)
-    from .virtual import enabled, gap_map
+    from ..virtual import enabled, gap_map
     virtual = enabled(settings)
     existing_virtual = gap_map(settings).get(str(path.resolve())) if virtual else None
     if existing_virtual:

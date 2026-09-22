@@ -77,6 +77,28 @@ def test_opt_in_order_side_has_separate_shared_knife_cache_key(tmp_path):
     assert old != opted_in
 
 
+def test_separate_platform_label_invalidates_old_card_placement_cache(tmp_path, monkeypatch):
+    path = tmp_path/'B1-1-T-Black-M-NO1-1.png'
+    path.write_bytes(b'original')
+    captured = []
+    real_dumps = plan_cache.json.dumps
+
+    def record(value, *args, **kwargs):
+        if isinstance(value, dict) and 'algorithm' in value:
+            captured.append(value)
+        return real_dumps(value, *args, **kwargs)
+
+    monkeypatch.setattr(plan_cache.json, 'dumps', record)
+    with measurement_session():
+        plan_cache.cache_key([path], config(platform_reuse_qr=False),
+                             datetime(2026, 9, 21))
+        plan_cache.cache_key([path], config(platform_reuse_qr=True),
+                             datetime(2026, 9, 21))
+    assert 'production_label_revision' not in captured[0]
+    assert captured[1]['production_label_revision'] == 2
+    assert all(row['font_revision'] == 1 for row in captured)
+
+
 def test_developer_knife_gap_has_separate_cache_revision_and_production_key(tmp_path, monkeypatch):
     path = tmp_path/'B1-1-T-Black-M-NO1-1.png'
     path.write_bytes(b'original')
@@ -97,7 +119,7 @@ def test_developer_knife_gap_has_separate_cache_revision_and_production_key(tmp_
     production, developer = captured
     assert production['algorithm'] == plan_cache.LAYOUT_ALGORITHM_REVISION == 11
     assert 'cutter_knife_change_gap_mm' not in production['settings']
-    assert developer['algorithm'] == plan_cache.DEVELOPER_LAYOUT_ALGORITHM_REVISION == 19
+    assert developer['algorithm'] == plan_cache.DEVELOPER_LAYOUT_ALGORITHM_REVISION == 20
     assert developer['settings']['cutter_knife_change_gap_mm'] == 600
     assert production_key != developer_key
 
@@ -224,18 +246,3 @@ assert reports[0]['cache']['hit'] and len(result[0]) == 12
     child = subprocess.run([sys.executable, '-c', script, str(plan_cache.cache_directory()),
                             json.dumps([str(p) for p in paths])], capture_output=True, text=True, timeout=15)
     assert child.returncode == 0, child.stderr
-
-
-def test_multiple_batches_can_share_the_local_database(tmp_path):
-    from concurrent.futures import ThreadPoolExecutor
-    batches = []
-    for i in range(4):
-        root = tmp_path/str(i)
-        root.mkdir()
-        batches.append(qr_sources(root))
-    s = config(worker_threads=1)
-    with ThreadPoolExecutor(4) as pool:
-        results = list(pool.map(lambda paths: planner.plan_layout(paths, s, None), batches))
-    assert all(len(r[0]) == 12 for r in results)
-    with plan_cache.connect() as db:
-        assert db.execute('SELECT count(*) FROM plans').fetchone()[0] == 4

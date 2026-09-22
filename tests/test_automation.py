@@ -2,7 +2,7 @@ import pytest
 
 from automatic_print.automation.providers.longfeng import BatchPreview, ShippingBatchPlan
 from automatic_print.automation.providers.registry import get_erp_platform
-from automatic_print.automation.batches.rules import (
+from automatic_print.automation.batches.received.rules import (
     RuleBatchItem,
     RuleBatchPlan,
 )

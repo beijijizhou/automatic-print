@@ -10,11 +10,10 @@ from ..ui.layout_values import settings_from_window
 from .platform.actions import BatchActionsMixin
 from .platform.generation import GenerationActionsMixin
 from .platform.routes import RouteActionsMixin
-from .platform.generation_page import build_batch_generation_page
+from .platform.view.generation_page import build_accepted_page, build_batch_generation_page
 from .local.actions import LocalActionsMixin
 from .local.page import build_local_page
-from .platform.pages import (
-    build_accepted_page,
+from .platform.view.pages import (
     build_production_page,
 )
 from .task.actions import ThreadActionsMixin

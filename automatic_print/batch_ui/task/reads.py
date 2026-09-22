@@ -32,8 +32,8 @@ class ReadWorker(AutomationWorker):
         from ...automation.browser.session import connect_debug_chrome
         from ...automation.providers.longfeng import find_longfeng_page
         from ...automation.providers.registry import get_erp_platform
-        from ...automation.batches.completed import plan_completed_erp_batches
-        from ...automation.batches.source import (
+        from ...automation.batches.supplements.completed import plan_completed_erp_batches
+        from ...automation.batches.supplements.source import (
             audit_candidate_orders, load_order_snapshot,
         )
         from ...automation.api.erp import list_batch_rules
@@ -73,7 +73,7 @@ class CompletedGenerateWorker(AutomationWorker):
         from ...automation.browser.session import connect_debug_chrome
         from ...automation.providers.longfeng import find_longfeng_page
         from ...automation.providers.registry import get_erp_platform
-        from ...automation.batches.completed import generate_completed_groups
+        from ...automation.batches.supplements.completed import generate_completed_groups
 
         platform = get_erp_platform(self.platform_name)
         with sync_playwright() as playwright:

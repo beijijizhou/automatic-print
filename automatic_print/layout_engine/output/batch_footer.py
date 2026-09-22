@@ -15,6 +15,7 @@ def footer_text(planned, settings, notice):
         settings.label_text_template, 1, paths[0], datetime.now().astimezone(),
         settings.label_date_format, settings.machine_number,
         batch_name=settings.label_batch_name,
+        platform_name=settings.platform_name,
     )
     scope = '本段' if settings.batch_footer_context else '批次'
     lines = [

@@ -4,6 +4,7 @@ from zipfile import ZipFile
 import pytest
 
 from automatic_print.automation.api.ydwx import downloads
+from automatic_print.automation.api.ydwx import archive_split
 from automatic_print.automation.api.ydwx.archive_split import split_uv_archive
 from automatic_print.layout_engine.uv import identify_uv_batch_material, uv_sheet_capacity
 
@@ -118,12 +119,73 @@ def test_existing_split_with_missing_file_is_preserved_and_reported(tmp_path):
     assert archive.exists()
 
 
+def test_existing_split_rejects_same_size_modified_image(tmp_path):
+    archive = tmp_path / "完整稿件.zip"
+    write_archive(archive, 1)
+    spec = identify_uv_batch_material("E_YX_03_Tie_2030__1")
+    result = split_uv_archive(archive, spec)
+    image = next(result.folders[0].glob("*.png"))
+    image.write_bytes(b"changed")
+    assert image.stat().st_size == len(b"image 0")
+    with pytest.raises(ValueError, match="内容变化"):
+        split_uv_archive(archive, spec)
+    assert archive.exists()
+
+
+def test_failed_copy_removes_only_its_stage_and_retry_succeeds(tmp_path):
+    archive = tmp_path / "完整稿件.zip"
+    write_archive(archive, 3)
+    spec = identify_uv_batch_material("E_YX_03_Tie_2030__3")
+
+    def interrupt(_message):
+        raise RuntimeError("copy interrupted")
+
+    with pytest.raises(RuntimeError, match="copy interrupted"):
+        split_uv_archive(archive, spec, progress=interrupt)
+    assert archive.is_file()
+    assert not (tmp_path / "完整稿件-分组").exists()
+    assert not list(tmp_path.glob("完整稿件-分组.未完成-*"))
+
+    result = split_uv_archive(archive, spec)
+    assert result.image_count == 3
+    assert len(list(result.folders[0].glob("*.png"))) == 3
+
+
+def test_failed_stage_cleanup_reports_path_and_preserves_zip(tmp_path, monkeypatch):
+    archive = tmp_path / "完整稿件.zip"
+    write_archive(archive, 1)
+    spec = identify_uv_batch_material("E_YX_03_Tie_2030__1")
+
+    def cannot_remove(_stage):
+        raise OSError("busy")
+
+    monkeypatch.setattr(archive_split.shutil, 'rmtree', cannot_remove)
+    with pytest.raises(OSError, match="临时目录 .* 清理失败"):
+        split_uv_archive(archive, spec,
+                         progress=lambda _message: (_ for _ in ()).throw(RuntimeError("stop")))
+    assert archive.is_file()
+    assert not (tmp_path / "完整稿件-分组").exists()
+
+
 def test_unsafe_zip_member_never_publishes_split(tmp_path):
     archive = tmp_path / "完整稿件.zip"
     with ZipFile(archive, "w") as bundle:
         bundle.writestr("../escape.png", b"bad")
     spec = identify_uv_batch_material("E_YX_03_Tie_2030__1")
     with pytest.raises(ValueError, match="不安全路径"):
+        split_uv_archive(archive, spec)
+    assert archive.exists()
+    assert not (tmp_path / "完整稿件-分组").exists()
+
+
+def test_duplicate_zip_image_path_is_rejected_before_publication(tmp_path):
+    archive = tmp_path / "完整稿件.zip"
+    with ZipFile(archive, "w") as bundle:
+        bundle.writestr("order/image.png", b"first")
+        with pytest.warns(UserWarning, match="Duplicate name"):
+            bundle.writestr("order/image.png", b"other")
+    spec = identify_uv_batch_material("E_YX_03_Tie_2030__2")
+    with pytest.raises(ValueError, match="重复图片路径"):
         split_uv_archive(archive, spec)
     assert archive.exists()
     assert not (tmp_path / "完整稿件-分组").exists()

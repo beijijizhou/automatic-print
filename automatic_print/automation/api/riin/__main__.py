@@ -5,16 +5,16 @@ import json
 from pathlib import Path
 import sys
 
-from .desktop import (
+from .desktop_controls.desktop import (
     accessible_inventory, dialog_inventory, import_menu, open_import, open_output,
     select_document, submit_import, window_inventory,
 )
-from .dialogs import (
+from .desktop_controls.dialogs import (
     acknowledge_import_errors, cancel_crop_warning, cancel_import,
     confirm_import,
 )
 from .elevation import is_administrator, launch_elevated
-from .window_control import probe_riin
+from .desktop_controls.window_control import probe_riin
 from .output import begin_file_output, inspect_printexp, load_printexp, new_document, save_print_file
 from .workflow import automate_layout_to_prn
 

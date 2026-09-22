@@ -5,8 +5,50 @@ import numpy as np
 
 from automatic_print.layout_engine import LayoutSettings
 from automatic_print.layout_engine.cutting.knife_signature import actual_knife_signatures
+from automatic_print.layout_engine.cutting.knife_folders import knife_output_folders
 from automatic_print.layout_engine.cutting.validation.cut_validation import corridor_checks
 from automatic_print.ui.workers import GenerateWorker
+
+
+def test_whole_rotated_batch_with_one_actual_knife_is_regular():
+    part = {
+        'filename': 'batch 旋转区 第001段.png',
+        'placements': [
+            {'cut_zone': '旋转区', 'rotation_degrees': angle,
+             'cut_knife_xs_px': (1960,)}
+            for angle in (0, 0, 90)
+        ],
+        'order_check': {'orders': 3},
+        'cut_corridor': {'pixel_verified': True},
+    }
+    result = {'cutter_mode': 'dual', 'placements': part['placements'],
+              'parts': [part]}
+    assert knife_output_folders(result) == {part['filename']: '常规'}
+
+
+def test_whole_rotated_batch_with_changed_knife_remains_separate():
+    parts = [
+        {'filename': f'batch-{index}.png',
+         'placements': [{'cut_zone': '旋转区', 'cut_knife_xs_px': (knife,)}],
+         'order_check': {'orders': 1},
+         'cut_corridor': {'pixel_verified': True}}
+        for index, knife in enumerate((1960, 2000), 1)
+    ]
+    result = {'cutter_mode': 'dual', 'placements': [
+        placement for part in parts for placement in part['placements']],
+        'parts': parts}
+    assert knife_output_folders(result) == {
+        part['filename']: '旋转' for part in parts}
+
+
+def test_whole_rotated_batch_without_internal_knife_is_not_promoted():
+    part = {'filename': 'single.png',
+            'placements': [{'cut_zone': '旋转区', 'cut_knife_xs_px': ()}],
+            'order_check': {'orders': 1},
+            'cut_corridor': {'pixel_verified': True}}
+    result = {'cutter_mode': 'dual', 'placements': part['placements'],
+              'parts': [part]}
+    assert knife_output_folders(result) == {'single.png': '旋转'}
 
 
 def test_regular_batch_routes_changed_knife_to_sibling_folder(tmp_path, monkeypatch):

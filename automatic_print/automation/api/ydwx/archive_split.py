@@ -13,6 +13,8 @@ from automatic_print.layout_engine.intake.discovery.discovery import SUPPORTED_E
 from automatic_print.layout_engine.output.output_name import label_output_name
 from automatic_print.layout_engine.uv import uv_sheet_capacity
 
+from .archive.verification import verify_existing_split
+
 
 @dataclass(frozen=True)
 class SplitResult:
@@ -30,7 +32,8 @@ def split_uv_archive(archive_path, spec, expected_count=None, progress=None):
     target = archive_path.with_name(f"{archive_path.stem}-分组")
     capacity = uv_sheet_capacity(spec)
     if target.exists():
-        return _existing_split(target, archive_path, spec, capacity)
+        count, folders, warning = verify_existing_split(target, archive_path, spec, capacity)
+        return SplitResult(target, spec.label, capacity, count, folders, warning)
     with ZipFile(archive_path) as archive:
         members = _image_members(archive)
         if not members:
@@ -85,8 +88,16 @@ def split_uv_archive(archive_path, spec, expected_count=None, progress=None):
                 json.dumps(manifest, ensure_ascii=False, indent=2), encoding="utf-8"
             )
             stage.rename(target)
-        except Exception:
-            # Keep the incomplete folder and the original ZIP for inspection/retry.
+        except Exception as error:
+            # Only this run's unpublished stage is disposable; the original
+            # ZIP remains the recoverable source for a clean retry.
+            try:
+                shutil.rmtree(stage)
+            except OSError as cleanup_error:
+                raise OSError(
+                    f"{archive_path.name} 分组失败，且临时目录 {stage} 清理失败："
+                    f"{cleanup_error}；原 ZIP 已保留。"
+                ) from error
             raise
     folders = tuple(target / f"{index}-{len(group)}"
                     for index, group in enumerate(groups, 1))
@@ -95,7 +106,7 @@ def split_uv_archive(archive_path, spec, expected_count=None, progress=None):
 
 
 def _image_members(archive):
-    members = []
+    members, seen = [], set()
     for member in archive.infolist():
         if member.is_dir():
             continue
@@ -109,6 +120,10 @@ def _image_members(archive):
         if path.parts[0] == "__MACOSX" or path.name.startswith("._"):
             continue
         if path.suffix.lower() in SUPPORTED_EXTENSIONS:
+            canonical = str(path)
+            if canonical in seen:
+                raise ValueError(f"ZIP 包含重复图片路径：{member.filename}")
+            seen.add(canonical)
             members.append(member)
     return members
 
@@ -135,38 +150,3 @@ def _canvas_groups(members, capacity):
     if current:
         result.append(current)
     return result, any(len(unit) > 1 for unit in orders.values())
-
-
-def _existing_split(target, archive_path, spec, capacity):
-    try:
-        manifest = json.loads((target / "分组信息.json").read_text(encoding="utf-8"))
-        archive_stat = archive_path.stat()
-        if (manifest["archive"], manifest["archive_bytes"], manifest["archive_mtime_ns"],
-                manifest["material"], manifest["capacity"]) != (
-                archive_path.name, archive_stat.st_size, archive_stat.st_mtime_ns,
-                spec.label, capacity):
-            raise ValueError("源 ZIP 或材质已变化")
-        files = manifest["files"]
-        if len(files) != manifest["image_count"]:
-            raise ValueError("分组清单数量不一致")
-        for item in files:
-            relative = Path(item["path"])
-            if relative.is_absolute() or len(relative.parts) != 2 or ".." in relative.parts:
-                raise ValueError("分组清单路径异常")
-            if (target / relative).stat().st_size != item["bytes"]:
-                raise ValueError(f"{relative} 缺失或大小变化")
-        expected_images = {item["path"] for item in files}
-        actual_images = {
-            path.relative_to(target).as_posix()
-            for path in target.rglob("*")
-            if path.is_file() and path.suffix.lower() in SUPPORTED_EXTENSIONS
-        }
-        if actual_images != expected_images:
-            raise ValueError("分组文件夹存在多余或缺失图片")
-        folders = tuple(target / name for name in dict.fromkeys(
-            Path(item["path"]).parts[0] for item in files
-        ))
-        return SplitResult(target, spec.label, capacity, len(files), folders,
-                           str(manifest.get("warning") or ""))
-    except (KeyError, OSError, TypeError, ValueError, json.JSONDecodeError) as error:
-        raise ValueError(f"已有分组 {target} 未通过复核：{error}；未覆盖原文件。") from error

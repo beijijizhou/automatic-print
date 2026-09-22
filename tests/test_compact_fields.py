@@ -15,6 +15,7 @@ def test_one_row_highlight_and_default_comparison_migration(tmp_path):
     prefs.setValue('source_location', str(tmp_path/'BATCH123'))
     prefs.setValue('cutter/compare_films', False)  # Old default must migrate once.
     window = MainWindow(prefs)
+    window.department_selector.setCurrentIndex(window.department_selector.findData('dtf'))
     OWNERS.append(window)
     window.startup_update_timer.stop()
     window.show()
@@ -34,6 +35,8 @@ def test_one_row_highlight_and_default_comparison_migration(tmp_path):
     assert window._layout_settings().compare_film_sizes
     assert panel.summary.film_table.rowCount() == 4
     viewport = window.automation_home.workbench_scroll.viewport()
+    window.automation_home.workbench_scroll.ensureWidgetVisible(panel.summary.film_table)
+    APP.processEvents()
     assert panel.summary.film_table.mapTo(viewport, QPoint(0, panel.summary.film_table.height())).y() < viewport.height()
     window.cutter_settings.compare_films.setChecked(False)
     window.close()

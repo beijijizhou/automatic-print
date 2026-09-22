@@ -8,6 +8,7 @@ from automatic_print.ui.main_window import MainWindow
 def test_failure_is_separate_and_copies_every_line(tmp_path):
     app=QApplication.instance() or QApplication([])
     window=MainWindow(QSettings(str(tmp_path/'ui.ini'),QSettings.IniFormat))
+    window.department_selector.setCurrentIndex(window.department_selector.findData('dtf'))
     window.startup_update_timer.stop()
     window.show()
     summary=window.generation_preview.panel.summary

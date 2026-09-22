@@ -6,7 +6,7 @@ os.environ.setdefault('QT_QPA_PLATFORM', 'offscreen')
 
 from PySide6.QtWidgets import QApplication, QWidget
 
-from automatic_print.automation.batches.completed import plan_completed_erp_batches
+from automatic_print.automation.batches.supplements.completed import plan_completed_erp_batches
 from automatic_print.batch_ui.platform.completed import CompletedErpPage
 
 

@@ -3,7 +3,7 @@ import ctypes
 from types import SimpleNamespace
 import unittest
 
-from automatic_print.automation.api.riin.window_control import _inspect
+from automatic_print.automation.api.riin.desktop_controls.window_control import _inspect
 
 
 class Function:

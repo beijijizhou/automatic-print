@@ -5,7 +5,7 @@ from types import SimpleNamespace
 
 import pytest
 
-from automatic_print.automation.batches import default_multi
+from automatic_print.automation.batches.received import default_multi
 
 
 def _row(item_id, route, composition, qty=1):

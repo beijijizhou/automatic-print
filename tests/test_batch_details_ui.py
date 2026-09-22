@@ -12,6 +12,7 @@ WINDOWS = []
 
 def test_removed_batch_details_leave_only_developer_pages(tmp_path):
     window = MainWindow(QSettings(str(tmp_path/'details.ini'), QSettings.IniFormat))
+    window.department_selector.setCurrentIndex(window.department_selector.findData('dtf'))
     WINDOWS.append(window)
     window.startup_update_timer.stop()
     window.show()

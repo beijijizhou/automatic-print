@@ -4,11 +4,11 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from ..api.erp.items import list_all_received_items
-from ..api.erp.gateway import production_batch_frame
-from ..api.erp.batches import list_batches
-from ..browser.session import connect_debug_chrome
-from ..providers.longfeng import (
+from ...api.erp.items import list_all_received_items
+from ...api.erp.gateway import production_batch_frame
+from ...api.erp.batches import list_batches
+from ...browser.session import connect_debug_chrome
+from ...providers.longfeng import (
     _filtered_result_count,
     _run_search,
     _select_filter,
@@ -16,8 +16,8 @@ from ..providers.longfeng import (
     find_longfeng_page,
     production_frame,
 )
-from ..providers.registry import get_erp_platform
-from ..workflows.shipping import (
+from ...providers.registry import get_erp_platform
+from ...workflows.shipping import (
     _generate_batch,
     _open_batch_page,
 )

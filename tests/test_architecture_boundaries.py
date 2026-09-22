@@ -13,11 +13,13 @@ def modules(package):
 def test_new_domain_packages_stay_small_and_cohesive():
     for package in (
         'controllers', 'history', 'batch_ui/local', 'batch_ui/platform',
+        'batch_ui/platform/view',
         'batch_ui/task', 'batch_ui/shell',
         'layout_engine/cutting/geometry',
         'layout_engine/cutting/validation', 'layout_engine/diagnostics',
         'layout_engine/intake/discovery', 'layout_engine/intake/metadata',
         'layout_engine/intake/preparation', 'layout_engine/labeling/base',
+        'layout_engine/labeling/gap', 'layout_engine/labeling/gap/cache',
         'layout_engine/labeling/markers', 'layout_engine/labeling/platform',
         'layout_engine/labeling/text', 'layout_engine/measurement',
         'layout_engine/orders', 'layout_engine/output',
@@ -29,9 +31,11 @@ def test_new_domain_packages_stay_small_and_cohesive():
         'layout_engine/rendering', 'layout_engine/rendering/engines',
         'layout_engine/rendering/png',
         'layout_engine/rendering/storage', 'layout_engine/reporting',
-        'automation/batches', 'automation/browser', 'automation/providers',
+        'automation/batches', 'automation/batches/received',
+        'automation/batches/supplements', 'automation/browser', 'automation/providers',
         'automation/transfer', 'automation/workflows', 'automation/api/erp',
-        'runtime', 'updates',
+        'automation/api/ydwx/archive', 'automation/api/riin',
+        'automation/api/riin/desktop_controls', 'diagnostics', 'runtime', 'updates',
         'automation/api/s2b', 'automation/api/s2b/metadata',
         'automation/api/s2b/production', 'ui/workbench',
         'ui/workbench/overview',
@@ -45,6 +49,55 @@ def test_new_domain_packages_stay_small_and_cohesive():
         oversized = [path.name for path in paths
                      if len(path.read_text(encoding='utf-8').splitlines()) > 200]
         assert not oversized, f'{package} 中存在超过200行的模块：{oversized}'
+
+
+def test_batch_and_device_modules_have_one_owner_per_responsibility():
+    expected = {
+        'automation/batches': {'classification.py', 'local.py', 'naming.py'},
+        'automation/batches/received': {
+            'rules.py', 'routes.py', 'default_multi.py', 'received_sizes.py',
+        },
+        'automation/batches/supplements': {
+            'completed.py', 'source.py', 'supplement_sizes.py',
+            'production_multi.py', 'models.py',
+        },
+        'automation/api/riin': {
+            '__main__.py', 'elevation.py', 'jobs.py', 'output.py', 'workflow.py',
+        },
+        'automation/api/riin/desktop_controls': {
+            'desktop.py', 'dialogs.py', 'window_control.py',
+        },
+        'layout_engine/labeling/gap': {
+            'batch.py', 'preparation.py', 'report.py', 'virtual.py',
+        },
+        'layout_engine/labeling/gap/cache': {
+            'cache_files.py', 'cached_copy.py', 'virtual_cache.py',
+        },
+    }
+    for package, names in expected.items():
+        assert {path.name for path in modules(package)} == names
+
+
+def test_business_subpackages_do_not_accumulate_parallel_implementations():
+    source = ROOT / 'automatic_print'
+    oversized = {}
+    overlong = {}
+    for package in source.rglob('__init__.py'):
+        directory = package.parent
+        # ui/ is the cross-feature namespace; its cohesive feature directories
+        # are checked individually, not capped as one business component.
+        if directory == source / 'ui':
+            continue
+        implementations = [path for path in directory.glob('*.py')
+                           if path.name != '__init__.py']
+        if len(implementations) > 5:
+            oversized[directory.relative_to(source).as_posix()] = len(implementations)
+        for path in implementations:
+            lines = len(path.read_text(encoding='utf-8').splitlines())
+            if lines > 200:
+                overlong[path.relative_to(source).as_posix()] = lines
+    assert not oversized, f'业务目录超过五个实现模块：{oversized}'
+    assert not overlong, f'普通实现模块超过200行，需按职责抽取：{overlong}'
 
 
 def test_layout_engine_root_is_only_a_small_facade():
@@ -133,11 +186,16 @@ def test_batch_workbench_matches_navigation_and_task_boundaries():
         '__init__.py', 'actions.py', 'page.py', 'processing.py', 'scanning.py'
     }
     assert {path.name for path in (package/'platform').glob('*.py')} == {
-        '__init__.py', 'actions.py', 'cache.py', 'generation.py', 'pages.py', 'completed.py'
+        '__init__.py', 'actions.py', 'cache.py', 'generation.py',
+        'completed.py', 'routes.py'
+    }
+    assert {path.name for path in (package/'platform/view').glob('*.py')} == {
+        '__init__.py', 'pages.py', 'generation_page.py',
+        'completed_view.py', 'route_view.py'
     }
     assert {path.name for path in (package/'task').glob('*.py')} == {
         '__init__.py', 'actions.py', 'worker.py', 'reads.py',
-        'automatic_print.py'
+        'automatic_print.py', 'generation_actions.py'
     }
 
 

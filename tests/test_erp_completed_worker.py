@@ -12,13 +12,13 @@ def test_completed_plan_reads_the_selected_erp_platform(platform_name):
     with patch('playwright.sync_api.sync_playwright') as playwright, \
          patch('automatic_print.automation.browser.session.connect_debug_chrome') as connect, \
          patch('automatic_print.automation.providers.longfeng.find_longfeng_page') as find, \
-         patch('automatic_print.automation.batches.source.load_order_snapshot',
+         patch('automatic_print.automation.batches.supplements.source.load_order_snapshot',
                return_value=([{'id': '1', 'order_id': 'order'}], {'1': {}})) as load, \
-         patch('automatic_print.automation.batches.completed.plan_completed_erp_batches',
+         patch('automatic_print.automation.batches.supplements.completed.plan_completed_erp_batches',
                return_value=('group',)) as plan, \
          patch('automatic_print.automation.api.erp.list_batch_rules',
                return_value=('rule',)), \
-         patch('automatic_print.automation.batches.source.list_order_items',
+         patch('automatic_print.automation.batches.supplements.source.list_order_items',
                return_value=[{'id': '1'}]):
         result = worker._completed_erp()
 
@@ -37,12 +37,12 @@ def test_production_snapshot_flags_partial_orders_before_generation():
     with patch('playwright.sync_api.sync_playwright'), \
          patch('automatic_print.automation.browser.session.connect_debug_chrome'), \
          patch('automatic_print.automation.providers.longfeng.find_longfeng_page'), \
-         patch('automatic_print.automation.batches.source.load_order_snapshot',
+         patch('automatic_print.automation.batches.supplements.source.load_order_snapshot',
                return_value=([row], {'1': {}})) as load, \
-         patch('automatic_print.automation.batches.completed.plan_completed_erp_batches',
+         patch('automatic_print.automation.batches.supplements.completed.plan_completed_erp_batches',
                return_value=('group',)) as plan, \
          patch('automatic_print.automation.api.erp.list_batch_rules', return_value=()), \
-         patch('automatic_print.automation.batches.source.list_order_items',
+         patch('automatic_print.automation.batches.supplements.source.list_order_items',
                return_value=[row, {'id': '2', 'order_id': 'order'}]):
         result = worker._completed_erp()
     assert load.call_args.kwargs['source_status'] == 5
@@ -68,10 +68,10 @@ def test_bad_production_order_does_not_block_independent_matching_group():
     with patch('playwright.sync_api.sync_playwright'), \
          patch('automatic_print.automation.browser.session.connect_debug_chrome'), \
          patch('automatic_print.automation.providers.longfeng.find_longfeng_page'), \
-         patch('automatic_print.automation.batches.source.load_order_snapshot',
+         patch('automatic_print.automation.batches.supplements.source.load_order_snapshot',
                return_value=(rows, details)), \
          patch('automatic_print.automation.api.erp.list_batch_rules', return_value=()), \
-         patch('automatic_print.automation.batches.source.list_order_items',
+         patch('automatic_print.automation.batches.supplements.source.list_order_items',
                side_effect=order_rows):
         result = worker._completed_erp()
     assert {group.item_ids for group in result['groups']} == {('1',), ('2',)}
@@ -86,7 +86,7 @@ def test_completed_generation_routes_to_selected_erp_platform(platform_name):
     with patch('playwright.sync_api.sync_playwright') as playwright, \
          patch('automatic_print.automation.browser.session.connect_debug_chrome') as connect, \
          patch('automatic_print.automation.providers.longfeng.find_longfeng_page') as find, \
-         patch('automatic_print.automation.batches.completed.generate_completed_groups',
+         patch('automatic_print.automation.batches.supplements.completed.generate_completed_groups',
                return_value=('batch',)) as generate:
         worker._run_action()
 

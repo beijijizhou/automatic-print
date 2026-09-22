@@ -128,11 +128,15 @@ def test_narrow_header_uses_verified_gutter_between_mark_and_source(tmp_path, de
         from automatic_print.layout_engine.labeling.markers.marker_stack import in_short_edge_space
         band = detect_guide_band(path).rotated(degrees)
         assert not result['analysis'].get('header_space_recovery')
-        assert in_short_edge_space(band, planned.width_px, planned.height_px,
-            (planned.number_x_px-planned.x_px, planned.number_y_px-planned.y_px,
-             planned.number_width_px, planned.number_height_px))
-        assert planned.number_y_px >= planned.y_px
-        assert planned.number_y_px+planned.number_height_px <= planned.y_px+planned.height_px
+        if planned.number_width_px:
+            assert in_short_edge_space(band, planned.width_px, planned.height_px,
+                (planned.number_x_px-planned.x_px, planned.number_y_px-planned.y_px,
+                 planned.number_width_px, planned.number_height_px))
+            assert planned.number_y_px >= planned.y_px
+            assert planned.number_y_px+planned.number_height_px <= planned.y_px+planned.height_px
+        else:
+            assert any(row['source'] == path.name and '批次文字空位' in row['kind']
+                       for row in result['analysis']['image_anomalies'])
     else:
         band = detect_guide_band(path)
         assert placement['number_x_px'] >= placement['x_px']+ceil(band.right*placement['width_px'])
@@ -140,8 +144,9 @@ def test_narrow_header_uses_verified_gutter_between_mark_and_source(tmp_path, de
             validate_embedded_marks([(
                 path, replace(planned, number_x_px=planned.x_px),
             )], replace(config, preserve_header_gap=False))
-    with Image.open(tmp_path/'out'/result['filename']) as output:
-        box = (placement['number_x_px'], placement['number_y_px'],
-               placement['number_x_px']+placement['number_width_px'],
-               placement['number_y_px']+placement['number_height_px'])
-        assert output.crop(box).getchannel('A').getbbox()
+    if placement['number_width_px']:
+        with Image.open(tmp_path/'out'/result['filename']) as output:
+            box = (placement['number_x_px'], placement['number_y_px'],
+                   placement['number_x_px']+placement['number_width_px'],
+                   placement['number_y_px']+placement['number_height_px'])
+            assert output.crop(box).getchannel('A').getbbox()

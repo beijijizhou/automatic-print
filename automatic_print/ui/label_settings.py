@@ -60,8 +60,9 @@ class LabelSettingsDialog(QDialog):
         help_label.setWordWrap(True)
         help_label.setTextInteractionFlags(Qt.TextSelectableByMouse)
         qr_help = QLabel(
-            "切膜模式下生产标签位于刀码与原图膜标签之间；原图空白不足时扩出透明走廊。"
-            "文字仍须完整位于膜标签高度范围，无法确认安全范围时禁止输出。"
+            "平台、尺码、机器号和批次信息写在原图膜标签卡片外的同一张生产标签中；"
+            "未旋转时位于卡片朝图片内部的一侧，旋转后位于卡片短边的透明空白。"
+            "卡片内部不加字，空白不足时跳过该图新增文字并显示异常。"
         )
         qr_help.setWordWrap(True)
         qr_help.setTextInteractionFlags(Qt.TextSelectableByMouse)

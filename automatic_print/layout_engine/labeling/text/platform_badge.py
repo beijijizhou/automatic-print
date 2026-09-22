@@ -1,21 +1,13 @@
 """Immutable pixel data for bounded platform-name badges."""
 from functools import lru_cache
 
-from PIL import Image, ImageDraw, ImageFont
+from PIL import Image, ImageDraw
+
+from .fonts import cached_bold_font
 
 
-@lru_cache(maxsize=128)
 def _font(size):
-    for path in (
-        'C:/Windows/Fonts/msyhbd.ttc', 'C:/Windows/Fonts/simhei.ttf',
-        '/System/Library/Fonts/Supplemental/Songti.ttc',
-        '/usr/share/fonts/opentype/noto/NotoSansCJK-Bold.ttc',
-    ):
-        try:
-            return ImageFont.truetype(path, size)
-        except OSError:
-            continue
-    raise ValueError('未找到中文字体，无法清晰打印平台名称。请安装微软雅黑或思源黑体。')
+    return cached_bold_font(size)
 
 
 @lru_cache(maxsize=2048)

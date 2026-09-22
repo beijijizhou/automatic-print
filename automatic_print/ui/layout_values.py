@@ -65,8 +65,8 @@ def settings_from_window(window) -> LayoutSettings:
         developer_gap_loss=True,
         developer_compact_cutter_layout=getattr(window, 'developer_mode_enabled', False),
         platform_below_marker=True,
-        # Platform text belongs to the source label/QR card, never the cutter mark.
-        # Preview and final output therefore always share the same embedded geometry.
+        # Platform and size join the separate production text label.  The
+        # source membrane/QR card must remain pixel-for-pixel unchanged.
         platform_reuse_qr=True,
         membrane_gap_mm=(window.membrane_gap.value() if cutting
                          and window.membrane_gap_enabled.isChecked() else 0),

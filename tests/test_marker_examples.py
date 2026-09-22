@@ -174,6 +174,7 @@ def test_bad_image_keeps_default_page_diagrams_visible(tmp_path):
 
 def test_main_page_examples_start_after_show_and_refresh_on_parameters(tmp_path, monkeypatch):
     window = MainWindow(QSettings(str(tmp_path/'prefs.ini'), QSettings.IniFormat))
+    window.department_selector.setCurrentIndex(window.department_selector.findData('dtf'))
     window.startup_update_timer.stop()
     examples = window.automation_home.label_quick_panel.marker_examples
     assert examples.worker is None

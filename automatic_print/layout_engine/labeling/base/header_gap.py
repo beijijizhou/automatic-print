@@ -1,6 +1,6 @@
 """Public membrane-gap facade used by generation, preview, and analysis."""
 from automatic_print.layout_engine.labeling.base.header_region import search_header
-from automatic_print.layout_engine.labeling.gap.cached_copy import (
+from automatic_print.layout_engine.labeling.gap.cache.cached_copy import (
     cache_root,
     prepare_one as _prepare_one,
 )

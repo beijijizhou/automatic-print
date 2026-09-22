@@ -22,6 +22,12 @@ def cached_bold_font(size: int):
 
 def _load_font(size: int):
     candidates = (
+        'C:/Windows/Fonts/msyhbd.ttc',
+        'C:/Windows/Fonts/Noto Sans SC Bold (TrueType).otf',
+        'C:/Windows/Fonts/simhei.ttf',
+        '/System/Library/Fonts/Supplemental/Songti.ttc',
+        '/usr/share/fonts/opentype/noto/NotoSansCJK-Bold.ttc',
+        '/usr/share/fonts/truetype/noto/NotoSansCJK-Bold.ttc',
         'DejaVuSans-Bold.ttf', 'arialbd.ttf',
         'C:/Windows/Fonts/arialbd.ttf', 'C:/Windows/Fonts/Arial.ttf',
         '/System/Library/Fonts/Supplemental/Arial Bold.ttf',

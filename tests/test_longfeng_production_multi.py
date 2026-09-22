@@ -2,7 +2,7 @@
 
 from unittest.mock import patch
 
-from automatic_print.automation.batches.production_multi import preview_production_multi
+from automatic_print.automation.batches.supplements.production_multi import preview_production_multi
 
 
 SOURCE = ("first", "second")
@@ -31,7 +31,7 @@ def test_cross_size_first_and_same_size_colors_together():
         _row("4", "same-b", "S", "白色", SOURCE[1]),
     ]
     with patch(
-        "automatic_print.automation.batches.production_multi._all_rows",
+        "automatic_print.automation.batches.supplements.production_multi._all_rows",
         return_value=rows,
     ):
         plan = preview_production_multi(None, SOURCE)

@@ -23,6 +23,19 @@ def qr_image(path):
     return path
 
 
+def separate_label_source(path, payload='SIZE'):
+    cv2 = pytest.importorskip('cv2')
+    qr = Image.fromarray(cv2.QRCodeEncoder_create().encode(payload)).convert('RGBA')
+    source = Image.new('RGBA', (270, 250))
+    source.paste('white', (0, 0, 110, 60))
+    source.paste(qr, (75, 10))
+    source.paste('blue', (0, 70, 270, 250))
+    source.save(path, dpi=(25.4, 25.4))
+    source.close()
+    qr.close()
+    return path
+
+
 def settings(**values):
     return LayoutSettings(**(dict(dpi=25.4, margin_mm=0, cutter_mode='dual',
         platform_name='隆丰', label_sequence_enabled=True, label_text_template='CY',
@@ -100,25 +113,19 @@ def test_missing_qr_warns_without_blocking_and_sequence_is_not_duplicated(tmp_pa
 
 
 def test_qr_card_without_verified_space_skips_platform_text_and_continues(
-        tmp_path, monkeypatch):
-    from automatic_print.layout_engine.labeling.platform import platform_label, platform_space
-
+        tmp_path):
     path = qr_image(tmp_path/'A00000002-B7RLBYZ-1-T-LSJ-2-Black-L-NO1-2.png')
-    monkeypatch.setattr(
-        platform_label, '_largest_card_badge',
-        lambda *_args, **_kwargs: (1, 1, 20, 20),
-    )
-    monkeypatch.setattr(platform_space, 'card_rect_clear', lambda *_args, **_kwargs: False)
-
     result = generate_layout(
         [path], tmp_path/'out',
-        settings(cutter_mode='single', platform_reuse_qr=True),
+        settings(cutter_mode='single', platform_reuse_qr=True,
+                 preserve_header_gap=True),
     )
 
     assert (tmp_path/'out'/result['filename']).exists()
     assert result['placements'][0]['platform_width_px'] == 0
     anomaly = result['analysis']['image_anomalies'][0]
     assert anomaly['source'] == path.name
+    assert '批次及平台尺码' in anomaly['kind']
     assert '继续完成排版' in anomaly['action']
 
 
@@ -134,85 +141,65 @@ def test_platform_badge_includes_source_size_and_stays_within_qr_height(tmp_path
 
 
 @pytest.mark.parametrize('degrees', [0, 90])
-def test_source_size_badge_uses_largest_space_inside_rotated_qr_card(
+def test_platform_and_size_use_separate_label_on_card_short_side(
         tmp_path, degrees):
-    cv2 = pytest.importorskip('cv2')
-    qr = Image.fromarray(cv2.QRCodeEncoder_create().encode('SIZE')).convert('RGBA')
-    path = tmp_path/'ORDER-1-T-Black-3XL-NO1-1.png'
-    source = Image.new('RGBA', (270, 250))
-    source.paste('white', (0, 0, 110, 60))
-    source.paste(qr, (75, 10))
-    source.paste('blue', (0, 70, 270, 250))
-    source.save(path, dpi=(25.4, 25.4))
-    source.close()
-    options, _ = read_items([path], settings(
-        cutter_mode='single', platform_reuse_qr=True,
+    path = separate_label_source(tmp_path/'ORDER-1-T-Black-3XL-NO1-1.png')
+    options, labels = read_items([path], settings(
+        cutter_mode='single', platform_reuse_qr=True, preserve_header_gap=True,
         manual_rotations=((str(path.resolve()), degrees),),
     ), None)
     item = options[0][0]
-    source_region = detect_guide_band(path)
-    rotated_region = source_region.rotated(degrees)
-    source_height = item.width if degrees % 180 else item.height
-    maximum = (round(source_region.bottom*source_height)
-               - round(source_region.top*source_height))
-    font_height = item.platform_width if degrees % 180 else item.platform_height
-    assert 0 < font_height <= maximum
-    relative_x = item.platform_rx-item.image_rx
-    relative_y = item.platform_ry-item.image_ry
-    assert relative_x >= round(rotated_region.left*item.width)-1
-    assert relative_y >= round(rotated_region.top*item.height)-1
-    assert relative_x+item.platform_width <= round(rotated_region.right*item.width)+1
-    assert relative_y+item.platform_height <= round(rotated_region.bottom*item.height)+1
-    badge = placement_badge(
-        '隆丰 · 3XL', item.platform_width, item.platform_height, degrees,
-    )
-    assert badge.size == (item.platform_width, item.platform_height)
-    if degrees == 90:
-        assert badge.height > badge.width
-    badge.close()
+    assert '隆丰 · 3XL' in labels[item.index]
+    assert item.platform_width == 0
+    assert item.label_width > 0 and item.label_height > 0
+    card = detect_guide_band(path).rotated(degrees)
+    x, y = item.label_rx-item.image_rx, item.label_ry-item.image_ry
+    if degrees:
+        assert y+item.label_height <= round(card.top*item.height) or y >= round(card.bottom*item.height)
+    else:
+        assert x >= round(card.right*item.width)
+    assert 0 <= x and x+item.label_width <= item.width
 
 
 @pytest.mark.parametrize('engine', ['pillow', 'libvips'])
 @pytest.mark.parametrize('degrees', [0, 90])
-def test_source_size_badge_is_rendered_in_qr_card_for_each_engine(
+def test_platform_and_size_render_outside_unchanged_card_for_each_engine(
         tmp_path, engine, degrees):
-    cv2 = pytest.importorskip('cv2')
-    qr = Image.fromarray(cv2.QRCodeEncoder_create().encode('OUTPUT')).convert('RGBA')
-    path = tmp_path/'ORDER-1-T-Black-3XL-NO1-1.png'
-    source = Image.new('RGBA', (270, 250))
-    source.paste('white', (0, 0, 110, 60))
-    source.paste(qr, (75, 10))
-    source.paste('blue', (0, 70, 270, 250))
-    source.save(path, dpi=(25.4, 25.4))
-    source.close()
+    path = separate_label_source(tmp_path/'ORDER-1-T-Black-3XL-NO1-1.png', 'OUTPUT')
+    plans = []
     result = generate_layout([path], tmp_path/engine, settings(
-        cutter_mode='single', platform_reuse_qr=True, png_engine=engine,
+        cutter_mode='single', platform_reuse_qr=True,
+        preserve_header_gap=True, png_engine=engine,
         manual_rotations=((str(path.resolve()), degrees),),
-    ))
+    ), plan_ready=plans.append)
     placement = result['placements'][0]
-    assert placement['platform_width_px'] > 0
+    item = plans[0]['planned'][0][1]
+    assert (placement['number_width_px'], placement['number_height_px']) == (
+        item.number_width_px, item.number_height_px)
+    assert placement['platform_width_px'] == 0
+    assert placement['number_width_px'] > 0
     region = detect_guide_band(path).rotated(degrees)
-    assert placement['platform_x_px'] >= placement['x_px']+round(region.left*placement['width_px'])-1
-    assert placement['platform_y_px'] >= placement['y_px']+round(region.top*placement['height_px'])-1
-    assert (placement['platform_x_px']+placement['platform_width_px']
-            <= placement['x_px']+round(region.right*placement['width_px'])+1)
-    assert (placement['platform_y_px']+placement['platform_height_px']
-            <= placement['y_px']+round(region.bottom*placement['height_px'])+1)
+    left = int(region.left*placement['width_px'])+2
+    top = int(region.top*placement['height_px'])+2
+    right = int(region.right*placement['width_px'])-2
+    bottom = int(region.bottom*placement['height_px'])-2
     with Image.open(tmp_path/engine/result['filename']) as output:
-        box = (
-            placement['platform_x_px'], placement['platform_y_px'],
-            placement['platform_x_px']+placement['platform_width_px'],
-            placement['platform_y_px']+placement['platform_height_px'],
-        )
-        badge = output.crop(box)
-        assert badge.getchannel('A').getbbox() is not None
-        assert (0, 0, 0, 255) in set(badge.getdata())
+        with Image.open(path) as source:
+            rotated = source.convert('RGBA').rotate(degrees, expand=True)
+            expected = rotated.crop((left, top, right, bottom))
+            actual = output.crop((placement['x_px']+left, placement['y_px']+top,
+                                  placement['x_px']+right, placement['y_px']+bottom))
+            assert expected.tobytes() == actual.tobytes()
+            rotated.close()
+        label = output.crop((placement['number_x_px'], placement['number_y_px'],
+                             placement['number_x_px']+placement['number_width_px'],
+                             placement['number_y_px']+placement['number_height_px']))
+        assert label.getchannel('A').getbbox() is not None
 
 
-def test_qr_reuse_never_falls_back_to_cutter_lane(tmp_path, monkeypatch):
+def test_platform_merge_never_writes_into_source_card(tmp_path):
     from automatic_print.layout_engine.labeling.platform import platform_label
     path = qr_image(tmp_path/'B1-1-T-Black-M-NO1-1.png')
-    monkeypatch.setattr(platform_label, 'card_space', lambda *_a, **_k: None)
     assert platform_label.platform_geometry(
         path, settings(platform_reuse_qr=True), 180, 250, 0
     ) == (0, 0, 0, 0)

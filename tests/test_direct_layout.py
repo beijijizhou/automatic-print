@@ -14,6 +14,7 @@ WINDOWS = []
 
 def make_window(tmp_path):
     window = MainWindow(QSettings(str(tmp_path/'direct.ini'), QSettings.IniFormat))
+    window.department_selector.setCurrentIndex(window.department_selector.findData('dtf'))
     WINDOWS.append(window)
     window.startup_update_timer.stop()
     window.show()

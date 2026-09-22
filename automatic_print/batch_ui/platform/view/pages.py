@@ -1,3 +1,5 @@
+"""Build production-platform batch pages and shared table controls."""
+
 from PySide6.QtWidgets import (
     QCheckBox,
     QComboBox,
@@ -74,26 +76,6 @@ def build_generation_page(owner) -> QWidget:
     return page
 
 
-def build_accepted_page(owner) -> QWidget:
-    page = QWidget()
-    layout = QVBoxLayout(page)
-    intro = QLabel(
-        "显示已经接单但尚未进入生产中的订单。"
-        "批次生成功能只在这个区域。"
-    )
-    intro.setWordWrap(True)
-    owner.accepted_summary = QLabel("尚未读取待生产订单数量。")
-    owner.accepted_table = table_widget(
-        ["订单号", "物流", "项目", "件数", "接单时间", "操作"]
-    )
-    layout.addWidget(intro)
-    layout.addWidget(owner.accepted_summary)
-    layout.addWidget(owner.accepted_table)
-    layout.addWidget(QLabel("批次生成"))
-    layout.addWidget(build_generation_page(owner))
-    return page
-
-
 def build_production_page(owner, output_row: QHBoxLayout) -> QWidget:
     page = QWidget()
     layout = QVBoxLayout(page)
@@ -132,7 +114,7 @@ def build_production_page(owner, output_row: QHBoxLayout) -> QWidget:
         "按当前打印参数生成最终PNG，再逐批交给RIIN生成PRN并加入PrinterExp；"
         "不会启动物理打印。"
     )
-    from .controls.shared_knife import add_shared_knife_controls
+    from ..controls.shared_knife import add_shared_knife_controls
     add_shared_knife_controls(owner)
     owner.open_download_folder = QCheckBox("下载完成后打开文件夹")
     owner.open_download_folder.setChecked(True)

@@ -42,9 +42,58 @@ def test_platform_and_sequence_default_and_persist(tmp_path):
     reopened.close()
 
 
+def test_gap_defaults_follow_platform_and_remain_editable(tmp_path):
+    window = MainWindow(QSettings(str(tmp_path/'gap-platform.ini'), QSettings.IniFormat))
+    WINDOWS.append(window)
+    window.startup_update_timer.stop()
+    mode = window.cutter_settings.mode
+    mode.setCurrentIndex(mode.findData('dual'))
+    platform = window.automation_home.label_quick_panel.platform
+
+    assert platform.currentText() == '隆丰'
+    assert not window.quick_membrane_gap_enabled.isChecked()
+    assert window._layout_settings().membrane_gap_mm == 0
+    for name in ('S2B', 'Haloo', '测试平台'):
+        platform.setCurrentText(name)
+        assert window.quick_membrane_gap_enabled.isChecked()
+        assert window.quick_membrane_gap.value() == 40
+        assert window._layout_settings().membrane_gap_mm == 40
+        if name == 'S2B':
+            assert window.combine_bulk_batches.isChecked()
+
+    window.quick_membrane_gap.setValue(45)
+    assert window._layout_settings().membrane_gap_mm == 45
+    window.quick_membrane_gap_enabled.setChecked(False)
+    assert window._layout_settings().membrane_gap_mm == 0
+    platform.setCurrentText('隆丰')
+    assert not window.quick_membrane_gap_enabled.isChecked()
+    assert window.quick_membrane_gap.value() == 40
+    assert window._layout_settings().membrane_gap_mm == 0
+    window.close()
+
+
+def test_saved_longfeng_gap_override_is_not_replaced_by_default(tmp_path):
+    prefs = QSettings(str(tmp_path/'longfeng-gap.ini'), QSettings.IniFormat)
+    prefs.setValue('label/platform_name', '隆丰')
+    prefs.setValue('layout/membrane_gap_enabled', True)
+    prefs.setValue('layout/membrane_gap_mm', 45)
+    window = MainWindow(prefs)
+    WINDOWS.append(window)
+    window.startup_update_timer.stop()
+    assert window.membrane_gap_enabled.isChecked()
+    assert window.membrane_gap.value() == 45
+    assert window._layout_settings().membrane_gap_mm == 45
+    window.developer_mode_checkbox.setChecked(True)
+    window.developer_mode_checkbox.setChecked(False)
+    assert window.membrane_gap_enabled.isChecked()
+    assert window._layout_settings().membrane_gap_mm == 45
+    window.close()
+
+
 def test_platform_label_can_be_disabled_without_disabling_cutter_marks(tmp_path):
     prefs = QSettings(str(tmp_path/'platform-toggle.ini'), QSettings.IniFormat)
     prefs.setValue('developer/enabled', True)
+    prefs.setValue('department/current', 'dtf')
     window = MainWindow(prefs)
     WINDOWS.append(window)
     window.startup_update_timer.stop()
@@ -99,12 +148,14 @@ def test_old_erp_selection_is_corrected_and_new_manual_label_starts_empty(tmp_pa
     window.close()
 
 
-def test_real_preview_includes_platform_beside_qr(tmp_path):
-    from test_platform_labels import qr_image, settings
+def test_real_preview_includes_platform_and_size_in_separate_label(tmp_path):
+    from test_platform_labels import separate_label_source, settings
     from automatic_print.layout_engine import generate_layout
-    path = qr_image(tmp_path/'B1-1-T-Black-M-NO1-1.png')
+    path = separate_label_source(tmp_path/'B1-1-T-Black-M-NO1-1.png')
     payloads = []
-    generate_layout([path], tmp_path/'out', settings(), plan_ready=payloads.append)
+    generate_layout([path], tmp_path/'out', settings(
+        platform_reuse_qr=True, preserve_header_gap=True,
+    ), plan_ready=payloads.append)
     window = MainWindow(QSettings(str(tmp_path/'preview.ini'), QSettings.IniFormat))
     WINDOWS.append(window)
     window.startup_update_timer.stop()
@@ -116,10 +167,12 @@ def test_real_preview_includes_platform_beside_qr(tmp_path):
     preview = controller.preview
     preview.grab()
     p = preview.planned[0][1]
-    assert p.platform_height_px > 0
-    key = ('隆丰 · M', p.platform_width_px, p.platform_height_px,
-           p.rotation_degrees)
-    assert key in preview.platform_badges
-    assert not preview.platform_badges[key].isNull()
+    assert p.platform_height_px == 0
+    assert p.number_height_px > 0
+    assert '隆丰 · M' in preview.batch_labels[p.sequence_number]
+    preview.overview = False
+    controller.show_pair(0)
+    assert not preview.badges[path].isNull()
+    assert not preview.platform_badges
     controller.end()
     window.close()

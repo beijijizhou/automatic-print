@@ -1,4 +1,4 @@
-"""Readable labels for supplement batch candidates."""
+"""Readable labels for supplement batch candidates in platform views."""
 
 
 def style_label(group) -> str:

@@ -4,7 +4,7 @@ import pytest
 
 from automatic_print.layout_engine import LayoutSettings
 from automatic_print.layout_engine.labeling.base import header_gap
-from automatic_print.layout_engine.labeling.gap import cache_files
+from automatic_print.layout_engine.labeling.gap.cache import cache_files
 from test_header_gap import sample
 
 

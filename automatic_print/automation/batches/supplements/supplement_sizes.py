@@ -3,55 +3,22 @@
 from __future__ import annotations
 
 from collections import defaultdict
-from dataclasses import dataclass
 
-from ..api.erp.items import (
+from ...api.erp.items import (
     generate_supplement_batch,
     list_batch_rules,
     list_production_items,
     production_item_payload,
 )
-from ..browser.session import connect_debug_chrome
-from ..providers.longfeng import find_longfeng_page
-from ..providers.registry import get_erp_platform
+from ...browser.session import connect_debug_chrome
+from ...providers.longfeng import find_longfeng_page
+from ...providers.registry import get_erp_platform
+from .models import SupplementGroup, SupplementItem, SupplementPlan
 
 
 ROUTE_ID = 768786
 STYLE_CODE = "T-LSJ-0"
 SIZE_ORDER = ("S", "M", "L", "XL", "XXL", "3XL-5XL")
-
-
-@dataclass(frozen=True)
-class SupplementItem:
-    item_id: str
-    order_id: str
-    source_batch: str
-    size: str
-    qty: int
-    existing_codes: tuple[str, ...] = ()
-
-
-@dataclass(frozen=True)
-class SupplementGroup:
-    label: str
-    items: tuple[SupplementItem, ...]
-
-    @property
-    def piece_count(self) -> int:
-        return sum(item.qty for item in self.items)
-
-
-@dataclass(frozen=True)
-class SupplementPlan:
-    source_batches: tuple[str, ...]
-    groups: tuple[SupplementGroup, ...]
-    existing_item_count: int = 0
-    partial_mixed_order_ids: tuple[str, ...] = ()
-    allow_existing_mixed: bool = False
-
-    @property
-    def item_count(self) -> int:
-        return sum(len(group.items) for group in self.groups)
 
 
 def _size_group(size: str) -> str:

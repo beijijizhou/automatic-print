@@ -4,8 +4,8 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from ..api.erp.batches import list_batches
-from ..api.erp.items import (
+from ...api.erp.batches import list_batches
+from ...api.erp.items import (
     generate_filtered_batch,
     list_all_received_items,
     list_batch_rules,
@@ -13,9 +13,9 @@ from ..api.erp.items import (
     list_production_items,
     production_item_payload,
 )
-from ..browser.session import connect_debug_chrome
-from ..providers.longfeng import find_longfeng_page
-from ..providers.registry import get_erp_platform
+from ...browser.session import connect_debug_chrome
+from ...providers.longfeng import find_longfeng_page
+from ...providers.registry import get_erp_platform
 
 
 ROUTE_CODE = "A00"

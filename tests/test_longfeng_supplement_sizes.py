@@ -2,7 +2,7 @@
 
 from unittest.mock import patch
 
-from automatic_print.automation.batches.supplement_sizes import (
+from automatic_print.automation.batches.supplements.supplement_sizes import (
     preview_size_supplements,
 )
 
@@ -36,7 +36,7 @@ def test_colors_share_size_group_and_mixed_order_stays_whole():
         _row("5", "d", "XXL", "白色", old_code="prior"),
     ]
     with patch(
-        "automatic_print.automation.batches.supplement_sizes._selected_rows",
+        "automatic_print.automation.batches.supplements.supplement_sizes._selected_rows",
         return_value=rows,
     ):
         safe_plan = preview_size_supplements(None, SOURCE)

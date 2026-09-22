@@ -1,4 +1,4 @@
-from automatic_print.automation.batches.source import audit_candidate_orders
+from automatic_print.automation.batches.supplements.source import audit_candidate_orders
 
 
 def test_candidate_order_audit_reports_changed_and_partial_orders(monkeypatch):
@@ -11,7 +11,7 @@ def test_candidate_order_audit_reports_changed_and_partial_orders(monkeypatch):
         'b': [rows[1], {'id': '3', 'order_id': 'b', 'status': 5}],
     }
     monkeypatch.setattr(
-        'automatic_print.automation.batches.source.list_order_items',
+        'automatic_print.automation.batches.supplements.source.list_order_items',
         lambda _page, order_id: actual[order_id],
     )
     reports = []
@@ -33,7 +33,7 @@ def test_production_special_routes_are_blocked_from_generic_supplement(monkeypat
          'process_route_code': 'A00', 'order_composition': 3},
     ]
     monkeypatch.setattr(
-        'automatic_print.automation.batches.source.list_order_items',
+        'automatic_print.automation.batches.supplements.source.list_order_items',
         lambda _page, order_id: [row for row in rows if row['order_id'] == order_id],
     )
     issues = audit_candidate_orders(None, rows)

@@ -1,8 +1,9 @@
 """One bounded RIIN import-to-PRN workflow without physical printing."""
 from pathlib import Path
 
-from . import desktop, output as riin_output
-from .dialogs import confirm_import
+from . import output as riin_output
+from .desktop_controls import desktop
+from .desktop_controls.dialogs import confirm_import
 
 
 def automate_layout_to_prn(handle, process_id, source, output, paths=None):

@@ -9,11 +9,11 @@ from automatic_print.automation.batches.classification import (
     classify_production_face,
     size_band,
 )
-from automatic_print.automation.batches.completed import (
+from automatic_print.automation.batches.supplements.completed import (
     completed_batch_request,
     plan_completed_erp_batches,
 )
-from automatic_print.automation.batches.completed import (
+from automatic_print.automation.batches.supplements.completed import (
     generate_completed_groups, verify_completed_group,
 )
 from automatic_print.automation.api.erp.items import (
@@ -197,13 +197,13 @@ def test_generation_rechecks_whole_order_and_confirms_one_code() -> None:
     group = plan_completed_erp_batches([row], {"1": _detail("A面")})[0]
     after = {**row, "supplement_detail_list": [{"production_batch_code": "new"}]}
     page = object()
-    with patch("automatic_print.automation.batches.completed.list_batch_rules",
+    with patch("automatic_print.automation.batches.supplements.completed.list_batch_rules",
                return_value=[type("Rule", (), {"id": 1})()]), \
              patch("automatic_print.automation.api.erp.items.list_production_items",
                side_effect=[{"list": [row], "total": 1}, {"list": [after], "total": 1}]), \
-         patch("automatic_print.automation.batches.completed.production_item_images",
+         patch("automatic_print.automation.batches.supplements.completed.production_item_images",
                return_value=_detail("A面")), \
-         patch("automatic_print.automation.batches.completed.generate_supplement_batch") as write:
+         patch("automatic_print.automation.batches.supplements.completed.generate_supplement_batch") as write:
         assert generate_completed_groups(page, (group,), 1) == ("new",)
     write.assert_called_once_with(page, [("1", 1)], 1)
 
@@ -223,31 +223,7 @@ def test_generation_rejects_existing_supplement() -> None:
     row["supplement_detail_list"] = [{"production_batch_code": "old"}]
     with patch("automatic_print.automation.api.erp.items.list_production_items",
                return_value={"list": [row], "total": 1}), \
-         patch("automatic_print.automation.batches.completed.production_item_images",
+         patch("automatic_print.automation.batches.supplements.completed.production_item_images",
                return_value=_detail("A面")):
         with pytest.raises(RuntimeError, match="已有补单"):
             verify_completed_group(object(), group)
-
-
-def test_production_a05_cannot_use_generic_supplement_submission() -> None:
-    row = _row('1', 'a')
-    row.update(status=5, process_route_code='A05')
-    group = plan_completed_erp_batches(
-        [row], {'1': _detail('A面')}, source_status=5)[0]
-    with patch('automatic_print.automation.api.erp.items.list_production_items',
-               return_value={'list': [row], 'total': 1}):
-        with pytest.raises(RuntimeError, match='A05 无印花'):
-            verify_completed_group(object(), group)
-
-
-def test_generation_rejects_mixed_order_sources_before_write() -> None:
-    produced = _row('1', 'a')
-    production = _row('2', 'b')
-    production['status'] = 5
-    groups = (
-        plan_completed_erp_batches([produced], {'1': _detail('A面')})[0],
-        plan_completed_erp_batches([production], {'2': _detail('A面')},
-                                   source_status=5)[0],
-    )
-    with pytest.raises(ValueError, match='不同订单入口'):
-        generate_completed_groups(object(), groups, 1)

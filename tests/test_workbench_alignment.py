@@ -11,7 +11,7 @@ from PySide6.QtCore import QSettings
 from PySide6.QtWidgets import QApplication, QDialog, QPlainTextEdit
 from automatic_print.ui.main_window import MainWindow
 from automatic_print.batch_ui.dialog import AutomationDialog
-from automatic_print.automation.batches.completed import plan_completed_erp_batches
+from automatic_print.automation.batches.supplements.completed import plan_completed_erp_batches
 from automatic_print.automation.api.erp.items import BatchRule
 
 APP = QApplication.instance() or QApplication([])

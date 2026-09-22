@@ -60,6 +60,32 @@ def test_developer_choice_zone_reports_full_placement_height(tmp_path):
     )
 
 
+def test_developer_orientation_choices_keep_one_regular_knife_zone(tmp_path):
+    from automatic_print.layout_engine.domain.models import mm_to_px
+    from automatic_print.layout_engine.planning.columns.cutter_planner import read_cutter_items
+    from automatic_print.layout_engine.planning.columns.choice.planner import plan_choice_cutter_layout
+    from automatic_print.layout_engine.planning.rotation.rotation_zones import rotation_items
+
+    paths = _sources(tmp_path)
+    settings = LayoutSettings(
+        dpi=25.4, media_width_mm=580, margin_mm=0, spacing_mm=8,
+        cutter_mode='dual', cutter_auto_knife=True,
+        number_images=False, allow_rotation=True,
+    )
+    normal, labels = read_cutter_items(paths, settings, None, prepare_rotations=True)
+    rotated, rotated_labels = rotation_items(paths, settings)
+    normal_by_path = {row[0].path: row[0] for row in normal}
+    options = [[normal_by_path[path], *([rotated[path]] if path in rotated else [])]
+               for path in paths]
+    planned, _labels, _width, _height, _baseline = plan_choice_cutter_layout(
+        paths, settings, options, labels | rotated_labels,
+        mm_to_px(settings.spacing_mm, settings.dpi),
+    )
+    assert {placement.cut_zone for _path, placement in planned} == {'常规区'}
+    assert len({placement.cut_knife_xs_px for _path, placement in planned}) == 1
+    assert all(placement.cut_knife_xs_px for _path, placement in planned)
+
+
 def test_batch_end_block_is_the_only_reason_to_restore_full_film_width(tmp_path):
     paths = _sources(tmp_path)
     base = LayoutSettings(dpi=25.4, media_width_mm=580, margin_mm=0,

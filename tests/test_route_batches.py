@@ -2,7 +2,7 @@ from types import SimpleNamespace
 
 import pytest
 
-from automatic_print.automation.batches import routes
+from automatic_print.automation.batches.received import routes
 
 
 class _Frame:

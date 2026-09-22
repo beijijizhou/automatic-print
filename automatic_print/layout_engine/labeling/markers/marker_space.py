@@ -76,6 +76,11 @@ def can_embed_marker(path, width, height, degrees, block, label, platform):
 def validate_embedded_marks(planned, settings=None):
     """Recheck every source rectangle independently of the packing decision."""
     for path, p in planned:
+        if (settings and settings.platform_reuse_qr
+                and p.platform_width_px and p.platform_height_px):
+            raise ValueError(
+                f'{path.name}：平台文字应并入卡外生产标签，禁止在膜标签卡内另行绘制。'
+            )
         if settings:
             from .marker_stack import validate_stack
             validate_stack(path, p, settings)
@@ -103,11 +108,6 @@ def validate_embedded_marks(planned, settings=None):
                     from .marker_stack import in_short_edge_space
                     valid = in_short_edge_space(header, p.width_px, p.height_px,
                         (x-p.x_px, y-p.y_px, w, h))
-                    if (kind == '平台' and settings.platform_reuse_qr and w and h
-                            and not valid):
-                        from automatic_print.layout_engine.labeling.platform.platform_space import card_rect_clear
-                        valid = card_rect_clear(path, p.width_px, p.height_px,
-                            p.rotation_degrees, (x-p.x_px, y-p.y_px, w, h))
                 else:
                     valid = y >= header_top and y+h <= header_bottom
                 if w and h and not valid:
@@ -116,15 +116,7 @@ def validate_embedded_marks(planned, settings=None):
                     )
                 overlaps = w and h and x < p.x_px+p.width_px and x+w > p.x_px and y < p.y_px+p.height_px and y+h > p.y_px
                 in_header = valid
-                if kind == '平台' and settings.platform_reuse_qr and overlaps:
-                    from automatic_print.layout_engine.labeling.platform.platform_space import card_rect_clear
-                    reused = card_rect_clear(
-                        path, p.width_px, p.height_px, p.rotation_degrees,
-                        (x-p.x_px, y-p.y_px, w, h),
-                    )
-                else:
-                    reused = False
-                if overlaps and not in_header and not reused:
+                if overlaps and not in_header:
                     raise ValueError(f'{path.name}：文字进入膜标签与图案之间的禁用区域，禁止输出。')
         if p.rotation_degrees % 360:
             from automatic_print.layout_engine.cutting.geometry.cut_guide_geometry import detect_guide_band
@@ -164,14 +156,8 @@ def validate_embedded_marks(planned, settings=None):
         for kind, x, y, w, h in rectangles:
             if w and h and x < p.x_px+p.width_px and x+w > p.x_px and y < p.y_px+p.height_px and y+h > p.y_px:
                 relative = (x-p.x_px, y-p.y_px, w, h)
-                if kind == '平台' and settings and settings.platform_reuse_qr:
-                    from automatic_print.layout_engine.labeling.platform.platform_space import card_rect_clear
-                    clear = card_rect_clear(
-                        path, p.width_px, p.height_px, p.rotation_degrees, relative,
-                    )
-                else:
-                    clear = transparent_rect(
-                        path, p.width_px, p.height_px, p.rotation_degrees, relative,
-                    )
+                clear = transparent_rect(
+                    path, p.width_px, p.height_px, p.rotation_degrees, relative,
+                )
                 if not clear:
                     raise ValueError(f'{path.name}：内置刀码或文字会覆盖原图，禁止输出。')

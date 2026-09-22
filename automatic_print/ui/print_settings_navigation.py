@@ -50,18 +50,20 @@ def build_settings_navigation(window, source):
         window.preferences.value('layout/combine_bulk_batches', False, bool))
     window.combine_bulk_batches.setToolTip(
         '多批次排版时只生成一个排版任务；直接合并原图清单，不先生成各子批次PNG。')
-    def platform_defaults(name):
+    def platform_defaults(name, *, initial=False):
         from .parameter_refresh import defer_parameter_refresh
         with defer_parameter_refresh(window):
             platform = name.strip()
-            if platform == 'Haloo' or (
-                platform == '莆田' and getattr(window, 'developer_mode_enabled', False)
-            ):
+            # Keep a deliberate saved Longfeng override on startup; a later
+            # platform switch always applies the selected platform's default.
+            saved_longfeng = (initial and platform == '隆丰'
+                              and window.preferences.contains('layout/membrane_gap_enabled'))
+            if platform and not saved_longfeng:
                 window.membrane_gap.setValue(40)
-                window.membrane_gap_enabled.setChecked(True)
+                window.membrane_gap_enabled.setChecked(platform != '隆丰')
                 window.preferences.setValue('layout/membrane_gap_mm', 40)
-                window.preferences.setValue('layout/membrane_gap_enabled', True)
-            elif platform.casefold() == 's2b':
+                window.preferences.setValue('layout/membrane_gap_enabled', platform != '隆丰')
+            if platform.casefold() == 's2b':
                 dual_index = window.cutter_settings.mode.findData('dual')
                 if dual_index >= 0:
                     window.cutter_settings.mode.setCurrentIndex(dual_index)
@@ -80,7 +82,7 @@ def build_settings_navigation(window, source):
                     window.preferences.setValue(key, value)
     window.apply_platform_defaults = platform_defaults
     window.label_settings.platform.currentTextChanged.connect(platform_defaults)
-    platform_defaults(window.label_settings.platform.currentText())
+    platform_defaults(window.label_settings.platform.currentText(), initial=True)
     window.print_settings_tabs = tabs
     window.layout_rules_form = forms['排版规则']
     window.output_parallel_form = forms['输出与并行']

@@ -3,7 +3,7 @@ from PIL import Image
 
 from automatic_print.layout_engine.cutting.geometry.cut_guide_geometry import detect_guide_band
 from automatic_print.layout_engine.domain.models import mm_to_px
-from automatic_print.layout_engine.labeling.platform.platform_space import card_space, header_space
+from automatic_print.layout_engine.labeling.platform.platform_space import header_space
 from automatic_print.layout_engine.labeling.platform.membrane_region import MembraneRegion
 from automatic_print.layout_engine.measurement.measurement_timing import measured
 from automatic_print.layout_engine.intake.metadata.source_metadata import source_size
@@ -54,6 +54,10 @@ def platform_text(path, settings):
 def platform_geometry(path, settings, width, height, degrees):
     if not settings.platform_name or not settings.number_images:
         return 0, 0, 0, 0
+    if settings.platform_reuse_qr:
+        # Production text is part of the separate batch label; the source
+        # membrane/QR card is never a writable canvas.
+        return 0, 0, 0, 0
     if (settings.platform_below_marker and not settings.platform_reuse_qr
             and settings.color_block_enabled and settings.platform_font_height_mm > 0):
         target = max(2, mm_to_px(settings.platform_font_height_mm, settings.dpi))
@@ -82,71 +86,16 @@ def platform_geometry(path, settings, width, height, degrees):
     gap = mm_to_px(settings.platform_gap_mm, settings.dpi)
     if settings.platform_below_marker and not settings.platform_reuse_qr and settings.color_block_enabled:
         return 0, 0, badge_width, badge_height
-    # Developer mode may explicitly reuse verified QR-card space even while
-    # the original header gap is preserved.
-    search_header = (
-        settings.platform_reuse_qr
-        or not (settings.preserve_header_gap and degrees % 180 == 0)
-    )
+    search_header = not (settings.preserve_header_gap and degrees % 180 == 0)
     fitted = (
-        (_largest_card_badge(
-            path, source_region, source_width, source_height, text, target, degrees)
-         if settings.platform_reuse_qr else
-         _largest_header_badge(
-            path, source_region, source_width, source_height, text, target, gap, degrees))
+        _largest_header_badge(
+            path, source_region, source_width, source_height, text, target, gap, degrees)
         if search_header else None
     )
     if fitted is not None:
         return fitted
-    x = None
-    if x is None:
-        if settings.platform_reuse_qr:
-            # Missing verified space means no added badge. Never move source-label
-            # content into the independent cutter-marker lane.
-            return 0, 0, 0, 0
-        # Never append a wide platform name to the artwork's right edge.
-        x = -gap-badge_width
-    return x, top, badge_width, badge_height
-
-
-def _largest_card_badge(
-        path, source_region, source_width, source_height,
-        text, maximum_height, degrees):
-    """Fit in the source QR card, then rotate the whole label with the image."""
-    from automatic_print.layout_engine.measurement.measurement_session import (
-        SESSION,
-        identity,
-    )
-    session = SESSION.get()
-    key = (
-        'largest-card-badge', identity(path), source_region,
-        source_width, source_height, text, maximum_height,
-    ) if session else None
-    if session and key in session.bands:
-        best = session.bands[key]
-        return (_rotate_rect(best, source_width, source_height, degrees)
-                if best is not None else None)
-    low, high, best = 2, maximum_height, None
-    while low <= high:
-        target = (low + high) // 2
-        try:
-            badge_width, badge_height = platform_badge_size(text, target)
-        except ValueError:
-            low = target + 1
-            continue
-        candidate = card_space(
-            path, source_region, source_width, source_height,
-            badge_width, badge_height,
-        )
-        if candidate is None:
-            high = target - 1
-        else:
-            best = (candidate[0], candidate[1], badge_width, badge_height)
-            low = target + 1
-    if session:
-        session.bands[key] = best
-    return (_rotate_rect(best, source_width, source_height, degrees)
-            if best is not None else None)
+    # Never append a wide platform name to the artwork's right edge.
+    return -gap-badge_width, top, badge_width, badge_height
 
 
 def _largest_header_badge(

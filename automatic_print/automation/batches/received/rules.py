@@ -3,21 +3,21 @@ from __future__ import annotations
 from dataclasses import dataclass
 from collections import Counter
 
-from ..browser.session import connect_debug_chrome
-from .classification import (
+from ...browser.session import connect_debug_chrome
+from ..classification import (
     classify_order_composition,
     composition_filter,
     detailed_compositions,
 )
-from ..api.erp import (
+from ...api.erp import (
     find_batch_rule,
     generate_filtered_batch,
     list_all_received_items,
     list_production_items,
     production_item_payload,
 )
-from ..providers.longfeng import find_longfeng_page
-from ..providers.registry import get_erp_platform
+from ...providers.longfeng import find_longfeng_page
+from ...providers.registry import get_erp_platform
 
 
 @dataclass(frozen=True)

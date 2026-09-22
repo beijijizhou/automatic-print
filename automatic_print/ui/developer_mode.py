@@ -155,7 +155,6 @@ def build_developer_mode(window, footer):
         with defer_parameter_refresh(window):
             window.developer_mode_enabled = enabled
             sync_experimental_platforms(window, enabled)
-            window.apply_platform_defaults(window.label_settings.platform.currentText())
             window.quick_header_gap_group.setVisible(True)
             window.layout_rules_form.setRowVisible(window.membrane_gap_enabled, True)
             window.layout_rules_form.setRowVisible(window.membrane_gap, True)

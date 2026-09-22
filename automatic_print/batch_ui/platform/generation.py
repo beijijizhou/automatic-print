@@ -1,14 +1,8 @@
 from PySide6.QtCore import Slot
 from PySide6.QtGui import QColor
 from PySide6.QtWidgets import (
-    QComboBox,
-    QDialog,
-    QDialogButtonBox,
-    QFormLayout,
-    QLabel,
     QMessageBox,
     QTableWidgetItem,
-    QVBoxLayout,
 )
 
 from ...automation.providers.registry import get_erp_platform
@@ -16,10 +10,11 @@ from ...automation.batches.classification import (
     DOUBLE_FACE,
     detailed_compositions,
 )
-from ...automation.batches.rules import RuleBatchPlan
-from ...automation.batches.routes import RouteBatchPlan
-from ...automation.batches.default_multi import DefaultMultiPlan
+from ...automation.batches.received.rules import RuleBatchPlan
+from ...automation.batches.received.routes import RouteBatchPlan
+from ...automation.batches.received.default_multi import DefaultMultiPlan
 from ..task.worker import AutomationWorker
+from .view.generation_page import ask_generation_rule
 
 
 class GenerationActionsMixin:
@@ -165,42 +160,14 @@ class GenerationActionsMixin:
                 "规则匹配数量与已接单总数不一致，不能生成批次。",
             )
             return
-        details = "\n".join(
-            f"{item.shipping_method} / {item.order_composition}："
-            f"{item.item_count} 项、{item.piece_count} 件"
-            for item in plan.nonempty_items
-        )
-        dialog = QDialog(self)
-        dialog.setWindowTitle("最终确认：生成后无法撤销")
-        description = QLabel(
-            f"平台：{plan.platform_name}\n\n{details}\n\n"
-            f"生成：{plan.total_items} 项"
-        )
-        rule = QComboBox()
-        rule.addItems(
-            ["按有面单生成批次规则", "按无面单生成批次规则"]
-        )
-        form = QFormLayout()
-        form.addRow("批次生成规则", rule)
-        buttons = QDialogButtonBox(
-            QDialogButtonBox.Ok | QDialogButtonBox.Cancel
-        )
-        buttons.button(QDialogButtonBox.Ok).setText(
-            "确认并生成（不可撤销）"
-        )
-        buttons.accepted.connect(dialog.accept)
-        buttons.rejected.connect(dialog.reject)
-        layout = QVBoxLayout(dialog)
-        layout.addWidget(description)
-        layout.addLayout(form)
-        layout.addWidget(buttons)
-        if dialog.exec() != QDialog.Accepted:
+        rule = ask_generation_rule(self, plan)
+        if rule is None:
             return
         self._start_worker(
             AutomationWorker(
                 "generate_rules",
                 plan.platform_name,
                 batch_plan=plan,
-                generation_rule=rule.currentText(),
+                generation_rule=rule,
             )
         )

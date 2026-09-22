@@ -4,8 +4,8 @@ from PySide6.QtWidgets import (
     QCheckBox, QComboBox, QDialog, QDialogButtonBox, QHBoxLayout, QLabel,
     QPlainTextEdit, QPushButton, QSpinBox, QTableWidgetItem, QVBoxLayout, QWidget,
 )
-from .pages import table_widget
-from .completed_view import selected_description, style_label
+from .view.pages import table_widget
+from .view.completed_view import selected_description, style_label
 from ..task.reads import CompletedGenerateWorker, ReadWorker
 
 

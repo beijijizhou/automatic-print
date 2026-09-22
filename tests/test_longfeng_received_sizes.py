@@ -4,7 +4,7 @@ from unittest.mock import patch
 
 import pytest
 
-from automatic_print.automation.batches.received_sizes import (
+from automatic_print.automation.batches.received.received_sizes import (
     _chunks,
     _verify_orders,
     plan_received_multi,
@@ -72,7 +72,7 @@ def test_confirmed_batch_must_not_split_one_order():
          "production_batch_code": "batch-b"},
     ]
     with patch(
-        "automatic_print.automation.batches.received_sizes.list_order_items",
+        "automatic_print.automation.batches.received.received_sizes.list_order_items",
         return_value=actual,
     ):
         with pytest.raises(RuntimeError, match="拆散"):

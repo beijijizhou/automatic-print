@@ -6,8 +6,8 @@ import unittest
 from unittest.mock import MagicMock, patch
 
 from automatic_print.automation.api.riin.__main__ import main
-from automatic_print.automation.api.riin.desktop import open_output, png_import_paths
-from automatic_print.automation.api.riin.dialogs import cancel_crop_warning
+from automatic_print.automation.api.riin.desktop_controls.desktop import open_output, png_import_paths
+from automatic_print.automation.api.riin.desktop_controls.dialogs import cancel_crop_warning
 from automatic_print.automation.api.riin.output import (
     load_printexp, wait_for_print_file,
 )
@@ -176,28 +176,28 @@ class AdminEntryTests(unittest.TestCase):
             output = source / 'batch.prn'
             calls = []
             with patch(
-                'automatic_print.automation.api.riin.desktop.png_import_paths',
+                'automatic_print.automation.api.riin.desktop_controls.desktop.png_import_paths',
                 return_value=(paths, 'selection'),
             ), patch(
-                'automatic_print.automation.api.riin.desktop.import_chunks',
+                'automatic_print.automation.api.riin.desktop_controls.desktop.import_chunks',
                 return_value=[[paths[0]], [paths[1]]],
             ), patch(
-                'automatic_print.automation.api.riin.desktop.open_import',
+                'automatic_print.automation.api.riin.desktop_controls.desktop.open_import',
                 side_effect=lambda handle: calls.append(('open', handle)),
             ), patch(
-                'automatic_print.automation.api.riin.desktop.submit_import_paths',
+                'automatic_print.automation.api.riin.desktop_controls.desktop.submit_import_paths',
                 side_effect=lambda pid, files, index: {'state': 'submitted', 'chunk': index},
             ), patch(
                 'automatic_print.automation.api.riin.workflow.confirm_import',
                 side_effect=lambda pid: {'state': 'confirmed'},
             ), patch(
-                'automatic_print.automation.api.riin.desktop.open_output',
+                'automatic_print.automation.api.riin.desktop_controls.desktop.open_output',
                 return_value={'state': 'output_opened'},
             ), patch(
                 'automatic_print.automation.api.riin.output.new_document',
                 return_value={'state': 'new_document', 'title': '未命名-12'},
             ), patch(
-                'automatic_print.automation.api.riin.desktop.select_document',
+                'automatic_print.automation.api.riin.desktop_controls.desktop.select_document',
                 side_effect=lambda handle, title: calls.append(('select', handle, title))
                 or {'state': 'document_selected'},
             ), patch(

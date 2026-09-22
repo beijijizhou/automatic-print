@@ -12,6 +12,7 @@
   `ProductionPlatformDownloadPage`；UV 可直接使用，DTF 仍受开发者模式门禁。普通下载不自动排版；
   蜂鸟平台保留用户显式启动的 DTF 下载、排版及 PRN 流程，亿点万象下载不自动启动 UV 排版。
 - 亿点万象（跨项目规范名“忆点万象”）：`automation/api/ydwx/gateway.py` 调用 `credentials.py`；正式构建沿用 Windows 注入的受限客户端密钥，公开源码从 `\\192.168.11.28\dtf\.automatic-print\ydwx-gateway.key` 读取独立受限密钥并缓存到当前用户配置目录。`ydwx-production` Edge Function 用服务端 Secret 登录 SDS，桌面端不接收平台账号或 token。`batches.py` 读取按日期分组的生产批次；平台兼有 UV 和 DTF 订单，当前不从平台名推断部门。`layout_engine/uv/material_codes.py` 只从明确 SKU 识别材质并复用 `sheet.py` 的单画布容量；`downloads.py` 重新核对勾选批次后下载并保留 ZIP，`archive_split.py` 以实际图片数原子发布画布容量分组并保留原路径清单，未知材质和失败不冒充可排版结果；`ui/ydwx_download.py` 后台管理批次、材质预估、进度和错误，不自动排版。Edge Function 关闭平台默认 JWT 校验，配置 `AUTOMATIC_PRINT_API_KEY`、`YDWX_SHARE_API_KEY` 和 `YDWX_FACTORY_LOGIN_JSON`。
+- UV 下载分组中途失败时，`automation/api/ydwx/archive_split.py`清理由本次运行创建且未发布的临时目录，保留原 ZIP 供重试；若清理失败，向用户报告临时目录路径。ZIP 重复图片路径不发布；`archive/verification.py`复用已有分组时按原 ZIP 的 CRC 逐文件复核，不能只比较大小，旧清单无需迁移。
 - UV固定画布：`layout_engine/uv/sheet.py`唯一维护11种材质的成品尺寸、容量、方向和右下起排坐标；
   `layout_engine/uv/render.py`使用libvips合成、复用并行分块原子BigTIFF保存并复核RGBA、画布尺寸和每个图位实际像素；
   `controllers/uv_generation.py`拥有后台线程，`ui/uv_workspace.py`只负责选择目录、进度和结果展示。
@@ -30,11 +31,16 @@
   `platform/`拥有已接单与生产批次页，`task/`拥有后台任务生命周期，`shell/`拥有窗口外壳；
   根目录`dialog.py`只装配这些区域。`shell/view.py`只构造公共控件，`results.py`只展示任务结果，
   `batch_table.py`只映射批次表格。
+- `batch_ui/platform/view/`集中拥有已接单、生产批次和路线页的控件构造及生成前确认弹窗；
+  `platform/`根目录只保留批次动作、流程状态和缓存。`automation/batches/received/`集中已接单规则、
+  路线和尺码批次；`automation/batches/supplements/`集中生产来源审计及补单规划，根目录保留
+  分类、本地发现和命名。对应界面调用与测试补丁路径均已迁移，结构门禁对三个目录统一执行
+  单目录最多五个实现模块、单文件最多200行，不再为旧批次目录设例外。
 - 排版运行期间的当前阶段、耗时和占比只显示在顶部“开始排版”按钮；下方批次区只保留文件夹队列、
   完成结果、方案耗时与总结，不重复放置当前进度条、当前文件和状态文字。文件夹队列表仅显示
   “文件夹、图片数、尺码群/订单群”，详细阶段保留在行提示中。
 - 普通模式显示生产排版规则、45/60厘米方案、批次记录入口、膜标签间距和额外损耗；本地排版平台列表包含Haloo，莆田仍须开发者模式。生产平台下载工作区仍仅开发者可见。补足膜间距
-  由 `ui/header_gap.py` 的独立开关控制，保存的毫米数值本身不会自动启用；`layout_engine/labeling/base/header_gap.py`负责批次编排，`layout_engine/labeling/gap/virtual.py`让Haloo、S2B、莆田和隆丰持久缓存间距几何并在最终合成时插入透明像素，不创建中间大图；其他平台仍由`layout_engine/labeling/gap/preparation.py`生成兼容副本，`layout_engine/labeling/gap/cache_files.py`负责Windows占用重试和临时文件回收。卡片内部空位搜索保持原有安全顺序与空白约束，按行数组化检查以缩短首次标签测量；补距会越过Haloo标签不属于白色卡片连通域的彩色底栏，再从真实透明分界补足40毫米。批次预览和最终报告显示总数、实际扩充、原本已满足、未能扩充及新增毫米范围。开发者模式显示算法
+  由 `ui/header_gap.py` 的独立开关控制，保存的毫米数值本身不会自动启用；`layout_engine/labeling/base/header_gap.py`负责批次编排，`layout_engine/labeling/gap/virtual.py`让Haloo、S2B、莆田和隆丰持久缓存间距几何并在最终合成时插入透明像素，不创建中间大图；其他平台仍由`layout_engine/labeling/gap/preparation.py`生成兼容副本，`layout_engine/labeling/gap/cache/cache_files.py`负责Windows占用重试和临时文件回收。补距会越过Haloo标签不属于白色卡片连通域的彩色底栏，再从真实透明分界补足40毫米。批次预览和最终报告显示总数、实际扩充、原本已满足、未能扩充及新增毫米范围。开发者模式显示算法
   诊断、排版历史、批量膜分析和批次顺序标注；补距的有界透明缝搜索覆盖标签卡片下方的短不透明尾栏，
   可选单图标签预测失败不再撤销已成功的补距，正式排版仍负责处理实际标签冲突。主界面底部的功能列表按分类展示全部开发者功能
   及当前开启状态；批次总结的单图异常由`ui/image_anomaly_actions.py`逐张提供“打开原图”，切换批次时清除旧入口；膜规格比较固定为45/60厘米四套方案。
@@ -83,7 +89,9 @@
   同一最终计划的真实统计，输出名由 `layout_engine/output/output_name.py` 同时写入订单数和件数。
 - `layout_engine/output/output_name.py` 统一管理输出落点：生成期间写入 `排版日志/.处理中` 隔离目录，
   安全检查完成后由`layout_engine/cutting/knife_folders.py`复核逐文件实际刀位，将普通切膜PNG分别
-  移入`切膜机文件/常规`或`切膜机文件/旋转`；非切膜PNG直接进入`切膜机文件`。
+  移入`切膜机文件/常规`或`切膜机文件/旋转`；整批仅规划为旋转区但所有段共用同一条非空实际纵刀位时仍归常规，
+  不用图片旋转角度或规划区名代替换刀事实；非切膜PNG直接进入`切膜机文件`。
+  `planning/columns/choice/planner.py`的顺序旋转候选允许个别图片调整方向，但所有排共用同一刀位，归入常规区。
   文本报告保存在平级 `排版日志`，不写输出JSON。
 - 多批次生成控制：`automatic_print/controllers/bulk_generation.py` 管理线程、取消和释放；
   `ui/batch_folder_selection.py`在后台扫描并提供批次勾选，`ui/bulk_start.py`负责入口与目录状态，`ui/bulk_workbench.py`、
@@ -136,10 +144,9 @@
   单件批次以完整尺码后缀比较多排区与旋转区分界；已有末尾旋转区时，可把交界前的完整尺码组整体并入旋转区，但同尺码绝不跨区。旋转区的竖图保持横向旋转，超出当前动态安全宽度时再等比缩小；整批旋转被个别超宽图阻断时，
   `layout_engine/planning/zones/gap_fallback.py` 用虚拟尺寸覆盖重跑完整订单局部比较，双面同倍率且整批仍最多只有并排区和旋转区两个区域。
 - 标签与刀码：`layout_engine/labeling/base/labels.py`、`layout_engine/labeling/base/dynamic_label.py`、`layout_engine/labeling/text/templates.py`、`layout_engine/labeling/markers/marker_stack.py`、`layout_engine/labeling/markers/validation/stack.py`、`layout_engine/labeling/markers/left_marker.py`、
-  `layout_engine/labeling/platform/platform_label.py`、`layout_engine/labeling/base/header_region.py`、`layout_engine/labeling/platform/transparent_search.py`。生产标签的机器号、批次正倒序及原图订单尺码共用同一模板和占位；未旋转时按膜标签侧别搜索朝图片内部的透明空白（左卡右放、右卡左放），文字始终留在原图宽度内且不增加排版占位。平台尺码文字只放入原图二维码卡片内部
-  已验证的未印刷白色或透明空位，绝不放到卡片与图案之间，使用不超过二维码卡片高度的最大字号；先在原图坐标确定位置，再与二维码一起旋转，预览与输出复用同一坐标。旋转90度时不论透明带选项或回退状态，`layout_engine/labeling/platform/short_edge_space.py`均只搜索卡片短边上方或下方的整块透明位，位置仍在原图占位内；不足时不得改放刀码旁。批次或平台文字没有经过最终像素验证的安全空位时，仅跳过该图对应文字、保留刀码和原图、记录可复制异常并继续，不阻断整批；渲染器只绘制最终坐标仍有有效尺寸的文字。最终刀位或原图坐标越界等不可恢复安全冲突不得猜值绕过，文字不能进入膜标签与图案之间，也不能扩出原图宽度。
+  `layout_engine/labeling/platform/platform_label.py`、`layout_engine/labeling/base/header_region.py`、`layout_engine/labeling/platform/transparent_search.py`。生产标签的机器号、批次正倒序、平台名及原图订单尺码共用同一模板和占位；膜标签／二维码卡片内部不新增文字。未旋转时按膜标签侧别搜索朝图片内部的透明空白（左卡右放、右卡左放），文字始终留在原图宽度内且不增加排版占位。旋转90度时不论透明带选项或回退状态，`layout_engine/labeling/platform/short_edge_space.py`均只搜索卡片短边上方或下方的整块透明位，位置仍在原图占位内；不足时不得改放刀码旁。新增文字没有经过最终像素验证的安全空位时，仅跳过该图对应文字、保留刀码和原图、记录可复制异常并继续，不阻断整批；渲染器只绘制最终坐标仍有有效尺寸的文字。最终刀位或原图坐标越界等不可恢复安全冲突不得猜值绕过，文字不能进入膜标签与图案之间，也不能扩出原图宽度。
 - 开发者排版隔离：换刀与批次结束600毫米停止距离只有开发者模式显式传入正数时才进入规划、候选比较和独立开发者缓存版本；普通模式不调用该逻辑，使用算法缓存版本10，缓存键也不包含开发者紧凑排版与停止距离字段。
-- 标签字体加载与线程内有界缓存由`layout_engine/labeling/text/fonts.py`唯一拥有；`layout_engine/labeling/base/labels.py`只负责标签内容、
+- 标签字体加载与线程内有界缓存由`layout_engine/labeling/text/fonts.py`唯一拥有；生产标签优先采用有真实汉字字形的字体，避免把平台名绘成方框。`layout_engine/labeling/base/labels.py`只负责标签内容、
   换行和徽标渲染。单图排版对象`LayoutItem`与`Placement`统一归`layout_engine/domain/models.py`。
 - 渲染与编码：`layout_engine/rendering/engines/pillow_renderer.py`、`layout_engine/rendering/engines/vips_renderer.py`、`layout_engine/rendering/png/`、
   `layout_engine/rendering/storage/plan_partition.py`、`layout_engine/rendering/storage/segmented_output.py`、
@@ -203,9 +210,9 @@
 - 隆丰、莆田和Haloo下载工作区各自提供“已生产订单计划”页签与“自动化生成计划”按钮，后台读取本平台当前范围内状态9的生产项并自动勾选未补单的候选分组，不提交批次；仍可手动读取分类和修改勾选。勾选时与最终确认窗口逐组展示真实底款名称/ID、颜色和件数，确认后才提交。页面还展示样本范围、物流、面别、尺码档、来源批次及未纳入数量；提交前重新精确读取整单，拦截已补单、过期或不完整分组。`batch_ui/task/reads.py`复用现有工作线程并按平台路由；`local/scanning.py`后台读取目录并按来源范围丢弃旧结果。批次排版复用界面补距开关及数值，不再强制40毫米。
 
 - ERP批次页允许等待隐藏微前端iframe挂载，再由批次入口验证实际表格。`automation/batches/local.py`统一发现本地批次；同批次号的嵌套解压目录保留外层一次，包含其全部图片，避免重复排版；预览输出目录不参与来源发现。
-- 蜂鸟ERP已生产候选批次由`automation/batches/completed.py`共用规划：状态9、实际生产图面别、整单、物流、订单组成、底款、颜色、尺码档及数量均须明确；多项多件混色整单不拆。已有批次的完成订单走补单批次接口，不改变订单完成状态，提交前通过`order_id`精确读取整单并重新核对状态、来源批次、数量和项目集合。普通精确选择接口会排除已有批次项目。Haloo接口实证见`docs/HALOO_BATCH_GENERATION.md`；隆丰和莆田仍需真实平台回归。
+- 蜂鸟ERP已生产候选批次由`automation/batches/supplements/completed.py`共用规划：状态9、实际生产图面别、整单、物流、订单组成、底款、颜色、尺码档及数量均须明确；多项多件混色整单不拆。已有批次的完成订单走补单批次接口，不改变订单完成状态，提交前通过`order_id`精确读取整单并重新核对状态、来源批次、数量和项目集合。普通精确选择接口会排除已有批次项目。Haloo接口实证见`docs/HALOO_BATCH_GENERATION.md`；隆丰和莆田仍需真实平台回归。
 
-- `automation/api/riin/__main__.py`提供独立管理员命令入口，`elevation.py`通过Windows正常UAC授权启动一次指定操作；不要求主工作台或Codex提权。`desktop.py`拥有原生/UIA控件发现和导入文件选择框，`dialogs.py`拥有导入确认与错误对话框操作，`workflow.py`编排完整导入到PRN流程；来源目录递归读取PNG并按文件选择框容量分段。报告区分“提交导入”和实际加载完成，失败保留RIIN界面供用户继续处理；文件输出由output.py负责。旧版MFC导入按钮使用已核验的工具栏相对位置，工具栏高度不符时拒绝点击并要求重新校准。
+- `automation/api/riin/__main__.py`提供独立管理员命令入口，`elevation.py`通过Windows正常UAC授权启动一次指定操作；不要求主工作台或Codex提权。`desktop_controls/`拥有窗口探测、原生/UIA控件发现、导入文件选择框及对话框操作；`workflow.py`编排完整导入到PRN流程；来源目录递归读取PNG并按文件选择框容量分段。报告区分“提交导入”和实际加载完成，失败保留RIIN界面供用户继续处理；文件输出由`output.py`负责。旧版MFC导入按钮使用已核验的工具栏相对位置，工具栏高度不符时拒绝点击并要求重新校准。
 - `automation/api/riin/output.py`新增文件输出和PrintExp加载命令，扩展上述导入入口。RIIN发送方式必须是“文件”，输出路径不可覆盖；PrintExp仅提交已有PRN，不启动物理打印。管理员后台会话通过窗口消息打开PrintExp文件框，不依赖鼠标焦点或活动桌面；加载报告与实际预览核验分开。
 - RIIN若明确提示图元超出画布并会自动裁切，受限管理员入口只允许精确匹配该警告后取消本次危险输出；不得确认裁切。原PNG与RIIN文档保留，改用匹配当前画布的安全膜宽重新排版后才能继续。
 - “自动生成打印文件”已移入开发者“生产平台下载”工作区。`batch_ui/task/automatic_print.py`在明确的
@@ -222,32 +229,27 @@
   `batches/`，浏览器会话与批次页面位于`browser/`，导出下载位于`transfer/`，平台配置与
   平台页面行为位于`providers/`，端到端流程位于`workflows/`。蜂鸟ERP页面桥接、生产项、
   生产批次和响应转换分别归档在`automation/api/erp/`，调用方不再经过根目录转发模块。
-- 隆丰“已接单”批次生成页另有按工艺路线直接生成入口：`automation/batches/routes.py`读取页面全部路线、核对指定路线项目数，`batch_ui/platform/routes.py`显示路线选择与确认，后台通过网页按筛选生成并到批次管理核对编号、数量和状态。默认预览 A05-无印花，不按底款、物流或面别预拆。
-- 隆丰 A05-无印花的生产中补单由`automation/batches/supplement_sizes.py`通过已登录会话的ERP接口读取、按尺码制定计划并提交；颜色不参与分组，跨尺码订单单独成组。接口会按订单组成拆成多个补单批次，提交后按每项新增编号核对，不自动重试。当前脚本入口由开发操作调用，尚未装配为可见按钮。
-- 生产平台下载下每个蜂鸟ERP工作区提供独立“批次生成”页：已接单入口集中显示物流/订单组成候选，隆丰另显示默认路线 A00 / 多项多件和其他工艺路线的订单、项目、件数；生产中入口默认读取状态5，并可切换到保留的状态9已生产补单来源。`automation/batches/source.py`负责读取来源快照并预先核对整单及关键字段，`completed.py`让后两种来源共用分组策略；异常组在界面禁用，提交前仍复核并使用补单接口。`automation/batches/default_multi.py`从ERP接口预览精确项目及件数，后台用按筛选生成接口一次提交，再从生产项与批次管理核对数量、编号及整单归属。筛选为空时生成按钮禁用；生成前不预测平台拆批或批次号。
-- `automation/batches/received_sizes.py`及`production_multi.py`保留按尺码重组的开发操作能力，不接入默认入口；此前生产中补单实测跨尺码394项一次提交被平台拆成200项和194项两批。补单记录不可因追求单一批次而重复生成。
+- 隆丰“已接单”批次生成页另有按工艺路线直接生成入口：`automation/batches/received/routes.py`读取页面全部路线、核对指定路线项目数，`batch_ui/platform/routes.py`显示路线选择与确认，后台通过网页按筛选生成并到批次管理核对编号、数量和状态。默认预览 A05-无印花，不按底款、物流或面别预拆。
+- 隆丰 A05-无印花的生产中补单由`automation/batches/supplements/supplement_sizes.py`通过已登录会话的ERP接口读取、按尺码制定计划并提交；颜色不参与分组，跨尺码订单单独成组。接口会按订单组成拆成多个补单批次，提交后按每项新增编号核对，不自动重试。当前脚本入口由开发操作调用，尚未装配为可见按钮。
+- 生产平台下载下每个蜂鸟ERP工作区提供独立“批次生成”页：已接单入口集中显示物流/订单组成候选，隆丰另显示默认路线 A00 / 多项多件和其他工艺路线的订单、项目、件数；生产中入口默认读取状态5，并可切换到保留的状态9已生产补单来源。`automation/batches/supplements/source.py`负责读取来源快照并预先核对整单及关键字段，`completed.py`让后两种来源共用分组策略；异常组在界面禁用，提交前仍复核并使用补单接口。`automation/batches/received/default_multi.py`从ERP接口预览精确项目及件数，后台用按筛选生成接口一次提交，再从生产项与批次管理核对数量、编号及整单归属。筛选为空时生成按钮禁用；生成前不预测平台拆批或批次号。
+- `automation/batches/received/received_sizes.py`及`production_multi.py`保留按尺码重组的开发操作能力，不接入默认入口；此前生产中补单实测跨尺码394项一次提交被平台拆成200项和194项两批。补单记录不可因追求单一批次而重复生成。
 - ERP生产批次读取兼容顶层表格与工厂外壳中的`fnsz-sale`内嵌表格；莆田从首页“生产 / 批量生产”进入后可复用同一列表、搜索和下载通路。批次范围的起止编号可从当前列表下拉选择或直接粘贴，列表显示平台批次记录的生成时间。
 - 蜂鸟ERP原始批次行到中立`BatchRecord`的转换集中在`automation/api/erp/records.py`，浏览器模块只负责页面与请求流程。
 - “生产平台下载”作为跨部门共享页签；UV 工作区直接显示，DTF 工作区仍随开发者模式显示。支持多选已配置平台，每个平台独立显示批次、下载进度和日志。普通下载不触发排版；蜂鸟平台的显式“下载、排版并生成打印文件”复用当前参数继续处理。隆丰、莆田和Haloo复用蜂鸟ERP通路；S2B优先通过Supabase受限网关读取平台批次、人员标签、触发生产图导出并取得真实下载地址，原始S2B Token只在服务端解密；网关不可用时才回退专用浏览器登录。`production/downloads.py`负责编排，`production/archive_io.py`负责下载、校验及安全解压到`S2B/ARCHIVES`和`S2B/BATCHES`。亿点万象只下载具体勾选批次中的新增稿件，与UV排版分开。下载和自动打印动作都不自动创建生产批次。
 - 多批文件夹选择窗口由`ui/batch_folder_selection.py`先显示本地扫描结果，`ui/batch_folder_colors.py`在后台复用 S2B 逐图元数据匹配，按每个本地文件夹显示颜色数量或未匹配张数；查询失败不阻止勾选，也不把批次列表的数量误作颜色来源。
 - 蜂鸟ERP批次若已完成生产图导出但当前表格没有完整显示三个旧版下载入口，下载器复用已登录页面加载的导出记录，校验受信任HTTPS主机后流式保存同一ZIP；旧版三按钮下载继续作为兼容路径，不能因页面入口缺失拒绝已有完整导出。
-- 生产平台工作台启动本地排版时，以当前工作台所选平台覆盖主界面的旧平台值；Haloo和莆田同时固定采用其40毫米默认补距，避免从下载页进入排版时因主界面残留选择而漏补。
+- 生产平台工作台启动本地排版时，以当前工作台所选平台覆盖主界面的旧平台值；补距仍读取界面当前开关及数值，不在批次入口静默覆盖。主界面平台切换的默认值由`ui/print_settings_navigation.py`集中应用。
 - 冷启动时图片尺寸和DPI按用户线程上限并行预读，再一次批量查询单图测量缓存；只影响整批摆放的开发者算法开关不进入单图标签/刀码缓存键，切换开发者模式或升级该排版策略不会无故重解码原图。
 - 跟随原图DPI时，批次DPI确认复用同一套有界尺寸预读并按用户线程上限并行访问源文件；结果保持原文件顺序，并向主界面报告真实完成数，避免网络批次逐张串行等待后再重复读取尺寸。
 - 并行单图测量开始前尺寸已完成预读；主界面从第一张大图解压开始即显示“测量标签与刀码”及透明区域安全检查，不把首批大图像素解压误报为仍在读取轻量尺寸。
-- 同一张膜标签卡片的透明/白色像素积分图在批次内只提取一次；不同字号探测及原方向、旋转方向共享该结果，不再为每个候选字号重复裁切和扫描二维码卡片。
+- 膜标签卡片只用于定位短边和高度，不把内部透明/白色区域当作新增文字的可写位置；平台与尺码并入独立生产标签，排版缓存键对旧卡内文字方案单独失效，最终内嵌标记校验拒绝仍携带独立平台卡片尺寸的旧计划。卡内空位搜索及只验证该旧方案的测试已移除。
 - Haloo、S2B、莆田和隆丰启用虚拟补距时，每张源图在同一个内存快照中完成补距、尺寸/DPI、标签卡片、刀码透明区及原向/旋转候选测量；刀位计算和膜规格比较只复用测量结果，预览阶段以“每张源图完整解码一次”的自动测试锁定。
   各平台下载页默认勾选下载完成后打开对应平台文件夹，用户可在下载前关闭该行为。
-- “莆田”和“Haloo”本地排版入口由`ui/developer_mode.py`控制，仅在开发者模式加入平台选择；`ui/print_settings_navigation.py`集中应用40毫米膜标签间距默认值。
+- Haloo本地排版入口对普通用户可见，“莆田”仅在开发者模式加入平台选择；`ui/print_settings_navigation.py`集中应用膜标签补距默认值：隆丰关闭，其他有名称的平台开启40毫米，之后仍可手动调整。
 - 新增外部平台接口必须进入`automation/api/<provider>/`；跨平台编排复用浏览器、批次和传输层，
   不在根目录增加平台文件或无业务含义的兼容转发层。
 
-## 已知结构债务
+## 结构边界
 
-- 以下遗留文件超过200行，测试已冻结当前上限；后续涉及其职责的修改应缩小而非增长：
-
-| 归属 | 遗留文件 | 后续收敛方向 |
-| --- | --- | --- |
-| 排版核心 | `layout_engine/pipeline/service.py`, `layout_engine/planning/base/planner.py` | 服务只编排阶段；测量、候选和对象构造已有独立所有者。 |
-
-- 部分 README 内容曾混入版本演进描述；当前规则以四份治理文档为准，README 仅保留使用和发布入口。
+- 当前应用 Python 模块没有超过200行的实现文件；结构测试检查各业务子目录最多五个直接实现模块，并锁定批次、RIIN和膜补距的唯一归属。`ui/`根目录是跨功能界面命名空间，其具体业务子目录逐一检查，不能把这一根目录误当单个组件拆分。
+- README 仅保留使用和发布入口；当前规则以四份治理文档为准。

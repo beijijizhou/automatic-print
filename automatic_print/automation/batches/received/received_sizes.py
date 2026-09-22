@@ -5,16 +5,16 @@ from __future__ import annotations
 from collections import defaultdict
 from dataclasses import dataclass
 
-from ..api.erp.items import (
+from ...api.erp.items import (
     generate_selected_batch,
     list_all_received_items,
     list_batch_rules,
     list_order_items,
 )
-from ..api.erp.batches import list_batches
-from ..browser.session import connect_debug_chrome
-from ..providers.longfeng import find_longfeng_page
-from ..providers.registry import get_erp_platform
+from ...api.erp.batches import list_batches
+from ...browser.session import connect_debug_chrome
+from ...providers.longfeng import find_longfeng_page
+from ...providers.registry import get_erp_platform
 
 
 SIZES = ("S", "M", "L", "XL", "XXL", "3XL", "4XL", "5XL")

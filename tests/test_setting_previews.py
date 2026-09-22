@@ -96,8 +96,9 @@ def test_home_hides_online_workflows_and_keeps_local_logs():
 
     _app()
     window = MainWindow()
+    window.department_selector.setCurrentIndex(window.department_selector.findData('dtf'))
     home = window.automation_home
-    assert window.windowTitle() == "本地排版工作台"
+    assert window.windowTitle() == "DTF 自动化打印工作台"
     assert window.cutter_settings.film.currentData() == 600
     assert window.cutter_settings.mode.currentData() == "dual"
     assert window.cutter_settings.knife.value() == 285
@@ -120,6 +121,7 @@ def test_main_label_edits_and_parameter_edits_share_live_preview_state():
 
     _app()
     window = MainWindow()
+    window.department_selector.setCurrentIndex(window.department_selector.findData('dtf'))
     panel = window.automation_home.label_quick_panel
     assert panel.font_size.isHidden()
     assert panel.position.isHidden()
@@ -128,7 +130,9 @@ def test_main_label_edits_and_parameter_edits_share_live_preview_state():
     label, block = window.label_settings, window.color_block_settings
     panel.text.setText("{编号}－测试")
     assert label.text_template.text() == "{编号}－测试"
-    assert panel.preview.sample_text() == "1－测试 M1"
+    sample = panel.preview.sample_text()
+    assert sample.startswith("1－测试") and sample.endswith("M1")
+    assert "隆丰" in sample and "未识别尺码" in sample
     panel.font_size.setValue(15)
     assert label.font_size.value() == 15
     label.text_template.setText("主界面同步")

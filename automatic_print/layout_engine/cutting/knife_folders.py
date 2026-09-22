@@ -14,6 +14,11 @@ def knife_output_folders(result):
                     if placement.get('cut_zone') != '旋转区'), None)
     fixed = knife_signature(regular) if regular is not None else None
     parts = result.get('parts') or [result]
+    if fixed is None:
+        # A whole-batch rotation can still have one unchanged production knife.
+        signatures = set().union(*(actual_knife_signatures(part) for part in parts))
+        if len(signatures) == 1 and next(iter(signatures)):
+            fixed = next(iter(signatures))
     folders = {}
     for part in parts:
         if not part.get('order_check'):

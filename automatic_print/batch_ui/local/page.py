@@ -8,7 +8,7 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
-from ..platform.pages import table_widget
+from ..platform.view.pages import table_widget
 from ...ui.workbench.overview import LabelQuickPanel
 
 
