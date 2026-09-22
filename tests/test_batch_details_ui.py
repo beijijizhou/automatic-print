@@ -25,10 +25,11 @@ def test_removed_batch_details_leave_only_developer_pages(tmp_path):
     for tool in (panel.summary, panel.timings, panel.preview_tabs):
         assert tool.isVisible()
     assert not hasattr(window, 'batch_record')
-    assert panel.preview_tabs.count() == 2
-    assert panel.preview_tabs.tabText(0) == '标签与刀码位置（默认）'
-    assert panel.preview_tabs.tabText(1) == '批次排版预览'
-    panel.preview_tabs.setCurrentIndex(1)
+    assert panel.preview_tabs.count() == 3
+    assert panel.preview_tabs.tabText(0) == '文字排版预览（默认）'
+    assert panel.preview_tabs.tabText(1) == '标签与刀码位置'
+    assert panel.preview_tabs.tabText(2) == '批次排版预览'
+    panel.preview_tabs.setCurrentIndex(2)
     assert panel.preview_scroll.isVisible()
     window.developer_mode_checkbox.setChecked(True)
     panel.history_button.click()

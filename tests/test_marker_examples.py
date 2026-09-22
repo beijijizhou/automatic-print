@@ -180,6 +180,7 @@ def test_main_page_examples_start_after_show_and_refresh_on_parameters(tmp_path,
     assert examples.worker is None
     assert window.automation_home.label_quick_panel.preview_tabs.currentIndex() == 0
     window.show()
+    window.automation_home.label_quick_panel.preview_tabs.setCurrentIndex(1)
     wait_for(lambda: len(examples.results) == 4 and examples.worker is None)
     assert examples.isVisible()
     assert all(picture.minimumHeight() >= 280 for picture, _ in examples.cards)
@@ -195,8 +196,9 @@ def test_main_page_examples_start_after_show_and_refresh_on_parameters(tmp_path,
         if row['label_text']:
             assert row['label_text'] in readout.text()
             assert '紫框标签文字放大' in readout.text()
-    assert window.automation_home.label_quick_panel.preview_tabs.tabText(0) == '标签与刀码位置（默认）'
-    assert window.automation_home.label_quick_panel.preview_tabs.tabText(1) == '批次排版预览'
+    assert window.automation_home.label_quick_panel.preview_tabs.tabText(0) == '文字排版预览（默认）'
+    assert window.automation_home.label_quick_panel.preview_tabs.tabText(1) == '标签与刀码位置'
+    assert window.automation_home.label_quick_panel.preview_tabs.tabText(2) == '批次排版预览'
     assert all(not r['production'] for r in examples.results)
     examples.grab().save(str(tmp_path/'four-case-diagram.png'))
     paths = sources(tmp_path)
@@ -240,8 +242,8 @@ def test_batch_preview_remains_independent_second_page(tmp_path):
     window = MainWindow(QSettings(str(tmp_path/'prefs.ini'), QSettings.IniFormat))
     window.startup_update_timer.stop()
     panel = window.automation_home.label_quick_panel
-    assert panel.preview_tabs.currentWidget() is panel.marker_examples
-    panel.preview_tabs.setCurrentIndex(1)
+    assert panel.preview_tabs.currentWidget() is not panel.marker_examples
+    panel.preview_tabs.setCurrentIndex(2)
     assert panel.preview_tabs.currentWidget() is panel.actual_preview_page
     assert panel.marker_examples is not panel.actual_preview_page
     window.preference_autosave.timer.stop()

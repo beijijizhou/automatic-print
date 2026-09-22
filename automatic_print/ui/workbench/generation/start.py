@@ -62,3 +62,4 @@ def start_generation(window, *, preview_only=False) -> None:
             'automation/output_location', '', str),
     )
     window.layout_generation.start(worker, window.worker_bridge)
+    window.automation_home.label_quick_panel.order_side_checkbox.setChecked(False)

@@ -1,14 +1,17 @@
 """Build the batch result, preview and inspection regions."""
 
 from PySide6.QtWidgets import (
+    QApplication,
     QCheckBox,
     QGroupBox,
+    QPlainTextEdit,
     QPushButton,
     QScrollArea,
     QTabWidget,
     QVBoxLayout,
     QWidget,
 )
+from PySide6.QtGui import QFontDatabase
 
 from ...batch_analysis_panel import BatchAnalysisPanel
 from ...batch_details import BatchDetailsDialog
@@ -42,9 +45,24 @@ def build_preview(panel, window, label, block):
     preview_layout = QVBoxLayout(group)
     panel.marker_examples = MarkerExamples(window, panel)
     panel.preview_tabs = QTabWidget()
+    panel.text_preview = QPlainTextEdit()
+    panel.text_preview.setReadOnly(True)
+    text_font = QFontDatabase.systemFont(QFontDatabase.FixedFont)
+    text_font.setPointSize(max(12, text_font.pointSize()))
+    panel.text_preview.setFont(text_font)
+    panel.text_preview.setPlainText('等待读取批次文件名…')
+    text_page = QWidget()
+    text_layout = QVBoxLayout(text_page)
+    copy_text = QPushButton('复制文字预览')
+    copy_text.setMaximumWidth(160)
+    copy_text.clicked.connect(
+        lambda: QApplication.clipboard().setText(panel.text_preview.toPlainText()))
+    text_layout.addWidget(copy_text)
+    text_layout.addWidget(panel.text_preview)
     panel.actual_preview_page = QWidget()
     QVBoxLayout(panel.actual_preview_page).addWidget(panel.preview_viewport)
-    panel.preview_tabs.addTab(panel.marker_examples, "标签与刀码位置（默认）")
+    panel.preview_tabs.addTab(text_page, '文字排版预览（默认）')
+    panel.preview_tabs.addTab(panel.marker_examples, "标签与刀码位置")
     panel.preview_tabs.addTab(panel.actual_preview_page, "批次排版预览")
     panel.preview_tabs.setCurrentIndex(0)
     preview_layout.addWidget(panel.batch_distribution)
@@ -59,6 +77,10 @@ def build_preview(panel, window, label, block):
     overview.toggled.connect(panel.preview.set_overview)
     overview.setChecked(True)
     preview_layout.addWidget(overview)
+    panel.preview_tabs.currentChanged.connect(
+        lambda *_: overview.setVisible(
+            panel.preview_tabs.currentWidget() is panel.actual_preview_page))
+    overview.hide()
     panel.read_folder_button = QPushButton("读取当前文件夹（使用上次路径）")
     panel.read_folder_button.clicked.connect(
         lambda: panel.preview.use_folder(window.folder.text())

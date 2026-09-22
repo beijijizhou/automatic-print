@@ -68,6 +68,9 @@ def test_generation_preview_uses_worker_positions_and_keeps_saving_frame(tmp_pat
     controller.start()
     bridge.layout_preview.emit(payloads[0])
     preview = controller.preview
+    assert controller.panel.preview_tabs.currentIndex() == 0
+    assert controller.panel.text_preview.toPlainText()
+    controller.panel.preview_tabs.setCurrentIndex(2)
     assert len(preview.planned) == 4
     assert preview.render_settings.cutter_knife_mm == payloads[0]["settings"].cutter_knife_mm
     bridge.layout_progress.emit("合成图片", 4, 4, paths[-1].name)
@@ -93,6 +96,7 @@ def test_generation_preview_uses_worker_positions_and_keeps_saving_frame(tmp_pat
     assert "新" in preview.detail
     # Reusing the same settings object must still install the new task data.
     bridge.layout_preview.emit(payloads[0])
+    controller.panel.preview_tabs.setCurrentIndex(2)
     assert len(preview.planned) == 4
     assert preview.batch_payload is payloads[0]
     controller.end()

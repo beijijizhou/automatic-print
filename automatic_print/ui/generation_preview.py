@@ -25,6 +25,7 @@ class GenerationPreviewController(QObject):
             signal.connect(self.end)
         bridge.layout_failed.connect(self.failed)
         bridge.layout_cancelled.connect(self.cancelled)
+        self.panel.preview_tabs.currentChanged.connect(self._tab_changed)
 
     def start(self, mode='single'):
         from .busy_spinner import show_busy
@@ -45,6 +46,7 @@ class GenerationPreviewController(QObject):
         self.panel.analysis.clear()
         folder = self.window.folder.text().strip()
         self.panel.summary.start(folder)
+        self.panel.text_preview.setPlainText('正在扫描文件名并准备文字预览…')
         self.panel.summary.progress.hide()
         self.panel.preview_scroll.verticalScrollBar().setValue(0)
         self.preview.clear_for_generation()
@@ -70,14 +72,17 @@ class GenerationPreviewController(QObject):
 
     @Slot(object)
     def analysis(self, report):
+        from .previews.text_layout import inventory_text
+        self.panel.text_preview.setPlainText(inventory_text(report))
         if self.mode == 'single':
             self.window.batch_status_board.update_distribution(0, report)
 
     @Slot(object)
     def ready(self, payload):
+        from .previews.text_layout import layout_text
+        self.panel.text_preview.setPlainText(layout_text(payload))
         if self.mode == 'single':
             self.window.batch_status_board.update_distribution(0, payload.get('analysis', {}))
-        self.panel.marker_examples.use_batch(payload)
         self.panel.preview_tabs.setCurrentIndex(0)
         self.payload = payload
         self.preview.production_stage = '本批次排版已确定，正在处理输出…'
@@ -91,7 +96,16 @@ class GenerationPreviewController(QObject):
             self.window.cutter_settings.knife.setValue(payload["settings"].cutter_knife_mm)
         self.preview.refresh_timer.stop()
         self.preview.sources_ready.emit(list(dict.fromkeys(path for path, _ in payload['planned'])))
-        self.show_pair(0)
+        self._tab_changed()
+
+    def _tab_changed(self, *_args):
+        if not self.payload:
+            return
+        current = self.panel.preview_tabs.currentWidget()
+        if current is self.panel.marker_examples:
+            self.panel.marker_examples.use_batch(self.payload)
+        elif current is self.panel.actual_preview_page:
+            self.show_pair(0)
 
     def show_pair(self, index):
         if not self.payload:

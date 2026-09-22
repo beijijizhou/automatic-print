@@ -3,6 +3,7 @@ from pathlib import Path
 from types import SimpleNamespace
 
 from PIL import Image
+import pytest
 
 from automatic_print.automation.workflows.shared_knife_batches import render_shared_knife_batches
 from automatic_print.layout_engine.domain.models import LayoutSettings
@@ -16,10 +17,11 @@ def _source(folder, order, number, width, size, side=1):
     return path
 
 
-def test_explicit_order_side_routes_unfit_whole_order_to_rotation(tmp_path):
+@pytest.mark.parametrize('platform_name', ['隆丰', 'Haloo'])
+def test_explicit_order_side_routes_unfit_whole_order_to_rotation(tmp_path, platform_name):
     settings = LayoutSettings(
         dpi=25.4, media_width_mm=600, cutter_mode='dual', cutter_knife_mm=300,
-        number_images=False, margin_mm=0, platform_name='隆丰',
+        number_images=False, margin_mm=0, platform_name=platform_name,
         png_engine='pillow', color_block_gap_mm=5, output_parts=1,
     )
     prepared = []
@@ -36,7 +38,7 @@ def test_explicit_order_side_routes_unfit_whole_order_to_rotation(tmp_path):
         ]
         prepared.append((folder, paths))
     report = render_shared_knife_batches(
-        tmp_path / '隆丰', '隆丰', prepared, settings,
+        tmp_path / platform_name, platform_name, prepared, settings,
         lambda _message: None, order_side=True)
     assert not report['layout_errors']
     assert report['shared_knife_mm'] == 300

@@ -72,6 +72,7 @@ def test_default_shows_production_layout_but_hides_diagnostic_tools(tmp_path, mo
     assert features == [
         '排版历史', '批量分析文件夹', '标签位置安全短测',
         'DTF随机10批冷启动测试', '算法诊断',
+        '整单归侧双排（仅本次任务）',
         '切膜刀码开关', '平台＋尺码标签开关', '批次顺序标注',
         'S2B 批次信息查询', '批次下载与自动化打印', '隆丰 ERP 下载', 'S2B 生产图下载',
         '莆田平台', '并行分块 TIFF',
@@ -130,6 +131,26 @@ def test_two_zone_layout_stays_visible_and_active_outside_developer_mode(tmp_pat
     owner.developer_mode_checkbox.setChecked(False)
     assert owner.layout_rules_form.isRowVisible(control)
     assert owner._layout_settings().cutter_majority_two_zone
+    owner.close()
+
+
+def test_order_side_action_applies_to_local_task_and_resets_after_start(tmp_path, monkeypatch):
+    source = tmp_path / 'S2B_batch'
+    source.mkdir()
+    owner = window(tmp_path / 'order-side.ini')
+    owner.folder.setText(str(source))
+    panel = owner.automation_home.label_quick_panel
+    panel.order_side_action.setChecked(True)
+    started = []
+    monkeypatch.setattr(owner.layout_generation, 'start',
+                        lambda worker, _bridge: started.append(worker))
+    owner.generate(preview_only=True)
+    assert len(started) == 1
+    assert started[0].settings.order_side_shared_knife
+    assert started[0].settings.strict_fixed_knife
+    assert not panel.order_side_action.isChecked()
+    assert not panel.order_side_checkbox.isChecked()
+    owner.clock.stop()
     owner.close()
 
 
@@ -206,7 +227,20 @@ def test_toggle_persists_and_existing_history_tab_hides(tmp_path, monkeypatch):
     assert owner._layout_settings().compare_reference_films
     assert panel.history_button.isVisible() and panel.test_tools_button.isVisible()
     assert [action.text() for action in panel.test_tools_button.menu().actions()] == [
-        '标签位置安全短测…', 'DTF随机10批冷启动测试…', '批量分析文件夹…', '算法诊断']
+        '标签位置安全短测…', 'DTF随机10批冷启动测试…',
+        '批量分析文件夹…', '算法诊断', '',
+        '整单归侧双排（仅本次任务）']
+    panel.order_side_action.setChecked(True)
+    assert panel.order_side_checkbox.isChecked()
+    panel.order_side_checkbox.setChecked(False)
+    assert not panel.order_side_action.isChecked()
+    tools_menu = panel.test_tools_button.menu()
+    tools_menu.popup(panel.test_tools_button.mapToGlobal(
+        panel.test_tools_button.rect().bottomLeft()))
+    APP.processEvents()
+    assert tools_menu.isVisible()
+    assert tools_menu.grab().save(str(tmp_path/'developer-tools-menu.png'))
+    tools_menu.hide()
     assert panel.source_order.isVisible() and panel.reference_films_label.isVisible()
     assert owner.grab().save(str(tmp_path/'developer-tools-visible.png'))
     panel.history_button.click()

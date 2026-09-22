@@ -20,7 +20,6 @@ class LabelQuickPanel(QWidget):
         layout = QVBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
         layout.addLayout(form)
-        layout.addWidget(self.order_side_control)
         layout.addWidget(build_data_panel(window, self.summary, self.timings))
         layout.insertWidget(1, window.batch_status_board)
         layout.addWidget(self.summary.failure_panel)
@@ -49,6 +48,14 @@ class LabelQuickPanel(QWidget):
             ('算法诊断', self.details_dialog.open_algorithm_costs),
         ):
             menu.addAction(label, action)
+        menu.addSeparator()
+        self.order_side_action = menu.addAction(
+            '整单归侧双排（仅本次任务）'
+        )
+        self.order_side_action.setCheckable(True)
+        self.order_side_action.setToolTip(self.order_side_checkbox.toolTip())
+        self.order_side_action.toggled.connect(self.order_side_checkbox.setChecked)
+        self.order_side_checkbox.toggled.connect(self.order_side_action.setChecked)
         self.test_tools_button.setMenu(menu)
 
 

@@ -1,4 +1,5 @@
 from __future__ import annotations
+from dataclasses import replace
 import json
 import os
 
@@ -22,7 +23,7 @@ def settings_from_window(window) -> LayoutSettings:
             raise ValueError('请填写实际生产平台名称。')
         if platform.casefold() == '蜂鸟':
             raise ValueError('蜂鸟是 ERP，不是生产平台；请填写实际平台名称。')
-    return LayoutSettings(
+    settings = LayoutSettings(
         media_width_mm=window.cutter_settings.printable.effective_width(),
         fixed_output_width_mm=window.cutter_settings.printable.effective_width(),
         compare_film_sizes=window.cutter_settings.compare_films.isChecked(),
@@ -115,3 +116,8 @@ def settings_from_window(window) -> LayoutSettings:
         cutter_marker_offset_mm=window.cutter_settings.marker_offset.value(),
         machine_number=label.machine.currentData(),
     )
+    if window.automation_home.label_quick_panel.order_side_checkbox.isChecked():
+        from ..automation.workflows.shared_knife import locked_knife_settings
+        settings = replace(locked_knife_settings(settings),
+                           order_side_shared_knife=True, output_parts=1)
+    return settings

@@ -1,10 +1,18 @@
 """Signal wiring between overview widgets and canonical workbench state."""
 
 from pathlib import Path
+from PySide6.QtCore import QTimer
 
 
 def bind_overview(panel, window, label, block) -> None:
     preview = panel.preview
+    from ...previews.text_layout import inventory_text, layout_text
+    preview.analysis_ready.connect(
+        lambda report: panel.text_preview.setPlainText(inventory_text(report)))
+    preview.plan_loaded.connect(
+        lambda payload: panel.text_preview.setPlainText(layout_text(payload)))
+    preview.analysis_started.connect(
+        lambda: panel.text_preview.setPlainText('正在读取文件名并准备文字预览…'))
     preview.loading_status.connect(panel.summary.progress.setText)
     preview.plan_loaded.connect(panel.summary.show_plan)
     preview.analysis_ready.connect(panel.analysis.show_report)
@@ -46,6 +54,10 @@ def bind_overview(panel, window, label, block) -> None:
             preview.use_folder(folder)
 
     window.folder.textChanged.connect(folder_changed)
+    saved_folder = window.folder.text()
+    QTimer.singleShot(
+        0, lambda: preview.stage_folder(saved_folder)
+        if saved_folder.strip() and window.folder.text() == saved_folder else None)
 
     def mode_changed(*_args):
         preview.auto_refresh_enabled = not window.cutter_settings.quick_mode.isChecked()

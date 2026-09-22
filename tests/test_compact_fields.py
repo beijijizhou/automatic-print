@@ -1,7 +1,7 @@
 import os
 os.environ.setdefault('QT_QPA_PLATFORM', 'offscreen')
 
-from PySide6.QtCore import QSettings, QPoint, Qt
+from PySide6.QtCore import QSettings, QPoint
 from PySide6.QtWidgets import QApplication
 
 from automatic_print.ui.main_window import MainWindow
@@ -25,10 +25,15 @@ def test_one_row_highlight_and_default_comparison_migration(tmp_path):
     assert max(c.mapTo(panel, QPoint()).y() for c in controls)-min(
         c.mapTo(panel, QPoint()).y() for c in controls) < 10
     assert all(c.isVisible() for c in controls)
-    assert panel.order_side_checkbox.isVisible()
+    assert panel.order_side_checkbox.isHidden()
     assert not panel.order_side_checkbox.isChecked()
-    assert '隆丰共刀' in panel.order_side_label.text()
-    assert panel.order_side_label.textInteractionFlags() & Qt.TextSelectableByMouse
+    assert panel.order_side_action.text() == '整单归侧双排（仅本次任务）'
+    assert panel.order_side_action.isCheckable()
+    panel.order_side_action.setChecked(True)
+    settings = window._layout_settings()
+    assert settings.order_side_shared_knife and settings.strict_fixed_knife
+    assert not settings.cutter_auto_knife and settings.output_parts == 1
+    panel.order_side_action.setChecked(False)
     assert 'BATCH123' in panel.selected_source.text()
     assert '#dbeafe' in panel.selected_source.styleSheet()
     assert not panel.preview.loader.active and not panel.preview.batch_payload
