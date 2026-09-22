@@ -26,10 +26,12 @@ def parse_production_rows(payload: dict) -> list[S2BProductionBatch]:
             continue
         progress = row.get("progress") if isinstance(row.get("progress"), dict) else {}
         piece_count = _number(
-            progress.get("total_num"), row.get("total_num"), row.get("num")
+            row.get("piece_count"), progress.get("total_num"),
+            row.get("total_num"), row.get("num"),
         )
         item_count = _number(
-            progress.get("total_print_num"), row.get("item_num"), piece_count
+            row.get("item_count"), progress.get("total_print_num"),
+            row.get("item_num"), piece_count,
         )
         batches.append(S2BProductionBatch(
             batch_number=batch_number,

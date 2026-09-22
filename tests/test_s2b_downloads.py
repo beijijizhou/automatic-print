@@ -75,6 +75,8 @@ def test_gateway_rows_include_platform_personnel_label():
         "personnel_label": "Andy", "created_at": "2026-09-17 01:00:00",
     }]})
     assert records[0].personnel_label == "Andy"
+    assert records[0].item_count == 30
+    assert records[0].piece_count == 40
 
 
 def test_gateway_export_rows_use_normalized_contract():
@@ -160,7 +162,7 @@ def test_s2b_archive_rejects_parent_escape(tmp_path):
 
 
 def test_download_uses_list_url_then_marks_record_after_extract(tmp_path, monkeypatch):
-    from automatic_print.automation.api.s2b.production import downloads
+    from automatic_print.automation.api.s2b.production import downloads, gateway
     source = tmp_path / "source.zip"
     with ZipFile(source, "w") as bundle:
         bundle.writestr("AS2B_22UJ9KT4VCZA/S/sample.png", b"png")
@@ -179,6 +181,7 @@ def test_download_uses_list_url_then_marks_record_after_extract(tmp_path, monkey
         def __exit__(self, *_args): pass
 
     monkeypatch.setattr(downloads, "_authenticated_page", lambda _progress: Session())
+    monkeypatch.setattr(gateway, "available", lambda: False)
     monkeypatch.setattr(downloads, "_download_archive",
                         lambda *_args, **_kwargs: source)
     result = downloads.download_s2b_exports(
@@ -190,7 +193,7 @@ def test_download_uses_list_url_then_marks_record_after_extract(tmp_path, monkey
 
 
 def test_missing_export_is_requested_then_polled(tmp_path, monkeypatch):
-    from automatic_print.automation.api.s2b.production import downloads
+    from automatic_print.automation.api.s2b.production import downloads, gateway
     source = tmp_path / "source.zip"
     with ZipFile(source, "w") as bundle:
         bundle.writestr("AS2B_22UJ9KT4VCZA/S/sample.png", b"png")
@@ -212,6 +215,7 @@ def test_missing_export_is_requested_then_polled(tmp_path, monkeypatch):
         def __exit__(self, *_args): pass
 
     monkeypatch.setattr(downloads, "_authenticated_page", lambda _progress: Session())
+    monkeypatch.setattr(gateway, "available", lambda: False)
     monkeypatch.setattr(downloads, "_download_archive", lambda *_args, **_kwargs: source)
     downloads.download_s2b_exports(["22UJ9KT4VCZA"], tmp_path / "output")
     export_call = next(
