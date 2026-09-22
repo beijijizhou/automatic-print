@@ -8,6 +8,7 @@ from PySide6.QtWidgets import (
     QGroupBox,
     QHBoxLayout,
     QLabel,
+    QPushButton,
     QStackedWidget,
     QVBoxLayout,
     QWidget,
@@ -37,10 +38,18 @@ def build_department_workspace(window, dtf_workspace):
     for department in DEPARTMENTS:
         selector.addItem(f"{department.label} 部门", department.key)
     status = QLabel()
+    accounts = QPushButton("DTF 平台账号")
     status.setTextInteractionFlags(Qt.TextSelectableByMouse)
     row.addWidget(QLabel("当前部门"))
     row.addWidget(selector)
     row.addWidget(status, 1)
+    row.addWidget(accounts)
+
+    def show_dtf_accounts():
+        from .dtf_accounts import DtfAccountDialog
+        DtfAccountDialog(window).exec()
+
+    accounts.clicked.connect(show_dtf_accounts)
 
     pages = QStackedWidget()
     page_indexes = {}
@@ -82,6 +91,7 @@ def build_department_workspace(window, dtf_workspace):
         window.preferences.setValue("department/current", department.key)
         window.setWindowTitle(f"{department.label} 自动化打印工作台")
         dtf_controls = department.key == "dtf"
+        accounts.setVisible(dtf_controls)
         if department.state == "existing":
             status.setText("当前：DTF · 现有自动化打印工作区")
         elif department.state == "development":

@@ -17,7 +17,7 @@ RIIN 或其他 RIP 软件的 PNG。
 在 PowerShell 运行：
 
 ```powershell
-powershell -ExecutionPolicy Bypass -Command "irm 'https://raw.githubusercontent.com/beijijizhou/automatic-print/main/windows/bootstrap-test-computer.ps1?v=0.1.337' | iex"
+powershell -ExecutionPolicy Bypass -Command "irm 'https://raw.githubusercontent.com/beijijizhou/automatic-print/main/windows/bootstrap-test-computer.ps1?v=0.1.338' | iex"
 ```
 
 该入口用于指定测试电脑拉取已经通过本次相关检查并推送到 `main` 的源码。正式生产电脑使用 GitHub
@@ -28,6 +28,12 @@ Release 安装包；源码更新、Release 和生产验收是三个独立状态�
 共享盘临时断开时已有缓存的电脑仍可访问在线平台，新电脑首次使用仍须能读取共享盘。
 平台断网时无法读取或下载新批次。需要使用其他共享位置时可设置
 `AUTOMATIC_PRINT_YDWX_SHARE_KEY_FILE` 为该文件路径。
+
+DTF 部门顶部的“DTF 平台账号”可查看服务端账号配置，并对支持服务端登录的平台按需验证。
+赛博已退出合作，不在清单中；S2B 使用独立网关。账号已配置不代表登录有效或生产批次下载已接入。
+管理员更新 after-sales 的私有凭据后，可在自己的电脑重新执行
+`python scripts/sync_dtf_platform_credentials.py --after-sales-root /path/to/after-sales`
+同步九个平台配置；测试电脑不需要这份私有文件。
 
 亿点万象下载会按批次名中的明确 UV 材质 SKU 选择 250×130 cm 画布容量，保留原 ZIP，
 再按 ZIP 实际图片数生成 `完整稿件-分组/1-48` 等文件夹。`1-48` 表示第 1 组有 48 张；
