@@ -21,12 +21,12 @@ class StatusProjector:
             self.samples.clear()
             return _base("stopped", "PrintExp未运行", False)
         if snapshot is None:
-            if loaded_task and printer_state == "ready":
+            if loaded_task:
                 return _loaded_receipt(loaded_task)
             return _base("idle", "PrintExp在线，等待任务", True, "idle")
         printer_state = printer_state or "printing"
         if (
-            loaded_task and printer_state == "ready"
+            loaded_task
             and float(loaded_task.get("loaded_at") or 0) >= snapshot.modified_at
         ):
             return _loaded_receipt(loaded_task)

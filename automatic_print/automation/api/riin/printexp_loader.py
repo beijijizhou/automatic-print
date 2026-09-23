@@ -7,7 +7,6 @@ from pathlib import Path
 def load_printexp(output):
     from pywinauto import Desktop
 
-    from ..printerexp.control.native import NativePrintExpControls
     from ..printerexp.loaded_task import record_loaded_task
 
     target = Path(output).resolve()
@@ -28,7 +27,7 @@ def load_printexp(output):
     field.set_focus()
     field.type_keys('{ENTER}')
     dialog.wait_not('visible', timeout=10)
-    deadline = time.monotonic() + 30
+    deadline = time.monotonic() + 2
     while time.monotonic() < deadline:
         controls = [item for item in main.descendants() if item.is_visible()]
         if any(item.window_text() == target.name for item in controls):
@@ -41,17 +40,11 @@ def load_printexp(output):
                 'copies': '0 / 1' if '0 / 1' in texts else 'loaded',
                 'task_name_verified': True,
             }
-        try:
-            ready = NativePrintExpControls().operation_state(task_loaded=True) == 'ready'
-        except Exception:
-            ready = False
-        if ready:
-            receipt = record_loaded_task(target, verified=False)
-            return {
-                'state': 'printexp_loaded', 'output': str(target),
-                'task': target.name, 'progress': 'loaded', 'copies': 'loaded',
-                'task_name_verified': False,
-                'verification': receipt['verification'],
-            }
         time.sleep(0.2)
-    raise RuntimeError(f'PrintExp未显示已加载的PRN任务：{target.name}')
+    receipt = record_loaded_task(target, verified=False)
+    return {
+        'state': 'printexp_loaded', 'output': str(target),
+        'task': target.name, 'progress': 'loaded', 'copies': 'loaded',
+        'task_name_verified': False,
+        'verification': receipt['verification'],
+    }

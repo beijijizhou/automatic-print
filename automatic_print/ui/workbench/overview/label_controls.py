@@ -54,13 +54,15 @@ def build_label_controls(panel, label, block, window):
     panel.machine = _mirror_combo(label.machine)
     panel.machine.currentIndexChanged.connect(label.machine.setCurrentIndex)
     label.machine.currentIndexChanged.connect(panel.machine.setCurrentIndex)
-    label.machine.currentIndexChanged.connect(
-        lambda *_: window.preferences.setValue(
-            "layout/machine_number", label.machine.currentData()
+    label.machine.activated.connect(
+        lambda index: _persist_machine_selection(
+            window, label.machine.itemData(index),
         )
     )
-    label.machine.currentIndexChanged.connect(
-        lambda *_: persist_machine_number(label.machine.currentData())
+    panel.machine.activated.connect(
+        lambda index: _persist_machine_selection(
+            window, panel.machine.itemData(index),
+        )
     )
     panel.position = _mirror_combo(label.position)
     panel.position.currentIndexChanged.connect(label.position.setCurrentIndex)
@@ -146,6 +148,12 @@ def _cutter_marker_toggle(window):
     )
     sync_from_mode()
     return toggle
+
+
+def _persist_machine_selection(window, value):
+    window.preferences.setValue("layout/machine_number", value)
+    window.preferences.sync()
+    persist_machine_number(value)
 
 
 def _mirror_combo(source):

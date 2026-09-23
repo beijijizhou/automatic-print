@@ -5,6 +5,7 @@ from PySide6.QtCore import QSettings, QPoint
 from PySide6.QtWidgets import QApplication
 
 from automatic_print.ui.main_window import MainWindow
+from automatic_print.ui.workbench.overview import label_controls
 
 APP = QApplication.instance() or QApplication([])
 OWNERS = []
@@ -50,3 +51,22 @@ def test_one_row_highlight_and_default_comparison_migration(tmp_path):
     fresh.startup_update_timer.stop()
     assert not fresh._layout_settings().compare_film_sizes  # Later explicit changes persist.
     fresh.close()
+
+
+def test_machine_identity_only_changes_after_explicit_combo_activation(tmp_path, monkeypatch):
+    saved = []
+    monkeypatch.setattr(label_controls, "persist_machine_number", saved.append)
+    prefs = QSettings(str(tmp_path / "machine.ini"), QSettings.IniFormat)
+    prefs.setValue("layout/machine_number", "M11")
+    window = MainWindow(prefs)
+    OWNERS.append(window)
+    window.startup_update_timer.stop()
+    panel = window.automation_home.label_quick_panel
+
+    assert saved == []
+    index = panel.machine.findData("M2")
+    panel.machine.setCurrentIndex(index)
+    assert saved == []
+    panel.machine.activated.emit(index)
+    assert saved == ["M2"]
+    window.close()

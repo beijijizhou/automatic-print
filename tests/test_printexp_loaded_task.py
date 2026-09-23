@@ -14,7 +14,7 @@ def test_loaded_task_receipt_round_trip(tmp_path):
     assert saved["task_file"] == task.name
     assert loaded["task_file"] == task.name
     assert loaded["task_name_verified"] is False
-    assert loaded["verification"] == "load_dialog_closed_ready"
+    assert loaded["verification"] == "load_dialog_closed"
 
 
 def test_loaded_task_receipt_expires_and_requires_existing_prn(tmp_path):

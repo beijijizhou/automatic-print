@@ -260,7 +260,7 @@ def test_printerexp_projection_prefers_new_load_receipt_over_stale_completed_sna
         printer_state="ready",
         loaded_task={
             "task_file": "609240119004.prn", "loaded_at": 101,
-            "task_name_verified": False, "verification": "load_dialog_closed_ready",
+            "task_name_verified": False, "verification": "load_dialog_closed",
         },
         clock=1,
     )

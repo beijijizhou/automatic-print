@@ -18,7 +18,7 @@ def record_loaded_task(path, *, verified=False, now=None, target=None):
         "task_path": str(task),
         "loaded_at": float(time.time() if now is None else now),
         "task_name_verified": bool(verified),
-        "verification": "visible_task_name" if verified else "load_dialog_closed_ready",
+        "verification": "visible_task_name" if verified else "load_dialog_closed",
     }
     destination = Path(target) if target is not None else loaded_task_file()
     destination.parent.mkdir(parents=True, exist_ok=True)

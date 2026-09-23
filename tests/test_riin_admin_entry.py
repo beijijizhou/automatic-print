@@ -204,7 +204,7 @@ class AdminEntryTests(unittest.TestCase):
             parent.post_message.assert_called_once_with(0x0111, 5, button.handle)
             self.assertEqual(result['state'], 'printexp_loaded')
 
-    def test_printexp_accepts_ready_state_as_unverified_load_receipt(self):
+    def test_printexp_records_closed_dialog_as_unverified_load_receipt(self):
         with tempfile.TemporaryDirectory() as folder:
             target = Path(folder) / '609240119004.prn'
             target.write_bytes(b'prn')
@@ -222,24 +222,22 @@ class AdminEntryTests(unittest.TestCase):
             def desktop(backend):
                 return native_desktop if backend == 'win32' else uia_desktop
 
-            controls = MagicMock()
-            controls.operation_state.return_value = 'ready'
             receipt = {
                 'task_name_verified': False,
-                'verification': 'load_dialog_closed_ready',
+                'verification': 'load_dialog_closed',
             }
             with patch('pywinauto.Desktop', side_effect=desktop), patch(
-                'automatic_print.automation.api.printerexp.control.native.NativePrintExpControls',
-                return_value=controls,
-            ), patch(
                 'automatic_print.automation.api.printerexp.loaded_task.record_loaded_task',
                 return_value=receipt,
+            ), patch(
+                'automatic_print.automation.api.riin.printexp_loader.time.monotonic',
+                side_effect=[0, 3],
             ):
                 result = load_printexp(target)
 
             self.assertEqual(result['task'], target.name)
             self.assertFalse(result['task_name_verified'])
-            self.assertEqual(result['verification'], 'load_dialog_closed_ready')
+            self.assertEqual(result['verification'], 'load_dialog_closed')
 
     def test_output_waits_for_riin_before_using_document_print_command(self):
         desktop = MagicMock()
