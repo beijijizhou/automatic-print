@@ -52,6 +52,17 @@ def run_command(command_id):
             return 0
         progress("正在准备远程下载排版任务", force=True)
         result = execute_download_layout(command.get("payload") or {}, progress)
+        errors = [
+            str(item.get("error") if isinstance(item, dict) else item).strip()
+            for item in result.get("prn_errors") or []
+            if str(item.get("error") if isinstance(item, dict) else item).strip()
+        ]
+        if errors:
+            update_command(
+                command_id, "failed", phase="PRN生成或装载失败",
+                result=result, error_message="；".join(errors)[:2000],
+            )
+            return 1
         update_command(
             command_id, "succeeded", phase="远程下载排版完成",
             progress_percent=100, result=result,

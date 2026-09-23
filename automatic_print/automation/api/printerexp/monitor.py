@@ -11,6 +11,7 @@ from ..machine_status import claim_control, report_machine
 from ..machine_commands import CommandDispatcher
 from .controls import NativePrintExpControls
 from .discovery import find_installation, process_running, running_installations
+from .loaded_task import read_loaded_task
 from .state import read_snapshot
 from .status.projection import StatusProjector
 
@@ -69,8 +70,11 @@ class PrintExpMonitor:
                 snapshot = read_snapshot(self.installation)
             except OSError as error:
                 self.logger.warning("Unable to read PrintExp status: %s", error)
-        printer_state = _printer_state(snapshot, online, self.logger)
-        status = self.projector.project(snapshot, online, printer_state=printer_state)
+        loaded_task = read_loaded_task() if online else None
+        printer_state = _printer_state(snapshot, online, self.logger, loaded_task)
+        status = self.projector.project(
+            snapshot, online, printer_state=printer_state, loaded_task=loaded_task,
+        )
         signature = _signature(status)
         now = monotonic()
         changed = signature != self.last_signature
@@ -94,14 +98,14 @@ def _signature(status):
     ))
 
 
-def _printer_state(snapshot, online, logger):
+def _printer_state(snapshot, online, logger, loaded_task=None):
     if not online:
         return None
     if snapshot is not None and snapshot.progress >= 100:
         return "idle"
-    loaded = bool(snapshot and snapshot.progress == 0 and (
+    loaded = bool(loaded_task or (snapshot and snapshot.progress == 0 and (
         snapshot.task_file or snapshot.task_folder
-    ))
+    )))
     try:
         return NativePrintExpControls().operation_state(task_loaded=loaded)
     except Exception as error:

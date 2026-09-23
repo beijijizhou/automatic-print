@@ -161,3 +161,25 @@ def test_runner_routes_start_with_expected_batch(monkeypatch):
     assert captured == {
         "action": "start_print", "payload": {"expected_batch_name": "tangle.prn"},
     }
+
+
+def test_runner_marks_prn_error_as_failed_and_preserves_result(monkeypatch):
+    updates = []
+    result = {
+        "prn_errors": [{"batch": "609240119004", "error": "PrintExp 装载失败"}],
+        "prn_files": [], "physical_print_started": False,
+    }
+    monkeypatch.setattr(runner, "get_command", lambda _command_id: {
+        "action": "download_layout", "payload": {},
+    })
+    monkeypatch.setattr(runner, "execute_download_layout", lambda *_args: result)
+    monkeypatch.setattr(runner, "CommandProgress", lambda _command_id: lambda *_args, **_kwargs: None)
+    monkeypatch.setattr(
+        runner, "update_command", lambda *args, **kwargs: updates.append((args, kwargs)),
+    )
+
+    assert runner.run_command("command-failed") == 1
+    assert updates[-1][0][1] == "failed"
+    assert updates[-1][1]["phase"] == "PRN生成或装载失败"
+    assert updates[-1][1]["result"] is result
+    assert "PrintExp 装载失败" in updates[-1][1]["error_message"]

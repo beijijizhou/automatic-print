@@ -117,6 +117,7 @@ class PrinterControlPanel(QGroupBox):
         self.target.setEnabled(bool(self.machines) and not self.busy)
         self.start_button.setEnabled(
             available and state == "ready" and bool(machine.get("batch_name"))
+            and (machine.get("batch_info") or {}).get("task_name_verified") is True
         )
         self.pause_button.setEnabled(available and state == "printing")
         self.clean_button.setEnabled(available and state in {"printing", "paused"})

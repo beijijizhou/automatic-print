@@ -33,5 +33,6 @@ def test_backend_and_control_claim_allow_safety_gated_start():
 
     assert '"start_print"' in function
     assert 'printerState !== "ready"' in function
+    assert 'task_name_verified !== true' in function
     assert "expected_batch_name" in function
     assert "start_print" in migration

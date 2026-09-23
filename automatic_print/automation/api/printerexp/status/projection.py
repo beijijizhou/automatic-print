@@ -11,15 +11,25 @@ class StatusProjector:
         self.started_at = None
         self.samples = deque(maxlen=30)
 
-    def project(self, snapshot, online, *, printer_state=None, clock=None, timestamp=None):
+    def project(
+        self, snapshot, online, *, printer_state=None, loaded_task=None,
+        clock=None, timestamp=None,
+    ):
         now = monotonic() if clock is None else float(clock)
         moment = timestamp or datetime.now(timezone.utc).isoformat()
         if not online:
             self.samples.clear()
             return _base("stopped", "PrintExp未运行", False)
         if snapshot is None:
+            if loaded_task and printer_state == "ready":
+                return _loaded_receipt(loaded_task)
             return _base("idle", "PrintExp在线，等待任务", True, "idle")
         printer_state = printer_state or "printing"
+        if (
+            loaded_task and printer_state == "ready"
+            and float(loaded_task.get("loaded_at") or 0) >= snapshot.modified_at
+        ):
+            return _loaded_receipt(loaded_task)
         if snapshot.task_id != self.task_id:
             self.task_id = snapshot.task_id
             self.started_at = moment if snapshot.progress < 100 else None
@@ -42,6 +52,8 @@ class StatusProjector:
                 "provider": "PrintExp", "task_file": snapshot.task_file or None,
                 "task_folder": snapshot.task_folder or None,
                 "printer_state": printer_state or "unknown",
+                "task_name_verified": bool(snapshot.task_file),
+                "task_source": "PrintInfo.ini",
             },
             "remaining_seconds": remaining,
             "estimate_scope": "batch" if remaining is not None else None,
@@ -73,6 +85,24 @@ def _base(state, phase, source_online, printer_state=None):
         "batch_info": {"provider": "PrintExp", "printer_state": printer_state},
         "remaining_seconds": None, "estimate_scope": None,
         "started_at": None, "error_message": None,
+    }
+
+
+def _loaded_receipt(receipt):
+    verified = receipt.get("task_name_verified") is True
+    task_file = str(receipt.get("task_file") or "").strip()
+    phase = "PrintExp待打印" if verified else "PrintExp待打印（文件名待状态文件复核）"
+    return {
+        **_base("idle", phase, True, "ready"),
+        "progress_percent": 0,
+        "batch_id": task_file or None,
+        "batch_name": task_file or None,
+        "batch_info": {
+            "provider": "PrintExp", "task_file": task_file or None,
+            "task_folder": None, "printer_state": "ready",
+            "task_name_verified": verified, "task_source": "load_receipt",
+            "verification": receipt.get("verification"),
+        },
     }
 
 

@@ -161,7 +161,9 @@ class AdminEntryTests(unittest.TestCase):
             def desktop(backend):
                 return native_desktop if backend == 'win32' else uia_desktop
 
-            with patch('pywinauto.Desktop', side_effect=desktop):
+            with patch('pywinauto.Desktop', side_effect=desktop), patch(
+                'automatic_print.automation.api.printerexp.loaded_task.record_loaded_task'
+            ):
                 result = load_printexp(target)
             self.assertEqual(result['state'], 'printexp_loaded')
             self.assertEqual(result['task'], target.name)
@@ -194,11 +196,50 @@ class AdminEntryTests(unittest.TestCase):
             def desktop(backend):
                 return native_desktop if backend == 'win32' else uia_desktop
 
-            with patch('pywinauto.Desktop', side_effect=desktop):
+            with patch('pywinauto.Desktop', side_effect=desktop), patch(
+                'automatic_print.automation.api.printerexp.loaded_task.record_loaded_task'
+            ):
                 result = load_printexp(target)
             main.set_focus.assert_not_called()
             parent.post_message.assert_called_once_with(0x0111, 5, button.handle)
             self.assertEqual(result['state'], 'printexp_loaded')
+
+    def test_printexp_accepts_ready_state_as_unverified_load_receipt(self):
+        with tempfile.TemporaryDirectory() as folder:
+            target = Path(folder) / '609240119004.prn'
+            target.write_bytes(b'prn')
+            native_desktop, uia_desktop = MagicMock(), MagicMock()
+            main, native_dialog = MagicMock(), MagicMock(handle=99)
+            main.process_id.return_value = 22
+            main.descendants.return_value = []
+            native_dialog.exists.return_value = True
+            native_dialog.is_visible.return_value = True
+            field = MagicMock()
+            field.get_value.return_value = str(target.resolve())
+            native_desktop.window.side_effect = [main, native_dialog]
+            uia_desktop.window.return_value.child_window.return_value = field
+
+            def desktop(backend):
+                return native_desktop if backend == 'win32' else uia_desktop
+
+            controls = MagicMock()
+            controls.operation_state.return_value = 'ready'
+            receipt = {
+                'task_name_verified': False,
+                'verification': 'load_dialog_closed_ready',
+            }
+            with patch('pywinauto.Desktop', side_effect=desktop), patch(
+                'automatic_print.automation.api.printerexp.control.native.NativePrintExpControls',
+                return_value=controls,
+            ), patch(
+                'automatic_print.automation.api.printerexp.loaded_task.record_loaded_task',
+                return_value=receipt,
+            ):
+                result = load_printexp(target)
+
+            self.assertEqual(result['task'], target.name)
+            self.assertFalse(result['task_name_verified'])
+            self.assertEqual(result['verification'], 'load_dialog_closed_ready')
 
     def test_output_waits_for_riin_before_using_document_print_command(self):
         desktop = MagicMock()

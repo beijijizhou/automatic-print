@@ -157,6 +157,9 @@ async function sendControl(db: ReturnType<typeof createClient>, input: Record<st
     if (machine.state !== "idle" || printerState !== "ready") {
       throw new ClientError("Target PrintExp is not idle and ready", 409);
     }
+    if ((machine.batch_info as Record<string, unknown> | null)?.task_name_verified !== true) {
+      throw new ClientError("Target PRN task name is not verified", 409);
+    }
     if (!expectedBatch || expectedBatch.toLocaleLowerCase() !==
         String(machine.batch_name || "").trim().toLocaleLowerCase()) {
       throw new ClientError("Target batch changed before printing", 409);

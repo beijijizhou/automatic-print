@@ -12,6 +12,10 @@ def status_text(machine):
         return "PrintExp 离线"
     printer_state = machine_printer_state(machine)
     if printer_state:
+        if printer_state == "ready" and (
+            machine.get("batch_info") or {}
+        ).get("task_name_verified") is False:
+            return "待打印（待复核）"
         return {
             "idle": "空闲", "ready": "待打印", "printing": "打印中",
             "paused": "已暂停", "cleaning": "清洗中", "unknown": "状态未确认",
