@@ -7,6 +7,7 @@ from PySide6.QtCore import QSettings
 from PySide6.QtWidgets import QApplication
 
 from automatic_print import __version__, __version_display__
+from automatic_print.automation.api.machine_status import identity
 from automatic_print.updates.versioning import release_display
 from automatic_print.updates import release as updater
 from automatic_print.updates.source import SourceUpdateInfo
@@ -17,7 +18,7 @@ OWNERS = []
 
 
 def test_version_is_date_and_fixed_daily_iteration(tmp_path):
-    assert __version_display__ == '0.1.364 · 2026-09-24 · 第21次更新'
+    assert __version_display__ == '0.1.365 · 2026-09-23 · 第22次更新'
     prefs = QSettings(str(tmp_path/'version.ini'), QSettings.IniFormat)
     for _ in range(2):
         window = MainWindow(prefs)
@@ -28,6 +29,23 @@ def test_version_is_date_and_fixed_daily_iteration(tmp_path):
         assert __version__ in window.version_label.toolTip()
         window.close()
     assert release_display('0.1.1', '2026-09-14', 1) == '0.1.1 · 2026-09-14 · 第01次更新'
+
+
+def test_loading_isolated_preferences_does_not_replace_machine_identity(
+    tmp_path, monkeypatch,
+):
+    machine_name = tmp_path / 'machine-name'
+    machine_name.write_text('M11', encoding='utf-8')
+    monkeypatch.setattr(identity, 'machine_name_file', lambda: machine_name)
+    prefs = QSettings(str(tmp_path / 'isolated.ini'), QSettings.IniFormat)
+    prefs.setValue('layout/machine_number', 'M1')
+
+    window = MainWindow(prefs)
+    OWNERS.append(window)
+    window.startup_update_timer.stop()
+    assert window.label_settings.machine.currentData() == 'M1'
+    assert machine_name.read_text(encoding='utf-8') == 'M11'
+    window.close()
 
 
 def test_historical_source_metadata_does_not_invent_iteration():
