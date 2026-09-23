@@ -10,7 +10,11 @@ from ..ui.layout_values import settings_from_window
 from .platform.actions import BatchActionsMixin
 from .platform.generation import GenerationActionsMixin
 from .platform.routes import RouteActionsMixin
-from .platform.view.generation_page import build_accepted_page, build_batch_generation_page
+from .platform.view.generation_page import (
+    build_accepted_page,
+    build_batch_generation_page,
+    build_s2b_strategy_page,
+)
 from .local.actions import LocalActionsMixin
 from .local.page import build_local_page
 from .platform.view.pages import (
@@ -95,6 +99,10 @@ class AutomationDialog(
                 self.main_tabs.addTab(
                     build_batch_generation_page(self, self.platform_names[0]),
                     "批次生成",
+                )
+            elif self.platform_names == ("S2B",):
+                self.main_tabs.addTab(
+                    build_s2b_strategy_page(self), "分批规则"
                 )
             else:
                 self.main_tabs.tabBar().hide()

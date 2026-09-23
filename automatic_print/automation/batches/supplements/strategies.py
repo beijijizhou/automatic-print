@@ -43,7 +43,7 @@ class GroupingStrategy:
 def default_strategy(platform_name: str) -> GroupingStrategy:
     if platform_name == "隆丰":
         return GroupingStrategy(False, True, True, False, False)
-    if platform_name == "Haloo":
+    if platform_name in {"Haloo", "S2B"}:
         return GroupingStrategy(True, True, True, True, False)
     return GroupingStrategy(True, True, True, True, True)
 
@@ -75,7 +75,7 @@ def grouping_values(
         classify_production_face(image_details[str(row["id"])]) for row in order
     }
 
-    if platform_name in {"隆丰", "Haloo"}:
+    if platform_name in {"隆丰", "Haloo", "S2B"}:
         return _confirmed_values(
             platform_name, order, logistics, composition, composition_name,
             faces, selected,
@@ -101,7 +101,9 @@ def _confirmed_values(
         raise RuntimeError("单项单件缺少颜色，不能按所选规则分组。")
     color_group = _color_group(platform_name, color) if strategy.by_color else ""
     band = ""
-    if strategy.by_size and (platform_name != "Haloo" or color in {"黑色", "白色"}):
+    if strategy.by_size and (
+        platform_name not in {"Haloo", "S2B"} or color in {"黑色", "白色"}
+    ):
         band = size_band(str(row.get("size") or ""))
     style_id, style_name = _style_values(row, strategy.by_style)
     return logistics, composition_name, face, style_id, style_name, color_group, band
@@ -130,7 +132,7 @@ def _validate_single_faces(faces) -> None:
 
 
 def _color_group(platform_name: str, color: str) -> str:
-    if platform_name == "Haloo" and color not in {"黑色", "白色"}:
+    if platform_name in {"Haloo", "S2B"} and color not in {"黑色", "白色"}:
         return "混色"
     return color
 
