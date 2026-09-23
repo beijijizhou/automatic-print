@@ -10,6 +10,7 @@ def submit_command(
     batch_numbers,
     layout_settings,
     *,
+    batch_details=None,
     generate_prn=True,
     expires_minutes=30,
     timeout=8,
@@ -24,6 +25,7 @@ def submit_command(
             "payload": {
                 "platform": str(platform),
                 "batch_numbers": list(batch_numbers),
+                "batch_details": list(batch_details or []),
                 "layout_settings": dict(layout_settings),
                 "generate_prn": bool(generate_prn),
             },

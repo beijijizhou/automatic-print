@@ -166,10 +166,17 @@ async function sendControl(db: ReturnType<typeof createClient>, input: Record<st
 }
 
 async function listCommands(db: ReturnType<typeof createClient>) {
-  const { data, error } = await db.from("machine_commands").select("*")
+  const { data: active, error: activeError } = await db.from("machine_commands")
+    .select("*").in("status", ["queued", "claimed", "running"])
+    .order("created_at", { ascending: true }).limit(200);
+  if (activeError) throw activeError;
+  const { data: recent, error: recentError } = await db.from("machine_commands")
+    .select("*").in("status", ["succeeded", "failed", "cancelled", "expired"])
     .order("created_at", { ascending: false }).limit(50);
-  if (error) throw error;
-  return { commands: data || [] };
+  if (recentError) throw recentError;
+  const rows = [...(active || []), ...(recent || [])];
+  rows.sort((left, right) => String(right.created_at).localeCompare(String(left.created_at)));
+  return { commands: rows };
 }
 
 async function claimCommand(db: ReturnType<typeof createClient>, input: Record<string, unknown>) {
@@ -250,7 +257,24 @@ function commandPayload(value: unknown) {
   }
   const layout = object(payload.layout_settings);
   if (JSON.stringify(layout).length > 20_000) throw new ClientError("Layout settings too large", 400);
-  return { platform, batch_numbers: batches, layout_settings: layout,
+  const rawDetails = payload.batch_details == null ? [] : payload.batch_details;
+  if (!Array.isArray(rawDetails) || rawDetails.length > batches.length) {
+    throw new ClientError("Invalid batch_details", 400);
+  }
+  const details = rawDetails.map((value) => {
+    const detail = object(value);
+    const batch = text(detail.batch_number, "batch_number", 12);
+    if (!batches.includes(batch)) throw new ClientError("Unknown batch detail", 400);
+    return {
+      batch_number: batch,
+      item_count: optionalInteger(detail.item_count, 0, 10_000_000) ?? 0,
+      piece_count: optionalInteger(detail.piece_count, 0, 10_000_000) ?? 0,
+    };
+  });
+  if (new Set(details.map(item => item.batch_number)).size !== details.length) {
+    throw new ClientError("Duplicate batch detail", 400);
+  }
+  return { platform, batch_numbers: batches, batch_details: details, layout_settings: layout,
     generate_prn: optionalBoolean(payload.generate_prn, true) };
 }
 

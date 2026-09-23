@@ -4,10 +4,16 @@ from dataclasses import asdict
 from threading import Lock, Thread
 
 from PySide6.QtCore import QObject, Signal
-from PySide6.QtWidgets import QInputDialog, QMessageBox
+from PySide6.QtWidgets import QDialog, QMessageBox
 
-from ...automation.api.machine_status import list_machines, submit_command
+from ...automation.api.machine_status import list_commands, list_machines, submit_command
 from ...ui.machine_status_format import actionable_machines
+from .remote_machine_dialog import RemoteMachineDialog
+from .remote_queue import selected_batch_details, selection_text, workload_detail
+
+
+def load_remote_targets():
+    return {"machines": list_machines(), "commands": list_commands()}
 
 
 class RemoteBatchDispatcher(QObject):
@@ -15,7 +21,7 @@ class RemoteBatchDispatcher(QObject):
     submitted = Signal(object)
     failed = Signal(str)
 
-    def __init__(self, owner, *, fetch=list_machines, submit=submit_command):
+    def __init__(self, owner, *, fetch=load_remote_targets, submit=submit_command):
         super().__init__(owner)
         self.owner = owner
         self.fetch = fetch
@@ -29,9 +35,13 @@ class RemoteBatchDispatcher(QObject):
     def start(self, platform, batch_numbers, settings):
         if not self._lock.acquire(blocking=False):
             return False
+        details = selected_batch_details(
+            getattr(self.owner, "records", []), batch_numbers,
+        )
         self._request = {
             "platform": str(platform),
             "batch_numbers": list(batch_numbers),
+            "batch_details": details,
             "layout_settings": asdict(settings),
             "generate_prn": True,
         }
@@ -46,24 +56,36 @@ class RemoteBatchDispatcher(QObject):
         except Exception as error:
             self.failed.emit(str(error))
 
-    def _choose_machine(self, rows):
+    def _choose_machine(self, dashboard):
+        if isinstance(dashboard, dict):
+            rows = dashboard.get("machines") or []
+            commands = dashboard.get("commands") or []
+        else:
+            rows, commands = dashboard, []
         machines = actionable_machines(rows, require_source=True)
         if not machines:
             self._finish("没有监控和 PrintExp 都在线且机器号不冲突的目标机器。")
             QMessageBox.warning(self.owner, "没有可用打印机", self.owner.remote_dispatch_status.text())
             return
-        labels = [str(item.get("machine_name") or item.get("machine_id")) for item in machines]
-        selected, accepted = QInputDialog.getItem(
-            self.owner, "选择目标打印机", "目标机器", labels, 0, False,
+        batches = self._request["batch_numbers"]
+        request_text = (
+            f"{self._request['platform']} · "
+            f"{selection_text(self._request['batch_details'], batches)} · "
+            f"批次 {'、'.join(batches)}"
         )
-        if not accepted:
+        dialog = RemoteMachineDialog(machines, commands, request_text, self.owner)
+        if dialog.exec() != QDialog.Accepted:
             self._finish("已取消发送；批次选择保持不变。")
             return
-        machine = machines[labels.index(selected)]
-        batches = self._request["batch_numbers"]
+        machine = dialog.selected_machine()
+        if machine is None:
+            self._finish("没有选中目标机器；批次选择保持不变。")
+            return
+        selected = str(machine.get("machine_name") or machine.get("machine_id"))
         detail = (
-            f"让 {selected} 下载并排版 {len(batches)} 个批次，随后生成 PRN "
-            "并加载到 PrintExp。不会开始物理打印。"
+            f"目标：{selected}\n{workload_detail(machine, commands)}\n\n"
+            f"本次发送：{request_text}\n"
+            "目标机随后下载、排版、生成 PRN 并加载到 PrintExp；不会开始物理打印。"
         )
         if QMessageBox.question(self.owner, "确认发送到指定机器", detail) != QMessageBox.Yes:
             self._finish("已取消发送；批次选择保持不变。")

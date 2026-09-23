@@ -18,6 +18,7 @@ from PySide6.QtWidgets import (
 )
 
 from ..automation.api.machine_status import list_commands, list_machines
+from ..batch_ui.platform.remote_queue import machine_workload
 from .machine_command_ui import RemoteCommandPanel
 from .printer_control_ui import PrinterControlPanel
 from .machine_status_format import (
@@ -90,9 +91,12 @@ class MachineStatusPage(QWidget):
         overview_layout.addLayout(header)
         overview_layout.addWidget(self.message)
 
-        self.table = QTableWidget(EXPECTED_MACHINES, 7)
+        self.table = QTableWidget(EXPECTED_MACHINES, 9)
         self.table.setHorizontalHeaderLabels(
-            ("打印机", "部门", "状态", "当前批次", "进度", "剩余时间", "最后心跳")
+            (
+                "打印机", "部门", "状态", "当前批次", "进度", "剩余时间",
+                "最后心跳", "后台处理中", "下一任务",
+            )
         )
         self.table.setEditTriggers(QAbstractItemView.NoEditTriggers)
         self.table.setSelectionBehavior(QAbstractItemView.SelectRows)
@@ -100,6 +104,7 @@ class MachineStatusPage(QWidget):
         header_view = self.table.horizontalHeader()
         header_view.setSectionResizeMode(QHeaderView.ResizeToContents)
         header_view.setSectionResizeMode(3, QHeaderView.Stretch)
+        header_view.setSectionResizeMode(8, QHeaderView.Stretch)
         self.apply_machines([])
         self.command_panel = RemoteCommandPanel(parent or self.window(), self)
         self.command_panel.command_submitted.connect(self.refresh)
@@ -131,12 +136,14 @@ class MachineStatusPage(QWidget):
         if isinstance(dashboard, list):
             dashboard = {"machines": dashboard, "commands": []}
         machines = dashboard.get("machines") or []
-        self.apply_machines(machines)
+        commands = dashboard.get("commands") or []
+        self.apply_machines(machines, commands)
         self.control_panel.set_data(machines)
-        self.command_panel.set_data(machines, dashboard.get("commands") or [])
+        self.command_panel.set_data(machines, commands)
 
-    def apply_machines(self, machines):
+    def apply_machines(self, machines, commands=None):
         machines = [item for item in machines if isinstance(item, dict)]
+        commands = [item for item in (commands or []) if isinstance(item, dict)]
         slots = machine_slots(machines, EXPECTED_MACHINES)
         self.table.setRowCount(EXPECTED_MACHINES)
         connected = [item for item in slots if item is not None]
@@ -160,7 +167,7 @@ class MachineStatusPage(QWidget):
         self.refresh_button.setEnabled(True)
         for row, machine in enumerate(slots):
             if machine is not None:
-                self._fill_machine(row, machine)
+                self._fill_machine(row, machine, commands)
             else:
                 self._fill_pending(row)
 
@@ -168,7 +175,8 @@ class MachineStatusPage(QWidget):
         self.refresh_button.setEnabled(True)
         self.message.setText(f"读取失败：{message}；已保留上一次显示结果，可手动重试。")
 
-    def _fill_machine(self, row, machine):
+    def _fill_machine(self, row, machine, commands):
+        workload = machine_workload(machine, commands)
         values = (
             f"M{row + 1}",
             machine.get("department") or "—",
@@ -177,6 +185,8 @@ class MachineStatusPage(QWidget):
             "",
             remaining_text(machine.get("remaining_seconds"), machine.get("state")),
             heartbeat_text(machine.get("heartbeat_age_seconds")),
+            workload["active_task"],
+            workload["next_task"],
         )
         for column, value in enumerate(values):
             self.table.setItem(row, column, QTableWidgetItem(str(value)))
@@ -192,7 +202,9 @@ class MachineStatusPage(QWidget):
         self.table.setCellWidget(row, 4, progress)
 
     def _fill_pending(self, row):
-        values = (f"M{row + 1}", "—", "待接入", "—", "", "—", "—")
+        values = (
+            f"M{row + 1}", "—", "待接入", "—", "", "—", "—", "—", "—",
+        )
         for column, value in enumerate(values):
             self.table.setItem(row, column, QTableWidgetItem(value))
         self.table.removeCellWidget(row, 4)
