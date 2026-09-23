@@ -49,7 +49,7 @@ def test_pause_button_only_pauses_current_print():
     assert controls.pause_clicks == 1
 
 
-def test_clean_then_resume_requires_pause_and_waits_for_cleaning():
+def test_clean_then_resume_keeps_existing_pause_and_waits_for_cleaning():
     controls = Controls(caption="继续")
     clock = Clock()
 
@@ -57,15 +57,29 @@ def test_clean_then_resume_requires_pause_and_waits_for_cleaning():
 
     assert result["cleaning_completed"] is True
     assert result["resumed"] is True
+    assert result["auto_paused"] is False
     assert controls.clean_clicks == 1
     assert controls.pause_clicks == 1
     assert controls.caption == "暂停"
 
 
-def test_clean_then_resume_refuses_unpaused_print():
+def test_clean_then_resume_auto_pauses_before_cleaning():
     controls = Controls(caption="暂停")
+    clock = Clock()
 
-    with pytest.raises(RuntimeError, match="必须先点击“暂停打印”"):
+    result = clean_then_resume(controls, clock=clock, wait=clock.wait)
+
+    assert result["auto_paused"] is True
+    assert controls.clean_clicks == 1
+    assert controls.pause_clicks == 2
+    assert controls.caption == "暂停"
+
+
+def test_clean_then_resume_refuses_when_no_active_print_exists():
+    controls = Controls(caption="暂停")
+    controls.statuses = ["空闲"]
+
+    with pytest.raises(RuntimeError, match="没有可确认的正在打印任务"):
         clean_then_resume(controls)
 
     assert controls.clean_clicks == 0

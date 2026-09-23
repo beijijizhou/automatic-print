@@ -24,7 +24,7 @@ class PrinterControlPanel(QGroupBox):
         self.pause_button.clicked.connect(lambda: self._request("pause_print"))
         self.clean_button.clicked.connect(lambda: self._request("clean_resume"))
         self.status = QLabel(
-            "先暂停，再执行清洗后自动启动；只有确认清洗结束才会继续打印。"
+            "清洗后自动启动会先暂停打印，确认暂停后清洗，清洗结束后再继续打印。"
         )
         self.status.setWordWrap(True)
         controls = QHBoxLayout()
@@ -64,7 +64,7 @@ class PrinterControlPanel(QGroupBox):
         else:
             title = "确认清洗后自动启动"
             detail = (
-                f"将要求 {target_name} 必须已暂停，然后执行清洗；"
+                f"将自动暂停 {target_name}，确认暂停后执行清洗；"
                 "只有确认清洗结束才会自动继续打印。"
             )
         if QMessageBox.question(self, title, detail) != QMessageBox.Yes:

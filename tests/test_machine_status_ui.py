@@ -43,6 +43,7 @@ def test_board_keeps_eleven_slots_and_renders_live_machine():
     assert page.command_panel.submit_button.isEnabled()
     assert page.control_panel.pause_button.isEnabled()
     assert page.control_panel.clean_button.text() == "清洗后自动启动"
+    assert "会先暂停打印" in page.control_panel.status.text()
     assert page.control_panel.target.currentText() == "M4"
 
 

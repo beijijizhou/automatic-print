@@ -64,8 +64,9 @@ def clean_then_resume(
     resume_timeout=10, clock=monotonic, wait=sleep,
 ):
     controls = controls or NativePrintExpControls()
-    if controls.pause_caption() != "继续":
-        raise RuntimeError("清洗前必须先点击“暂停打印”，当前任务尚未确认暂停。")
+    pause_result = pause_print(
+        controls, progress=progress, timeout=start_timeout, clock=clock, wait=wait,
+    )
     if _is_cleaning(controls.status_text()):
         raise RuntimeError("PrintExp 已经在清洗；保持暂停，请等待本次清洗结束。")
     _report(progress, "已确认暂停；正在启动 PrintExp 清洗")
@@ -85,6 +86,7 @@ def clean_then_resume(
         return {
             "state": "printing", "cleaning_completed": True,
             "resumed": True, "resumed_by_printexp": True,
+            "auto_paused": not pause_result["already_paused"],
         }
     if caption != "继续":
         raise RuntimeError("清洗结束后无法确认暂停/打印状态；未发送启动指令。")
@@ -98,6 +100,7 @@ def clean_then_resume(
     return {
         "state": "printing", "cleaning_completed": True,
         "resumed": True, "resumed_by_printexp": False,
+        "auto_paused": not pause_result["already_paused"],
     }
 
 
