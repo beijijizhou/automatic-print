@@ -18,18 +18,21 @@ def test_source_monitor_registration_uses_venv_pythonw(tmp_path):
     script.write_text("", encoding="utf-8")
     pythonw.write_text("", encoding="utf-8")
     registered, spawned = [], []
+    stopped = []
 
     result = ensure_monitor_started(
         project_root=root,
         executable=python,
         frozen=False,
         platform_name="nt",
+        stop_existing=lambda: stopped.append(True),
         start_scheduled=lambda: False,
         register=registered.append,
         spawn=lambda command, cwd: spawned.append((command, cwd)),
     )
 
     assert result is True
+    assert stopped == [True]
     assert RUN_VALUE == "AutomaticPrintMonitor"
     assert str(pythonw) in registered[0]
     assert str(script) in registered[0]
@@ -44,6 +47,7 @@ def test_existing_elevated_task_is_preferred_over_regular_startup(tmp_path):
         executable=tmp_path / "python.exe",
         frozen=False,
         platform_name="nt",
+        stop_existing=lambda: None,
         start_scheduled=lambda: True,
         unregister=lambda: removed.append(True),
         register=registered.append,
@@ -76,6 +80,7 @@ def test_missing_monitor_is_a_recoverable_startup_failure(tmp_path):
         executable=tmp_path / "python.exe",
         frozen=False,
         platform_name="nt",
+        stop_existing=lambda: None,
         start_scheduled=lambda: False,
         register=registered.append,
         spawn=lambda *_: None,

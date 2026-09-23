@@ -16,12 +16,13 @@ PROJECT_ROOT = Path(__file__).resolve().parents[3]
 def ensure_monitor_started(
     *, project_root=PROJECT_ROOT, executable=None, frozen=None,
     platform_name=None, register=None, spawn=None, start_scheduled=None,
-    unregister=None,
+    unregister=None, stop_existing=None,
 ):
     """Start the elevated monitor task, with a status-only fallback."""
     if (platform_name or os.name) != "nt":
         return False
     try:
+        (stop_existing or _stop_existing_monitors)()
         if (start_scheduled or _start_scheduled_monitor)():
             (unregister or _remove_run_value)()
             return True
@@ -78,6 +79,14 @@ def _remove_run_value():
 
 def _start_scheduled_monitor():
     flags = getattr(subprocess, "CREATE_NO_WINDOW", 0)
+    subprocess.run(
+        ["schtasks.exe", "/End", "/TN", SCHEDULED_TASK],
+        stdin=subprocess.DEVNULL,
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL,
+        check=False,
+        creationflags=flags,
+    )
     result = subprocess.run(
         ["schtasks.exe", "/Run", "/TN", SCHEDULED_TASK],
         stdin=subprocess.DEVNULL,
@@ -87,6 +96,31 @@ def _start_scheduled_monitor():
         creationflags=flags,
     )
     return result.returncode == 0
+
+
+def _stop_existing_monitors():
+    """Release the old source monitor lock after an in-app code update."""
+    flags = getattr(subprocess, "CREATE_NO_WINDOW", 0)
+    script = (
+        f"$owner={os.getpid()}; "
+        "Get-CimInstance Win32_Process -ErrorAction SilentlyContinue | "
+        "Where-Object { $_.ProcessId -ne $PID -and $_.ProcessId -ne $owner "
+        "-and $_.CommandLine -like '*run_printerexp_monitor.py*' } | "
+        "ForEach-Object { Stop-Process -Id $_.ProcessId -Force "
+        "-ErrorAction SilentlyContinue }"
+    )
+    try:
+        subprocess.run(
+            ["powershell.exe", "-NoProfile", "-Command", script],
+            stdin=subprocess.DEVNULL,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+            check=False,
+            timeout=10,
+            creationflags=flags,
+        )
+    except (OSError, subprocess.SubprocessError):
+        pass
 
 
 def _spawn_monitor(command, working_directory):
