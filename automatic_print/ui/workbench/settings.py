@@ -127,7 +127,6 @@ def build_settings(window) -> None:
     actions.addWidget(window.build_reset_button())
     actions.addStretch()
     actions.addWidget(window.save_settings_button)
-    body.addLayout(actions)
     container = QWidget()
     container.setLayout(body)
 
@@ -143,4 +142,6 @@ def build_settings(window) -> None:
     scroll = QScrollArea()
     scroll.setWidgetResizable(True)
     scroll.setWidget(container)
-    QVBoxLayout(window.settings_dialog).addWidget(scroll)
+    dialog_layout = QVBoxLayout(window.settings_dialog)
+    dialog_layout.addWidget(scroll)
+    dialog_layout.addLayout(actions)

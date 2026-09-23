@@ -6,16 +6,14 @@ from PySide6.QtWidgets import QTabWidget, QWidget, QFormLayout, QSpinBox, QCheck
 def build_settings_navigation(window, source):
     tabs = QTabWidget()
     forms = {}
-    for name in ('膜的设置', '排版规则', '标签与文字', '输出与并行'):
+    for name in ('切膜机专用', '排版规则', '标签与文字', '输出与并行'):
         page = QWidget()
         forms[name] = QFormLayout(page)
         forms[name].setFieldGrowthPolicy(QFormLayout.AllNonFixedFieldsGrow)
         tabs.addTab(page, name)
     cutter = window.cutter_settings
-    film = {cutter.film, cutter.custom_film, cutter.printable,cutter.auto_knife,
-            cutter.knife,cutter.safety,cutter.marker_offset,cutter.compare_films}
     layout = {window.spacing, window.margin, window.allow_rotation, window.rotation_direction,
-              window.membrane_gap_enabled, window.membrane_gap, window.auto_fit_width}
+              window.auto_fit_width}
     labels = {'标签与文字', '剪膜机色块'}
 
     def transfer(form, classify):
@@ -29,8 +27,7 @@ def build_settings_navigation(window, source):
             else:
                 target.addRow(field)
 
-    transfer(cutter.layout(), lambda label, field: '膜的设置' if field in film else (
-        '标签与文字' if field is cutter.left_marker_lift else '排版规则'))
+    transfer(cutter.layout(), lambda _label, _field: '切膜机专用')
     cutter.hide()
     # The empty cutter container is no longer needed as a form row.
     for index in range(source.rowCount()):
@@ -38,8 +35,11 @@ def build_settings_navigation(window, source):
             row = source.takeRow(index)
             row.labelItem.widget().deleteLater()
             break
-    transfer(source, lambda label, field: '排版规则' if field in layout else (
+    cutter_only = {window.membrane_gap_enabled, window.membrane_gap}
+    transfer(source, lambda label, field: '切膜机专用' if field in cutter_only else (
+        '排版规则' if field in layout else (
         '标签与文字' if label and label.text() in labels else '输出与并行'))
+    )
     window.bulk_parallelism = QSpinBox()
     window.bulk_parallelism.setRange(1, 8)
     window.bulk_parallelism.setValue(window.preferences.value('developer/bulk_parallelism', 4, int))
@@ -84,8 +84,15 @@ def build_settings_navigation(window, source):
     window.label_settings.platform.currentTextChanged.connect(platform_defaults)
     platform_defaults(window.label_settings.platform.currentText(), initial=True)
     window.print_settings_tabs = tabs
+    window.cutter_rules_form = forms['切膜机专用']
     window.layout_rules_form = forms['排版规则']
     window.output_parallel_form = forms['输出与并行']
+    def sync_cutter_only_rows(*_args):
+        cutting = cutter.mode.currentData() != 'free'
+        for control in (window.membrane_gap_enabled, window.membrane_gap):
+            window.cutter_rules_form.setRowVisible(control, cutting)
+    cutter.mode.currentIndexChanged.connect(sync_cutter_only_rows)
+    sync_cutter_only_rows()
     def fit_current_page(index):
         page = tabs.widget(index)
         if page is None:

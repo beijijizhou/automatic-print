@@ -1,4 +1,4 @@
-"""Persistent minimum label-to-artwork gap, configured with layout rules."""
+"""Persistent cutter-only minimum gap between the membrane label and artwork."""
 from PySide6.QtWidgets import QCheckBox, QDoubleSpinBox, QWidget, QHBoxLayout, QLabel
 
 

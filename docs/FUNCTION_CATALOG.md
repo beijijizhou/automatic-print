@@ -56,7 +56,7 @@
 | 真实排版预览运行时 | `ui/previews/runtime/task.py`, `loader.py`, `inventory.py`, `snapshot.py`, `viewport.py` | 后台计算、结果加载、文件名轻量清单、轻量快照和视口交互分离；耗时计算不进入GUI线程，快速模式只读取清单而不启动排版。 |
 | 批次图片元数据预读 | `layout_engine/measurement/parallel_measurement.py`, `intake/metadata/output_dpi.py`, `intake/metadata/images.py` | 尺寸与DPI按用户线程上限有界并行读取，保持输入顺序并复用批次测量缓存；跟随原图DPI时显示真实完成数，不在网络盘逐张串行后再次读取。 |
 | 错误上下文与复制 | `layout_engine/diagnostics/error_context.py`, `layout_engine/diagnostics/error_parameters.py`, `ui/failure_panel.py` | 所有失败复用完整订单/参数诊断，不散落拼字符串。 |
-| 参数持久化与模式可见性 | `ui/workbench/preferences/`, `ui/preference_autosave.py`, `layout_values.py`, `developer_mode.py`, `ui/label_settings.py`, `ui/print_settings_navigation.py` | 读取、保存和文件夹/设置窗口动作按状态方向分离；平台切换由`print_settings_navigation.py`统一应用膜标签补距默认值：隆丰关闭，其他有名称的平台开启40毫米，当前界面允许再修改；Haloo本地排版平台对普通用户开放，莆田及新实验功能默认只在开发者模式显示并生效；开发者工作区页签统一由共享可见性绑定装配。 |
+| 参数持久化与模式可见性 | `ui/batch_input_panel.py`, `ui/header_gap.py`, `ui/workbench/preferences/`, `ui/preference_autosave.py`, `layout_values.py`, `developer_mode.py`, `ui/label_settings.py`, `ui/print_settings_navigation.py`, `ui/workbench/settings.py` | 读取、保存和文件夹/设置窗口动作按状态方向分离；主界面和完整参数窗口均用一个“切膜机专用”区域集中刀码、刀位、旋转区、膜标签补距及并排缩小，正常排版（无刀码）隐藏补距；设置内容可滚动，恢复与保存动作固定在窗口底部。平台切换由`print_settings_navigation.py`统一应用补距默认值：隆丰关闭，其他有名称的平台开启40毫米，当前界面允许再修改；Haloo本地排版平台对普通用户开放，莆田及新实验功能默认只在开发者模式显示并生效；开发者工作区页签统一由共享可见性绑定装配。 |
 | 输出参数界面 | `ui/settings/output/dpi.py`, `location.py`, `format.py`, `segmentation.py` | 设置页输出区域按用户可见参数分离，统一向工作台和生成入口提供控件与保存位置解析。 |
 | 通用数值参数控件 | `ui/spinbox_style.py` | 所有毫米、尺寸和偏移浮点输入复用`double_spinbox`，不在页面内复制范围、精度和初始值构造代码。 |
 | 参数联动刷新门禁 | `ui/parameter_refresh.py` | 平台和模式一次更新多个控件时取消旧预览并抑制新批次读取；不用多个信号重复触发排版。 |

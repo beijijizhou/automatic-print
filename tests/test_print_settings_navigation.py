@@ -6,10 +6,12 @@ def test_settings_categories_reuse_controls_and_persist_parallelism(tmp_path, mo
     owner = window(path)
     tabs = owner.print_settings_tabs
     assert [tabs.tabText(i) for i in range(tabs.count())] == [
-        '膜的设置', '排版规则', '标签与文字', '输出与并行']
+        '切膜机专用', '排版规则', '标签与文字', '输出与并行']
     assert tabs.widget(0).isAncestorOf(owner.cutter_settings.film)
     assert tabs.widget(0).isAncestorOf(owner.cutter_settings.printable)
     assert tabs.widget(0).isAncestorOf(owner.cutter_settings.knife)
+    assert tabs.widget(0).isAncestorOf(owner.membrane_gap_enabled)
+    assert tabs.widget(0).isAncestorOf(owner.membrane_gap)
     assert tabs.widget(1).isAncestorOf(owner.spacing)
     assert tabs.widget(3).isAncestorOf(owner.bulk_parallelism)
     assert owner.automation_home.isAncestorOf(owner.combine_bulk_batches)
@@ -26,6 +28,8 @@ def test_settings_categories_reuse_controls_and_persist_parallelism(tmp_path, mo
     assert owner._layout_settings().worker_threads == 3
     # The spacing callback still owns the same label after layout transfer.
     owner.cutter_settings.mode.setCurrentIndex(owner.cutter_settings.mode.findData('free'))
+    assert not owner.cutter_rules_form.isRowVisible(owner.membrane_gap_enabled)
+    assert not owner.cutter_rules_form.isRowVisible(owner.membrane_gap)
     label = tabs.widget(1).layout().labelForField(owner.spacing)
     assert '自由排版' in label.text()
     owner.settings_dialog.show()

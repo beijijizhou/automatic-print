@@ -132,9 +132,12 @@ def test_everyday_parameters_are_grouped_and_text_layout_is_default(tmp_path):
     home = owner.automation_home
     panel = home.label_quick_panel
     titles = {group.title() for group in home.batch_input_panel.findChildren(type(home.batch_input_panel))}
-    assert {'批次', '输出', '排版', '刀码与标签'} <= titles
+    assert {'批次', '输出', '切膜机专用'} <= titles
+    assert '排版' not in titles and '刀码与标签' not in titles
     assert home.batch_input_panel.isAncestorOf(owner.quick_header_gap_group)
     assert home.batch_input_panel.isAncestorOf(owner.quick_force_small_pair)
+    assert panel.source_order_group.isAncestorOf(owner.quick_header_gap_group)
+    assert panel.source_order_group.isAncestorOf(owner.quick_force_small_pair)
     assert home.batch_input_panel.isAncestorOf(owner.quick_output_width)
     assert home.batch_input_panel.isAncestorOf(panel.source_order)
     assert panel.source_order.isChecked()
@@ -142,6 +145,11 @@ def test_everyday_parameters_are_grouped_and_text_layout_is_default(tmp_path):
     assert panel.source_order_label.textInteractionFlags() & Qt.TextSelectableByMouse
     assert panel.preview_tabs.currentWidget() is not panel.marker_examples
     assert panel.preview_tabs.tabText(panel.preview_tabs.currentIndex()) == '文字排版预览（默认）'
+    owner.cutter_settings.mode.setCurrentIndex(
+        owner.cutter_settings.mode.findData('free'))
+    assert owner.quick_header_gap_group.isHidden()
+    assert owner.quick_force_small_pair.parentWidget().isHidden()
+    assert panel.cutter_marker_enabled.isVisibleTo(owner)
     owner.close()
 
 

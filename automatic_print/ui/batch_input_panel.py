@@ -77,21 +77,29 @@ def build_batch_input(owner, panel):
     gap = build_quick_header_gap(owner.window())
     force_pair = build_quick_force_pair(owner.window())
     panel.reference_films_label = QLabel('方案比较：45 / 60 厘米')
-    layout_rules = _parameter_group('排版', gap, force_pair, panel.reference_films_label)
     panel.source_order = QCheckBox('批次文件夹名＋正序/倒序')
     panel.source_order.setChecked(panel.label.source_order.isChecked())
     panel.source_order.toggled.connect(panel.label.source_order.setChecked)
     panel.label.source_order.toggled.connect(panel.source_order.setChecked)
-    source_order_control, panel.source_order_label = _copyable_toggle(
+    panel.source_order_control, panel.source_order_label = _copyable_toggle(
         panel.source_order, '批次文件夹名＋正序/倒序')
     panel.source_order_group = _parameter_group(
-        '刀码与标签', panel.cutter_marker_enabled,
-        panel.platform_enabled, source_order_control
+        '切膜机专用', panel.cutter_marker_enabled, gap, force_pair,
+        panel.platform_enabled, panel.source_order_control,
+        panel.reference_films_label,
     )
+    def sync_cutter_controls(*_args):
+        enabled = owner.window().cutter_settings.mode.currentData() != 'free'
+        for control in (gap, force_pair):
+            control.setVisible(enabled)
+        panel.reference_films_label.setVisible(
+            enabled and getattr(owner.window(), 'developer_mode_enabled', False))
+    owner.window().cutter_settings.mode.currentIndexChanged.connect(
+        sync_cutter_controls)
+    sync_cutter_controls()
     parameters.addWidget(batch, 0, 0)
     parameters.addWidget(output, 0, 1)
-    parameters.addWidget(panel.source_order_group, 0, 2)
-    parameters.addWidget(layout_rules, 1, 0, 1, 3)
+    parameters.addWidget(panel.source_order_group, 1, 0, 1, 3)
     parameters.setColumnStretch(0, 1)
     parameters.setColumnStretch(1, 1)
     layout.addLayout(parameters)

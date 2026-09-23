@@ -43,9 +43,11 @@ def test_settings_classification_matches_operation(tmp_path):
     assert cutter.safety.value() == 0
     assert not cutter.safety.isEnabled()
     assert window._layout_settings().cutter_safety_mm == 0
-    for field in (cutter.film,cutter.custom_film,cutter.printable,cutter.knife,cutter.safety,cutter.auto_knife):
-        assert pages['膜的设置'].isAncestorOf(field)
-    for field in (cutter.mode,cutter.rotation_zone,cutter.quick_mode,window.spacing,window.auto_fit_width):
+    for field in (cutter.film, cutter.custom_film, cutter.printable, cutter.knife,
+                  cutter.safety, cutter.auto_knife, cutter.mode,
+                  cutter.rotation_zone, cutter.quick_mode, cutter.left_marker_lift,
+                  window.membrane_gap_enabled, window.membrane_gap):
+        assert pages['切膜机专用'].isAncestorOf(field)
+    for field in (window.spacing, window.auto_fit_width):
         assert pages['排版规则'].isAncestorOf(field)
-    assert pages['标签与文字'].isAncestorOf(cutter.left_marker_lift)
     window.close()

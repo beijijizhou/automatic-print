@@ -156,10 +156,13 @@ def build_developer_mode(window, footer):
         with defer_parameter_refresh(window):
             window.developer_mode_enabled = enabled
             sync_experimental_platforms(window, enabled)
-            window.quick_header_gap_group.setVisible(True)
-            window.layout_rules_form.setRowVisible(window.membrane_gap_enabled, True)
-            window.layout_rules_form.setRowVisible(window.membrane_gap, True)
-            window.layout_rules_form.setRowVisible(window.cutter_settings.two_zone, True)
+            cutting = window.cutter_settings.mode.currentData() != 'free'
+            window.quick_header_gap_group.setVisible(cutting)
+            window.cutter_rules_form.setRowVisible(
+                window.membrane_gap_enabled, cutting)
+            window.cutter_rules_form.setRowVisible(window.membrane_gap, cutting)
+            window.cutter_rules_form.setRowVisible(
+                window.cutter_settings.two_zone, True)
             window.cutter_settings.set_developer_mode(enabled)
             if not enabled:
                 window.output_format.setCurrentIndex(
@@ -172,8 +175,8 @@ def build_developer_mode(window, footer):
             panel.test_tools_button.setVisible(enabled)
             panel.developer_tools_label.setVisible(enabled)
             panel.source_order.setVisible(enabled)
-            panel.source_order_group.setVisible(enabled)
-            panel.reference_films_label.setVisible(enabled)
+            panel.source_order_control.setVisible(enabled)
+            panel.reference_films_label.setVisible(enabled and cutting)
             window.automation_home.batch_tools.setVisible(enabled)
             panel.summary.film_table.set_reference_mode(enabled)
             window.label_settings.form.setRowVisible(window.label_settings.source_order, enabled)

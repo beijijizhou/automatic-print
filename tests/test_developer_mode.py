@@ -32,9 +32,9 @@ def test_default_shows_production_layout_but_hides_diagnostic_tools(tmp_path, mo
     owner.label_settings.source_order.setChecked(True)
     assert not owner._layout_settings().label_source_order_enabled
     assert owner.quick_header_gap_group.isVisible()
-    assert owner.layout_rules_form.isRowVisible(owner.membrane_gap_enabled)
-    assert owner.layout_rules_form.isRowVisible(owner.membrane_gap)
-    assert owner.layout_rules_form.isRowVisible(owner.cutter_settings.two_zone)
+    assert owner.cutter_rules_form.isRowVisible(owner.membrane_gap_enabled)
+    assert owner.cutter_rules_form.isRowVisible(owner.membrane_gap)
+    assert owner.cutter_rules_form.isRowVisible(owner.cutter_settings.two_zone)
     assert owner._layout_settings().cutter_majority_two_zone
     assert not hasattr(owner, 'batch_record_group')
     assert panel.summary.gap_loss.isVisible()
@@ -125,11 +125,11 @@ def test_two_zone_layout_stays_visible_and_active_outside_developer_mode(tmp_pat
     assert owner.label_settings.form.isRowVisible(owner.label_settings.source_order)
     owner.label_settings.source_order.setChecked(True)
     assert owner._layout_settings().label_source_order_enabled
-    assert owner.layout_rules_form.isRowVisible(control)
+    assert owner.cutter_rules_form.isRowVisible(control)
     control.setChecked(True)
     assert owner._layout_settings().cutter_majority_two_zone
     owner.developer_mode_checkbox.setChecked(False)
-    assert owner.layout_rules_form.isRowVisible(control)
+    assert owner.cutter_rules_form.isRowVisible(control)
     assert owner._layout_settings().cutter_majority_two_zone
     owner.close()
 
@@ -212,8 +212,8 @@ def test_toggle_persists_and_existing_history_tab_hides(tmp_path, monkeypatch):
     assert owner.cutter_settings.knife_change_gap.value() == 600
     assert owner._layout_settings().cutter_knife_change_gap_mm == 600
     assert owner.quick_header_gap_group.isVisible()
-    assert owner.layout_rules_form.isRowVisible(owner.membrane_gap_enabled)
-    assert owner.layout_rules_form.isRowVisible(owner.membrane_gap)
+    assert owner.cutter_rules_form.isRowVisible(owner.membrane_gap_enabled)
+    assert owner.cutter_rules_form.isRowVisible(owner.membrane_gap)
     assert not owner.quick_membrane_gap_enabled.isChecked()
     assert owner.quick_membrane_gap.value() == 40
     owner.quick_membrane_gap.setValue(45)
@@ -250,8 +250,8 @@ def test_toggle_persists_and_existing_history_tab_hides(tmp_path, monkeypatch):
     owner.developer_mode_checkbox.setChecked(False)
     assert owner._layout_settings().membrane_gap_mm == 42
     assert owner.membrane_gap.value() == 42
-    assert owner.layout_rules_form.isRowVisible(owner.membrane_gap_enabled)
-    assert owner.layout_rules_form.isRowVisible(owner.membrane_gap)
+    assert owner.cutter_rules_form.isRowVisible(owner.membrane_gap_enabled)
+    assert owner.cutter_rules_form.isRowVisible(owner.membrane_gap)
     assert panel.summary.film_table.rowCount() == 4
     assert not owner._layout_settings().compare_reference_films
     assert not details.tabs.isTabVisible(details.tabs.indexOf(details.history_page))
