@@ -120,10 +120,10 @@ def test_platform_download_is_multi_select_and_preview_only(tmp_path):
     assert longfeng.shared_knife_button.text() == '多批次共用刀位生成PRN'
     assert '分别归入常规和旋转文件夹' in longfeng.shared_knife_button.toolTip()
     assert '不比较四种膜规格' in longfeng.shared_knife_button.toolTip()
+    assert '主界面' in longfeng.shared_knife_button.toolTip()
     assert not longfeng.shared_knife_button.isHidden()
-    assert not longfeng.order_side_checkbox.isChecked()
-    assert not longfeng.order_side_checkbox.isHidden()
-    assert longfeng.order_side_label.textInteractionFlags() & Qt.TextSelectableByMouse
+    assert not hasattr(longfeng, 'order_side_checkbox')
+    assert not hasattr(longfeng, 'order_side_control')
     main_order_side = owner.automation_home.label_quick_panel.order_side_checkbox
     assert main_order_side.isHidden()
     assert not main_order_side.isChecked()
@@ -132,11 +132,9 @@ def test_platform_download_is_multi_select_and_preview_only(tmp_path):
     longfeng._download_selected = lambda *, auto_print: selected_modes.append(auto_print)
     longfeng.shared_knife_button.click()
     main_order_side.setChecked(True)
-    assert longfeng.order_side_checkbox.isChecked()
     assert owner.automation_home.label_quick_panel.order_side_action.isChecked()
     longfeng.shared_knife_button.click()
     assert selected_modes == ['shared_knife', 'shared_knife_order_side']
-    assert not longfeng.order_side_checkbox.isChecked()
     assert not main_order_side.isChecked()
     assert not owner.automation_home.label_quick_panel.order_side_action.isChecked()
     longfeng._download_selected = original_download
