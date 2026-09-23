@@ -15,12 +15,10 @@ from ...busy_spinner import show_progress
 from ...failure_dialog import show_failure_dialog
 from ...progress_format import duration_text, file_size_text
 from ...recent_output import remember_recent_output
-from ....controllers.generation_progress import report_machine_progress
 
 
 def generation_finished(window, output, result) -> None:
     window.clock.stop()
-    _publish_terminal(window, "completed", "批次预览完成" if result.get("preview_only") else "批次生成完成", 100)
     if window.generation_preview.mode == 'single':
         window.batch_status_board.update_batch(
             0, '批次预览完成' if result.get('preview_only') else '批次生成完成')
@@ -106,7 +104,6 @@ def _confirm_result(window, output, summary, warning) -> bool:
 
 def generation_failed(window, message) -> None:
     window.clock.stop()
-    _publish_terminal(window, "failed", "生成失败", None, str(message))
     show_progress(window)
     window.progress.setRange(0, 100)
     window.progress.setFormat("生成失败")
@@ -120,7 +117,6 @@ def generation_failed(window, message) -> None:
 
 def generation_cancelled(window) -> None:
     window.clock.stop()
-    _publish_terminal(window, "stopped", "用户已停止", None)
     show_progress(window)
     window.progress.setRange(0, 100)
     window.progress.setFormat("已停止")
@@ -132,12 +128,3 @@ def generation_cancelled(window) -> None:
 def _set_idle(window) -> None:
     window.generate_button.setEnabled(True)
     window.stop_generation_button.setEnabled(False)
-
-
-def _publish_terminal(window, state, phase, percent, error_message=None) -> None:
-    report_machine_progress(
-        window, phase, percent, state=state,
-        remaining=0 if state == "completed" else None,
-        estimate_scope="batch" if state == "completed" else None,
-        error_message=error_message,
-    )

@@ -62,6 +62,7 @@ async function report(db: ReturnType<typeof createClient>, input: Record<string,
     heartbeat_at: now.toISOString(),
     app_version: String(input.app_version || "").slice(0, 40),
     error_message: optionalText(input.error_message, 1000),
+    source_online: optionalBoolean(input.source_online, true),
     updated_at: now.toISOString(),
   };
   const { data: previous, error: readError } = await db.from("machine_status_current")
@@ -91,7 +92,13 @@ async function get(db: ReturnType<typeof createClient>, id: string) {
 
 function decorate(row: Record<string, unknown>) {
   const age = Math.max(0, (Date.now() - new Date(String(row.heartbeat_at)).getTime()) / 1000);
-  return { ...row, online: age <= STALE_SECONDS, heartbeat_age_seconds: Math.round(age) };
+  const agentOnline = age <= STALE_SECONDS;
+  return {
+    ...row,
+    agent_online: agentOnline,
+    online: agentOnline && row.source_online !== false,
+    heartbeat_age_seconds: Math.round(age),
+  };
 }
 
 async function authorize(request: Request) {
@@ -137,6 +144,11 @@ function optionalDate(value: unknown) {
 function object(value: unknown) {
   if (value == null) return {};
   if (typeof value !== "object" || Array.isArray(value)) throw new ClientError("Invalid batch_info", 400);
+  return value;
+}
+function optionalBoolean(value: unknown, fallback: boolean) {
+  if (value == null) return fallback;
+  if (typeof value !== "boolean") throw new ClientError("Invalid boolean value", 400);
   return value;
 }
 async function digest(value: string) {

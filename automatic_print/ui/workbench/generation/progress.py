@@ -6,7 +6,7 @@ from pathlib import Path
 from ....controllers.generation_progress import (
     progress_count,
     progress_percent,
-    remaining_seconds, report_machine_progress,
+    remaining_seconds,
 )
 from ...busy_spinner import show_busy, show_progress
 from ...progress_format import duration_text, file_size_text
@@ -58,22 +58,6 @@ def refresh_timing(window) -> None:
         f" · 本阶段 {duration_text(stage_elapsed)}"
         f" · 总计 {duration_text(elapsed)} · {estimate}"
         f"{saving_detail(window)}"
-    )
-    _publish_machine_progress(window, remaining)
-
-
-def _publish_machine_progress(window, remaining) -> None:
-    report_machine_progress(
-        window,
-        window.current_stage,
-        progress_percent(
-            window.current_stage, window.current_count, window.current_total
-        ) if window.current_total else None,
-        batch_info={
-            "current": window.current_count,
-            "total": window.current_total,
-        },
-        remaining=remaining,
     )
 
 

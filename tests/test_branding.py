@@ -25,6 +25,8 @@ def test_test_computer_setup_creates_desktop_shortcut() -> None:
     ).read_text(encoding="utf-8")
 
     assert '"Haloo Automatic.lnk"' in script
+    assert '"AutomaticPrintMonitor"' in script
+    assert '"run_printerexp_monitor.py"' in script
     assert '"assets\\ha-icon.ico"' in script
     assert "$shortcut.Save()" in script
 

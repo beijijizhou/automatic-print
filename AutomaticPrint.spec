@@ -20,6 +20,21 @@ analysis = Analysis(
 )
 pyz = PYZ(analysis.pure)
 
+monitor_analysis = Analysis(
+    [str(project_root / "run_printerexp_monitor.py")],
+    pathex=[str(project_root)],
+    binaries=[],
+    datas=[],
+    hiddenimports=[],
+    hookspath=[],
+    hooksconfig={},
+    runtime_hooks=[],
+    excludes=["PySide6", "PIL", "cv2", "pyvips", "playwright"],
+    noarchive=False,
+    optimize=1,
+)
+monitor_pyz = PYZ(monitor_analysis.pure)
+
 exe = EXE(
     pyz,
     analysis.scripts,
@@ -34,10 +49,27 @@ exe = EXE(
     icon=str(project_root / "assets" / "ha-icon.ico"),
 )
 
+monitor_exe = EXE(
+    monitor_pyz,
+    monitor_analysis.scripts,
+    [],
+    exclude_binaries=True,
+    name="AutomaticPrintMonitor",
+    debug=False,
+    bootloader_ignore_signals=False,
+    strip=False,
+    upx=True,
+    console=False,
+    icon=str(project_root / "assets" / "ha-icon.ico"),
+)
+
 bundle = COLLECT(
     exe,
     analysis.binaries,
     analysis.datas,
+    monitor_exe,
+    monitor_analysis.binaries,
+    monitor_analysis.datas,
     strip=False,
     upx=True,
     upx_exclude=[],

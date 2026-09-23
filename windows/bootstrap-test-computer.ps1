@@ -2,7 +2,7 @@ $ErrorActionPreference = "Stop"
 $ProgressPreference = "SilentlyContinue"
 
 # Update this marker when publishing a new bootstrap entry URL with a cache query.
-$bootstrapCacheVersion = "0.1.342"
+$bootstrapCacheVersion = "0.1.343"
 $repositoryUrl = "https://github.com/beijijizhou/automatic-print.git"
 $installRoot = Join-Path ([Environment]::GetFolderPath("MyDocuments")) "AutomaticPrint"
 Write-Host "Bootstrap cache version: $bootstrapCacheVersion"
@@ -257,6 +257,17 @@ if (Test-Path $iconPath) {
 }
 $shortcut.Save()
 Write-Host "Desktop entry: $shortcutPath"
+
+Write-Host "Registering the PrintExp status monitor..."
+$monitorPython = Join-Path $installRoot ".venv\Scripts\pythonw.exe"
+$monitorScript = Join-Path $installRoot "run_printerexp_monitor.py"
+$monitorArguments = "`"$monitorScript`""
+$runKey = "HKCU:\Software\Microsoft\Windows\CurrentVersion\Run"
+$monitorCommand = "`"$monitorPython`" $monitorArguments"
+New-ItemProperty -Path $runKey -Name "AutomaticPrintMonitor" `
+    -Value $monitorCommand -PropertyType String -Force | Out-Null
+Start-Process -FilePath $monitorPython -ArgumentList $monitorArguments `
+    -WorkingDirectory $installRoot -WindowStyle Hidden
 
 Write-Host ""
 Write-Host "Setup/update finished. Starting Haloo Automatic..."

@@ -209,7 +209,7 @@
 
 ## 外部自动化
 
-- Supabase机器状态中心由`supabase/migrations/202609220001_machine_status.sql`维护只允许service role访问的最新状态表，`supabase/functions/machine-status/`通过现有受限工厂密钥提供`report/list/get`接口并按90秒心跳判断在线；`automation/api/machine_status/`拥有安装ID、请求客户端和不阻塞生产的合并上报线程。开发者模式的本地单批与多批排版复用`controllers/generation_progress.py`的真实百分比，只在已有可靠阶段样本时发送阶段ETA；未知剩余时间保持空值。当前后端已提供统一读取数据，尚未增加普通用户机器看板。
+- Supabase机器状态中心由两份`202609220001/2`迁移维护只允许service role访问的每机最新状态，`supabase/functions/machine-status/`通过现有受限工厂密钥提供`report/list/get`并分别返回监控心跳和PrintExp来源在线状态。`automation/api/printerexp/`发现便携式PrintExp安装，读取`PrintInfo.ini`及当前任务文件中的真实百分比、任务GUID、PRN和批次目录，并以同一任务的连续样本估算整批ETA。安装器注册独立无窗口监控进程随Windows登录启动，主工作台关闭后仍运行；本地2秒读取，状态变化或60秒心跳才上报。AutomaticPrint排版进度不再进入机器状态中心。当前后端已提供统一读取数据，尚未增加普通用户机器看板。
 
 - 隆丰、莆田和Haloo下载工作区各自提供状态9“已完成”来源与“自动化生成计划”按钮，后台读取本平台当前范围内状态9的生产项并自动勾选未补单的候选分组，不提交批次；仍可手动读取分类和修改勾选。勾选时与最终确认窗口逐组展示真实底款名称/ID、颜色和件数，确认后才提交。页面还展示样本范围、物流、面别、尺码档、来源批次及未纳入数量；提交前重新精确读取整单，拦截已补单、过期或不完整分组。`batch_ui/task/reads.py`复用现有工作线程并按平台路由；`local/scanning.py`后台读取目录并按来源范围丢弃旧结果。批次排版复用界面补距开关及数值，不再强制40毫米。
 

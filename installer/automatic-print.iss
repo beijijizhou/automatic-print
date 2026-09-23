@@ -35,5 +35,9 @@ Source: "..\dist\AutomaticPrint\*"; DestDir: "{app}"; Flags: ignoreversion recur
 Name: "{autoprograms}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"
 Name: "{autodesktop}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"; Tasks: desktopicon
 
+[Registry]
+Root: HKCU; Subkey: "Software\Microsoft\Windows\CurrentVersion\Run"; ValueType: string; ValueName: "AutomaticPrintMonitor"; ValueData: """{app}\AutomaticPrintMonitor.exe"""; Flags: uninsdeletevalue
+
 [Run]
+Filename: "{app}\AutomaticPrintMonitor.exe"; Flags: nowait runhidden
 Filename: "{app}\{#MyAppExeName}"; Description: "Launch {#MyAppName}"; Flags: nowait postinstall skipifsilent

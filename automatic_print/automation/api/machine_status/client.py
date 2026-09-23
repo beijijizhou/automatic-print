@@ -6,7 +6,7 @@ from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
 
 from automatic_print import __version__
-from automatic_print.automation.api.ydwx.credentials import client_key
+from automatic_print.automation.api.gateway_credentials import shared_client_key
 
 from .identity import machine_id, machine_name
 
@@ -42,7 +42,7 @@ def _call(payload, *, endpoint=None, access_key=None, timeout=8):
         "AUTOMATIC_PRINT_MACHINE_STATUS_URL", DEFAULT_ENDPOINT)).strip()
     configured_key = access_key
     if configured_key is None:
-        configured_key = client_key()
+        configured_key = shared_client_key()
     request = Request(
         endpoint,
         data=json.dumps(payload, ensure_ascii=False).encode("utf-8"),

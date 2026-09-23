@@ -10,7 +10,6 @@ from .update_actions import UpdateActionsMixin
 from .worker_bridge import MainWindowWorkerBridge
 from .workbench import build_activity, build_home, build_settings
 from ..controllers import LayoutGenerationController
-from ..automation.api.machine_status import MachineStatusReporter
 
 
 class MainWindow(
@@ -28,10 +27,6 @@ class MainWindow(
         self.worker = None
         self.worker_bridge = MainWindowWorkerBridge(self)
         self.layout_generation = LayoutGenerationController(self)
-        self.machine_status_reporter = MachineStatusReporter(minimum_interval=5)
-        self.machine_status_batch_id = ""
-        self.machine_status_batch_name = ""
-        self.machine_status_started_at = None
         self.update_thread: QThread | None = None
         self.update_worker = None
         self.update_is_silent = True

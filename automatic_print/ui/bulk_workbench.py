@@ -2,7 +2,6 @@
 from pathlib import Path
 from PySide6.QtCore import QObject, Slot
 from ..controllers import BulkGenerationController
-from .bulk_machine_status import begin_status, finish_status, update_status
 from .bulk_generation_worker import BulkGenerationWorker
 from .busy_spinner import show_busy, show_progress
 from .bulk_start import open_bulk, start_bulk
@@ -41,7 +40,6 @@ class BulkWorkbench(QObject):
         except ValueError as error:
             self.window.status.setText(str(error))
             return
-        begin_status(self, parent, selected)
         self.window.generation_preview.start('multiple')
         self.selector.show()
         self.panel.summary.start(str(parent), 0)
@@ -123,7 +121,6 @@ class BulkWorkbench(QObject):
         previous = self.stages.get(index)
         if previous is None or previous[0] != stage:
             self.window.run_log.appendPlainText(f'{Path(folder).name}：{stage}')
-        update_status(self, index, folder, stage, current, total)
         self.stages[index] = stage, current, total, filename
         self.selector.update_batch(index, stage, current, total, filename)
         if index == self.selector.currentIndex():
@@ -184,7 +181,6 @@ class BulkWorkbench(QObject):
         if result['errors']:
             self.panel.summary.show_failure('\n'.join(
                 f"{e['folder']}：{e['error']}" for e in result['errors']))
-        finish_status(self, result, text)
     def cancel(self):
         if not self.task_control.request_cancel():
             return
