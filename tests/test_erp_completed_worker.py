@@ -29,6 +29,7 @@ def test_completed_plan_reads_the_selected_erp_platform(platform_name):
         playwright.return_value.__enter__.return_value,
         url,
         worker.cancellation.check,
+        worker._report,
     )
     find.assert_called_once_with(
         connect.return_value,
@@ -126,8 +127,18 @@ def test_completed_generation_routes_to_selected_erp_platform(platform_name):
         worker._run_action()
 
     url = get_erp_platform(platform_name).production_items_url
-    connect.assert_called_once_with(playwright.return_value.__enter__.return_value, url)
-    find.assert_called_once_with(connect.return_value, platform_name)
+    connect.assert_called_once_with(
+        playwright.return_value.__enter__.return_value,
+        url,
+        worker.cancellation.check,
+        worker._report,
+    )
+    find.assert_called_once_with(
+        connect.return_value,
+        platform_name,
+        worker._report,
+        worker.cancellation.check,
+    )
     generate.assert_called_once_with(find.return_value, ('group',), 7, worker._report)
     assert results == [dict(type='completed_erp_generated',
                             platform=platform_name, codes=('batch',))]

@@ -34,6 +34,7 @@ def build_controls(owner) -> None:
         'font-size:14px;font-weight:700;}')
     loading = QVBoxLayout(owner.loading_panel)
     owner.loading_label = QLabel('正在准备…')
+    owner.loading_label.setWordWrap(True)
     owner.loading_bar = QProgressBar()
     owner.loading_bar.setRange(0, 0)
     owner.loading_bar.setTextVisible(False)

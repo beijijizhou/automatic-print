@@ -1,4 +1,4 @@
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, patch
 
 import pytest
 
@@ -33,6 +33,7 @@ class _TaskUi(ThreadActionsMixin):
         self.worker = worker
         self.stop_button = _TextWidget()
         self.loading_label = _TextWidget()
+        self.loading_bar = MagicMock()
         self.log = _Log()
 
 
@@ -43,13 +44,41 @@ def test_stop_batch_reading_uses_matching_status_without_riin():
     ui.stop_current_task()
 
     assert worker.cancellation.requested()
-    assert ui.loading_label.text == "正在停止批次信息读取…"
+    assert ui.loading_label.text == "步骤 1 · 正在停止批次信息读取…"
     assert ui.log.lines == ["正在停止批次信息读取…"]
     assert "RIIN" not in ui.loading_label.text
     assert not ui.stop_button.enabled
 
     ui.task_cancelled()
     assert ui.loading_label.text == "批次信息读取已停止。"
+
+
+def test_current_automation_step_shows_step_and_elapsed_time():
+    ui = _TaskUi(AutomationWorker("list", "隆丰"))
+    ui._task_started_at = 90
+
+    with patch(
+        "automatic_print.batch_ui.task.actions.monotonic",
+        side_effect=(100, 106),
+    ):
+        ui.show_progress_message("正在等待生产批次表格加载…")
+
+    assert ui.loading_label.text == (
+        "步骤 1 · 正在等待生产批次表格加载…"
+        "（本步骤 6 秒 · 总计 16 秒）"
+    )
+
+
+def test_automation_log_keeps_layout_and_riin_steps():
+    ui = _TaskUi(AutomationWorker("download", "隆丰", auto_print=True))
+
+    ui.append_log("正在保存大图 · 已写入 20.0 兆字节")
+    ui.append_log("RIIN正在生成PRN")
+
+    assert ui.log.lines == [
+        "正在保存大图 · 已写入 20.0 兆字节",
+        "RIIN正在生成PRN",
+    ]
 
 
 def test_riin_stop_status_is_limited_to_automatic_print():

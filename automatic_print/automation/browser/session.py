@@ -65,11 +65,15 @@ def chrome_is_connectable() -> bool:
         return False
 
 
-def ensure_debug_chrome(start_url: str, check_cancel=None) -> None:
+def ensure_debug_chrome(start_url: str, check_cancel=None, progress=None) -> None:
     check = check_cancel or (lambda: None)
+    report = progress or (lambda _message: None)
     check()
+    report("正在检查 Chrome 自动化连接…")
     if chrome_is_connectable():
+        report("Chrome 自动化连接可用。")
         return
+    report("未检测到自动化浏览器，正在启动 Chrome…")
     profile = _profile_dir()
     profile.mkdir(parents=True, exist_ok=True)
     subprocess.Popen(
@@ -90,17 +94,23 @@ def ensure_debug_chrome(start_url: str, check_cancel=None) -> None:
     for _ in range(150):
         check()
         if chrome_is_connectable():
+            report("Chrome 已启动，自动化端口可以连接。")
             return
         time.sleep(0.1)
     raise TimeoutError("Chrome 启动超时。")
 
 
-def connect_debug_chrome(playwright, start_url: str, check_cancel=None):
+def connect_debug_chrome(
+    playwright, start_url: str, check_cancel=None, progress=None
+):
     check = check_cancel or (lambda: None)
-    ensure_debug_chrome(start_url, check)
+    report = progress or (lambda _message: None)
+    ensure_debug_chrome(start_url, check, report)
     check()
+    report("正在连接 Chrome 自动化会话…")
     browser = playwright.chromium.connect_over_cdp(CDP_URL, timeout=30_000)
     check()
+    report("Chrome 自动化会话连接完成。")
     return browser
 
 
@@ -118,6 +128,7 @@ def open_authenticated_page(
     check = check_cancel or (lambda: None)
     check()
     host = urlsplit(target_url).netloc
+    report(f"正在查找 {host} 已打开的目标页面…")
     exact_pages = [
         page
         for context in browser.contexts
@@ -128,6 +139,7 @@ def open_authenticated_page(
     ]
     if exact_pages:
         page = exact_pages[-1]
+        report(f"已找到目标页面，正在核对登录和数据区：{page.url}")
     else:
         authenticated_pages = [
             page
@@ -136,6 +148,7 @@ def open_authenticated_page(
             if host in page.url and "/login" not in page.url
         ]
         if authenticated_pages:
+            report("已找到登录有效的页面，正在新建目标页签…")
             page = authenticated_pages[-1].context.new_page()
         else:
             host_pages = [
@@ -150,6 +163,10 @@ def open_authenticated_page(
                 else browser.contexts[0]
             )
             page = host_pages[-1] if host_pages else context.new_page()
+            report(
+                "正在复用平台页签…" if host_pages
+                else "正在新建平台页签…"
+            )
         report(f"正在打开 {host}…")
         check()
         page.goto(target_url, wait_until="domcontentloaded", timeout=30_000)
@@ -172,6 +189,7 @@ def _wait_for_authenticated_target(
     ready_deadline = time.monotonic() + 30
     login_reported = False
     was_login = False
+    last_wait_report = time.monotonic()
     report(f"页面已打开，正在等待 ERP 数据区域：{page.url}")
     while True:
         check_cancel()
@@ -211,4 +229,7 @@ def _wait_for_authenticated_target(
                     f"当前页面：{page.url}\n"
                     "请确认页面没有验证码、登录提示或错误弹窗。"
                 )
+            if now - last_wait_report >= 5:
+                report(f"仍在等待 ERP 数据区域：{page.url}")
+                last_wait_report = now
         page.wait_for_timeout(250)

@@ -23,16 +23,31 @@ def download_production_images(
     extract: bool = True,
 ) -> list[Path]:
     """Reuse local files, then transfer production archives in groups of three."""
+    if progress:
+        progress("正在检查所选批次的本地图片和压缩包…")
     output_root.mkdir(parents=True, exist_ok=True)
     saved, archives, remote = _classify_batches(
         batch_groups, output_root, progress
     )
+    if progress:
+        progress(
+            f"本地检查完成：{len(saved)} 个可复用，"
+            f"{len(remote)} 个需要从 ERP 下载。"
+        )
     for offset in range(0, len(remote), DOWNLOAD_CONCURRENCY):
         group = remote[offset : offset + DOWNLOAD_CONCURRENCY]
-        _search_batches(page, [task.batch_number for task in group])
+        numbers = [task.batch_number for task in group]
+        if progress:
+            progress(f"正在 ERP 页面搜索批次：{'、'.join(numbers)}")
+        _search_batches(page, numbers, progress)
         active = _start_parallel_downloads(page, group, progress)
         for task, download in active:
             destination = task.group_dir / f"{task.batch_number}_生产图.zip"
+            if progress:
+                progress(
+                    f"正在保存生产图压缩包 {task.group_name} / "
+                    f"{task.batch_number}…"
+                )
             _save_download(download, destination, task, progress)
             saved.append(destination)
             archives.append(destination)
@@ -41,7 +56,11 @@ def download_production_images(
                     f"下载完成 {task.group_name} / {task.batch_number}"
                 )
     if extract:
+        if progress:
+            progress(f"下载阶段完成；正在解压 {len(archives)} 个压缩包…")
         extract_production_archives(archives, progress)
+    if progress:
+        progress(f"生产图准备完成：共 {len(saved)} 个批次。")
     return saved
 
 
@@ -108,7 +127,7 @@ def _classify_batches(batch_groups, output_root, progress):
     return saved, archives, remote
 
 
-def _search_batches(page, batch_numbers: list[str]) -> None:
+def _search_batches(page, batch_numbers: list[str], progress=None) -> None:
     frame = production_batch_frame(page)
     search = frame.locator("input[placeholder*='批次号']")
     button = frame.get_by_text("搜 索", exact=True)
@@ -121,6 +140,8 @@ def _search_batches(page, batch_numbers: list[str]) -> None:
         timeout=30_000,
     ):
         button.click()
+    if progress:
+        progress("ERP 已返回搜索结果；正在等待批次行显示…")
     frame.locator("tbody tr").filter(
         has_text=batch_numbers[0]
     ).first.wait_for(state="visible", timeout=10_000)
@@ -130,6 +151,11 @@ def _start_parallel_downloads(page, tasks, progress):
     active = []
     rows = production_batch_frame(page).locator("tbody tr")
     for task in tasks:
+        if progress:
+            progress(
+                f"正在核对生产图下载入口 {task.group_name} / "
+                f"{task.batch_number}…"
+            )
         matching = rows.filter(has_text=task.batch_number)
         if matching.count() != 1:
             raise RuntimeError(
@@ -164,7 +190,8 @@ def _start_parallel_downloads(page, tasks, progress):
             continue
         if progress:
             progress(
-                f"并行下载已启动 {task.group_name} / {task.batch_number}"
+                f"下载入口已确认；正在等待浏览器接收文件 "
+                f"{task.group_name} / {task.batch_number}…"
             )
         with page.expect_download(timeout=120_000) as info:
             links.nth(2).click()
@@ -193,4 +220,6 @@ def extract_production_archives(
                     )
             bundle.extractall(destination)
         extracted.append(destination)
+        if progress:
+            progress(f"解压完成 {archive.parent.name} / {batch_number}")
     return extracted

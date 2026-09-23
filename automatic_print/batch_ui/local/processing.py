@@ -29,6 +29,7 @@ def process_local_batches(
     order_side: bool = False,
 ) -> dict:
     platform_root = output / platform_name
+    progress(f"正在扫描 {platform_name} 的本地批次目录…")
     folders = _batch_folders(platform_root, batch_numbers)
     if not folders:
         raise RuntimeError(
@@ -36,6 +37,7 @@ def process_local_batches(
         )
     if sample_limit and not merge_batches:
         folders = folders[:1]
+    progress(f"已找到 {len(folders)} 个批次；正在读取各批次生产图…")
     prepared = [
         (
             folder,
@@ -48,6 +50,10 @@ def process_local_batches(
         )
         for folder in folders
     ]
+    progress(
+        f"生产图读取完成：{sum(len(images) for _folder, images in prepared)} 张；"
+        "正在准备输出目录和排版模式…"
+    )
     output_name = (
         "PREVIEW"
         if preview_only
@@ -57,14 +63,17 @@ def process_local_batches(
     )
     destination_root = platform_root / output_name
     if shared_knife:
+        progress("正在进入跨批次固定刀位排版…")
         from ...automation.workflows.shared_knife_batches import render_shared_knife_batches
         return render_shared_knife_batches(platform_root, platform_name, prepared,
                                            settings, progress, order_side=order_side)
     if merge_batches:
+        progress("正在进入合并批次排版…")
         completed = _render_merged(
             prepared, destination_root, settings, progress, preview_only
         )
     else:
+        progress("正在进入逐批次排版…")
         completed = _render_separately(
             prepared, destination_root, settings, progress, preview_only
         )
@@ -93,6 +102,7 @@ def _batch_folders(root: Path, selected: list[str]) -> list[Path]:
 
 
 def _prepare_images(folder, batch_type, sample_limit, progress):
+    progress(f"{folder.name} · 正在读取批次类型和生产图文件…")
     if not batch_type and has_source_prefix(folder):
         raise RuntimeError(
             f"批次 {folder.name} 包含平台来源前缀，但无法确认"
@@ -108,7 +118,9 @@ def _prepare_images(folder, batch_type, sample_limit, progress):
     images = discover_images(folder)
     if batch_type in MULTI_PIECE_TYPES:
         images = sort_multi_piece_images(images)
-    return images[:sample_limit] if sample_limit else images
+    selected = images[:sample_limit] if sample_limit else images
+    progress(f"{folder.name} · 已读取 {len(selected)} 张生产图")
+    return selected
 
 
 def _render_merged(

@@ -21,9 +21,12 @@ def load_platform_order_status(
 ) -> PlatformOrderStatus:
     from playwright.sync_api import sync_playwright
     platform = get_erp_platform(platform_name)
+    if progress:
+        progress(f"正在准备连接 {platform.name} 生产项页面…")
     with sync_playwright() as playwright:
         browser = connect_debug_chrome(
-            playwright, platform.production_items_url, check_cancel
+            playwright, platform.production_items_url, check_cancel,
+            progress,
         )
         page = _production_items_page(
             browser, platform.production_items_url, progress, check_cancel
@@ -33,6 +36,8 @@ def load_platform_order_status(
         count = production_item_count(page, "1")
         if check_cancel:
             check_cancel()
+        if progress:
+            progress(f"ERP 已接单数量读取完成：{count} 项。")
         return PlatformOrderStatus(accepted_count=count)
 def load_batch_records(
     platform_name: str, progress=None, check_cancel=None
@@ -41,6 +46,9 @@ def load_batch_records(
         check_cancel()
     if platform_name == "S2B":
         from ..api.s2b.production.downloads import list_s2b_batches
+        source = list_s2b_batches(progress)
+        if progress:
+            progress(f"正在解析 S2B 返回的 {len(source)} 条批次记录…")
         records = [
             BatchRecord(
                 record.batch_number,
@@ -50,21 +58,24 @@ def load_batch_records(
                 record.created_at,
                 True,
             )
-            for record in list_s2b_batches(progress)
+            for record in source
         ]
         if check_cancel:
             check_cancel()
         return records
     from playwright.sync_api import sync_playwright
     platform = get_erp_platform(platform_name)
+    if progress:
+        progress(f"正在准备连接 {platform.name} 生产批次页面…")
     with sync_playwright() as playwright:
         browser = connect_debug_chrome(
-            playwright, platform.production_batches_url, check_cancel
+            playwright, platform.production_batches_url, check_cancel,
+            progress,
         )
         page = _batch_page(
             browser, platform.production_batches_url, progress, check_cancel
         )
-        rows = _parse_api_rows(page)
+        rows = _parse_api_rows(page, progress)
         if check_cancel:
             check_cancel()
         return rows
@@ -74,27 +85,38 @@ def load_batch_records_between(
 ) -> list[BatchRecord]:
     from playwright.sync_api import sync_playwright
     platform = get_erp_platform(platform_name)
+    if progress:
+        progress(
+            f"正在读取批次范围 {start_code} 至 {end_code}…"
+        )
     with sync_playwright() as playwright:
         browser = connect_debug_chrome(
-            playwright, platform.production_batches_url, check_cancel
+            playwright, platform.production_batches_url, check_cancel,
+            progress,
         )
         page = _batch_page(
             browser, platform.production_batches_url, progress, check_cancel
         )
+        if progress:
+            progress("生产批次表格已就绪；正在通过 ERP API 读取范围记录…")
         rows = list_batches_between(page, start_code, end_code)
+        if progress:
+            progress(f"ERP 返回 {len(rows)} 条记录；正在核对生产图状态…")
         if check_cancel:
             check_cancel()
         ready_codes = ready_production_image_codes(page, rows)
         ready_codes.update(
             _search_batch_codes(
                 page, [str(row.get("code") or "") for row in rows],
-                check_cancel,
+                check_cancel, progress,
             )
         )
         if check_cancel:
             check_cancel()
         return records_from_rows(page, rows, ready_codes)
-def _search_batch_codes(page, codes: list[str], check_cancel=None) -> set[str]:
+def _search_batch_codes(
+    page, codes: list[str], check_cancel=None, progress=None
+) -> set[str]:
     if not codes:
         return set()
     frame = production_batch_frame(page)
@@ -107,6 +129,11 @@ def _search_batch_codes(page, codes: list[str], check_cancel=None) -> set[str]:
         if check_cancel:
             check_cancel()
         group = codes[offset : offset + 3]
+        if progress:
+            progress(
+                f"[{min(offset + len(group), len(codes))}/{len(codes)}] "
+                f"正在页面核对批次：{'、'.join(group)}"
+            )
         search.fill(",".join(group))
         endpoint = "/production/v1/production/batch/page"
         with page.expect_response(
@@ -153,9 +180,12 @@ def download_selected_batches(
         raise ValueError("请至少选择一个生产批次。")
     platform = get_erp_platform(platform_name)
     destination = output_root / platform.name
+    if progress:
+        progress(f"正在准备连接 {platform.name} 生产批次下载页面…")
     with sync_playwright() as playwright:
         browser = connect_debug_chrome(
-            playwright, platform.production_batches_url, check_cancel
+            playwright, platform.production_batches_url, check_cancel,
+            progress,
         )
         page = _batch_page(
             browser, platform.production_batches_url, progress, check_cancel
@@ -185,28 +215,49 @@ def _batch_page(browser, url: str, progress=None, check_cancel=None):
         browser, url, "iframe", progress=progress, ready_state="attached",
         check_cancel=check,
     )
+    if pages and progress:
+        progress(f"正在复用已打开的生产批次页面：{page.url}")
     check()
     if "/productionBatch/index" not in page.url:
+        if progress:
+            progress("当前不在生产批次页；正在打开“生产”菜单…")
         production = page.get_by_text("生产", exact=True)
         if production.count():
             production.first.click()
         check()
         link = page.locator("a[href*='/productionBatch/index']")
+        if progress:
+            progress("正在等待“生产批次”入口…")
         link.first.wait_for(state="visible", timeout=10_000)
         link.first.click()
+        if progress:
+            progress("已点击“生产批次”；正在等待页面跳转…")
         page.wait_for_url("**/productionBatch/index", timeout=30_000)
         check()
+    if progress:
+        progress("已进入生产批次页；正在等待批次表格加载…")
     for _ in range(60):
         check()
         try:
             frame = production_batch_frame(page)
             if frame.locator("th:visible").count():
+                if progress:
+                    progress("生产批次表格已加载。")
                 return page
         except RuntimeError:
             pass
         page.wait_for_timeout(500)
     raise RuntimeError("ERP 生产批次表格在 30 秒内没有加载完成。")
-def _parse_api_rows(page) -> list[BatchRecord]:
+def _parse_api_rows(page, progress=None) -> list[BatchRecord]:
+    if progress:
+        progress("正在通过 ERP API 读取生产批次列表…")
     rows = list_batches(page)
+    if progress:
+        progress(f"ERP 返回 {len(rows)} 条批次记录；正在读取生产图就绪状态…")
     ready_codes = ready_production_image_codes(page, rows)
-    return records_from_rows(page, rows, ready_codes)
+    if progress:
+        progress("生产图状态读取完成；正在整理批次列表…")
+    records = records_from_rows(page, rows, ready_codes)
+    if progress:
+        progress(f"批次列表整理完成：{len(records)} 条。")
+    return records

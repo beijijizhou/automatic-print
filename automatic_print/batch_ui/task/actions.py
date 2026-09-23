@@ -1,4 +1,5 @@
 import re
+from time import monotonic
 from PySide6.QtCore import QThread, Qt, Slot, QTimer
 from PySide6.QtWidgets import QMessageBox
 
@@ -16,8 +17,13 @@ class ThreadActionsMixin:
                 return
         self._set_actions_enabled(False)
         self.loading_bar.setRange(0, 0)
-        self.loading_label.setText(
-            f"正在处理 {worker.platform_name}，请稍候…"
+        self._task_started_at = monotonic()
+        self._task_step_started_at = self._task_started_at
+        self._task_step_number = 0
+        self._task_step_text = ""
+        self._ensure_task_status_timer()
+        self.show_progress_message(
+            f"正在启动 {worker.platform_name} · {worker.task_title}…"
         )
         self.loading_panel.show()
         self.stop_button.setEnabled(True)
@@ -61,12 +67,14 @@ class ThreadActionsMixin:
 
     @Slot(str)
     def append_log(self, message: str) -> None:
-        if "正在保存大图" not in message and "RIIN正在" not in message:
-            self.log.appendPlainText(message)
+        self.log.appendPlainText(message)
 
     @Slot(str)
     def show_progress_message(self, message: str) -> None:
-        self.loading_label.setText(message)
+        self._task_step_number = getattr(self, "_task_step_number", 0) + 1
+        self._task_step_text = message
+        self._task_step_started_at = monotonic()
+        self._render_task_status()
         step = re.search(r"\[(\d+)/(\d+)\]", message)
         if step:
             current, total = map(int, step.groups())
@@ -78,6 +86,30 @@ class ThreadActionsMixin:
             self.loading_bar.setRange(0, 0)
             self.loading_bar.setTextVisible(False)
 
+    def _ensure_task_status_timer(self) -> None:
+        timer = getattr(self, "_task_status_timer", None)
+        if timer is None:
+            timer = QTimer(self)
+            timer.setInterval(1_000)
+            timer.timeout.connect(self._render_task_status)
+            self._task_status_timer = timer
+        timer.start()
+
+    def _render_task_status(self) -> None:
+        message = getattr(self, "_task_step_text", "")
+        if not message:
+            return
+        number = getattr(self, "_task_step_number", 0)
+        now = monotonic()
+        step_seconds = int(now - getattr(self, "_task_step_started_at", now))
+        total_seconds = int(now - getattr(self, "_task_started_at", now))
+        elapsed = (
+            f"（本步骤 {step_seconds} 秒 · 总计 {total_seconds} 秒）"
+            if step_seconds > 0
+            else ""
+        )
+        self.loading_label.setText(f"步骤 {number} · {message}{elapsed}")
+
     @Slot()
     def stop_current_task(self) -> None:
         if self.worker is None:
@@ -85,7 +117,7 @@ class ThreadActionsMixin:
         self.worker.request_cancel()
         self.stop_button.setEnabled(False)
         text = self.worker.stop_pending_text
-        self.loading_label.setText(text)
+        self.show_progress_message(text)
         self.log.appendPlainText(text)
 
     @Slot()
@@ -95,6 +127,9 @@ class ThreadActionsMixin:
             if self.worker is not None
             else "当前处理已停止。"
         )
+        timer = getattr(self, "_task_status_timer", None)
+        if timer is not None:
+            timer.stop()
         self.loading_label.setText(text)
         self.log.appendPlainText(text)
 
@@ -116,6 +151,10 @@ class ThreadActionsMixin:
 
     @Slot(str)
     def failed(self, message: str) -> None:
+        timer = getattr(self, "_task_status_timer", None)
+        if timer is not None:
+            timer.stop()
+        self.loading_label.setText(f"停止：{message}")
         self.log.appendPlainText(f"停止：{message}")
         QMessageBox.critical(self, "操作已停止", message)
 
@@ -177,6 +216,9 @@ class ThreadActionsMixin:
 
     @Slot()
     def clear_worker(self) -> None:
+        timer = getattr(self, "_task_status_timer", None)
+        if timer is not None:
+            timer.stop()
         self.loading_panel.hide()
         self.stop_button.setEnabled(False)
         self._set_actions_enabled(True)

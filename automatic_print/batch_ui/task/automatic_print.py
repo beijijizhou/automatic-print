@@ -22,10 +22,15 @@ def save_downloaded_batch_types(output, platform_name, batch_types):
 def process_and_print(process, files, progress, stop_requested):
     progress("下载与解压完成；正在使用本地排版参数生成最终PNG。")
     processed = process()
+    progress("最终PNG排版完成；正在核对安全分区并准备RIIN任务。")
     from ...automation.api.riin.jobs import generate_batch_prns
 
     printed, errors, skipped = generate_batch_prns(
         processed, progress, stop_requested
+    )
+    progress(
+        f"RIIN任务处理完成：{len(printed)} 个PRN成功，"
+        f"{len(errors)} 个失败，{len(skipped)} 个停止前未提交。"
     )
     processed.update(
         type="downloaded_processed_and_printed",

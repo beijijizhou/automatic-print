@@ -65,17 +65,23 @@ def list_s2b_batches(progress=None):
     if available():
         try:
             _report(progress, "正在通过共享 S2B 服务读取生产批次和人员标签…")
-            return list_s2b_production_batches()
+            records = list_s2b_production_batches()
+            _report(progress, f"共享 S2B 服务读取完成：{len(records)} 个批次。")
+            return records
         except Exception as error:
             _report(progress, f"共享 S2B 服务暂不可用：{error}；改用本机登录继续读取")
     with _authenticated_page(progress) as page:
-        return list_s2b_production_batches(page)
+        _report(progress, "S2B 页面已登录；正在调用批次列表接口…")
+        records = list_s2b_production_batches(page)
+        _report(progress, f"S2B 页面接口读取完成：{len(records)} 个批次。")
+        return records
 
 
 def download_s2b_exports(batch_numbers, output_root: Path, progress=None) -> list[Path]:
     if not batch_numbers:
         raise ValueError("请至少选择一个 S2B 生产图批次。")
     batches = list(dict.fromkeys(batch_numbers))
+    _report(progress, f"正在检查 {len(batches)} 个 S2B 批次的本地文件…")
     saved = {
         batch: existing
         for batch in batches
@@ -86,11 +92,13 @@ def download_s2b_exports(batch_numbers, output_root: Path, progress=None) -> lis
         if batch in saved:
             _report(progress, f"[{index}/{len(batches)}] 本地已有 S2B / {batch}，跳过下载")
     if not pending:
+        _report(progress, "所选 S2B 批次均已有本地生产图，无需下载。")
         return [saved[batch] for batch in batches]
     from .gateway import available, mark_downloaded, wait_for_exports
     selected = None
     if available():
         try:
+            _report(progress, f"正在等待 {len(pending)} 个 S2B 生产图导出就绪…")
             selected = wait_for_exports(pending, parse_export_rows, progress)
         except Exception as error:
             _report(progress, f"共享 S2B 下载暂不可用：{error}；改用本机登录继续下载")
@@ -100,6 +108,7 @@ def download_s2b_exports(batch_numbers, output_root: Path, progress=None) -> lis
         )
     with _authenticated_page(progress) as page:
         from .batches import wait_for_ready_exports
+        _report(progress, "S2B 页面已登录；正在读取生产图导出状态…")
         selected = wait_for_ready_exports(page, pending, progress)
         return _download_selected(
             selected, saved, batches, output_root, progress,
@@ -112,9 +121,22 @@ def download_s2b_exports(batch_numbers, output_root: Path, progress=None) -> lis
 def _download_selected(selected, saved, batches, output_root, progress, mark):
     total = len(selected)
     for index, record in enumerate(selected, 1):
+        _report(
+            progress,
+            f"[{index}/{total}] 正在下载 S2B / {record.batch_number} 压缩包…",
+        )
         archive = _download_archive(record, output_root, index, total, progress)
+        _report(
+            progress,
+            f"[{index}/{total}] 下载完成；正在安全解压 S2B / "
+            f"{record.batch_number}…",
+        )
         saved[record.batch_number] = _extract_archive(
             archive, output_root, record.batch_number
+        )
+        _report(
+            progress,
+            f"[{index}/{total}] 解压完成；正在更新 S2B 下载记录…",
         )
         mark(record.record_id)
         _report(progress, f"[{index}/{total}] 已下载并解压 S2B / {record.batch_number}")
@@ -132,11 +154,15 @@ class _authenticated_page:
     def __init__(self, progress): self.progress = progress
     def __enter__(self):
         from playwright.sync_api import sync_playwright
+        _report(self.progress, "正在启动 S2B 浏览器自动化会话…")
         self.playwright = sync_playwright().start()
-        self.browser = connect_debug_chrome(self.playwright, EXPORT_URL)
+        self.browser = connect_debug_chrome(
+            self.playwright, EXPORT_URL, progress=self.progress
+        )
         self.page = open_authenticated_page(
             self.browser, EXPORT_URL, ".exportRecordBlock", progress=self.progress
         )
+        _report(self.progress, "S2B 导出记录页面已就绪；正在同步共享登录…")
         _sync_shared_login(self.page, self.progress)
         return self.page
     def __exit__(self, *_exc):

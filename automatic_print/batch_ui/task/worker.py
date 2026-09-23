@@ -72,6 +72,28 @@ class AutomationWorker(QObject):
         self.cancellation.request()
 
     @property
+    def task_title(self) -> str:
+        titles = {
+            "list": "读取生产批次",
+            "list_range": "读取批次范围",
+            "status": "刷新平台状态",
+            "status_and_list": "刷新状态和批次",
+            "read": "读取数据",
+            "preview_rules": "预览批次规则",
+            "preview_route": "预览工艺路线",
+            "preview_default_multi": "预览默认工艺多项多件",
+            "generate_rules": "生成规则批次",
+            "generate_route": "生成工艺路线批次",
+            "generate_default_multi": "生成默认工艺批次",
+            "generate_completed_erp": "生成已完成订单批次",
+            "download": "下载生产图",
+            "process": "生产图排版",
+        }
+        if self.action == "download" and self.auto_print is True:
+            return "下载、排版并生成打印文件"
+        return titles.get(self.action, self.action)
+
+    @property
     def stop_pending_text(self) -> str:
         if self.action in {"list", "list_range", "status", "status_and_list"}:
             return "正在停止批次信息读取…"
@@ -132,47 +154,46 @@ class AutomationWorker(QObject):
             self._report(
                 f"正在读取 {self.platform_name} 已生成批次…"
             )
-            self._deliver(
-                self.batches_loaded,
-                load_batch_records(
-                    self.platform_name,
-                    self._report,
-                    self.cancellation.check,
-                )
+            records = load_batch_records(
+                self.platform_name,
+                self._report,
+                self.cancellation.check,
             )
+            self._report(f"批次信息读取完成：共 {len(records)} 个批次。")
+            self._deliver(self.batches_loaded, records)
         elif self.action == "list_range":
             self._report("正在读取指定范围内的生产批次…")
-            self._deliver(
-                self.batches_loaded,
-                load_batch_records_between(
-                    self.platform_name,
-                    self.range_start,
-                    self.range_end,
-                    self._report,
-                    self.cancellation.check,
-                )
+            records = load_batch_records_between(
+                self.platform_name,
+                self.range_start,
+                self.range_end,
+                self._report,
+                self.cancellation.check,
             )
+            self._report(f"批次范围读取完成：共 {len(records)} 个批次。")
+            self._deliver(self.batches_loaded, records)
         elif self.action in {"status", "status_and_list"}:
             self._report(
                 f"正在刷新 {self.platform_name} 平台状态…"
             )
-            self._deliver(
-                self.status_loaded,
-                load_platform_order_status(
+            status = load_platform_order_status(
+                self.platform_name,
+                self._report,
+                self.cancellation.check,
+            )
+            self._report(
+                f"平台状态读取完成：已接单 {status.accepted_count} 项。"
+            )
+            self._deliver(self.status_loaded, status)
+            if self.action == "status_and_list":
+                self._report("平台状态已更新；继续读取生产批次…")
+                records = load_batch_records(
                     self.platform_name,
                     self._report,
                     self.cancellation.check,
                 )
-            )
-            if self.action == "status_and_list":
-                self._deliver(
-                    self.batches_loaded,
-                    load_batch_records(
-                        self.platform_name,
-                        self._report,
-                        self.cancellation.check,
-                    )
-                )
+                self._report(f"批次信息读取完成：共 {len(records)} 个批次。")
+                self._deliver(self.batches_loaded, records)
         elif self.action in GENERATION_ACTIONS:
             run_generation_action(self)
         elif self.action == "download":
@@ -192,7 +213,9 @@ class AutomationWorker(QObject):
             self._report,
             self.cancellation.check,
         )
+        self._report("生产图已准备完成；正在保存批次类型信息…")
         self._save_batch_types()
+        self._report("批次类型信息已保存。")
         if self.auto_print:
             from .automatic_print import process_and_print
             processed = process_and_print(
@@ -215,6 +238,7 @@ class AutomationWorker(QObject):
     def _process_batches(self) -> dict:
         if self.output is None or self.settings is None:
             raise RuntimeError("缺少排版位置或排版设置。")
+        self._report("正在定位已解压的批次文件夹并读取生产图…")
         return process_local_batches(
             self.output,
             self.platform_name,
