@@ -52,7 +52,7 @@
 | 主窗口可见页面装配 | `ui/main_window.py`, `ui/workbench/home.py`, `activity.py`, `settings.py` | 主窗口只连接应用状态和控制器；首页、任务状态与打印参数按实际UI区域各自拥有控件树，新增可见区域不得重新堆回主窗口。 |
 | 主工作台批次总览 | `ui/workbench/overview/panel.py`, `label_controls.py`, `preview.py`, `bindings.py` | 目录直接对应快捷标签、批次数据、真实预览和参数联动；根目录兼容模块不拥有控件或业务逻辑。 |
 | 开发者测试与诊断入口 | `ui/workbench/overview/panel.py`, `ui/batch_details.py`, `ui/label_position_test.py`, `ui/developer_mode.py` | 主工作台只显示一个“测试与诊断”按钮，菜单复用原有冷启动、批量分析和算法诊断入口；标签位置短测在后台子进程只运行39组定向检查，显示实际通过/失败与耗时，不启动完整测试或真实批次回归。 |
-| 刀码方向预览 | `ui/previews/markers/view.py`, `data.py`, `render.py`, `annotations.py`, `assets/haloo-preview-sample.png`, `scripts/build_haloo_preview_asset.py` | 页签、示例数据、像素渲染和尺寸标注分别拥有唯一职责；逐图隔离异常，优先复用生产排版对象和真实坐标，缺侧时使用去标识化 Haloo 样本；安全定位不可行时只显示代码方向图并明确不代表生产坐标。四格用紫框标出真实标签坐标，下方以可复制的大字展示同一标签内容，扩大图片及说明但不改变生产徽标和输出坐标。 |
+| 刀码方向预览 | `ui/previews/markers/view.py`, `focus.py`, `data.py`, `render.py`, `annotations.py`, `assets/haloo-preview-sample.png`, `scripts/build_haloo_preview_asset.py` | 页签、局部放大、示例数据、像素渲染和尺寸标注分别拥有唯一职责；逐图隔离异常，优先复用生产排版对象和真实坐标，缺侧时使用去标识化 Haloo 样本；安全定位不可行时只显示代码方向图并明确不代表生产坐标。四格用紫框标出真实标签坐标，下方以可复制的大字展示同一内容；页面顶部从已渲染生产图截取膜标签与文字作为可切换的单独放大图，不修改生产徽标和输出坐标。 |
 | 真实排版预览运行时 | `ui/previews/runtime/task.py`, `loader.py`, `inventory.py`, `snapshot.py`, `viewport.py` | 后台计算、结果加载、文件名轻量清单、轻量快照和视口交互分离；耗时计算不进入GUI线程，快速模式只读取清单而不启动排版。 |
 | 批次图片元数据预读 | `layout_engine/measurement/parallel_measurement.py`, `intake/metadata/output_dpi.py`, `intake/metadata/images.py` | 尺寸与DPI按用户线程上限有界并行读取，保持输入顺序并复用批次测量缓存；跟随原图DPI时显示真实完成数，不在网络盘逐张串行后再次读取。 |
 | 错误上下文与复制 | `layout_engine/diagnostics/error_context.py`, `layout_engine/diagnostics/error_parameters.py`, `ui/failure_panel.py` | 所有失败复用完整订单/参数诊断，不散落拼字符串。 |

@@ -4,6 +4,7 @@ from PySide6.QtGui import QImage, QPixmap
 from PySide6.QtWidgets import QDialog, QGridLayout, QGroupBox, QLabel, QPushButton, QScrollArea, QVBoxLayout
 
 from .data import CASES, build_examples
+from .focus import LabelFocusPreview
 
 
 class ExampleWorker(QThread):
@@ -30,6 +31,8 @@ class MarkerExamples(QGroupBox):
         self.status.setWordWrap(True)
         layout, grid = QVBoxLayout(self), QGridLayout()
         layout.addWidget(self.status)
+        self.focus = LabelFocusPreview(self)
+        layout.addWidget(self.focus)
         for index, (side, degrees) in enumerate(CASES):
             card = QGroupBox(('膜标签在左' if side == 'left' else '膜标签在右')+
                              (' · 向左旋转90°' if degrees else ' · 不旋转'))
@@ -113,6 +116,7 @@ class MarkerExamples(QGroupBox):
 
     def failed(self, text):
         self.status.setText(f'示例读取失败：{text}')
+        self.focus.failed(text)
         if self.results:
             return  # Keep the last valid diagrams visible during a failed refresh.
         for (picture, caption), readout in zip(self.cards, self.label_readouts):
@@ -143,6 +147,7 @@ class MarkerExamples(QGroupBox):
                             '仅方向示意：当前参数没有可安全定位的标签文字。')
             picture.setToolTip(data['source'] or reason or
                 '示意图使用生产排版模块计算位置，不生成打印文件。')
+        self.focus.set_results(results, self.images)
         count = sum(r['production'] for r in results)
         mode = {'free':'自由排版','single':'单列切膜','dual':'自动多列切膜'}.get(settings.cutter_mode,settings.cutter_mode)
         self.status.setText(f'四种情况已更新 · {mode} · {count}种使用当前批次生产图，其余使用内置样本或代码示意。使用当前模式标记位置；'
