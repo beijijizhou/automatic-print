@@ -9,17 +9,22 @@ import sys
 
 RUN_KEY = r"Software\Microsoft\Windows\CurrentVersion\Run"
 RUN_VALUE = "AutomaticPrintMonitor"
+SCHEDULED_TASK = "AutomaticPrintMonitor"
 PROJECT_ROOT = Path(__file__).resolve().parents[3]
 
 
 def ensure_monitor_started(
     *, project_root=PROJECT_ROOT, executable=None, frozen=None,
-    platform_name=None, register=None, spawn=None,
+    platform_name=None, register=None, spawn=None, start_scheduled=None,
+    unregister=None,
 ):
-    """Register and launch the monitor; its own lock makes this idempotent."""
+    """Start the elevated monitor task, with a status-only fallback."""
     if (platform_name or os.name) != "nt":
         return False
     try:
+        if (start_scheduled or _start_scheduled_monitor)():
+            (unregister or _remove_run_value)()
+            return True
         command, working_directory = monitor_command(
             project_root=project_root, executable=executable, frozen=frozen,
         )
@@ -57,6 +62,31 @@ def _register_run_value(command):
 
     with winreg.CreateKey(winreg.HKEY_CURRENT_USER, RUN_KEY) as key:
         winreg.SetValueEx(key, RUN_VALUE, 0, winreg.REG_SZ, command)
+
+
+def _remove_run_value():
+    import winreg
+
+    try:
+        with winreg.OpenKey(
+            winreg.HKEY_CURRENT_USER, RUN_KEY, 0, winreg.KEY_SET_VALUE,
+        ) as key:
+            winreg.DeleteValue(key, RUN_VALUE)
+    except FileNotFoundError:
+        pass
+
+
+def _start_scheduled_monitor():
+    flags = getattr(subprocess, "CREATE_NO_WINDOW", 0)
+    result = subprocess.run(
+        ["schtasks.exe", "/Run", "/TN", SCHEDULED_TASK],
+        stdin=subprocess.DEVNULL,
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL,
+        check=False,
+        creationflags=flags,
+    )
+    return result.returncode == 0
 
 
 def _spawn_monitor(command, working_directory):

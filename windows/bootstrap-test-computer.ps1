@@ -2,8 +2,26 @@ $ErrorActionPreference = "Stop"
 $ProgressPreference = "SilentlyContinue"
 
 # Update this marker when publishing a new bootstrap entry URL with a cache query.
-$bootstrapCacheVersion = "0.1.346"
+$bootstrapCacheVersion = "0.1.354"
 $repositoryUrl = "https://github.com/beijijizhou/automatic-print.git"
+$bootstrapUrl = "https://raw.githubusercontent.com/beijijizhou/automatic-print/main/windows/bootstrap-test-computer.ps1?v=$bootstrapCacheVersion"
+
+$identity = [Security.Principal.WindowsIdentity]::GetCurrent()
+$principal = New-Object Security.Principal.WindowsPrincipal($identity)
+if (-not $principal.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)) {
+    Write-Host "Administrator permission is required for realtime PrintExp control."
+    $bootstrapFile = Join-Path $env:TEMP "automatic-print-bootstrap-$bootstrapCacheVersion.ps1"
+    Invoke-WebRequest -UseBasicParsing -Uri $bootstrapUrl -OutFile $bootstrapFile
+    $powerShell = "$env:SystemRoot\System32\WindowsPowerShell\v1.0\powershell.exe"
+    $arguments = @(
+        "-NoProfile", "-ExecutionPolicy", "Bypass", "-File", "`"$bootstrapFile`""
+    )
+    $elevated = Start-Process -FilePath $powerShell -Verb RunAs `
+        -ArgumentList $arguments -Wait -PassThru
+    Remove-Item -LiteralPath $bootstrapFile -Force -ErrorAction SilentlyContinue
+    exit $elevated.ExitCode
+}
+
 $installRoot = Join-Path ([Environment]::GetFolderPath("MyDocuments")) "AutomaticPrint"
 Write-Host "Bootstrap cache version: $bootstrapCacheVersion"
 
@@ -263,11 +281,22 @@ $monitorPython = Join-Path $installRoot ".venv\Scripts\pythonw.exe"
 $monitorScript = Join-Path $installRoot "run_printerexp_monitor.py"
 $monitorArguments = "`"$monitorScript`""
 $runKey = "HKCU:\Software\Microsoft\Windows\CurrentVersion\Run"
-$monitorCommand = "`"$monitorPython`" $monitorArguments"
-New-ItemProperty -Path $runKey -Name "AutomaticPrintMonitor" `
-    -Value $monitorCommand -PropertyType String -Force | Out-Null
-Start-Process -FilePath $monitorPython -ArgumentList $monitorArguments `
-    -WorkingDirectory $installRoot -WindowStyle Hidden
+$taskName = "AutomaticPrintMonitor"
+$taskAction = New-ScheduledTaskAction -Execute $monitorPython `
+    -Argument $monitorArguments -WorkingDirectory $installRoot
+$taskTrigger = New-ScheduledTaskTrigger -AtLogOn -User $identity.Name
+$taskPrincipal = New-ScheduledTaskPrincipal -UserId $identity.Name `
+    -LogonType Interactive -RunLevel Highest
+$taskSettings = New-ScheduledTaskSettingsSet -MultipleInstances IgnoreNew `
+    -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries `
+    -ExecutionTimeLimit ([TimeSpan]::Zero)
+Register-ScheduledTask -TaskName $taskName -Action $taskAction `
+    -Trigger $taskTrigger -Principal $taskPrincipal -Settings $taskSettings `
+    -Description "Haloo Automatic realtime PrintExp status and control" `
+    -Force | Out-Null
+Remove-ItemProperty -Path $runKey -Name "AutomaticPrintMonitor" `
+    -ErrorAction SilentlyContinue
+Start-ScheduledTask -TaskName $taskName
 
 Write-Host ""
 Write-Host "Setup/update finished. Starting Haloo Automatic..."
