@@ -112,7 +112,7 @@ class RemoteCommandPanel(QGroupBox):
         header.addWidget(self.status, 1)
         header.addWidget(self.submit_button)
         self.table = QTableWidget(0, 5)
-        self.table.setHorizontalHeaderLabels(("目标机器", "平台/批次", "状态", "当前步骤", "下达人"))
+        self.table.setHorizontalHeaderLabels(("目标机器", "任务", "状态", "当前步骤", "下达人"))
         self.table.verticalHeader().setVisible(False)
         self.table.setMaximumHeight(190)
         self.table.horizontalHeader().setStretchLastSection(True)
@@ -130,7 +130,7 @@ class RemoteCommandPanel(QGroupBox):
             batches = payload.get("batch_numbers") or []
             values = (
                 names.get(str(command.get("target_machine_id"))) or str(command.get("target_machine_id") or ""),
-                f"{payload.get('platform') or '—'} · {', '.join(map(str, batches))}",
+                _command_summary(command.get("action"), payload, batches),
                 _command_status(command.get("status")),
                 command.get("phase") or command.get("error_message") or "等待目标机领取",
                 command.get("requested_by_name") or "—",
@@ -188,3 +188,11 @@ def _command_status(status):
         "queued": "等待领取", "claimed": "已领取", "running": "执行中",
         "succeeded": "已完成", "failed": "失败", "cancelled": "已取消", "expired": "已过期",
     }.get(str(status), str(status or "未知"))
+
+
+def _command_summary(action, payload, batches):
+    if action == "pause_print":
+        return "暂停打印"
+    if action == "clean_resume":
+        return "清洗后自动启动"
+    return f"{payload.get('platform') or '—'} · {', '.join(map(str, batches))}"

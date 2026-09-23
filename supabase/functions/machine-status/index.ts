@@ -10,6 +10,7 @@ const DEPARTMENTS = new Set(["DTF", "UV", "3D"]);
 const STALE_SECONDS = 90;
 const COMMAND_STATES = new Set(["running", "succeeded", "failed"]);
 const COMMAND_PLATFORMS = new Set(["Haloo", "莆田", "隆丰"]);
+const COMMAND_ACTIONS = new Set(["download_layout", "pause_print", "clean_resume"]);
 
 class ClientError extends Error {
   constructor(message: string, public status: number) { super(message); }
@@ -101,14 +102,16 @@ async function get(db: ReturnType<typeof createClient>, id: string) {
 async function enqueueCommand(db: ReturnType<typeof createClient>, input: Record<string, unknown>) {
   const target = machineId(input.target_machine_id);
   const requester = machineId(input.machine_id);
-  const payload = commandPayload(input.payload);
+  const action = String(input.command_action || "download_layout");
+  if (!COMMAND_ACTIONS.has(action)) throw new ClientError("Unsupported command action", 400);
+  const payload = action === "download_layout" ? commandPayload(input.payload) : {};
   const { data: machine, error: machineError } = await db.from("machine_status_current")
     .select("machine_id, heartbeat_at, source_online").eq("machine_id", target).maybeSingle();
   if (machineError) throw machineError;
   if (!machine) throw new ClientError("Target machine not found", 404);
   const age = (Date.now() - new Date(String(machine.heartbeat_at)).getTime()) / 1000;
   if (age > STALE_SECONDS) throw new ClientError("Target monitor is offline", 409);
-  if (payload.generate_prn && machine.source_online === false) {
+  if ((action !== "download_layout" || payload.generate_prn) && machine.source_online === false) {
     throw new ClientError("Target PrintExp is offline", 409);
   }
   const expiry = optionalInteger(input.expires_minutes, 5, 120) ?? 30;
@@ -116,7 +119,7 @@ async function enqueueCommand(db: ReturnType<typeof createClient>, input: Record
     target_machine_id: target,
     requested_by_machine_id: requester,
     requested_by_name: text(input.machine_name, "machine_name", 100),
-    action: "download_layout",
+    action,
     payload,
     expires_at: new Date(Date.now() + expiry * 60_000).toISOString(),
   }).select().single();

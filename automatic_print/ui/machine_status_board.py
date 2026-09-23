@@ -1,6 +1,5 @@
 """Fleet view for PrintExp status and remote production commands."""
 
-import re
 from threading import Lock, Thread
 
 from PySide6.QtCore import QObject, QTimer, Qt, Signal
@@ -20,7 +19,8 @@ from PySide6.QtWidgets import (
 
 from ..automation.api.machine_status import list_commands, list_machines
 from .machine_command_ui import RemoteCommandPanel
-from .machine_status_format import heartbeat_text, remaining_text, status_text
+from .printer_control_ui import PrinterControlPanel
+from .machine_status_format import heartbeat_text, machine_slots, remaining_text, status_text
 
 
 EXPECTED_MACHINES = 11
@@ -101,12 +101,15 @@ class MachineStatusPage(QWidget):
         self.apply_machines([])
         self.command_panel = RemoteCommandPanel(parent or self.window(), self)
         self.command_panel.command_submitted.connect(self.refresh)
+        self.control_panel = PrinterControlPanel(self)
+        self.control_panel.command_submitted.connect(self.refresh)
 
         layout = QVBoxLayout(self)
         layout.addWidget(title)
         layout.addWidget(description)
         layout.addWidget(overview)
         layout.addWidget(self.table, 1)
+        layout.addWidget(self.control_panel)
         layout.addWidget(self.command_panel)
 
     def set_active(self, active):
@@ -127,11 +130,12 @@ class MachineStatusPage(QWidget):
             dashboard = {"machines": dashboard, "commands": []}
         machines = dashboard.get("machines") or []
         self.apply_machines(machines)
+        self.control_panel.set_data(machines)
         self.command_panel.set_data(machines, dashboard.get("commands") or [])
 
     def apply_machines(self, machines):
         machines = [item for item in machines if isinstance(item, dict)]
-        slots = _machine_slots(machines)
+        slots = machine_slots(machines, EXPECTED_MACHINES)
         self.table.setRowCount(EXPECTED_MACHINES)
         online = sum(bool(item.get("online")) for item in machines)
         running = sum(item.get("state") == "running" and item.get("online") for item in machines)
@@ -178,27 +182,6 @@ class MachineStatusPage(QWidget):
         for column, value in enumerate(values):
             self.table.setItem(row, column, QTableWidgetItem(value))
         self.table.removeCellWidget(row, 4)
-
-
-def _machine_slots(machines):
-    slots = [None] * EXPECTED_MACHINES
-    unmatched = []
-    for machine in machines:
-        match = re.fullmatch(
-            r"M(?:[1-9]|1[01])", str(machine.get("machine_name") or "").upper()
-        )
-        index = int(match.group()[1:]) - 1 if match else -1
-        if index >= 0 and slots[index] is None:
-            slots[index] = machine
-        else:
-            unmatched.append(machine)
-    for machine in unmatched:
-        try:
-            index = slots.index(None)
-        except ValueError:
-            break
-        slots[index] = machine
-    return slots
 
 
 def install_machine_status_tab(window, tabs):

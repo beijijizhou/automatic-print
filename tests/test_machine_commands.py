@@ -1,6 +1,7 @@
 from types import SimpleNamespace
 
 from automatic_print.automation.api.machine_commands.dispatcher import CommandDispatcher
+from automatic_print.automation.api.machine_commands import runner
 from automatic_print.automation.api.machine_commands.runner import CommandProgress, _layout_settings
 
 
@@ -42,3 +43,21 @@ def test_remote_settings_keep_target_machine_number():
 
     assert settings.dpi == 200
     assert settings.machine_number == "M8"
+
+
+def test_runner_routes_pause_command_without_starting_layout(monkeypatch):
+    updates = []
+    monkeypatch.setattr(runner, "get_command", lambda _command_id: {
+        "action": "pause_print", "payload": {},
+    })
+    monkeypatch.setattr(
+        runner, "execute_printer_action",
+        lambda action, progress: {"state": "paused", "action": action},
+    )
+    monkeypatch.setattr(
+        runner, "update_command", lambda *args, **kwargs: updates.append((args, kwargs)),
+    )
+
+    assert runner.run_command("command-1") == 0
+    assert updates[-1][0][1] == "succeeded"
+    assert updates[-1][1]["phase"] == "PrintExp 已暂停"

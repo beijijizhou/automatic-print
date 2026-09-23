@@ -41,6 +41,9 @@ def test_board_keeps_eleven_slots_and_renders_live_machine():
     assert isinstance(page.table.cellWidget(3, 4), QProgressBar)
     assert page.table.cellWidget(3, 4).value() == 42
     assert page.command_panel.submit_button.isEnabled()
+    assert page.control_panel.pause_button.isEnabled()
+    assert page.control_panel.clean_button.text() == "清洗后自动启动"
+    assert page.control_panel.target.currentText() == "M4"
 
 
 def test_board_distinguishes_monitor_and_printerexp_offline():

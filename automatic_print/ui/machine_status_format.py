@@ -1,5 +1,7 @@
 """Short display labels for the PrintExp fleet table."""
 
+import re
+
 
 def status_text(machine):
     if not machine.get("agent_online"):
@@ -29,3 +31,23 @@ def heartbeat_text(seconds):
         return "—"
     seconds = max(0, int(seconds))
     return f"{seconds}秒前" if seconds < 60 else f"{seconds // 60}分钟前"
+
+
+def machine_slots(machines, count=11):
+    slots = [None] * count
+    unmatched = []
+    for machine in machines:
+        match = re.fullmatch(
+            r"M(?:[1-9]|1[01])", str(machine.get("machine_name") or "").upper()
+        )
+        index = int(match.group()[1:]) - 1 if match else -1
+        if 0 <= index < count and slots[index] is None:
+            slots[index] = machine
+        else:
+            unmatched.append(machine)
+    for machine in unmatched:
+        try:
+            slots[slots.index(None)] = machine
+        except ValueError:
+            break
+    return slots

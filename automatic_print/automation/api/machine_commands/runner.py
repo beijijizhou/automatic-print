@@ -32,8 +32,18 @@ class CommandProgress:
 
 def run_command(command_id):
     progress = CommandProgress(command_id)
+    action = "download_layout"
     try:
         command = get_command(command_id)
+        action = str(command.get("action") or "download_layout")
+        if action in {"pause_print", "clean_resume"}:
+            result = execute_printer_action(action, progress)
+            phase = "PrintExp 已暂停" if action == "pause_print" else "清洗完成，已继续打印"
+            update_command(
+                command_id, "succeeded", phase=phase,
+                progress_percent=100, result=result,
+            )
+            return 0
         progress("正在准备远程下载排版任务", force=True)
         result = execute_download_layout(command.get("payload") or {}, progress)
         update_command(
@@ -43,13 +53,24 @@ def run_command(command_id):
         return 0
     except Exception as error:
         try:
+            phase = "打印机控制失败" if action != "download_layout" else "远程下载排版失败"
             update_command(
-                command_id, "failed", phase="远程下载排版失败",
+                command_id, "failed", phase=phase,
                 error_message=str(error)[:2000],
             )
         except Exception:
             pass
         return 1
+
+
+def execute_printer_action(action, progress):
+    from ..printerexp.controls import clean_then_resume, pause_print
+
+    if action == "pause_print":
+        return pause_print(progress=progress)
+    if action == "clean_resume":
+        return clean_then_resume(progress=progress)
+    raise ValueError("不支持的打印机控制指令。")
 
 
 def execute_download_layout(payload, progress):

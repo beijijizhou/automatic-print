@@ -84,6 +84,10 @@ def test_backend_contract_keeps_unknown_eta_nullable():
         __import__("pathlib").Path(__file__).parents[1]
         / "supabase/migrations/202609230001_machine_commands.sql"
     ).read_text(encoding="utf-8")
+    control_migration = (
+        __import__("pathlib").Path(__file__).parents[1]
+        / "supabase/migrations/202609230002_printer_controls.sql"
+    ).read_text(encoding="utf-8")
 
     assert "remaining_seconds integer" in migration
     assert "progress_percent smallint" in migration
@@ -96,6 +100,8 @@ def test_backend_contract_keeps_unknown_eta_nullable():
     assert 'action === "claim_command"' in function
     assert "create table if not exists public.machine_commands" in command_migration
     assert "for update skip locked" in command_migration
+    assert "pause_print" in function and "clean_resume" in function
+    assert "pause_print" in control_migration and "clean_resume" in control_migration
 
 
 def test_submit_command_sends_target_batches_and_settings(monkeypatch):
@@ -122,6 +128,23 @@ def test_submit_command_sends_target_batches_and_settings(monkeypatch):
     assert captured["target_machine_id"].startswith("b942")
     assert captured["payload"]["batch_numbers"] == ["609231234567"]
     assert captured["payload"]["layout_settings"] == {"dpi": 300}
+
+
+def test_submit_printer_action_is_explicit_and_has_no_layout_payload(monkeypatch):
+    captured = {}
+    monkeypatch.setattr(commands, "machine_id", lambda: "d9428888-122b-4c26-a127-3eafad1f5270")
+    monkeypatch.setattr(commands, "machine_name", lambda: "M4")
+    monkeypatch.setattr(commands, "_call", lambda payload, **_options: captured.update(payload) or {
+        "command": {"id": "control-1"}
+    })
+
+    result = commands.submit_printer_action(
+        "b9428888-122b-4c26-a127-3eafad1f5271", "clean_resume"
+    )
+
+    assert result["id"] == "control-1"
+    assert captured["command_action"] == "clean_resume"
+    assert captured["payload"] == {}
 
 
 def test_printerexp_snapshot_reads_real_progress_and_task(tmp_path):
