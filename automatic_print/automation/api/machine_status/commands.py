@@ -32,12 +32,12 @@ def submit_command(
     )["command"]
 
 
-def submit_printer_action(target_machine_id, action, *, expires_minutes=5, timeout=8):
+def submit_printer_action(target_machine_id, action, *, expires_minutes=2, timeout=8):
     if action not in {"pause_print", "clean_resume"}:
         raise ValueError("不支持的打印机控制指令。")
     return _call(
         {
-            "action": "enqueue_command",
+            "action": "send_control",
             "command_action": action,
             "machine_id": machine_id(),
             "machine_name": machine_name(),
@@ -56,6 +56,12 @@ def list_commands(*, timeout=8):
 def claim_command(*, timeout=5):
     return _call(
         {"action": "claim_command", "machine_id": machine_id()}, timeout=timeout
+    )["command"]
+
+
+def claim_control(*, timeout=2):
+    return _call(
+        {"action": "claim_control", "machine_id": machine_id()}, timeout=timeout
     )["command"]
 
 

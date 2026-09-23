@@ -1,6 +1,8 @@
 import pytest
 
-from automatic_print.automation.api.printerexp.controls import clean_then_resume, pause_print
+from automatic_print.automation.api.printerexp.controls import (
+    NativePrintExpControls, clean_then_resume, pause_print,
+)
 
 
 class Clock:
@@ -36,6 +38,17 @@ class Controls:
     def click_clean(self):
         self.clean_clicks += 1
         self.statuses = ["正在清洗...", "正在清洗...", "打印暂停"]
+
+
+def test_native_control_uses_direct_button_messages():
+    clicked = []
+    button = type("Button", (), {"click": lambda self: clicked.append(True)})()
+    controls = object.__new__(NativePrintExpControls)
+    controls._control = lambda control_id: button
+
+    controls._command(11027)
+
+    assert clicked == [True]
 
 
 def test_pause_button_only_pauses_current_print():

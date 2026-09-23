@@ -28,8 +28,10 @@ Deno.serve(async (request) => {
     if (action === "list") return json(await list(db));
     if (action === "get") return json(await get(db, machineId(input.machine_id)));
     if (action === "enqueue_command") return json(await enqueueCommand(db, input));
+    if (action === "send_control") return json(await sendControl(db, input));
     if (action === "list_commands") return json(await listCommands(db));
     if (action === "claim_command") return json(await claimCommand(db, input));
+    if (action === "claim_control") return json(await claimControl(db, input));
     if (action === "get_command") return json(await getCommand(db, input));
     if (action === "update_command") return json(await updateCommand(db, input));
     if (action === "cancel_command") return json(await cancelCommand(db, input));
@@ -100,18 +102,21 @@ async function get(db: ReturnType<typeof createClient>, id: string) {
 }
 
 async function enqueueCommand(db: ReturnType<typeof createClient>, input: Record<string, unknown>) {
+  if (COMMAND_ACTIONS.has(String(input.command_action || "")) &&
+      String(input.command_action) !== "download_layout") {
+    return sendControl(db, input);
+  }
   const target = machineId(input.target_machine_id);
   const requester = machineId(input.machine_id);
-  const action = String(input.command_action || "download_layout");
-  if (!COMMAND_ACTIONS.has(action)) throw new ClientError("Unsupported command action", 400);
-  const payload = action === "download_layout" ? commandPayload(input.payload) : {};
+  const action = "download_layout";
+  const payload = commandPayload(input.payload);
   const { data: machine, error: machineError } = await db.from("machine_status_current")
     .select("machine_id, heartbeat_at, source_online").eq("machine_id", target).maybeSingle();
   if (machineError) throw machineError;
   if (!machine) throw new ClientError("Target machine not found", 404);
   const age = (Date.now() - new Date(String(machine.heartbeat_at)).getTime()) / 1000;
   if (age > STALE_SECONDS) throw new ClientError("Target monitor is offline", 409);
-  if ((action !== "download_layout" || payload.generate_prn) && machine.source_online === false) {
+  if (payload.generate_prn && machine.source_online === false) {
     throw new ClientError("Target PrintExp is offline", 409);
   }
   const expiry = optionalInteger(input.expires_minutes, 5, 120) ?? 30;
@@ -121,6 +126,39 @@ async function enqueueCommand(db: ReturnType<typeof createClient>, input: Record
     requested_by_name: text(input.machine_name, "machine_name", 100),
     action,
     payload,
+    expires_at: new Date(Date.now() + expiry * 60_000).toISOString(),
+  }).select().single();
+  if (error) throw error;
+  return { command: data };
+}
+
+async function sendControl(db: ReturnType<typeof createClient>, input: Record<string, unknown>) {
+  const target = machineId(input.target_machine_id);
+  const requester = machineId(input.machine_id);
+  const action = String(input.command_action || "");
+  if (action !== "pause_print" && action !== "clean_resume") {
+    throw new ClientError("Unsupported control action", 400);
+  }
+  const { data: machine, error: machineError } = await db.from("machine_status_current")
+    .select("machine_id, heartbeat_at, source_online").eq("machine_id", target).maybeSingle();
+  if (machineError) throw machineError;
+  if (!machine) throw new ClientError("Target machine not found", 404);
+  const age = (Date.now() - new Date(String(machine.heartbeat_at)).getTime()) / 1000;
+  if (age > STALE_SECONDS) throw new ClientError("Target monitor is offline", 409);
+  if (machine.source_online === false) throw new ClientError("Target PrintExp is offline", 409);
+  const now = new Date().toISOString();
+  const { error: cancelError } = await db.from("machine_commands").update({
+    status: "cancelled", phase: "由更新的实时控制指令替代",
+    finished_at: now, updated_at: now,
+  }).eq("target_machine_id", target).eq("status", "queued")
+    .in("action", ["pause_print", "clean_resume"]);
+  if (cancelError) throw cancelError;
+  const expiry = optionalInteger(input.expires_minutes, 1, 5) ?? 2;
+  const { data, error } = await db.from("machine_commands").insert({
+    target_machine_id: target,
+    requested_by_machine_id: requester,
+    requested_by_name: text(input.machine_name, "machine_name", 100),
+    action, payload: {}, phase: "实时控制信号已发送",
     expires_at: new Date(Date.now() + expiry * 60_000).toISOString(),
   }).select().single();
   if (error) throw error;
@@ -137,6 +175,13 @@ async function listCommands(db: ReturnType<typeof createClient>) {
 async function claimCommand(db: ReturnType<typeof createClient>, input: Record<string, unknown>) {
   const id = machineId(input.machine_id);
   const { data, error } = await db.rpc("claim_machine_command", { target_id: id }).maybeSingle();
+  if (error) throw error;
+  return { command: data || null };
+}
+
+async function claimControl(db: ReturnType<typeof createClient>, input: Record<string, unknown>) {
+  const id = machineId(input.machine_id);
+  const { data, error } = await db.rpc("claim_machine_control", { target_id: id }).maybeSingle();
   if (error) throw error;
   return { command: data || null };
 }

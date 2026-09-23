@@ -9,7 +9,7 @@ from pathlib import Path
 from threading import Event
 from time import monotonic
 
-from ..machine_status import report_machine
+from ..machine_status import claim_control, report_machine
 from ..machine_commands import CommandDispatcher
 from .discovery import find_installation, process_running, running_installations
 from .state import read_snapshot
@@ -81,6 +81,7 @@ class PrintExpMonitor:
         heartbeat_seconds=60,
         send=report_machine,
         command_dispatcher=None,
+        control_dispatcher=None,
     ):
         self.poll_seconds = float(poll_seconds)
         self.heartbeat_seconds = float(heartbeat_seconds)
@@ -92,15 +93,26 @@ class PrintExpMonitor:
         self.last_attempt = 0.0
         self.logger = _logger()
         self.command_dispatcher = command_dispatcher or CommandDispatcher()
+        self.control_dispatcher = control_dispatcher or CommandDispatcher(
+            poll_seconds=0.5, claim=claim_control,
+        )
 
     def run(self):
+        next_status = 0.0
         while not self.stop_event.is_set():
+            try:
+                self.control_dispatcher.tick()
+            except Exception as error:
+                self.logger.warning("Unable to poll realtime printer controls: %s", error)
             try:
                 self.command_dispatcher.tick()
             except Exception as error:
                 self.logger.warning("Unable to poll remote commands: %s", error)
-            self.run_once()
-            self.stop_event.wait(self.poll_seconds)
+            now = monotonic()
+            if now >= next_status:
+                self.run_once()
+                next_status = now + self.poll_seconds
+            self.stop_event.wait(0.25)
 
     def run_once(self):
         active_installations = running_installations()

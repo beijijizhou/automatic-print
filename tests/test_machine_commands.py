@@ -3,6 +3,7 @@ from types import SimpleNamespace
 from automatic_print.automation.api.machine_commands.dispatcher import CommandDispatcher
 from automatic_print.automation.api.machine_commands import runner
 from automatic_print.automation.api.machine_commands.runner import CommandProgress, _layout_settings
+from automatic_print.automation.api.printerexp.monitor import PrintExpMonitor
 
 
 def test_dispatcher_claims_one_command_and_waits_for_process():
@@ -25,6 +26,20 @@ def test_dispatcher_claims_one_command_and_waits_for_process():
     assert claimed == [4]
     assert spawned == ["command-1"]
     assert dispatcher.process is process
+
+
+def test_monitor_accepts_independent_control_dispatcher():
+    download = SimpleNamespace(tick=lambda: None)
+    control = SimpleNamespace(tick=lambda: None)
+
+    monitor = PrintExpMonitor(
+        send=lambda _status: None,
+        command_dispatcher=download,
+        control_dispatcher=control,
+    )
+
+    assert monitor.command_dispatcher is download
+    assert monitor.control_dispatcher is control
 
 
 def test_command_progress_rate_limits_repeated_updates():

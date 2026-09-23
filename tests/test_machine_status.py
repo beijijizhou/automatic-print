@@ -88,6 +88,10 @@ def test_backend_contract_keeps_unknown_eta_nullable():
         __import__("pathlib").Path(__file__).parents[1]
         / "supabase/migrations/202609230002_printer_controls.sql"
     ).read_text(encoding="utf-8")
+    urgent_control_migration = (
+        __import__("pathlib").Path(__file__).parents[1]
+        / "supabase/migrations/202609230003_urgent_printer_controls.sql"
+    ).read_text(encoding="utf-8")
 
     assert "remaining_seconds integer" in migration
     assert "progress_percent smallint" in migration
@@ -102,6 +106,10 @@ def test_backend_contract_keeps_unknown_eta_nullable():
     assert "for update skip locked" in command_migration
     assert "pause_print" in function and "clean_resume" in function
     assert "pause_print" in control_migration and "clean_resume" in control_migration
+    assert 'action === "send_control"' in function
+    assert 'action === "claim_control"' in function
+    assert "claim_machine_control" in urgent_control_migration
+    assert "action = 'download_layout'" in urgent_control_migration
 
 
 def test_submit_command_sends_target_batches_and_settings(monkeypatch):
@@ -143,6 +151,7 @@ def test_submit_printer_action_is_explicit_and_has_no_layout_payload(monkeypatch
     )
 
     assert result["id"] == "control-1"
+    assert captured["action"] == "send_control"
     assert captured["command_action"] == "clean_resume"
     assert captured["payload"] == {}
 

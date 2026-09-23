@@ -6,9 +6,6 @@ from time import monotonic, sleep
 PAUSE_CONTROL_ID = 11027
 CLEAN_CONTROL_ID = 11030
 STATUS_CONTROL_ID = 31028
-WM_COMMAND = 0x0111
-
-
 class NativePrintExpControls:
     def __init__(self):
         from pywinauto import Desktop
@@ -36,7 +33,9 @@ class NativePrintExpControls:
 
     def _command(self, control_id):
         control = self._control(control_id)
-        control.parent().post_message(WM_COMMAND, control_id, control.handle)
+        # pywinauto sends native WM_LBUTTONDOWN/UP messages directly to this
+        # HWND. It neither moves the cursor nor depends on screen coordinates.
+        control.click()
 
 
 def pause_print(controls=None, *, progress=None, timeout=10, clock=monotonic, wait=sleep):
