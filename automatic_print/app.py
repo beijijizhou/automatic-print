@@ -1,4 +1,4 @@
-from PySide6.QtCore import Qt
+from PySide6.QtCore import QTimer, Qt
 from PySide6.QtGui import QPixmap
 from PySide6.QtWidgets import QApplication, QSplashScreen
 
@@ -31,4 +31,6 @@ def run() -> int:
     install_restart_monitor(application, window)
     window.showMaximized()
     splash.finish(window)
+    from .runtime.monitor_startup import ensure_monitor_started
+    QTimer.singleShot(0, ensure_monitor_started)
     return application.exec()
