@@ -169,14 +169,14 @@ def test_strategy_editor_persists_customer_combination_and_invalidates_preview()
 def test_s2b_uses_confirmed_haloo_style_defaults_and_whole_order_values() -> None:
     strategy = default_strategy('S2B')
     assert strategy.enabled_labels() == (
-        '订单组成', '物流', '单双面', '颜色', '尺码档'
+        '订单组成', '单双面', '颜色', '尺码档'
     )
     row = _row('1', 's2b-order')
     row.update(color='红色', size='3XL')
     values = grouping_values(
         'S2B', [row], {'1': {'production_images': [{'name': 'A面'}]}}, strategy
     )
-    assert values == ('USPS', '单项单件', '单面', '', '', '混色', '')
+    assert values == ('', '单项单件', '单面', '', '', '混色', '')
 
 
 def test_s2b_download_workspace_exposes_persistent_strategy_editor() -> None:
@@ -184,7 +184,7 @@ def test_s2b_download_workspace_exposes_persistent_strategy_editor() -> None:
     owner.preferences = None
     page = build_s2b_strategy_page(owner)
     assert owner.s2b_strategy_editor.platform_name == 'S2B'
-    assert owner.s2b_strategy_editor.controls['by_logistics'].isChecked()
+    assert not owner.s2b_strategy_editor.controls['by_logistics'].isChecked()
     assert not owner.s2b_strategy_editor.controls['by_style'].isChecked()
     page.close()
     owner.close()

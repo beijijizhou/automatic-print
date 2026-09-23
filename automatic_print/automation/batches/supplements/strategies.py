@@ -43,8 +43,10 @@ class GroupingStrategy:
 def default_strategy(platform_name: str) -> GroupingStrategy:
     if platform_name == "隆丰":
         return GroupingStrategy(False, True, True, False, False)
-    if platform_name in {"Haloo", "S2B"}:
+    if platform_name == "Haloo":
         return GroupingStrategy(True, True, True, True, False)
+    if platform_name == "S2B":
+        return GroupingStrategy(False, True, True, True, False)
     return GroupingStrategy(True, True, True, True, True)
 
 
