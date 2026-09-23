@@ -7,6 +7,7 @@ from automatic_print.automation.api.s2b.metadata.client import (
     fetch_s2b_batch_info,
     gateway_config,
 )
+from automatic_print.automation.api.s2b.production.gateway import refresh_login
 
 
 def test_gateway_client_posts_batch_and_account(monkeypatch):
@@ -39,6 +40,23 @@ def test_gateway_client_posts_batch_and_account(monkeypatch):
         "account": "DTF", "batch_number": "ABC123ABC123"
     }
     assert captured["key"] == "limited-key"
+
+
+def test_refresh_login_uses_restricted_gateway_action(monkeypatch):
+    captured = {}
+
+    def call(payload):
+        captured.update(payload)
+        return {"refreshed": True}
+
+    monkeypatch.setattr(
+        "automatic_print.automation.api.s2b.production.gateway.call_s2b_gateway",
+        call,
+    )
+    assert refresh_login("browser-token") == {"refreshed": True}
+    assert captured == {
+        "account": "DTF", "action": "refresh_login", "token": "browser-token"
+    }
 
 
 def test_gateway_uses_shared_endpoint_without_per_machine_url(monkeypatch):

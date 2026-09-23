@@ -108,6 +108,45 @@ def test_batch_listing_prefers_server_gateway(monkeypatch):
     assert records[0].personnel_label == "Andy"
 
 
+def test_browser_login_is_synced_to_shared_dtf_without_logging_token(monkeypatch):
+    from automatic_print.automation.api.s2b.production import downloads, gateway
+    seen = []
+
+    class Page:
+        def evaluate(self, _script):
+            return "current-browser-token"
+
+    monkeypatch.setattr(gateway, "available", lambda: True)
+    monkeypatch.setattr(
+        gateway, "refresh_login",
+        lambda token: seen.append(token) or {
+            "refreshed": True, "latest_created_at": "2026-09-24"
+        },
+    )
+    messages = []
+    assert downloads._sync_shared_login(Page(), messages.append)
+    assert seen == ["current-browser-token"]
+    assert "current-browser-token" not in "".join(messages)
+    assert "2026-09-24" in messages[0]
+
+
+def test_shared_login_sync_failure_keeps_authenticated_browser_usable(monkeypatch):
+    from automatic_print.automation.api.s2b.production import downloads, gateway
+
+    class Page:
+        def evaluate(self, _script):
+            return "current-browser-token"
+
+    monkeypatch.setattr(gateway, "available", lambda: True)
+    monkeypatch.setattr(
+        gateway, "refresh_login",
+        lambda _token: (_ for _ in ()).throw(RuntimeError("gateway unavailable")),
+    )
+    messages = []
+    assert not downloads._sync_shared_login(Page(), messages.append)
+    assert "共享登录更新失败" in messages[0]
+
+
 def test_download_prefers_gateway_and_marks_only_after_extract(tmp_path, monkeypatch):
     from automatic_print.automation.api.s2b.production import downloads, gateway
     source = tmp_path / "source.zip"

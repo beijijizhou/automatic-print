@@ -137,6 +137,7 @@ class _authenticated_page:
         self.page = open_authenticated_page(
             self.browser, EXPORT_URL, ".exportRecordBlock", progress=self.progress
         )
+        _sync_shared_login(self.page, self.progress)
         return self.page
     def __exit__(self, *_exc):
         self.playwright.stop()
@@ -146,6 +147,29 @@ def _records_from_page(page):
     query = ("/factory/userExportRecord?page=1&per_page=100&type=4&is_download="
              "&status=&batch_number=&created_at_before=&created_at_after=")
     return parse_export_rows(_api(page, "GET", query))
+
+
+def _sync_shared_login(page, progress=None):
+    from .gateway import available, refresh_login
+    if not available():
+        return False
+    token = page.evaluate("""() => {
+      const saved = localStorage.getItem('pro__Access-Token');
+      if (!saved) return '';
+      try { const parsed = JSON.parse(saved); return parsed.value || parsed || ''; }
+      catch (_) { return saved; }
+    }""")
+    if not token:
+        return False
+    try:
+        result = refresh_login(token)
+    except Exception as error:
+        _report(progress, f"本机 S2B 登录可用，但共享登录更新失败：{error}")
+        return False
+    latest = str(result.get("latest_created_at") or "").strip()
+    suffix = f"，最新批次 {latest}" if latest else ""
+    _report(progress, f"S2B 登录已验证并安全更新到 DTF 共享服务{suffix}。")
+    return True
 
 
 def _api(page, method, path, payload=None):

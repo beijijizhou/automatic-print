@@ -13,6 +13,13 @@ def list_batches() -> dict:
     return _call("production_batches", page=1, per_page=100)
 
 
+def refresh_login(token: str) -> dict:
+    value = str(token or "").strip()
+    if not value:
+        raise RuntimeError("S2B 登录已失效，请重新登录")
+    return _call("refresh_login", token=value)
+
+
 def wait_for_exports(batch_numbers, parse, progress=None, wait_seconds=600):
     latest = _latest(parse)
     missing = [batch for batch in batch_numbers if batch not in latest]

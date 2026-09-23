@@ -25,6 +25,7 @@ Deno.serve(async (request) => {
     const url = requiredEnv("SUPABASE_URL");
     const serviceKey = requiredEnv("SUPABASE_SERVICE_ROLE_KEY");
     const db = createClient(url, serviceKey);
+    const secret = Deno.env.get("ERP_TOKEN_ENCRYPTION_KEY") || serviceKey;
     const batch = String(input.batch_number || "").trim().toUpperCase();
     if (action === "batch_info") {
       if (!/^[A-Z0-9]{12}$/.test(batch)) {
@@ -37,6 +38,10 @@ Deno.serve(async (request) => {
     }
 
     const platform = `S2B:${account}`;
+    if (action === "refresh_login") {
+      const result = await refreshLogin(db, platform, input, secret);
+      return json({ account, ...result });
+    }
     const { data: credential, error: credentialError } = await db
       .from("erp_api_credentials")
       .select("encrypted_token,status")
@@ -47,7 +52,6 @@ Deno.serve(async (request) => {
     if (credential.status === "expired") {
       throw new ClientError(`${platform} shared login has expired`, 503);
     }
-    const secret = Deno.env.get("ERP_TOKEN_ENCRYPTION_KEY") || serviceKey;
     const token = await decryptToken(String(credential.encrypted_token), secret);
     if (action !== "batch_info") {
       const result = await handleProductionAction(token, action, input);
@@ -211,6 +215,51 @@ async function decryptToken(value: string, secret: string) {
   return new TextDecoder().decode(plain);
 }
 
+async function refreshLogin(
+  db: ReturnType<typeof createClient>,
+  platform: string,
+  input: Record<string, unknown>,
+  secret: string,
+) {
+  const token = String(input.token || "").trim();
+  if (token.length < 32 || token.length > 8192) {
+    throw new ClientError("Invalid S2B login token", 400);
+  }
+  const verified = await handleProductionAction(token, "production_batches", {
+    page: 1, per_page: 1,
+  }) as Record<string, unknown>;
+  const encryptedToken = await encryptToken(token, secret);
+  const now = new Date().toISOString();
+  const { data, error } = await db.from("erp_api_credentials").update({
+    encrypted_token: encryptedToken,
+    status: "active",
+    last_used_at: now,
+    last_error: null,
+  }).eq("platform", platform).select("platform").maybeSingle();
+  if (error) throw error;
+  if (!data) throw new ClientError(`${platform} shared login is not configured`, 503);
+  const records = Array.isArray(verified.records)
+    ? verified.records as Record<string, unknown>[] : [];
+  return {
+    action: "refresh_login",
+    refreshed: true,
+    total: Number(verified.total || records.length),
+    latest_created_at: String(records[0]?.created_at || ""),
+  };
+}
+
+async function encryptToken(value: string, secret: string) {
+  const nonce = crypto.getRandomValues(new Uint8Array(12));
+  const key = await crypto.subtle.importKey(
+    "raw", await sha256(`after-sales:erp-api-token:${secret}`),
+    { name: "AES-GCM" }, false, ["encrypt"],
+  );
+  const ciphertext = new Uint8Array(await crypto.subtle.encrypt(
+    { name: "AES-GCM", iv: nonce }, key, new TextEncoder().encode(value),
+  ));
+  return `aesgcm:v1:${encode(nonce)}:${encode(ciphertext)}`;
+}
+
 async function digest(value: string) {
   return [...await sha256(value)].map((byte) => byte.toString(16).padStart(2, "0")).join("");
 }
@@ -222,6 +271,11 @@ function decode(value: string) {
     value.length + ((4 - value.length % 4) % 4), "=",
   );
   return Uint8Array.from(atob(padded), (character) => character.charCodeAt(0));
+}
+function encode(value: Uint8Array) {
+  let binary = "";
+  for (const byte of value) binary += String.fromCharCode(byte);
+  return btoa(binary).replaceAll("+", "-").replaceAll("/", "_").replace(/=+$/, "");
 }
 function requiredEnv(name: string) {
   const value = Deno.env.get(name);
