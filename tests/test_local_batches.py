@@ -1,6 +1,9 @@
 from pathlib import Path
 
-from automatic_print.automation.batches.local import discover_local_batches
+from automatic_print.automation.batches.local import (
+    discover_batch_folders,
+    discover_local_batches,
+)
 
 
 def test_discovers_downloaded_batches_but_not_processed_output(
@@ -27,3 +30,18 @@ def test_local_batches_are_scoped_to_platform(tmp_path: Path) -> None:
     (folder / "design.jpg").write_bytes(b"image")
 
     assert discover_local_batches(tmp_path, "Haloo") == []
+
+
+def test_discovers_s2b_alphanumeric_batch_inside_prefixed_archive_root(
+    tmp_path: Path,
+) -> None:
+    source = tmp_path / "S2B" / "BATCHES" / "AS2B_22UJ9KT4VCZA"
+    source.mkdir(parents=True)
+    (source / "S" / "design.png").parent.mkdir()
+    (source / "S" / "design.png").write_bytes(b"image")
+
+    assert discover_batch_folders(tmp_path / "S2B") == [source]
+    records = discover_local_batches(tmp_path, "S2B")
+    assert [(record.batch_number, record.folder) for record in records] == [
+        ("22UJ9KT4VCZA", source)
+    ]

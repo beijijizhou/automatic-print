@@ -139,6 +139,54 @@ def test_download_worker_runs_download_layout_and_riin_in_order(tmp_path, monkey
     assert results[0]["print_files"] == [{"batch": "batch"}]
 
 
+def test_s2b_prefixed_archive_root_uses_real_batch_for_layout(
+    tmp_path, monkeypatch,
+):
+    from automatic_print.batch_ui.local import processing
+
+    source = tmp_path / "S2B" / "BATCHES" / "AS2B_22UJ9KT4VCZA"
+    source.mkdir(parents=True)
+    (source / "S" / "design.png").parent.mkdir()
+    (source / "S" / "design.png").write_bytes(b"image")
+    calls = []
+    monkeypatch.setattr(
+        processing,
+        "generate_layout",
+        lambda images, destination, settings, progress, batch_name, **kwargs:
+        calls.append((images, destination, batch_name)) or {"filename": "final.png"},
+    )
+
+    result = processing.process_local_batches(
+        tmp_path, "S2B", ["22UJ9KT4VCZA"], {}, object(), None, False,
+        lambda _message: None,
+    )
+
+    assert result["batches"] == [
+        ("22UJ9KT4VCZA", {"filename": "final.png"})
+    ]
+    assert calls[0][1:] == (
+        tmp_path / "S2B" / "PROCESSED" / "22UJ9KT4VCZA",
+        "22UJ9KT4VCZA",
+    )
+
+
+def test_s2b_batch_type_is_saved_inside_prefixed_archive_root(tmp_path):
+    from automatic_print.automation.batches.naming import load_batch_type
+    from automatic_print.batch_ui.task.automatic_print import (
+        save_downloaded_batch_types,
+    )
+
+    source = tmp_path / "S2B" / "BATCHES" / "AS2B_22UJ9KT4VCZA"
+    source.mkdir(parents=True)
+    (source / "design.png").write_bytes(b"image")
+
+    save_downloaded_batch_types(
+        tmp_path, "S2B", {"22UJ9KT4VCZA": "单项单件"}
+    )
+
+    assert load_batch_type(source) == "单项单件"
+
+
 def test_batch_prns_continue_after_one_riin_failure(tmp_path, monkeypatch):
     from automatic_print.automation.api.riin import jobs
 

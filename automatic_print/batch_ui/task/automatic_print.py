@@ -1,19 +1,24 @@
 """Continue a completed platform download through layout and RIIN output."""
 from pathlib import Path
 
+from ...automation.batches.local import (
+    batch_number_from_folder,
+    discover_batch_folders,
+)
 from ...automation.batches.naming import save_batch_type
 
 
 def save_downloaded_batch_types(output, platform_name, batch_types):
     platform_root = Path(output) / platform_name
+    folders = discover_batch_folders(platform_root)
     for batch_number, batch_type in batch_types.items():
         standard = platform_root / "BATCHES" / batch_number
         if standard.is_dir():
             save_batch_type(standard, batch_type)
             continue
         matches = [
-            folder for folder in platform_root.rglob(batch_number)
-            if folder.is_dir() and folder.name == batch_number
+            folder for folder in folders
+            if batch_number_from_folder(folder) == batch_number
         ]
         if len(matches) == 1:
             save_batch_type(matches[0], batch_type)

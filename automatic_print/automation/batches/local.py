@@ -16,12 +16,33 @@ class LocalBatch:
     modified_at: str
 
 
+def batch_number_from_folder(folder: Path) -> str:
+    """Return the production batch code represented by an archive folder."""
+    name = folder.name
+    if name.startswith("AS2B_"):
+        for part in name.split("_")[1:]:
+            if len(part) == 12 and part.isalnum():
+                return part
+    return name
+
+
 def discover_batch_folders(platform_root: Path) -> list[Path]:
     """Keep an archive's outer batch folder once, including its nested images."""
-    folders = [folder for folder in platform_root.rglob('*')
-               if folder.is_dir() and len(folder.name) == 12
-               and folder.name.isdigit()
-               and not {'PROCESSED', 'TEST_SAMPLE', 'PREVIEW', '切膜机文件'}.intersection(folder.parts)]
+    excluded = {'PROCESSED', 'TEST_SAMPLE', 'PREVIEW', '切膜机文件'}
+    standard_root = platform_root / "BATCHES"
+    standard = (
+        [folder for folder in standard_root.iterdir() if folder.is_dir()]
+        if standard_root.is_dir()
+        else []
+    )
+    legacy = [
+        folder for folder in platform_root.rglob('*')
+        if folder.is_dir()
+        and len(folder.name) == 12
+        and folder.name.isalnum()
+        and not excluded.intersection(folder.parts)
+    ]
+    folders = list(dict.fromkeys((*standard, *legacy)))
     candidates = set(folders)
     return [folder for folder in folders
             if not any(parent in candidates and parent.name == folder.name
@@ -44,7 +65,7 @@ def discover_local_batches(
         batches.append(
             LocalBatch(
                 platform_name,
-                folder.name,
+                batch_number_from_folder(folder),
                 folder,
                 len(images),
                 datetime.fromtimestamp(modified).strftime(

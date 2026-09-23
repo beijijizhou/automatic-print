@@ -12,7 +12,10 @@ from ...automation.batches.naming import (
 )
 from ...layout_engine import discover_images, generate_layout
 from ...layout_engine.output.output_name import batch_directory_name
-from ...automation.batches.local import discover_batch_folders
+from ...automation.batches.local import (
+    batch_number_from_folder,
+    discover_batch_folders,
+)
 
 
 def process_local_batches(
@@ -43,7 +46,9 @@ def process_local_batches(
             folder,
             _prepare_images(
                 folder,
-                batch_types.get(folder.name) or load_batch_type(folder),
+                batch_types.get(batch_number_from_folder(folder))
+                or batch_types.get(folder.name)
+                or load_batch_type(folder),
                 sample_limit,
                 progress,
             ),
@@ -81,7 +86,9 @@ def process_local_batches(
         "type": "processed",
         "platform": platform_name,
         "batches": completed,
-        "merged_batches": [folder.name for folder, _images in prepared]
+        "merged_batches": [
+            batch_number_from_folder(folder) for folder, _images in prepared
+        ]
         if merge_batches
         else [],
         "test": bool(sample_limit),
@@ -96,8 +103,11 @@ def _batch_folders(root: Path, selected: list[str]) -> list[Path]:
         return sorted(folders)
     positions = {number: index for index, number in enumerate(selected)}
     return sorted(
-        (folder for folder in folders if folder.name in positions),
-        key=lambda folder: positions[folder.name],
+        (
+            folder for folder in folders
+            if batch_number_from_folder(folder) in positions
+        ),
+        key=lambda folder: positions[batch_number_from_folder(folder)],
     )
 
 
@@ -129,7 +139,7 @@ def _render_merged(
     images = [
         image for _folder, folder_images in prepared for image in folder_images
     ]
-    codes = [folder.name for folder, _images in prepared]
+    codes = [batch_number_from_folder(folder) for folder, _images in prepared]
     stamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     destination = destination_root / batch_directory_name("_".join(codes), f"MERGED_{stamp}")
     progress(f"[1/1] 正在合并 {len(codes)} 个批次、{len(images)} 张图片")
@@ -150,18 +160,19 @@ def _render_separately(
     completed = []
     total = len(prepared)
     for index, (folder, images) in enumerate(prepared, start=1):
+        batch_number = batch_number_from_folder(folder)
         progress(
-            f"[{index}/{total}] {folder.name}：正在排版 {len(images)} 张图片"
+            f"[{index}/{total}] {batch_number}：正在排版 {len(images)} 张图片"
         )
         result = generate_layout(
             images,
-            destination_root / folder.name,
+            destination_root / batch_number,
             settings,
-            _layout_progress(progress, folder.name),
-            batch_name=folder.name,
+            _layout_progress(progress, batch_number),
+            batch_name=batch_number,
             **({"preview_only": True} if preview_only else {}),
         )
-        completed.append((folder.name, result))
+        completed.append((batch_number, result))
     return completed
 
 
