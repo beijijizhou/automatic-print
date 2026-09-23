@@ -70,8 +70,19 @@ def main(argv=None):
             if args.manifest:
                 files = json.loads(args.manifest.read_text(encoding='utf-8'))
             source = args.source or args.manifest.parent
+
+            def write_progress(message):
+                report_path.parent.mkdir(parents=True, exist_ok=True)
+                report_path.write_text(json.dumps({
+                    'operation': args.operation,
+                    'administrator': result['administrator'],
+                    'done': False,
+                    'status': message,
+                }, ensure_ascii=False, indent=2), encoding='utf-8')
+
             result['automation'] = automate_layout_to_prn(
-                windows[0].handle, windows[0].process_id, source, args.output, files)
+                windows[0].handle, windows[0].process_id, source, args.output,
+                files, write_progress)
         elif args.operation == 'open-import':
             result['dialogs'] = open_import(windows[0].handle)
         elif args.operation == 'import':
@@ -103,10 +114,13 @@ def main(argv=None):
         else:
             result['accessible_controls'] = accessible_inventory(windows[0].handle)
             result['dialogs'] = dialog_inventory(windows[0].process_id)
-        result['ok'] = True
+        result.update(ok=True, done=True)
     except Exception as exc:
         import traceback
-        result.update(ok=False, error=str(exc), traceback=traceback.format_exc())
+        result.update(
+            ok=False, done=True, error=str(exc),
+            traceback=traceback.format_exc(),
+        )
     report_path.parent.mkdir(parents=True, exist_ok=True)
     report_path.write_text(json.dumps(result, ensure_ascii=False, indent=2), encoding='utf-8')
     return 0 if result['ok'] else 1

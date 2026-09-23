@@ -66,25 +66,36 @@ def generate_prn(files, output, progress):
     )
     started = time.monotonic()
     finished = False
+    last_status = ''
     try:
         launch_elevated([
             "automate-layout", "--report", str(report),
             "--manifest", str(manifest), "--output", str(target),
         ])
         while True:
+            active_status = False
             if report.is_file():
                 try:
                     payload = json.loads(report.read_text(encoding="utf-8"))
                 except (OSError, json.JSONDecodeError):
                     pass
                 else:
-                    finished = True
-                    break
+                    if payload.get('done', True):
+                        finished = True
+                        break
+                    active_status = True
+                    status = str(payload.get('status') or '').strip()
+                    if status and status != last_status:
+                        progress(status)
+                        last_status = status
             elapsed = time.monotonic() - started
             if elapsed > 7500:
                 raise TimeoutError(
                     f"RIIN任务超过125分钟仍未返回；任务未被取消：{target}"
                 )
+            if active_status:
+                time.sleep(0.5)
+                continue
             if target.is_file():
                 progress(
                     f"RIIN正在生成 {target.name} · "

@@ -8,13 +8,91 @@ from unittest.mock import MagicMock, patch
 from automatic_print.automation.api.riin.__main__ import main
 from automatic_print.automation.api.riin.desktop_controls.desktop import open_output, png_import_paths
 from automatic_print.automation.api.riin.desktop_controls.dialogs import cancel_crop_warning
+from automatic_print.automation.api.riin.desktop_controls.dialogs import confirm_import
 from automatic_print.automation.api.riin.output import (
     load_printexp, wait_for_print_file,
 )
+from automatic_print.automation.api.riin.jobs import generate_prn
 from automatic_print.automation.api.riin.workflow import automate_layout_to_prn
 
 
 class AdminEntryTests(unittest.TestCase):
+    def test_import_settings_selects_and_verifies_original_size(self):
+        desktop = MagicMock()
+        dialog = desktop.window.return_value
+        original = MagicMock()
+        original.window_text.return_value = '按原图尺寸导入'
+        original.class_name.return_value = 'Button'
+        original.get_check_state.side_effect = [0, 1]
+        dialog.descendants.return_value = [original]
+        messages = []
+
+        with patch('pywinauto.Desktop', return_value=desktop), \
+             patch('automatic_print.automation.api.riin.desktop_controls.dialogs.time.sleep'):
+            result = confirm_import(22, messages.append)
+
+        original.click.assert_called_once_with()
+        dialog.child_window.assert_called_once_with(
+            title='确定', class_name='Button')
+        dialog.child_window.return_value.click.assert_called_once_with()
+        self.assertEqual(result['parameters'], '按原图尺寸导入')
+        self.assertEqual(result['confirmation'], 'automatic')
+        self.assertTrue(any('原图尺寸' in message for message in messages))
+
+    def test_unrecognized_import_settings_waits_for_manual_confirmation(self):
+        desktop = MagicMock()
+        dialog = desktop.window.return_value
+        scaled = MagicMock()
+        scaled.window_text.return_value = '适合页面'
+        scaled.class_name.return_value = 'Button'
+        dialog.descendants.return_value = [scaled]
+        messages = []
+
+        with patch('pywinauto.Desktop', return_value=desktop):
+            result = confirm_import(22, messages.append, manual_timeout=15)
+
+        dialog.child_window.assert_not_called()
+        dialog.wait_not.assert_called_once_with('visible', timeout=15)
+        self.assertEqual(result['confirmation'], 'manual')
+        self.assertTrue(any('手动选择原尺寸' in message for message in messages))
+
+    def test_parent_ui_receives_manual_original_size_prompt(self):
+        with tempfile.TemporaryDirectory() as folder:
+            source = Path(folder)
+            image = source / 'layout.png'
+            image.write_bytes(b'png')
+            output = source / 'layout.prn'
+            state = {}
+            messages = []
+
+            def launch(arguments):
+                report = Path(arguments[arguments.index('--report') + 1])
+                state['report'] = report
+                report.write_text(json.dumps({
+                    'done': False,
+                    'status': ('未识别到可验证的原尺寸选项；请在RIIN“导入图像设置”'
+                               '窗口手动选择原尺寸并点击确定。'),
+                }, ensure_ascii=False), encoding='utf-8')
+
+            def finish(_seconds):
+                state['report'].write_text(json.dumps({
+                    'done': True,
+                    'ok': True,
+                    'automation': {'state': 'completed'},
+                }), encoding='utf-8')
+
+            with patch(
+                'automatic_print.automation.api.riin.jobs.launch_elevated',
+                side_effect=launch,
+            ), patch(
+                'automatic_print.automation.api.riin.jobs.time.sleep',
+                side_effect=finish,
+            ):
+                result = generate_prn([image], output, messages.append)
+
+            self.assertEqual(result['state'], 'completed')
+            self.assertTrue(any('手动选择原尺寸' in message for message in messages))
+
     def test_crop_warning_cancel_requires_exact_destructive_message(self):
         desktop = MagicMock()
         found, dialog, message = MagicMock(), MagicMock(), MagicMock()
@@ -189,7 +267,7 @@ class AdminEntryTests(unittest.TestCase):
                 side_effect=lambda pid, files, index: {'state': 'submitted', 'chunk': index},
             ), patch(
                 'automatic_print.automation.api.riin.workflow.confirm_import',
-                side_effect=lambda pid: {'state': 'confirmed'},
+                side_effect=lambda pid, progress: {'state': 'confirmed'},
             ), patch(
                 'automatic_print.automation.api.riin.desktop_controls.desktop.open_output',
                 return_value={'state': 'output_opened'},

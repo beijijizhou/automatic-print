@@ -2,14 +2,89 @@
 import time
 
 
-def confirm_import(process_id):
+ORIGINAL_SIZE_LABELS = (
+    '原尺寸', '原始尺寸', '原图尺寸', '实际尺寸', '原始图像大小', '100%'
+)
+
+
+def _normalized_label(value):
+    return ''.join(
+        character for character in str(value).casefold()
+        if character.isalnum() or character == '%'
+    )
+
+
+def _original_size_controls(dialog):
+    matches = []
+    labels = []
+    for control in dialog.descendants():
+        try:
+            text = control.window_text().strip()
+            kind = control.class_name()
+        except Exception:
+            continue
+        if text:
+            labels.append(text)
+        normalized = _normalized_label(text)
+        if (
+            kind == 'Button'
+            and not any(word in normalized for word in ('缩放', '适应', '填充'))
+            and any(
+                _normalized_label(label) in normalized
+                for label in ORIGINAL_SIZE_LABELS
+            )
+        ):
+            matches.append(control)
+    return matches, labels
+
+
+def _checked(control):
+    try:
+        return int(control.get_check_state()) == 1
+    except Exception:
+        return False
+
+
+def confirm_import(process_id, progress=None, manual_timeout=7_200):
     from pywinauto import Desktop
     dialog = Desktop(backend='win32').window(
         process=process_id, title='导入图像设置', class_name='#32770')
     dialog.wait('visible', timeout=5)
-    dialog.child_window(title='确定', class_name='Button').click()
-    dialog.wait_not('visible', timeout=30)
-    return {'state': 'import_settings_accepted', 'parameters': '沿用当前导入参数'}
+    controls, labels = _original_size_controls(dialog)
+    if len(controls) == 1:
+        original = controls[0]
+        if not _checked(original):
+            original.click()
+            time.sleep(0.2)
+        if _checked(original):
+            selected = original.window_text().strip()
+            if progress:
+                progress(f'RIIN导入图像设置已确认“{selected}”；正在提交导入…')
+            dialog.child_window(title='确定', class_name='Button').click()
+            dialog.wait_not('visible', timeout=30)
+            return {
+                'state': 'original_size_confirmed',
+                'parameters': selected,
+                'confirmation': 'automatic',
+            }
+
+    reason = (
+        '找到多个可能的原尺寸选项，无法安全自动选择'
+        if len(controls) > 1
+        else '未识别到可验证的原尺寸选项'
+    )
+    if progress:
+        progress(
+            f'{reason}；请在RIIN“导入图像设置”窗口手动选择原尺寸并点击确定。'
+        )
+    dialog.wait_not('visible', timeout=manual_timeout)
+    return {
+        'state': 'original_size_confirmed',
+        'parameters': '原尺寸（用户在RIIN窗口确认）',
+        'confirmation': 'manual',
+        'reason': reason,
+        'visible_labels': labels,
+    }
 
 
 def cancel_import(process_id):

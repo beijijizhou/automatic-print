@@ -90,7 +90,7 @@ def test_workflow_loads_early_prn_and_reports_writing(tmp_path, monkeypatch):
     monkeypatch.setattr(workflow.desktop, 'open_import', lambda _handle: {})
     monkeypatch.setattr(workflow.desktop, 'submit_import_paths',
                         lambda *_args: {})
-    monkeypatch.setattr(workflow, 'confirm_import', lambda _pid: {})
+    monkeypatch.setattr(workflow, 'confirm_import', lambda _pid, _progress: {})
     monkeypatch.setattr(workflow.desktop, 'select_document', lambda *_args: {})
     monkeypatch.setattr(workflow.desktop, 'open_output', lambda _handle: {})
     monkeypatch.setattr(workflow.riin_output, 'begin_file_output',
