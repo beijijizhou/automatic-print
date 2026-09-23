@@ -103,6 +103,8 @@ class ThreadActionsMixin:
         if result.get('type') == 'read':
             if result['kind'] == 'completed_erp':
                 self.completed_page.show_result(result)
+            elif result['kind'] == 's2b_preview':
+                self.s2b_preview_page.show_result(result)
             else:
                 self.local_read_finished(result)
             return
@@ -146,6 +148,8 @@ class ThreadActionsMixin:
                 widget.setEnabled(enabled)
         if hasattr(self, 'completed_page'):
             self.completed_page.set_actions_enabled(enabled)
+        if hasattr(self, 's2b_preview_page'):
+            self.s2b_preview_page.set_actions_enabled(enabled)
         plan = self.pending_batch_plan
         if hasattr(self, "generate_rules_button"):
             self.generate_rules_button.setEnabled(

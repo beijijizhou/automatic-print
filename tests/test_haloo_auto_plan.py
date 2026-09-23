@@ -186,5 +186,7 @@ def test_s2b_download_workspace_exposes_persistent_strategy_editor() -> None:
     assert owner.s2b_strategy_editor.platform_name == 'S2B'
     assert not owner.s2b_strategy_editor.controls['by_logistics'].isChecked()
     assert not owner.s2b_strategy_editor.controls['by_style'].isChecked()
+    assert owner.s2b_preview_page is page
+    assert '模拟分组' in owner.s2b_preview_page.read_button.text()
     page.close()
     owner.close()

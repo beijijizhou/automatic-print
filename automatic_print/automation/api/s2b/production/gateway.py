@@ -20,6 +20,10 @@ def refresh_login(token: str) -> dict:
     return _call("refresh_login", token=value)
 
 
+def preview_items() -> dict:
+    return _call("preview_items")
+
+
 def wait_for_exports(batch_numbers, parse, progress=None, wait_seconds=600):
     latest = _latest(parse)
     missing = [batch for batch in batch_numbers if batch not in latest]

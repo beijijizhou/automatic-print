@@ -10,6 +10,7 @@ export async function handleProductionAction(
   if (action === "request_export") return requestExport(token, input);
   if (action === "export_records") return exportRecords(token, input);
   if (action === "mark_downloaded") return markDownloaded(token, input);
+  if (action === "preview_items") return previewItems(token);
   throw new ProductionError("Unsupported S2B action", 400);
 }
 
@@ -19,6 +20,38 @@ class ProductionError extends Error {
     super(message);
     this.status = status;
   }
+}
+
+async function previewItems(token: string) {
+  const records: Record<string, unknown>[] = [];
+  let page = 1;
+  let lastPage = 1;
+  let sourceTotal = -1;
+  do {
+    const body = await request(token, "POST", "/factory/orderProductOrder/index", {
+      basic_product_ids: "", logistics_type: "", logistics_carrier_codes: "",
+      produce_warning: "", order_product_line_ids: "", logistics_platform_ids: "",
+      third_order_id: "", logisticss_track_number: "", technology: "", material: "",
+      stock_sku_color_ids: "", stock_sku_size_ids: "", has_logistics_track_number: "",
+      platform: "", status: 1, order_type: 0, order_codes: [], sort_field: "",
+      sort_type: "", order_item_type: "", stock_sku_ids: "",
+      created_at_before: "", created_at_after: "", page, per_page: 500,
+    });
+    const data = object(body.data);
+    const rows = Array.isArray(data.data) ? data.data : [];
+    const currentTotal = integer(data.total, rows.length, 0, 1_000_000);
+    if (sourceTotal < 0) sourceTotal = currentTotal;
+    if (currentTotal !== sourceTotal) {
+      throw new ProductionError("S2B pending orders changed while reading; preview again", 409);
+    }
+    records.push(...rows.map(normalizePreviewItem));
+    lastPage = integer(data.last_page, page, page, 10_000);
+    page += 1;
+  } while (page <= lastPage);
+  if (records.length !== sourceTotal) {
+    throw new ProductionError("S2B pending order snapshot is incomplete; preview again", 409);
+  }
+  return { action: "preview_items", total: sourceTotal, records };
 }
 
 async function listBatches(token: string, input: Record<string, unknown>) {
@@ -133,6 +166,25 @@ function normalizeExport(row: Record<string, any>) {
     ready: Number(row.status || 0) === 2 && Boolean(row.download_url),
     download_url: String(row.download_url || ""),
     archive_name: String(file.origin_name || ""),
+  };
+}
+
+function normalizePreviewItem(row: Record<string, any>) {
+  const order = object(row.order_data);
+  const item = object(row.order_item_data);
+  return {
+    production_id: String(row.id || item.production_order_id || ""),
+    order_code: String(order.order_code || "").trim(),
+    item_id: String(item.order_item_id || ""),
+    item_code: String(item.order_item_code || "").trim(),
+    quantity: number(item.order_item_num),
+    order_total_count: number(item.order_item_total_count),
+    logistics: String(order.logistics_platform_name || "").trim(),
+    product_name: String(item.basic_product_name || "").trim(),
+    style_name: String(item.stock_sku_name || "").trim(),
+    color: String(item.stock_sku_color_text || "").trim(),
+    size: String(item.stock_sku_size_text || "").trim(),
+    created_at: String(order.created_at || ""),
   };
 }
 

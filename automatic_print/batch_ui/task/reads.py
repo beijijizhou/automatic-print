@@ -22,6 +22,9 @@ class ReadWorker(AutomationWorker):
             data = image_name_rows(Path(self.value))
         elif self.kind == 'completed_erp':
             data = self._completed_erp()
+        elif self.kind == 's2b_preview':
+            from ...automation.api.s2b.production.preview import load_s2b_preview
+            data = load_s2b_preview(self.strategy, self._report)
         else:
             raise ValueError(f'未知读取操作：{self.kind}')
         self._deliver(self.completed, dict(type='read', kind=self.kind,

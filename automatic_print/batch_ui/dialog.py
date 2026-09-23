@@ -102,7 +102,7 @@ class AutomationDialog(
                 )
             elif self.platform_names == ("S2B",):
                 self.main_tabs.addTab(
-                    build_s2b_strategy_page(self), "分批规则"
+                    build_s2b_strategy_page(self), "批次预览"
                 )
             else:
                 self.main_tabs.tabBar().hide()
