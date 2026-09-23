@@ -65,7 +65,9 @@ def chrome_is_connectable() -> bool:
         return False
 
 
-def ensure_debug_chrome(start_url: str) -> None:
+def ensure_debug_chrome(start_url: str, check_cancel=None) -> None:
+    check = check_cancel or (lambda: None)
+    check()
     if chrome_is_connectable():
         return
     profile = _profile_dir()
@@ -86,15 +88,20 @@ def ensure_debug_chrome(start_url: str) -> None:
         start_new_session=True,
     )
     for _ in range(150):
+        check()
         if chrome_is_connectable():
             return
         time.sleep(0.1)
     raise TimeoutError("Chrome 启动超时。")
 
 
-def connect_debug_chrome(playwright, start_url: str):
-    ensure_debug_chrome(start_url)
-    return playwright.chromium.connect_over_cdp(CDP_URL, timeout=30_000)
+def connect_debug_chrome(playwright, start_url: str, check_cancel=None):
+    check = check_cancel or (lambda: None)
+    ensure_debug_chrome(start_url, check)
+    check()
+    browser = playwright.chromium.connect_over_cdp(CDP_URL, timeout=30_000)
+    check()
+    return browser
 
 
 def open_authenticated_page(
@@ -104,9 +111,12 @@ def open_authenticated_page(
     login_timeout_ms: int = 180_000,
     progress=None,
     ready_state="visible",
+    check_cancel=None,
 ):
     """Open an ERP route, waiting for the user to finish login if required."""
     report = progress or (lambda _message: None)
+    check = check_cancel or (lambda: None)
+    check()
     host = urlsplit(target_url).netloc
     exact_pages = [
         page
@@ -141,17 +151,19 @@ def open_authenticated_page(
             )
             page = host_pages[-1] if host_pages else context.new_page()
         report(f"正在打开 {host}…")
+        check()
         page.goto(target_url, wait_until="domcontentloaded", timeout=30_000)
+        check()
 
     return _wait_for_authenticated_target(
         page, target_url, ready_selector, ready_state,
-        login_timeout_ms, report,
+        login_timeout_ms, report, check,
     )
 
 
 def _wait_for_authenticated_target(
     page, target_url, ready_selector, ready_state,
-    login_timeout_ms, report,
+    login_timeout_ms, report, check_cancel,
 ):
     """Follow delayed login redirects without making the user restart the task."""
     host = urlsplit(target_url).netloc
@@ -162,6 +174,7 @@ def _wait_for_authenticated_target(
     was_login = False
     report(f"页面已打开，正在等待 ERP 数据区域：{page.url}")
     while True:
+        check_cancel()
         try:
             locator = page.locator(ready_selector).first
             ready = locator.count() > 0 and (
@@ -187,7 +200,9 @@ def _wait_for_authenticated_target(
             if was_login:
                 report("登录成功，正在进入生产项管理页面…")
                 if target_path not in page.url:
+                    check_cancel()
                     page.goto(target_url, wait_until="domcontentloaded", timeout=30_000)
+                    check_cancel()
                 ready_deadline = time.monotonic() + 30
                 was_login = False
             if now >= ready_deadline:

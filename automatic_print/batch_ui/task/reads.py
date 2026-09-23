@@ -1,6 +1,7 @@
 """Background read actions sharing the ERP worker lifecycle."""
 from pathlib import Path
 
+from ...runtime.cancellation import TaskCancelled
 from .worker import AutomationWorker
 
 
@@ -45,8 +46,17 @@ class ReadWorker(AutomationWorker):
         from ...automation.api.erp import list_batch_rules
         platform = get_erp_platform(self.platform_name)
         with sync_playwright() as playwright:
-            browser = connect_debug_chrome(playwright, platform.production_items_url)
-            page = find_longfeng_page(browser, self.platform_name)
+            browser = connect_debug_chrome(
+                playwright,
+                platform.production_items_url,
+                self.cancellation.check,
+            )
+            page = find_longfeng_page(
+                browser,
+                self.platform_name,
+                self._report,
+                self.cancellation.check,
+            )
             rows, details = load_order_snapshot(
                 page, page_size=self.value, progress=self._report,
                 source_status=self.source_status)
@@ -66,7 +76,11 @@ class ReadWorker(AutomationWorker):
                     platform_name=self.platform_name, strategy=self.strategy))
             rule_issue = ''
             try:
+                self.cancellation.check()
                 rules = list_batch_rules(page)
+                self.cancellation.check()
+            except TaskCancelled:
+                raise
             except Exception:
                 rules = ()
                 rule_issue = ('批次规则暂时无法读取，当前计划仍可预览；'

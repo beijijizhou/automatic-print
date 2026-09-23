@@ -84,14 +84,17 @@ class ThreadActionsMixin:
             return
         self.worker.request_cancel()
         self.stop_button.setEnabled(False)
-        self.loading_label.setText(
-            "正在安全停止；已提交的 RIIN 文件任务结束后收尾，后续批次不会启动…"
-        )
-        self.log.appendPlainText("已请求停止当前处理。")
+        text = self.worker.stop_pending_text
+        self.loading_label.setText(text)
+        self.log.appendPlainText(text)
 
     @Slot()
     def task_cancelled(self) -> None:
-        text = "当前处理已安全停止，已经完成的文件会保留。"
+        text = (
+            self.worker.stopped_text
+            if self.worker is not None
+            else "当前处理已停止。"
+        )
         self.loading_label.setText(text)
         self.log.appendPlainText(text)
 

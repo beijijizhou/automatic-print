@@ -59,12 +59,16 @@ class ShippingBatchPlan:
         )
 
 
-def find_longfeng_page(browser, platform_name: str = "隆丰"):
+def find_longfeng_page(
+    browser, platform_name: str = "隆丰", progress=None, check_cancel=None
+):
     platform = get_erp_platform(platform_name)
     return open_authenticated_page(
         browser,
         platform.production_items_url,
         ".search-container",
+        progress=progress,
+        check_cancel=check_cancel,
     )
 
 

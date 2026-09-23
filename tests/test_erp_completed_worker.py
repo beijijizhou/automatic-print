@@ -25,8 +25,17 @@ def test_completed_plan_reads_the_selected_erp_platform(platform_name):
         result = worker._completed_erp()
 
     url = get_erp_platform(platform_name).production_items_url
-    connect.assert_called_once_with(playwright.return_value.__enter__.return_value, url)
-    find.assert_called_once_with(connect.return_value, platform_name)
+    connect.assert_called_once_with(
+        playwright.return_value.__enter__.return_value,
+        url,
+        worker.cancellation.check,
+    )
+    find.assert_called_once_with(
+        connect.return_value,
+        platform_name,
+        worker._report,
+        worker.cancellation.check,
+    )
     load.assert_called_once()
     assert plan.call_args.kwargs['platform_name'] == platform_name
     assert plan.call_args.kwargs['strategy'] is strategy

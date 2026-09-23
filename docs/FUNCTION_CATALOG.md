@@ -80,7 +80,7 @@
 | 自动化浏览器、传输与平台 | `automation/browser/`, `automation/transfer/`, `automation/providers/`, `automation/workflows/` | 登录会话、批次页面、导出下载、平台配置和端到端流程分别归档；`automation/browser/session.py`持续监听目标数据区、异步登录跳转和登录后返回，同一次任务内完成登录后重新进入原目标页，不要求用户再次启动；`automation/`根目录只公开稳定入口。 |
 | 平台批次自动生成RIIN PRN | `batch_ui/task/automatic_print.py`, `automation/api/riin/jobs.py`, `desktop_controls/window_control.py`, `desktop_controls/desktop.py`, `desktop_controls/dialogs.py`, `workflow.py`, `output.py`, `elevation.py`, `layout_engine/cutting/validation/cut_validation.py` | 唯一入口位于生产平台下载页。下载后复用`batch_ui/local/processing.py`及当前打印参数生成最终PNG，再逐批调用受限管理员任务；每批使用独立、不覆盖的PRN路径，RIIN精确任务进度大于0且文件超过占位大小即可加入PrintExp，无法确认进度时等待完成和稳定文件，结果区分仍在写入与已完成；已停止、消失或提交后两分钟未出现的精确任务及时报告失败，保留未确认文件且不重试。同批次分区之间响应停止请求。45厘米窄膜退化为安全单列时仍报告末枚左刀码到批次结束的600毫米停止距离。PrintExp使用窗口消息打开文件框，兼容无活动桌面的管理员后台会话；单批失败继续其他批次并完整展示，不启动物理打印。 |
 | 源码更新 | `updates/source.py`, `updates/release.py`, `updates/versioning.py`, `updates/worker.py` | 源码安装更新、发布包检查、版本展示和后台执行按职责分离；检查、应用和重启保持同一状态机。 |
-| 协作取消与安全关闭 | `runtime/cancellation.py`, `controllers/thread_lifecycle.py`, `ui/stop_actions.py`, `ui/immediate_exit.py` | 控制器拥有线程释放，UI只路由用户停止意图；任务运行时拒绝关闭并继续处理，空闲时由 Qt 正常退出，禁止强杀进程。 |
+| 协作取消与安全关闭 | `runtime/cancellation.py`, `controllers/thread_lifecycle.py`, `ui/stop_actions.py`, `ui/immediate_exit.py`, `batch_ui/task/actions.py`, `batch_ui/task/worker.py`, `automation/browser/session.py`, `automation/browser/batches.py` | 控制器拥有线程释放，UI只路由用户停止意图；平台任务按读取、预览、生成、下载、排版和自动打印显示对应停止状态，RIIN文案只用于自动打印；批次读取把取消检查传入Chrome启动、登录监听和页面等待循环。任务运行时拒绝关闭并继续处理，空闲时由 Qt 正常退出，禁止强杀进程。 |
 | 应用运行时 | `runtime/branding.py`, `runtime/resources.py`, `runtime/crash_logging.py`, `runtime/restart.py`, `runtime/cancellation.py` | 品牌、资源、故障日志、重启和任务取消归运行时层；包根目录只保留启动入口。 |
 
 ## 新增能力检查

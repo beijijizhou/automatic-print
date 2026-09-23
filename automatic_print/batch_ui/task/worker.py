@@ -71,6 +71,45 @@ class AutomationWorker(QObject):
     def request_cancel(self) -> None:
         self.cancellation.request()
 
+    @property
+    def stop_pending_text(self) -> str:
+        if self.action in {"list", "list_range", "status", "status_and_list"}:
+            return "正在停止批次信息读取…"
+        if self.action == "read":
+            return "正在停止数据读取…"
+        if self.action.startswith("preview_"):
+            return "正在停止批次预览…"
+        if self.action.startswith("generate_"):
+            return "正在停止批次生成…"
+        if self.action == "download" and self.auto_print is True:
+            return (
+                "正在安全停止；已提交的 RIIN 文件任务结束后收尾，"
+                "后续批次不会启动…"
+            )
+        if self.action == "download":
+            return "正在停止批次下载…"
+        if self.action == "process":
+            return "正在停止排版；已完成文件会保留…"
+        return "正在停止当前处理…"
+
+    @property
+    def stopped_text(self) -> str:
+        if self.action in {"list", "list_range", "status", "status_and_list"}:
+            return "批次信息读取已停止。"
+        if self.action == "read":
+            return "数据读取已停止。"
+        if self.action.startswith("preview_"):
+            return "批次预览已停止。"
+        if self.action.startswith("generate_"):
+            return "批次生成已停止。"
+        if self.action == "download" and self.auto_print is True:
+            return "自动打印已安全停止，已经完成的文件会保留。"
+        if self.action == "download":
+            return "批次下载已停止，已经完成的文件会保留。"
+        if self.action == "process":
+            return "排版已停止，已经完成的文件会保留。"
+        return "当前处理已停止，已经完成的结果会保留。"
+
     def _report(self, message: str) -> None:
         self.cancellation.check()
         self.progress.emit(message)
@@ -95,7 +134,11 @@ class AutomationWorker(QObject):
             )
             self._deliver(
                 self.batches_loaded,
-                load_batch_records(self.platform_name, self._report)
+                load_batch_records(
+                    self.platform_name,
+                    self._report,
+                    self.cancellation.check,
+                )
             )
         elif self.action == "list_range":
             self._report("正在读取指定范围内的生产批次…")
@@ -105,6 +148,8 @@ class AutomationWorker(QObject):
                     self.platform_name,
                     self.range_start,
                     self.range_end,
+                    self._report,
+                    self.cancellation.check,
                 )
             )
         elif self.action in {"status", "status_and_list"}:
@@ -114,13 +159,19 @@ class AutomationWorker(QObject):
             self._deliver(
                 self.status_loaded,
                 load_platform_order_status(
-                    self.platform_name, self._report
+                    self.platform_name,
+                    self._report,
+                    self.cancellation.check,
                 )
             )
             if self.action == "status_and_list":
                 self._deliver(
                     self.batches_loaded,
-                    load_batch_records(self.platform_name, self._report)
+                    load_batch_records(
+                        self.platform_name,
+                        self._report,
+                        self.cancellation.check,
+                    )
                 )
         elif self.action in GENERATION_ACTIONS:
             run_generation_action(self)
@@ -139,6 +190,7 @@ class AutomationWorker(QObject):
             self.batch_numbers,
             self.output,
             self._report,
+            self.cancellation.check,
         )
         self._save_batch_types()
         if self.auto_print:
