@@ -10,6 +10,7 @@ from ....layout_engine.output.output_name import batch_output_directory
 from ...busy_spinner import show_busy
 from ...settings.output import output_base
 from ...workers import GenerateWorker
+from ....controllers.generation_progress import begin_machine_task
 
 
 def start_generation(window, *, preview_only=False) -> None:
@@ -53,6 +54,10 @@ def start_generation(window, *, preview_only=False) -> None:
     window.current_stage = "正在开始"
     window.current_count = 0
     window.current_total = 0
+    begin_machine_task(
+        window, job_id, source.name,
+        batch_info={"preview_only": bool(preview_only)},
+    )
     window.active_png_compression = settings.png_compression_level
     window.active_png_engine = settings.png_engine
     window.clock.start()

@@ -8,7 +8,6 @@ from .view.pages import table_widget
 from .view.completed_view import selected_description, style_label
 from ..task.reads import CompletedGenerateWorker, ReadWorker
 
-
 class CompletedErpPage(QWidget):
     def __init__(self, owner, platform_name):
         super().__init__(owner)
