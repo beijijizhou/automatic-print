@@ -14,7 +14,7 @@ from automatic_print.automation.batches.supplements.completed import (
     plan_completed_erp_batches,
 )
 from automatic_print.automation.batches.supplements.completed import (
-    generate_completed_groups, verify_completed_group,
+    _confirmed_group_codes, generate_completed_groups, verify_completed_group,
 )
 from automatic_print.automation.api.erp.items import (
     generate_selected_batch,
@@ -227,6 +227,79 @@ def test_longfeng_completed_plan_matches_logistics_style_and_color_rules() -> No
     }
 
 
+def test_longfeng_confirmed_strategy_ignores_logistics_style_and_size() -> None:
+    rows = [
+        _row("1", "black-a", style="base-a", color="黑色", size="S"),
+        _row("2", "black-b", style="base-b", color="黑色", size="4XL"),
+        _row("3", "white", style="base-a", color="白色", size="3XL"),
+        _row("4", "double-a", style="base-a", color="黑色", size="S"),
+        _row("5", "double-b", style="base-b", color="白色", size="5XL"),
+        _row("6", "multi-a", composition=3),
+        _row("7", "multi-a", composition=3, color="白色"),
+        _row("8", "multi-b", composition=3),
+    ]
+    for row in rows:
+        row["process_route_code"] = "A00"
+    for row in (rows[1], rows[4], rows[7]):
+        row["logistics_sorting_code"] = "GOFO"
+    details = {row["id"]: _detail("A面") for row in rows}
+    details["4"] = details["5"] = _detail("A面", "B面")
+
+    groups = plan_completed_erp_batches(rows, details, platform_name="隆丰")
+
+    assert {group.logistics_code for group in groups} == {""}
+    assert {group.item_ids for group in groups} == {
+        ("1", "2"), ("3",), ("4", "5"), ("6", "7", "8")
+    }
+    assert all(not group.style_id and not group.size_group for group in groups)
+    assert next(group for group in groups if group.item_ids == ("4", "5")).color == ""
+
+
+def test_haloo_confirmed_strategy_uses_logistics_face_color_and_size_band() -> None:
+    rows = [
+        _row("1", "black-small", style="base-a", color="黑色", size="S"),
+        _row("2", "black-large", style="base-b", color="黑色", size="3XL"),
+        _row("3", "other-a", color="红色", size="S"),
+        _row("4", "other-b", color="蓝色", size="5XL"),
+        _row("5", "double-a", color="黑色"),
+        _row("6", "double-b", color="白色"),
+        _row("7", "multi-a", composition=3),
+        _row("8", "multi-a", composition=3, color="白色"),
+    ]
+    details = {row["id"]: _detail("A面") for row in rows}
+    details["5"] = details["6"] = _detail("A面", "B面")
+
+    groups = plan_completed_erp_batches(rows, details, platform_name="Haloo")
+
+    assert {group.item_ids for group in groups} == {
+        ("1",), ("2",), ("3", "4"), ("5", "6"), ("7", "8")
+    }
+    mixed = next(group for group in groups if group.item_ids == ("3", "4"))
+    assert (mixed.color, mixed.size_group) == ("混色", "")
+    double = next(group for group in groups if group.item_ids == ("5", "6"))
+    assert double.face == "双面" and not double.color
+    multi = next(group for group in groups if group.item_ids == ("7", "8"))
+    assert multi.face == "不区分面别"
+
+
+@pytest.mark.parametrize("field,value,message", [
+    ("color", "", "缺少颜色"),
+    ("detail", _detail("袖口"), "缺少可识别"),
+])
+def test_confirmed_strategy_rejects_unknown_single_fields(field, value, message) -> None:
+    row = _row("1", "a")
+    row["process_route_code"] = "A00"
+    detail = _detail("A面")
+    if field == "detail":
+        detail = value
+    else:
+        row[field] = value
+    with pytest.raises(RuntimeError, match=message):
+        plan_completed_erp_batches(
+            [row], {"1": detail}, platform_name="隆丰"
+        )
+
+
 def test_generation_rechecks_whole_order_and_confirms_one_code() -> None:
     row = _row("1", "a")
     row["production_batch_code"] = "original"
@@ -242,6 +315,45 @@ def test_generation_rechecks_whole_order_and_confirms_one_code() -> None:
          patch("automatic_print.automation.batches.supplements.completed.generate_supplement_batch") as write:
         assert generate_completed_groups(page, (group,), 1) == ("new",)
     write.assert_called_once_with(page, [("1", 1)], 1)
+
+
+def test_generation_accepts_platform_split_into_one_code_per_order() -> None:
+    rows = [_row("1", "a", composition=2), _row("2", "b", composition=2)]
+    group = plan_completed_erp_batches(
+        rows, {"1": _detail("A面"), "2": _detail("A面")}
+    )[0]
+    after_a = {**rows[0], "supplement_detail_list": [
+        {"production_batch_code": "new-a"}]}
+    after_b = {**rows[1], "supplement_detail_list": [
+        {"production_batch_code": "new-b"}]}
+    with patch("automatic_print.automation.batches.supplements.completed.list_batch_rules",
+               return_value=[type("Rule", (), {"id": 1})()]), \
+         patch("automatic_print.automation.api.erp.items.list_production_items",
+               side_effect=[
+                   {"list": [rows[0]], "total": 1},
+                   {"list": [rows[1]], "total": 1},
+                   {"list": [after_a], "total": 1},
+                   {"list": [after_b], "total": 1},
+               ]), \
+         patch("automatic_print.automation.batches.supplements.completed.production_item_images",
+               return_value=_detail("A面")), \
+         patch("automatic_print.automation.batches.supplements.completed.generate_supplement_batch"):
+        assert generate_completed_groups(object(), (group,), 1) == ("new-a", "new-b")
+
+
+def test_generation_confirmation_requires_every_item_to_have_one_code() -> None:
+    rows = [_row("1", "a", composition=3), _row("2", "a", composition=3)]
+    group = plan_completed_erp_batches(
+        rows, {"1": _detail("A面"), "2": _detail("A面")}
+    )[0]
+    confirmed = {
+        **rows[0], "supplement_detail_list": [{"production_batch_code": "new"}]
+    }
+    with patch(
+        "automatic_print.automation.batches.supplements.completed._whole_order",
+        return_value=[confirmed, rows[1]],
+    ), pytest.raises(RuntimeError, match="未确认或多重归属"):
+        _confirmed_group_codes(object(), group)
 
 
 def test_generation_rejects_partial_order_before_write() -> None:

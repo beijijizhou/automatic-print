@@ -44,17 +44,20 @@ class ReadWorker(AutomationWorker):
             rows, details = load_order_snapshot(
                 page, page_size=self.value, progress=self._report,
                 source_status=self.source_status)
-            order_issues = audit_candidate_orders(page, rows, self._report)
+            order_issues = audit_candidate_orders(
+                page, rows, self._report, self.platform_name)
             safe_rows = [row for row in rows
                          if str(row['order_id']) not in order_issues]
             groups = list(plan_completed_erp_batches(
-                safe_rows, details, source_status=self.source_status)
+                safe_rows, details, source_status=self.source_status,
+                platform_name=self.platform_name)
                 if safe_rows else ())
             for order_id in order_issues:
                 blocked_rows = [row for row in rows
                                 if str(row['order_id']) == order_id]
                 groups.extend(plan_completed_erp_batches(
-                    blocked_rows, details, source_status=self.source_status))
+                    blocked_rows, details, source_status=self.source_status,
+                    platform_name=self.platform_name))
             rule_issue = ''
             try:
                 rules = list_batch_rules(page)

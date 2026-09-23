@@ -3,10 +3,10 @@
 from dataclasses import dataclass
 from typing import Any
 
-from .gateway import call_module
+from .gateway import call_imported_module, call_module
 
 PRODUCT_ITEM_MODULE = "productItemManage-"
-BATCH_RULE_MODULE = "index-B6_UezUx.js"
+BATCH_RULE_MODULE = "index-D04tZfQ7.js"
 GENERATE_BATCH_MODULE = "productOrderManage-B-Bfdh3C.js"
 SUPPLEMENT_BATCH_MODULE = "productItemManage-ppzeq-54.js"
 
@@ -103,9 +103,10 @@ def list_order_items(page, order_id: str) -> list[dict[str, Any]]:
 
 
 def list_batch_rules(page) -> tuple[BatchRule, ...]:
-    rows = call_module(
+    rows = call_imported_module(
         page,
-        "index-B6_UezUx",
+        "GlobalBuildBatch.vue_",
+        "product_sale_type_list",
         "k",
         {"product_sale_type_list": 1},
         BATCH_RULE_MODULE,

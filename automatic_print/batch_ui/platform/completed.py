@@ -17,10 +17,7 @@ class CompletedErpPage(QWidget):
         self.boxes = []
         self.auto_plan_pending = False
         layout = QVBoxLayout(self)
-        note = QLabel('生产中与已完成共用补单分组策略：单项单件按物流、底款、'
-                      '颜色（黑色/白色分开）、面别和尺码档分类。单项多件与多项多件'
-                      '按物流、订单组成和面别分组，始终保持整单。'
-                      '选中的每一组会单独生成一个补单批次。')
+        note = QLabel(self._strategy_note())
         note.setWordWrap(True)
         self.source = QComboBox()
         self.source.addItem('生产中', 5)
@@ -53,8 +50,8 @@ class CompletedErpPage(QWidget):
         self.selection_preview.setReadOnly(True)
         self.selection_preview.setFixedHeight(92)
         self.selection_preview.setPlaceholderText('勾选分组后，这里会显示生成前的真实底款和颜色。')
-        preview_title = QLabel('待生成清单（提交前核对底款名称、ID、颜色和件数）')
-        warning = QLabel('提交前会重新核验已完成状态、整单范围、底款、来源批次和数量；'
+        preview_title = QLabel('待生成清单（提交前核对分组条件和件数）')
+        warning = QLabel('提交前会重新核验订单状态、整单范围、分组字段、来源批次和数量；'
                          '已补单的组不可重复生成。接口提交后若结果不明确，请先到平台核对，不要重试。')
         warning.setWordWrap(True)
         layout.addWidget(note)
@@ -114,9 +111,10 @@ class CompletedErpPage(QWidget):
             box.toggled.connect(self.update_generate_enabled)
             self.table.setCellWidget(row, 0, box)
             self.boxes.append(box)
-            values = (group.logistics_code, group.order_composition,
+            values = (group.logistics_code or '不分物流', group.order_composition,
                       style_label(group),
-                      group.color or '未记录', group.face, group.size_group or '未记录',
+                      group.color or ('不分颜色' if group.face == '双面' else '未记录'),
+                      group.face, group.size_group or '不分尺码',
                       str(len(group.item_ids)), ', '.join(group.source_batch_codes) or '未记录',
                       ', '.join(group.item_ids))
             for column, value in enumerate(values, 1):
@@ -172,11 +170,11 @@ class CompletedErpPage(QWidget):
         if not groups or self.owner.thread is not None:
             return
         dialog = QDialog(self)
-        dialog.setWindowTitle('生成前核对底款与颜色')
+        dialog.setWindowTitle('生成前核对分组条件')
         dialog.resize(740, 360)
         layout = QVBoxLayout(dialog)
         label = QLabel(f'{self.source.currentText()}来源的 {len(groups)} 个分组将分别生成补单批次。'
-                       '请先核对真实底款和颜色：')
+                       '请先核对分组条件和件数：')
         layout.addWidget(label)
         details = QPlainTextEdit(selected_description(groups))
         details.setReadOnly(True)
@@ -200,3 +198,13 @@ class CompletedErpPage(QWidget):
         self.invalidate()
         self.summary.setText('已确认生成批次：' + ', '.join(codes) + '。请刷新生产批次列表下载。')
         self.owner.log.appendPlainText(self.summary.text())
+
+    def _strategy_note(self):
+        if self.platform_name == '隆丰':
+            return ('隆丰只使用 A00 默认工艺，不按物流、底款或尺码拆分；多件按订单组成，'
+                    '单项单件分单双面，单面再按颜色分组。始终保持整单。')
+        if self.platform_name == 'Haloo':
+            return ('Haloo 按物流和订单组成分组；单项单件分单双面，单面按黑色、白色、'
+                    '混色分组，黑白再分 S–XL 与 2XL–5XL。始终保持整单。')
+        return ('生产中与已完成共用补单分组策略：单项单件按物流、底款、颜色、面别和'
+                '尺码档分类；多件按物流、订单组成和面别分组。始终保持整单。')

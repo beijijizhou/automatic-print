@@ -11,13 +11,8 @@ from ...api.erp import (
     production_item_images,
 )
 from ...api.erp.items import list_order_items
-from ..classification import (
-    BASE_COMPOSITIONS,
-    classify_production_face,
-    size_band,
-)
-
 from .source import COMPLETED_STATUS, SUPPLEMENT_SOURCES, special_strategy_issue
+from .strategies import grouping_values
 
 
 @dataclass(frozen=True)
@@ -34,39 +29,23 @@ class CompletedBatchGroup:
     item_quantities: tuple[tuple[str, int], ...] = ()
     order_ids: tuple[str, ...] = ()
     source_status: int = COMPLETED_STATUS
+    platform_name: str = ""
 
 
 def plan_completed_erp_batches(
     rows: list[dict], image_details: dict[str, dict], *,
     source_status: int = COMPLETED_STATUS,
+    platform_name: str = "",
 ) -> tuple[CompletedBatchGroup, ...]:
     """Apply one supplement grouping strategy to either order source."""
-    _validate_completed_snapshot(rows, image_details, source_status)
+    _validate_completed_snapshot(rows, image_details, source_status, platform_name)
     grouped: dict[tuple[str, ...], list[dict]] = defaultdict(list)
     order_rows: dict[str, list[dict]] = defaultdict(list)
     for row in rows:
         order_rows[str(row["order_id"])].append(row)
 
     for order in order_rows.values():
-        composition = int(order[0]["order_composition"])
-        logistics = str(order[0].get("logistics_sorting_code") or "")
-        if any(int(row["order_composition"]) != composition or
-               str(row.get("logistics_sorting_code") or "") != logistics
-               for row in order):
-            raise RuntimeError("同订单的物流或订单组成不一致，不能拆单或猜测分组。")
-        if composition == 1 and len(order) != 1:
-            raise RuntimeError("单项单件订单包含多个生产项，不能按单项拆开。")
-        faces = {classify_production_face(image_details[str(row["id"])]) for row in order}
-        face = next(iter(faces)) if len(faces) == 1 else "混合面别"
-        if composition == 1:
-            row = order[0]
-            key = (logistics, "单项单件", face,
-                   str(row.get("style_id") or ""), str(row.get("style_name") or ""),
-                   str(row.get("color") or ""), size_band(str(row.get("size") or "")))
-        else:
-            key = (logistics,
-                   BASE_COMPOSITIONS.get(str(composition), f"订单组成:{composition}"),
-                   face, "", "", "", "")
+        key = grouping_values(platform_name, order, image_details)
         grouped[key].extend(order)
     return tuple(
         CompletedBatchGroup(
@@ -84,13 +63,15 @@ def plan_completed_erp_batches(
             ),
             tuple(dict.fromkeys(str(row["order_id"]) for row in members)),
             source_status,
+            platform_name,
         )
         for key, members in sorted(grouped.items())
         if members
     )
 
 
-def _validate_completed_snapshot(rows, image_details, source_status: int) -> None:
+def _validate_completed_snapshot(rows, image_details, source_status: int,
+                                 platform_name: str) -> None:
     if not rows:
         raise RuntimeError("所选订单入口没有可测试的生产项。")
     if source_status not in SUPPLEMENT_SOURCES:
@@ -105,7 +86,7 @@ def _validate_completed_snapshot(rows, image_details, source_status: int) -> Non
             raise RuntimeError("生产项缺少实际生产图面别详情，禁止猜测。")
         if not row.get("order_id"):
             raise RuntimeError("生产项缺少订单身份，无法保证整单不拆。")
-        if not row.get("logistics_sorting_code"):
+        if platform_name != "隆丰" and not row.get("logistics_sorting_code"):
             raise RuntimeError("生产项缺少物流编码，不能按物流生成测试计划。")
         if int(row.get("qty") or 0) <= 0:
             raise RuntimeError("生产项缺少可核对的正数数量。")
@@ -132,17 +113,36 @@ def _supplement_codes(row: dict) -> set[str]:
             if detail.get("production_batch_code")}
 
 
+def _confirmed_group_codes(page, group: CompletedBatchGroup) -> tuple[str, ...]:
+    """Confirm every order once while allowing the ERP to split one request."""
+    codes = set()
+    for order_id in group.order_ids:
+        row_codes = [
+            _supplement_codes(row) for row in _whole_order(page, order_id)
+        ]
+        if not row_codes or any(len(item_codes) != 1 for item_codes in row_codes):
+            raise RuntimeError("订单中存在未确认或多重归属的生产项")
+        order_codes = set().union(*row_codes)
+        if len(order_codes) != 1:
+            raise RuntimeError("订单未能唯一对应一个新补单批次")
+        codes.update(order_codes)
+    if not codes:
+        raise RuntimeError("未读取到新补单批次")
+    return tuple(sorted(codes))
+
+
 def verify_completed_group(page, expected: CompletedBatchGroup) -> list[dict]:
     if not expected.order_ids or not expected.item_quantities:
         raise RuntimeError("分组缺少订单或数量信息，请重新读取分类。")
     rows = [row for order_id in expected.order_ids for row in _whole_order(page, order_id)]
     if len({str(row["id"]) for row in rows}) != len(rows):
         raise RuntimeError("订单查询返回重复生产项。")
-    if issue := special_strategy_issue(rows):
+    if issue := special_strategy_issue(rows, expected.platform_name):
         raise RuntimeError(issue)
     details = {str(row["id"]): production_item_images(page, str(row["id"])) for row in rows}
     actual = plan_completed_erp_batches(rows, details,
-                                        source_status=expected.source_status)
+                                        source_status=expected.source_status,
+                                        platform_name=expected.platform_name)
     fields = ("logistics_code", "order_composition", "face", "style_id", "style_name",
               "color", "size_group")
     if len(actual) != 1 or any(getattr(actual[0], field) != getattr(expected, field)
@@ -174,11 +174,11 @@ def generate_completed_groups(page, groups: tuple[CompletedBatchGroup, ...],
             progress(f"[{index}/{len(groups)}] 核验 {group.style_name or group.style_id or '整单混合底款'}")
         verify_completed_group(page, group)
         generate_supplement_batch(page, list(group.item_quantities), rule_id)
-        codes = set.intersection(*(_supplement_codes(row) for order_id in group.order_ids
-                                   for row in _whole_order(page, order_id)))
-        if len(codes) != 1:
+        try:
+            codes = _confirmed_group_codes(page, group)
+        except RuntimeError:
             raise RuntimeError(
-                f"第 {index} 组已提交，但未能唯一确认新批次。禁止重试；请到平台核对生产项补单记录。"
-            )
-        created.append(codes.pop())
+                f"第 {index} 组已提交，但未能逐单确认新批次。禁止重试；请到平台核对生产项补单记录。"
+            ) from None
+        created.extend(code for code in codes if code not in created)
     return tuple(created)

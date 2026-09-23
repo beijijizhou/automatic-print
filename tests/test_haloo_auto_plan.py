@@ -4,9 +4,10 @@ import pytest
 
 os.environ.setdefault('QT_QPA_PLATFORM', 'offscreen')
 
-from PySide6.QtWidgets import QApplication, QWidget
+from PySide6.QtWidgets import QApplication, QLabel, QWidget
 
 from automatic_print.automation.batches.supplements.completed import plan_completed_erp_batches
+from automatic_print.automation.batches.supplements.completed import CompletedBatchGroup
 from automatic_print.batch_ui.platform.completed import CompletedErpPage
 
 
@@ -95,4 +96,26 @@ def test_auto_plan_button_reads_completed_items_and_selects_only_eligible_groups
     assert '自动候选计划 0 组' in page.summary.text()
     assert not page.selected_groups()
     assert not page.generate_button.isEnabled()
+    owner.close()
+
+
+def test_confirmed_strategy_ui_explains_unsplit_fields() -> None:
+    owner = QWidget()
+    owner.thread = None
+    owner._start_worker = lambda _worker: None
+    page = CompletedErpPage(owner, '隆丰')
+    page.source.setCurrentIndex(1)
+    group = CompletedBatchGroup(
+        '', '单项单件', '双面', ('1',),
+        item_quantities=(('1', 1),), order_ids=('a',), platform_name='隆丰')
+    page.show_result(dict(platform='隆丰', scope=30, source_status=9, data=dict(
+        count=1, groups=(group,), supplemented=(), order_issues={},
+        rules=[SimpleNamespace(id=7, name='默认规则', is_default=True)])))
+
+    note_text = '\n'.join(label.text() for label in page.findChildren(QLabel))
+    assert '不按物流、底款或尺码拆分' in note_text
+    assert page.table.item(0, 1).text() == '不分物流'
+    assert page.table.item(0, 3).text() == '不按底款拆分'
+    assert page.table.item(0, 4).text() == '不分颜色'
+    assert page.table.item(0, 6).text() == '不分尺码'
     owner.close()

@@ -35,10 +35,14 @@ def load_order_snapshot(page, *, page_size: int = 200, progress=None,
     return rows, details
 
 
-def special_strategy_issue(rows) -> str:
+def special_strategy_issue(rows, platform_name: str = "隆丰") -> str:
     if any(str(row.get('status')) == '5' and
            str(row.get('process_route_code')) == 'A05' for row in rows):
         return 'A05 无印花须使用按尺码专用补单策略'
+    if platform_name == "隆丰" and any(
+        str(row.get('process_route_code') or '') != 'A00' for row in rows
+    ):
+        return '隆丰只使用 A00 默认工艺路线；无印花及其他工艺不纳入此计划'
     if any(str(row.get('status')) == '5' and
            str(row.get('process_route_code')) == 'A00' and
            str(row.get('order_composition')) == '3' for row in rows):
@@ -46,7 +50,8 @@ def special_strategy_issue(rows) -> str:
     return ''
 
 
-def audit_candidate_orders(page, rows, progress=None) -> dict[str, str]:
+def audit_candidate_orders(page, rows, progress=None,
+                           platform_name: str = "隆丰") -> dict[str, str]:
     by_order = {}
     for row in rows:
         by_order.setdefault(str(row['order_id']), {})[str(row['id'])] = row
@@ -64,7 +69,7 @@ def audit_candidate_orders(page, rows, progress=None) -> dict[str, str]:
                 for item_id, before in expected.items() for field in ORDER_FIELDS
             ):
                 issues[order_id] = '订单状态、数量或分组字段已变化'
-            elif issue := special_strategy_issue(expected.values()):
+            elif issue := special_strategy_issue(expected.values(), platform_name):
                 issues[order_id] = issue
         except Exception as error:
             issues[order_id] = f'整单核验失败：{error}'

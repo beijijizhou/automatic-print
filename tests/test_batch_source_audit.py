@@ -39,3 +39,24 @@ def test_production_special_routes_are_blocked_from_generic_supplement(monkeypat
     issues = audit_candidate_orders(None, rows)
     assert issues['a'].startswith('A05 无印花')
     assert issues['b'].startswith('A00 多项多件')
+
+
+def test_longfeng_completed_non_default_route_is_not_a_candidate(monkeypatch):
+    row = {'id': '1', 'order_id': 'a', 'status': 9,
+           'process_route_code': 'A05', 'order_composition': 1}
+    monkeypatch.setattr(
+        'automatic_print.automation.batches.supplements.source.list_order_items',
+        lambda _page, _order_id: [row],
+    )
+    issues = audit_candidate_orders(None, [row], platform_name='隆丰')
+    assert 'A00 默认工艺路线' in issues['a']
+
+
+def test_haloo_route_is_not_checked_as_longfeng_a00(monkeypatch):
+    row = {'id': '1', 'order_id': 'a', 'status': 9,
+           'process_route_code': 'CVC面料', 'order_composition': 1}
+    monkeypatch.setattr(
+        'automatic_print.automation.batches.supplements.source.list_order_items',
+        lambda _page, _order_id: [row],
+    )
+    assert audit_candidate_orders(None, [row], platform_name='Haloo') == {}

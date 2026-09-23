@@ -26,7 +26,7 @@ def test_completed_plan_reads_the_selected_erp_platform(platform_name):
     connect.assert_called_once_with(playwright.return_value.__enter__.return_value, url)
     find.assert_called_once_with(connect.return_value, platform_name)
     load.assert_called_once()
-    plan.assert_called_once()
+    assert plan.call_args.kwargs['platform_name'] == platform_name
     assert result['groups'] == ('group',)
     assert result['rules'] == ('rule',)
 
@@ -47,6 +47,7 @@ def test_production_snapshot_flags_partial_orders_before_generation():
         result = worker._completed_erp()
     assert load.call_args.kwargs['source_status'] == 5
     assert plan.call_args.kwargs['source_status'] == 5
+    assert plan.call_args.kwargs['platform_name'] == '隆丰'
     assert result['order_issues'] == {
         'order': '读取范围未覆盖整单或订单混有其他状态'}
 
@@ -77,7 +78,8 @@ def test_bad_production_order_does_not_block_independent_matching_group():
     rows = [
         {'id': item_id, 'order_id': order_id, 'status': 5,
          'order_composition': 1, 'qty': 1, 'logistics_sorting_code': 'USPS',
-         'style_id': 'style', 'style_name': 'T恤', 'color': '黑色', 'size': 'M'}
+         'process_route_code': 'A00', 'style_id': 'style',
+         'style_name': 'T恤', 'color': '黑色', 'size': 'M'}
         for item_id, order_id in (('1', 'safe'), ('2', 'partial'))
     ]
     details = {row['id']: {'production_images': [{'name': 'A面'}]}
