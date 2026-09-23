@@ -47,6 +47,9 @@ def build_preview(panel, window, label, block):
     panel.preview_tabs = QTabWidget()
     panel.text_preview = QPlainTextEdit()
     panel.text_preview.setReadOnly(True)
+    # The text layout uses fixed-width left/right columns. Wrapping turns a
+    # genuine two-column plan into a misleading vertical size list.
+    panel.text_preview.setLineWrapMode(QPlainTextEdit.NoWrap)
     text_font = QFontDatabase.systemFont(QFontDatabase.FixedFont)
     text_font.setPointSize(max(12, text_font.pointSize()))
     panel.text_preview.setFont(text_font)

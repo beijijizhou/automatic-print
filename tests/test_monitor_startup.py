@@ -1,6 +1,6 @@
 from pathlib import Path
 
-from automatic_print.runtime.monitor_startup import (
+from automatic_print.runtime.monitoring.startup import (
     RUN_VALUE,
     ensure_monitor_started,
     monitor_command,

@@ -31,6 +31,6 @@ def run() -> int:
     install_restart_monitor(application, window)
     window.showMaximized()
     splash.finish(window)
-    from .runtime.monitor_startup import ensure_monitor_started
+    from .runtime.monitoring.startup import ensure_monitor_started
     QTimer.singleShot(0, ensure_monitor_started)
     return application.exec()

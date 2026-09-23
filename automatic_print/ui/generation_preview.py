@@ -96,7 +96,7 @@ class GenerationPreviewController(QObject):
             self.window.cutter_settings.knife.setValue(payload["settings"].cutter_knife_mm)
         self.preview.refresh_timer.stop()
         self.preview.sources_ready.emit(list(dict.fromkeys(path for path, _ in payload['planned'])))
-        self._tab_changed()
+        self.show_pair(0)
 
     def _tab_changed(self, *_args):
         if not self.payload:

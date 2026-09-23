@@ -6,7 +6,6 @@ from unicodedata import east_asian_width
 
 from ...layout_engine.intake.metadata.source_metadata import size_key
 
-
 def inventory_text(report):
     orders = report.get('orders') or ()
     if not orders:
@@ -17,16 +16,28 @@ def inventory_text(report):
         '下列订单、件数和尺码来自文件名。',
     ]
     for title, kind in (('多件订单', '多件订单'),
-                        ('单件单面', '单件单面'),
-                        ('单件双面', '单件双面')):
+                        ('单件单面尺码统计（不是排版位置）', '单件单面'),
+                        ('单件双面尺码统计（不是排版位置）', '单件双面')):
         members = [order for order in orders if order.get('kind') == kind]
         if members:
-            lines.extend(('', title, *(_order_label(order) for order in members)))
+            labels = (_order_label(order) for order in members)
+            if kind in {'单件单面', '单件双面'}:
+                labels = (_compact_counts(labels),)
+            lines.extend(('', title, *labels))
     uncertain = [order for order in orders if order.get('kind') not in {
         '多件订单', '单件单面', '单件双面'}]
     if uncertain:
         lines.extend(('', '归属待核对', *(_order_label(order) for order in uncertain)))
     return '\n'.join(lines)
+
+
+def _compact_counts(labels):
+    counts = defaultdict(int)
+    for label in labels:
+        counts[label] += 1
+    ordered = sorted(counts.items(), key=lambda entry: size_key(entry[0].split(' ', 1)[0]))
+    return ' · '.join(label if count == 1 else f'{label}×{count}'
+                      for label, count in ordered)
 
 
 def layout_text(payload):
@@ -78,7 +89,7 @@ def layout_text(payload):
         bucket = _position(placements, settings)
         first_row = min(rows[p.row_y_px] for p in placements)
         buckets[bucket].append((first_row, f'第{first_row}排  {_order_label(order)}'))
-    for name in ('并排区 · 左侧', '并排区 · 右侧', '旋转区', '常规区',
+    for name in ('常规区 · 左侧', '常规区 · 右侧', '旋转区', '常规区',
                  '跨侧或跨区（需核查）', '未放入排版'):
         if buckets.get(name):
             lines.extend(('', name, *(label for _, label in sorted(buckets.pop(name)))))
@@ -93,7 +104,7 @@ def _zone_chart(zone, members, rows, settings):
     knives = next((_knives(p) for p, _ in members if _knives(p)), ())
     count = len(knives) + 1
     mode = '单排' if count == 1 else '双排' if count == 2 else f'{count}列'
-    title = f'{zone} · {mode}'
+    title = f'{_visible_zone(zone)} · {mode}'
     if knives and settings is not None:
         title += ' · 分割线 ' + '、'.join(f'{x * 25.4 / settings.dpi:g} 毫米'
                                           for x in knives)
@@ -152,15 +163,21 @@ def _position(placements, settings):
         return '跨侧或跨区（需核查）'
     zone = next(iter(zones))
     if zone != '并排区':
-        return zone
+        return _visible_zone(zone)
+    if settings is None or not settings.order_side_shared_knife:
+        return '常规区'
     knife = next((p.cut_knife_x_px for p in placements
                   if p.cut_knife_x_px is not None), None)
     if knife is None and settings is not None:
         knife = round(settings.cutter_knife_mm * settings.dpi / 25.4)
     if knife is None:
-        return '并排区 · 刀位待核对'
+        return '常规区 · 刀位待核对'
     sides = {'左侧' if p.x_px < knife else '右侧' for p in placements}
-    return '并排区 · ' + next(iter(sides)) if len(sides) == 1 else '跨侧或跨区（需核查）'
+    return '常规区 · ' + next(iter(sides)) if len(sides) == 1 else '跨侧或跨区（需核查）'
+
+
+def _visible_zone(zone):
+    return '常规区' if zone == '并排区' else zone
 
 
 def _order_label(order):

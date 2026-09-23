@@ -44,8 +44,8 @@ def test_sync_collects_only_active_dtf_profiles(tmp_path):
 def test_missing_credential_prevents_any_remote_write(tmp_path, monkeypatch):
     private = _private_tree(tmp_path)
     path = private / "local_factory_credentials.toml"
-    path.write_text(path.read_text().replace('password = "sample-password"',
-                                               'password = ""', 1), encoding="utf-8")
+    path.write_text(path.read_text(encoding="utf-8").replace(
+        'password = "sample-password"', 'password = ""', 1), encoding="utf-8")
     monkeypatch.setattr(
         "scripts.sync_dtf_platform_credentials.subprocess.run",
         lambda *_args, **_kwargs: pytest.fail("must not upload partial profiles"),

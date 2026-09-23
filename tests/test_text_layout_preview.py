@@ -7,7 +7,7 @@ from time import monotonic, sleep
 
 from PIL import Image
 from PySide6.QtCore import QSettings
-from PySide6.QtWidgets import QApplication, QPushButton
+from PySide6.QtWidgets import QApplication, QPlainTextEdit, QPushButton
 
 from automatic_print.layout_engine import LayoutSettings
 from automatic_print.ui.main_window import MainWindow
@@ -53,19 +53,20 @@ def test_text_preview_formats_multi_single_and_two_faces_without_images():
     early = inventory_text(sample_report())
     assert '尚未计算排版，暂时无法判断单排或双排' in early
     assert 'ORDER123-3件-S、M×2（第1件 S A面＋B面）' in early
-    assert '\nL\n' in early
-    assert 'XL A面＋B面' in early
+    assert '单件单面尺码统计（不是排版位置）\nL' in early
+    assert '单件双面尺码统计（不是排版位置）\nXL A面＋B面' in early
     text = layout_text(sample_payload())
     assert '本次排版：双排' in text
-    assert '并排区 · 双排 · 分割线 100 毫米' in text
+    assert '常规区 · 双排 · 分割线 100 毫米' in text
     assert '排次 左侧' in text and '│ 右侧' in text
     assert '01   ORDER123-3件-S（第1件 A面）' in text
     assert '│ L' in text
     assert '02   ORDER123-3件-S（第1件 B面）' in text
     assert '旋转区 · 双排' in text
     assert 'XL A面' in text and 'XL B面' in text
-    assert '并排区 · 左侧\n第1排  ORDER123-3件-S、M×2' in text
-    assert '并排区 · 右侧\n第1排  L' in text
+    assert '\n常规区\n' in text
+    assert '第1排  ORDER123-3件-S、M×2' in text
+    assert '第1排  L' in text
     assert '旋转区\n第5排  XL A面＋B面' in text
 
 
@@ -93,10 +94,11 @@ def test_main_page_shows_filename_text_then_actual_layout(tmp_path):
     panel = window.automation_home.label_quick_panel
     assert panel.preview_tabs.currentIndex() == 0
     assert panel.text_preview.isReadOnly() and panel.text_preview.isVisible()
+    assert panel.text_preview.lineWrapMode() == QPlainTextEdit.NoWrap
     panel.preview.analysis_ready.emit(sample_report())
     assert 'ORDER123-3件-S、M×2' in panel.text_preview.toPlainText()
     panel.preview.plan_loaded.emit(sample_payload())
-    assert '并排区 · 左侧' in panel.text_preview.toPlainText()
+    assert '常规区' in panel.text_preview.toPlainText()
     assert '旋转区' in panel.text_preview.toPlainText()
     copy_button = next(button for button in panel.preview_tabs.findChildren(QPushButton)
                        if button.text() == '复制文字预览')
@@ -104,6 +106,21 @@ def test_main_page_shows_filename_text_then_actual_layout(tmp_path):
     assert APP.clipboard().text() == panel.text_preview.toPlainText()
     assert panel.text_preview.grab().save(str(tmp_path / 'text-preview.png'))
     window.close()
+
+
+def test_inventory_groups_repeated_sizes_instead_of_implying_vertical_placement():
+    report = {'image_count': 5, 'orders': [
+        {'order': f'SINGLE-{index}', 'kind': '单件单面', 'pieces': 1,
+         'sizes': {size: 1}, 'items': [{'size': size, 'images': [
+             {'path': f'/batch/{index}.png'}]}]}
+        for index, size in enumerate(('3XL', '3XL', '4XL', '5XL', '5XL'), 1)
+    ]}
+
+    text = inventory_text(report)
+
+    assert '单件单面尺码统计（不是排版位置）' in text
+    assert '3XL×2 · 4XL · 5XL×2' in text
+    assert text.count('\n3XL') == 1
 
 
 def test_saved_folder_shows_fast_text_inventory_without_layout(tmp_path):

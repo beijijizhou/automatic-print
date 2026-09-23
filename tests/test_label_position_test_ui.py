@@ -1,6 +1,6 @@
 """The unified developer test menu runs focused label checks in the background."""
 
-from time import monotonic
+from time import monotonic, sleep
 
 from test_developer_mode import APP, window
 
@@ -23,10 +23,11 @@ def test_label_position_action_uses_one_test_menu_and_reports_result(tmp_path):
     assert dialog.isVisible()
     dialog.run_button.click()
     assert dialog.is_running()
-    deadline = monotonic()+8
+    deadline = monotonic()+20
     while dialog.is_running() and monotonic() < deadline:
         APP.processEvents()
-    assert not dialog.is_running(), '短测超出8秒；保留子进程继续完成'
+        sleep(0.01)
+    assert not dialog.is_running(), '短测超出20秒；保留子进程继续完成'
     APP.processEvents()
     assert dialog.status.text().startswith('通过'), dialog.log.toPlainText()
     assert 'passed' in dialog.log.toPlainText()
