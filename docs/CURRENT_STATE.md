@@ -17,6 +17,7 @@
   `layout_engine/uv/render.py`使用libvips合成、复用并行分块原子BigTIFF保存并复核RGBA、画布尺寸和每个图位实际像素；
   `controllers/uv_generation.py`拥有后台线程，`ui/uv_workspace.py`只负责选择目录、进度和结果展示。
 - 应用入口：`automatic_print/__main__.py`、`automatic_print/app.py`。
+- 可见版本身份由`automatic_print/updates/versioning.py`统一格式化为“语义版本 · 发布日期 · 当日更新次数”；主窗口、本地源码更新和Release更新不得只显示其中一部分。
 - 主窗口：`automatic_print/ui/main_window.py`只负责应用级状态、控制器装配和窗口生命周期；
   界面上可见的工作台首页、任务状态和打印参数分别映射到`automatic_print/ui/workbench/home.py`、
   `activity.py`和`settings.py`，不再把控件树堆在主窗口入口。

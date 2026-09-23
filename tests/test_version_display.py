@@ -17,22 +17,22 @@ OWNERS = []
 
 
 def test_version_is_date_and_fixed_daily_iteration(tmp_path):
-    assert __version_display__ == '2026-09-23 · 第10次更新'
+    assert __version_display__ == '0.1.358 · 2026-09-23 · 第15次更新'
     prefs = QSettings(str(tmp_path/'version.ini'), QSettings.IniFormat)
     for _ in range(2):
         window = MainWindow(prefs)
         OWNERS.append(window)
         window.startup_update_timer.stop()
         assert window.version_label.text() == '版本 '+__version_display__
-        assert __version__ not in window.version_label.text()
+        assert __version__ in window.version_label.text()
         assert __version__ in window.version_label.toolTip()
         window.close()
-    assert release_display('2026-09-14', 1) == '2026-09-14 · 第01次更新'
+    assert release_display('0.1.1', '2026-09-14', 1) == '0.1.1 · 2026-09-14 · 第01次更新'
 
 
 def test_historical_source_metadata_does_not_invent_iteration():
     info = SourceUpdateInfo('a', 'b', '0.1.1', '2026-09-12', 1)
-    assert info.display_version == '2026-09-12 · 历史版本'
+    assert info.display_version == '0.1.1 · 2026-09-12 · 历史版本'
 
 
 def test_release_notes_carry_date_and_daily_count(monkeypatch):
@@ -42,4 +42,4 @@ def test_release_notes_carry_date_and_daily_count(monkeypatch):
     monkeypatch.setattr(updater, 'urlopen', lambda *a, **kw: BytesIO(json.dumps(data).encode()))
     info = updater.fetch_latest_release()
     assert info.version == '0.1.81'
-    assert info.display_version == '2026-09-13 · 第20次更新'
+    assert info.display_version == '0.1.81 · 2026-09-13 · 第20次更新'

@@ -45,7 +45,7 @@ def test_check_and_apply_fast_forward_without_installer(repositories, monkeypatc
     publish(seed)
     info = updater.check()
     assert info.needs_update and info.commits == 1
-    assert info.display_version == '2026-09-14 · 第02次更新'
+    assert info.display_version == '0.1.2 · 2026-09-14 · 第02次更新'
     assert info.version == '0.1.2' and info.release_iteration == 2
     original, commands = updater.run, []
     def run(args, **kwargs):

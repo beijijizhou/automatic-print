@@ -34,7 +34,7 @@ class SourceUpdateInfo:
 
     @property
     def display_version(self):
-        return release_display(self.release_date, self.release_iteration)
+        return release_display(self.version, self.release_date, self.release_iteration)
 
 
 class SourceUpdater:

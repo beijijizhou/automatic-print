@@ -23,7 +23,7 @@ class UpdateInfo:
 
     @property
     def display_version(self) -> str:
-        return release_display(self.release_date, self.release_iteration)
+        return release_display(self.version, self.release_date, self.release_iteration)
 
 
 def version_tuple(version: str) -> tuple[int, ...]:
