@@ -143,29 +143,57 @@ def open_authenticated_page(
         report(f"正在打开 {host}…")
         page.goto(target_url, wait_until="domcontentloaded", timeout=30_000)
 
-    deadline = time.monotonic() + (login_timeout_ms / 1000)
-    login_reported = False
-    while "/login" in page.url:
-        if not login_reported:
-            report(f"请在已打开的 {host} 页面完成登录…")
-            login_reported = True
-        if time.monotonic() >= deadline:
-            raise TimeoutError("等待 ERP 登录超时，请登录后重试。")
-        page.wait_for_timeout(500)
+    return _wait_for_authenticated_target(
+        page, target_url, ready_selector, ready_state,
+        login_timeout_ms, report,
+    )
 
-    if urlsplit(target_url).path not in page.url:
-        report("登录成功，正在进入生产项管理页面…")
-        page.goto(target_url, wait_until="domcontentloaded", timeout=30_000)
+
+def _wait_for_authenticated_target(
+    page, target_url, ready_selector, ready_state,
+    login_timeout_ms, report,
+):
+    """Follow delayed login redirects without making the user restart the task."""
+    host = urlsplit(target_url).netloc
+    target_path = urlsplit(target_url).path
+    login_deadline = time.monotonic() + login_timeout_ms / 1000
+    ready_deadline = time.monotonic() + 30
+    login_reported = False
+    was_login = False
     report(f"页面已打开，正在等待 ERP 数据区域：{page.url}")
-    try:
-        page.locator(ready_selector).first.wait_for(
-            state=ready_state, timeout=30_000
-        )
-    except Exception as error:
-        raise RuntimeError(
-            "ERP 页面已打开，但数据区域在 30 秒内没有加载完成。\n"
-            f"当前页面：{page.url}\n"
-            "请确认页面没有验证码、登录提示或错误弹窗。"
-        ) from error
-    report("ERP 数据区域已加载。")
-    return page
+    while True:
+        try:
+            locator = page.locator(ready_selector).first
+            ready = locator.count() > 0 and (
+                ready_state == "attached" or locator.is_visible()
+            )
+        except Exception:
+            # A redirect can destroy the old DOM between the two checks.
+            ready = False
+        if ready:
+            report("ERP 数据区域已加载。")
+            return page
+
+        now = time.monotonic()
+        on_login = "/login" in page.url
+        if on_login:
+            was_login = True
+            if not login_reported:
+                report(f"请在已打开的 {host} 页面完成登录…")
+                login_reported = True
+            if now >= login_deadline:
+                raise TimeoutError("等待 ERP 登录超时，请登录后重试。")
+        else:
+            if was_login:
+                report("登录成功，正在进入生产项管理页面…")
+                if target_path not in page.url:
+                    page.goto(target_url, wait_until="domcontentloaded", timeout=30_000)
+                ready_deadline = time.monotonic() + 30
+                was_login = False
+            if now >= ready_deadline:
+                raise RuntimeError(
+                    "ERP 页面已打开，但数据区域在 30 秒内没有加载完成。\n"
+                    f"当前页面：{page.url}\n"
+                    "请确认页面没有验证码、登录提示或错误弹窗。"
+                )
+        page.wait_for_timeout(250)
