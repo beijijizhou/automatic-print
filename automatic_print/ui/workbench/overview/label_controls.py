@@ -2,6 +2,7 @@
 
 from PySide6.QtWidgets import QCheckBox, QComboBox, QDoubleSpinBox, QLineEdit, QPushButton
 
+from ....automation.api.machine_status.identity import persist_machine_number
 from ....layout_engine.labeling.base.labels import compact_label_text
 from ...quick_fields import quick_fields
 
@@ -57,6 +58,9 @@ def build_label_controls(panel, label, block, window):
         lambda *_: window.preferences.setValue(
             "layout/machine_number", label.machine.currentData()
         )
+    )
+    label.machine.currentIndexChanged.connect(
+        lambda *_: persist_machine_number(label.machine.currentData())
     )
     panel.position = _mirror_combo(label.position)
     panel.position.currentIndexChanged.connect(label.position.setCurrentIndex)

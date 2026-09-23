@@ -33,9 +33,10 @@ class NativePrintExpControls:
 
     def _command(self, control_id):
         control = self._control(control_id)
-        # pywinauto sends native WM_LBUTTONDOWN/UP messages directly to this
-        # HWND. It neither moves the cursor nor depends on screen coordinates.
-        control.click()
+        # PrintExp uses custom-drawn controls that can ignore BM_CLICK and
+        # WM_LBUTTONDOWN/UP while a job is active. Send the same WM_COMMAND
+        # notification the button emits to its parent window instead.
+        control.parent().send_message(0x0111, control_id, control.handle)
 
 
 def pause_print(controls=None, *, progress=None, timeout=10, clock=monotonic, wait=sleep):

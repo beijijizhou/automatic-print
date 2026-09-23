@@ -2,6 +2,8 @@
 
 from PySide6.QtWidgets import QMessageBox
 
+from ....automation.api.machine_status.identity import persist_machine_number
+
 
 def save_layout_preferences(window, *, notify=True) -> None:
     window.cutter_settings.save()
@@ -57,6 +59,7 @@ def save_layout_preferences(window, *, notify=True) -> None:
     for key, value in values.items():
         window.preferences.setValue(key, value)
     window.preferences.sync()
+    persist_machine_number(values["layout/machine_number"])
     if notify:
         QMessageBox.information(
             window,

@@ -1,5 +1,6 @@
 """Stable installation identity without exposing Windows account details."""
 
+import logging
 import os
 import re
 import tempfile
@@ -11,6 +12,10 @@ def identity_file():
     root = os.environ.get("LOCALAPPDATA")
     base = Path(root) if root else Path.home() / ".automatic-print"
     return base / "AutomaticPrint" / "machine-id" if root else base / "machine-id"
+
+
+def machine_name_file():
+    return identity_file().with_name("machine-name")
 
 
 def machine_id():
@@ -46,6 +51,12 @@ def machine_name():
 
 def saved_machine_number():
     """Read the M1-M11 value saved by the desktop app without importing Qt."""
+    try:
+        value = machine_name_file().read_text(encoding="utf-8").strip().upper()
+        if re.fullmatch(r"M(?:[1-9]|1[01])", value):
+            return value
+    except (OSError, UnicodeError):
+        pass
     if os.name != "nt":
         return ""
     try:
@@ -59,3 +70,29 @@ def saved_machine_number():
     except (ImportError, OSError, TypeError, ValueError):
         return ""
     return value if re.fullmatch(r"M(?:[1-9]|1[01])", value) else ""
+
+
+def persist_machine_number(value):
+    """Persist the machine slot where scheduled tasks and the UI both see it."""
+    normalized = str(value or "").strip().upper()
+    if not re.fullmatch(r"M(?:[1-9]|1[01])", normalized):
+        raise ValueError("机器号必须是 M1-M11。")
+    target = machine_name_file()
+    temporary = None
+    try:
+        target.parent.mkdir(parents=True, exist_ok=True)
+        descriptor, temporary = tempfile.mkstemp(prefix=".machine-name-", dir=target.parent)
+        with os.fdopen(descriptor, "w", encoding="utf-8") as stream:
+            stream.write(normalized)
+        os.replace(temporary, target)
+    except OSError as error:
+        logging.getLogger("automatic-print.machine-identity").warning(
+            "Unable to persist machine number: %s", error,
+        )
+    finally:
+        if temporary:
+            try:
+                Path(temporary).unlink(missing_ok=True)
+            except OSError:
+                pass
+    return normalized

@@ -217,6 +217,15 @@ def test_machine_name_prefers_saved_machine_number(monkeypatch):
     assert identity.machine_name() == "M7"
 
 
+def test_persisted_machine_number_is_shared_outside_registry(tmp_path, monkeypatch):
+    target = tmp_path / "machine-name"
+    monkeypatch.setattr(identity, "machine_name_file", lambda: target)
+
+    assert identity.persist_machine_number("m11") == "M11"
+    assert target.read_text(encoding="utf-8") == "M11"
+    assert identity.saved_machine_number() == "M11"
+
+
 def test_machine_name_only_accepts_m1_to_m11_fallback(monkeypatch):
     monkeypatch.setattr(identity, "saved_machine_number", lambda: "")
     monkeypatch.setenv("AUTOMATIC_PRINT_MACHINE_NAME", "m9")

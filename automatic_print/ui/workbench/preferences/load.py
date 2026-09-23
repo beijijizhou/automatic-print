@@ -2,6 +2,7 @@
 
 import re
 
+from ....automation.api.machine_status.identity import persist_machine_number
 from ...spacing_settings import migrate_spacing
 
 
@@ -76,6 +77,7 @@ def _load_label(window) -> None:
     label._sync_fit()
     _restore_combo(label.machine, window.preferences.value(
         "layout/machine_number", "M1", str).upper())
+    persist_machine_number(label.machine.currentData())
     label.follow_qr.setChecked(
         window.preferences.value("label/follow_qr", True, bool)
     )

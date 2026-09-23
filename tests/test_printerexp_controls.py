@@ -40,15 +40,21 @@ class Controls:
         self.statuses = ["正在清洗...", "正在清洗...", "打印暂停"]
 
 
-def test_native_control_uses_direct_button_messages():
-    clicked = []
-    button = type("Button", (), {"click": lambda self: clicked.append(True)})()
+def test_native_control_sends_button_command_to_parent():
+    messages = []
+    parent = type("Parent", (), {
+        "send_message": lambda self, *args: messages.append(args),
+    })()
+    button = type("Button", (), {
+        "handle": 4321,
+        "parent": lambda self: parent,
+    })()
     controls = object.__new__(NativePrintExpControls)
     controls._control = lambda control_id: button
 
     controls._command(11027)
 
-    assert clicked == [True]
+    assert messages == [(0x0111, 11027, 4321)]
 
 
 def test_pause_button_only_pauses_current_print():
