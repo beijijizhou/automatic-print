@@ -31,6 +31,9 @@ def test_automated_print_action_moved_to_platform_download(tmp_path):
 
     assert not workbench.automated_print_button.isHidden()
     assert workbench.automated_print_button.text() == "下载、排版并生成打印文件"
+    assert workbench.select_button.isHidden()
+    assert workbench.download_button.isHidden()
+    assert not hasattr(workbench, "shared_knife_button")
     assert workbench.main_tabs.currentWidget().isAncestorOf(
         workbench.automated_print_button
     )

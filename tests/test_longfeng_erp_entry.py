@@ -114,33 +114,18 @@ def test_platform_download_is_multi_select_and_preview_only(tmp_path):
     longfeng.main_tabs.setCurrentIndex(0)
     assert longfeng.download_preview_only.isChecked()
     assert not longfeng.download_preview_only.isEnabled()
-    assert longfeng.download_button.text() == "下载并解压"
+    assert longfeng.select_button.isHidden()
+    assert longfeng.download_button.isHidden()
     assert longfeng.automated_print_button.text() == "下载、排版并生成打印文件"
     assert not longfeng.automated_print_button.isHidden()
-    assert longfeng.shared_knife_button.text() == '多批次共用刀位生成PRN'
-    assert '分别归入常规和旋转文件夹' in longfeng.shared_knife_button.toolTip()
-    assert '不比较四种膜规格' in longfeng.shared_knife_button.toolTip()
-    assert '主界面' in longfeng.shared_knife_button.toolTip()
-    assert not longfeng.shared_knife_button.isHidden()
+    assert not longfeng.remote_dispatch_button.isHidden()
+    assert not hasattr(longfeng, 'shared_knife_button')
     assert not hasattr(longfeng, 'order_side_checkbox')
     assert not hasattr(longfeng, 'order_side_control')
     main_order_side = owner.automation_home.label_quick_panel.order_side_checkbox
     assert main_order_side.isHidden()
     assert not main_order_side.isChecked()
-    selected_modes = []
-    original_download = longfeng._download_selected
-    longfeng._download_selected = lambda *, auto_print: selected_modes.append(auto_print)
-    longfeng.shared_knife_button.click()
-    main_order_side.setChecked(True)
-    assert owner.automation_home.label_quick_panel.order_side_action.isChecked()
-    longfeng.shared_knife_button.click()
-    assert selected_modes == ['shared_knife', 'shared_knife_order_side']
-    assert not main_order_side.isChecked()
-    assert not owner.automation_home.label_quick_panel.order_side_action.isChecked()
-    longfeng._download_selected = original_download
-    assert longfeng.open_download_folder.text() == "下载完成后打开文件夹"
-    assert longfeng.open_download_folder.isChecked()
-    assert not longfeng.open_download_folder.isHidden()
+    assert longfeng.open_download_folder.isHidden()
     assert longfeng.process_button.isHidden()
     assert longfeng.test_mode.isHidden()
     assert longfeng.download_preview_only.isHidden()

@@ -2,7 +2,7 @@ $ErrorActionPreference = "Stop"
 $ProgressPreference = "SilentlyContinue"
 
 # Update this marker when publishing a new bootstrap entry URL with a cache query.
-$bootstrapCacheVersion = "0.1.367"
+$bootstrapCacheVersion = "0.1.368"
 $repositoryUrl = "https://github.com/beijijizhou/automatic-print.git"
 $bootstrapUrl = "https://raw.githubusercontent.com/beijijizhou/automatic-print/main/windows/bootstrap-test-computer.ps1?v=$bootstrapCacheVersion"
 
