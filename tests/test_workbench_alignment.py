@@ -33,6 +33,7 @@ def test_completed_preview_shows_style_and_color_before_generation(tmp_path, mon
     workbench = owner.production_platform_download_page.workbenches['Haloo']
     page = workbench.completed_page
     page.source.setCurrentIndex(1)
+    assert page.source.currentText() == '已完成'
     assert page.plan_button.text() == '自动化生成计划'
     assert workbench.main_tabs.tabText(1) == '批次生成'
     assert workbench.generation_sections.indexOf(page) == 1

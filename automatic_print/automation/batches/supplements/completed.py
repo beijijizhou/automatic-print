@@ -94,7 +94,7 @@ def _validate_completed_snapshot(rows, image_details, source_status: int) -> Non
     if not rows:
         raise RuntimeError("所选订单入口没有可测试的生产项。")
     if source_status not in SUPPLEMENT_SOURCES:
-        raise ValueError("补单订单入口必须是生产中或已生产。")
+        raise ValueError("补单订单入口必须是生产中或已完成。")
     if len({str(row.get('id') or '') for row in rows}) != len(rows):
         raise RuntimeError("订单入口快照包含重复生产项，禁止生成测试计划。")
     for row in rows:

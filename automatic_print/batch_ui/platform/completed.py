@@ -18,13 +18,14 @@ class CompletedErpPage(QWidget):
         self.boxes = []
         self.auto_plan_pending = False
         layout = QVBoxLayout(self)
-        note = QLabel('生产中与已生产共用补单分组策略：单项单件按物流、底款、颜色、面别和尺码档分类。'
-                      '多件订单只按物流、订单组成和面别分组，始终保持整单。'
+        note = QLabel('生产中与已完成共用补单分组策略：单项单件按物流、底款、'
+                      '颜色（黑色/白色分开）、面别和尺码档分类。单项多件与多项多件'
+                      '按物流、订单组成和面别分组，始终保持整单。'
                       '选中的每一组会单独生成一个补单批次。')
         note.setWordWrap(True)
         self.source = QComboBox()
         self.source.addItem('生产中', 5)
-        self.source.addItem('已生产', 9)
+        self.source.addItem('已完成', 9)
         self.limit = QSpinBox()
         self.limit.setRange(1, 200)
         self.limit.setValue(30)

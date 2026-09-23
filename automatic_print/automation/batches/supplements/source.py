@@ -24,7 +24,7 @@ def load_order_snapshot(page, *, page_size: int = 200, progress=None,
     if not 1 <= page_size <= 200:
         raise ValueError('订单测试快照每次只允许读取 1–200 项。')
     if source_status not in SUPPLEMENT_SOURCES:
-        raise ValueError('补单订单入口必须是生产中或已生产。')
+        raise ValueError('补单订单入口必须是生产中或已完成。')
     payload = production_item_payload(status=(str(source_status),), page_size=page_size)
     rows = list(list_production_items(page, payload).get('list') or [])
     details = {}

@@ -191,6 +191,42 @@ def test_single_item_same_style_splits_black_and_white() -> None:
     }
 
 
+def test_longfeng_completed_plan_matches_logistics_style_and_color_rules() -> None:
+    single_multi_usps = _row("1", "single-multi-usps", composition=2)
+    single_multi_usps["qty"] = 3
+    single_multi_gofo = _row("2", "single-multi-gofo", composition=2)
+    single_multi_gofo["qty"] = 2
+    single_multi_gofo["logistics_sorting_code"] = "GOFO"
+    rows = [
+        single_multi_usps,
+        single_multi_gofo,
+        _row("3", "multi-a", composition=3, style="base-a", color="黑色"),
+        _row("4", "multi-a", composition=3, style="base-b", color="白色"),
+        _row("5", "single-black", style="base-a", color="黑色"),
+        _row("6", "single-white", style="base-a", color="白色"),
+        _row("7", "single-other-style", style="base-b", color="黑色"),
+    ]
+    details = {row["id"]: _detail("A面") for row in rows}
+
+    groups = plan_completed_erp_batches(rows, details)
+
+    assert {(group.logistics_code, group.order_composition): group.item_ids
+            for group in groups if group.order_composition == "单项多件"} == {
+        ("GOFO", "单项多件"): ("2",),
+        ("USPS", "单项多件"): ("1",),
+    }
+    multi = next(group for group in groups if group.order_composition == "多项多件")
+    assert multi.item_ids == ("3", "4")
+    assert multi.style_id == multi.color == ""
+    singles = {(group.style_id, group.color): group.item_ids for group in groups
+               if group.order_composition == "单项单件"}
+    assert singles == {
+        ("base-a", "黑色"): ("5",),
+        ("base-a", "白色"): ("6",),
+        ("base-b", "黑色"): ("7",),
+    }
+
+
 def test_generation_rechecks_whole_order_and_confirms_one_code() -> None:
     row = _row("1", "a")
     row["production_batch_code"] = "original"
