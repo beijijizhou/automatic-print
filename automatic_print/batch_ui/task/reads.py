@@ -55,11 +55,19 @@ class ReadWorker(AutomationWorker):
                                 if str(row['order_id']) == order_id]
                 groups.extend(plan_completed_erp_batches(
                     blocked_rows, details, source_status=self.source_status))
-            rules = list_batch_rules(page)
+            rule_issue = ''
+            try:
+                rules = list_batch_rules(page)
+            except Exception:
+                rules = ()
+                rule_issue = ('批次规则暂时无法读取，当前计划仍可预览；'
+                              '生成按钮已禁用，请稍后重新读取。')
+                self._report(rule_issue)
             supplemented = tuple(str(row['id']) for row in rows
                                  if row.get('supplement_detail_list'))
             return dict(count=len(rows), groups=tuple(groups), rules=rules,
-                        supplemented=supplemented, order_issues=order_issues)
+                        supplemented=supplemented, order_issues=order_issues,
+                        rule_issue=rule_issue)
 
 
 class CompletedGenerateWorker(AutomationWorker):

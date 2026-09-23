@@ -136,11 +136,13 @@ class CompletedErpPage(QWidget):
                     planned += 1
         self.auto_plan_pending = False
         prefix = f'自动候选计划 {planned} 组；' if was_auto_plan else ''
+        rule_issue = data.get('rule_issue') or ''
         self.summary.setText(f"{prefix}{self.source.currentText()}已读 {data['count']} 项，"
                              f"分类 {len(self.groups)} 组 / {included} 项；"
                              f"未纳入 {data['count'] - included} 项，"
                              f"已有补单 {len(blocked)} 项，整单异常 {len(order_issues)} 单。"
-                             f"异常组已禁用，提交前仍会复核整单。")
+                             f"异常组已禁用，提交前仍会复核整单。"
+                             f"{' ' + rule_issue if rule_issue else ''}")
         self.update_generate_enabled()
 
     def selected_groups(self):

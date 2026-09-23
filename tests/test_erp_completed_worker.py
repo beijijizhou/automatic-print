@@ -51,6 +51,27 @@ def test_production_snapshot_flags_partial_orders_before_generation():
         'order': '读取范围未覆盖整单或订单混有其他状态'}
 
 
+def test_completed_plan_survives_batch_rule_module_failure():
+    worker = ReadWorker('Haloo', 'completed_erp', 30, 30)
+    row = {'id': '1', 'order_id': 'order'}
+    with patch('playwright.sync_api.sync_playwright'), \
+         patch('automatic_print.automation.browser.session.connect_debug_chrome'), \
+         patch('automatic_print.automation.providers.longfeng.find_longfeng_page'), \
+         patch('automatic_print.automation.batches.supplements.source.load_order_snapshot',
+               return_value=([row], {'1': {}})), \
+         patch('automatic_print.automation.batches.supplements.completed.plan_completed_erp_batches',
+               return_value=('group',)), \
+         patch('automatic_print.automation.api.erp.list_batch_rules',
+               side_effect=RuntimeError('dynamic module failed')), \
+         patch('automatic_print.automation.batches.supplements.source.list_order_items',
+               return_value=[row]):
+        result = worker._completed_erp()
+
+    assert result['groups'] == ('group',)
+    assert result['rules'] == ()
+    assert '当前计划仍可预览' in result['rule_issue']
+
+
 def test_bad_production_order_does_not_block_independent_matching_group():
     worker = ReadWorker('隆丰', 'completed_erp', 30, 30, source_status=5)
     rows = [

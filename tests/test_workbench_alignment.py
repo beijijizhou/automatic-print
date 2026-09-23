@@ -133,3 +133,28 @@ def test_multi_only_snapshot_does_not_require_single_item_style():
     details = {str(i): {'production_images': [{'name': 'A面'}]} for i in (1, 2)}
     groups = plan_completed_erp_batches(rows, details)
     assert groups[0].item_ids == ('1', '2')
+
+
+def test_completed_preview_keeps_groups_when_rules_are_temporarily_unavailable(tmp_path):
+    owner = MainWindow(QSettings(str(tmp_path/'prefs.ini'), QSettings.IniFormat))
+    owner.startup_update_timer.stop()
+    owner.developer_mode_checkbox.setChecked(True)
+    owner.production_platform_download_page.platform_checks['Haloo'].setChecked(True)
+    page = owner.production_platform_download_page.workbenches['Haloo'].completed_page
+    page.source.setCurrentIndex(1)
+    group = SimpleNamespace(logistics_code='GOFO', order_composition='多项多件',
+                            style_name='', style_id='', color='', face='正面',
+                            size_group='', item_ids=('1', '2'),
+                            item_quantities=(('1', 1), ('2', 1)),
+                            source_batch_codes=(), order_ids=('order',))
+    issue = '批次规则暂时无法读取，当前计划仍可预览；生成按钮已禁用。'
+
+    page.show_result(dict(platform='Haloo', scope=30, source_status=9,
+                          data=dict(count=2, groups=(group,), rules=(),
+                                    supplemented=(), order_issues={}, rule_issue=issue)))
+
+    assert page.table.rowCount() == 1
+    assert issue in page.summary.text()
+    page.boxes[0].setChecked(True)
+    assert not page.generate_button.isEnabled()
+    owner.close()
