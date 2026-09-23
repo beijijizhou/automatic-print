@@ -113,9 +113,47 @@ def test_confirmed_strategy_ui_explains_unsplit_fields() -> None:
         rules=[SimpleNamespace(id=7, name='默认规则', is_default=True)])))
 
     note_text = '\n'.join(label.text() for label in page.findChildren(QLabel))
-    assert '不按物流、底款或尺码拆分' in note_text
+    assert '默认不按物流、底款或尺码' in note_text
     assert page.table.item(0, 1).text() == '不分物流'
     assert page.table.item(0, 3).text() == '不按底款拆分'
     assert page.table.item(0, 4).text() == '不分颜色'
     assert page.table.item(0, 6).text() == '不分尺码'
+    owner.close()
+
+
+def test_strategy_editor_persists_customer_combination_and_invalidates_preview() -> None:
+    class Settings:
+        def __init__(self):
+            self.values = {}
+
+        def value(self, key, default, _kind):
+            return self.values.get(key, default)
+
+        def setValue(self, key, value):
+            self.values[key] = value
+
+    owner = QWidget()
+    owner.thread = None
+    owner._start_worker = lambda _worker: None
+    owner.preferences = Settings()
+    page = CompletedErpPage(owner, '隆丰')
+    page.summary.setText('已有预览')
+
+    page.strategy_editor.controls['by_logistics'].setChecked(True)
+    page.strategy_editor.controls['by_style'].setChecked(True)
+    page.strategy_editor.controls['by_composition'].setChecked(False)
+
+    strategy = page.strategy_editor.strategy()
+    assert strategy.by_logistics and strategy.by_style and not strategy.by_composition
+    assert owner.preferences.values == {
+        'batch_strategy/隆丰/by_composition': False,
+        'batch_strategy/隆丰/by_logistics': True,
+        'batch_strategy/隆丰/by_face': True,
+        'batch_strategy/隆丰/by_color': True,
+        'batch_strategy/隆丰/by_size': False,
+        'batch_strategy/隆丰/by_style': True,
+    }
+    assert page.summary.text() == '读取范围已变化，请重新读取分类。'
+    assert '物流' in page.strategy_editor.summary.text()
+    assert '底款' in page.strategy_editor.summary.text()
     owner.close()

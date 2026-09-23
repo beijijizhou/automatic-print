@@ -5,10 +5,12 @@ from .worker import AutomationWorker
 
 
 class ReadWorker(AutomationWorker):
-    def __init__(self, platform_name, kind, scope, value=None, source_status=9):
+    def __init__(self, platform_name, kind, scope, value=None, source_status=9,
+                 strategy=None):
         super().__init__('read', platform_name)
         self.kind, self.scope, self.value = kind, scope, value
         self.source_status = source_status
+        self.strategy = strategy
 
     def _run_action(self):
         self._report('正在读取数据，请稍候…')
@@ -25,7 +27,8 @@ class ReadWorker(AutomationWorker):
         self._deliver(self.completed, dict(type='read', kind=self.kind,
                       platform=self.platform_name,
                       scope=self.scope, value=self.value,
-                      source_status=self.source_status, data=data))
+                      source_status=self.source_status,
+                      strategy=self.strategy, data=data))
 
     def _completed_erp(self):
         from playwright.sync_api import sync_playwright
@@ -50,14 +53,14 @@ class ReadWorker(AutomationWorker):
                          if str(row['order_id']) not in order_issues]
             groups = list(plan_completed_erp_batches(
                 safe_rows, details, source_status=self.source_status,
-                platform_name=self.platform_name)
+                platform_name=self.platform_name, strategy=self.strategy)
                 if safe_rows else ())
             for order_id in order_issues:
                 blocked_rows = [row for row in rows
                                 if str(row['order_id']) == order_id]
                 groups.extend(plan_completed_erp_batches(
                     blocked_rows, details, source_status=self.source_status,
-                    platform_name=self.platform_name))
+                    platform_name=self.platform_name, strategy=self.strategy))
             rule_issue = ''
             try:
                 rules = list_batch_rules(page)

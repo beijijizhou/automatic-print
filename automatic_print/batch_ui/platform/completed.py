@@ -5,7 +5,10 @@ from PySide6.QtWidgets import (
     QPlainTextEdit, QPushButton, QSpinBox, QTableWidgetItem, QVBoxLayout, QWidget,
 )
 from .view.pages import table_widget
-from .view.completed_view import selected_description, style_label
+from .view.completed_view import (
+    color_label, selected_description, size_label, style_label,
+)
+from .view.strategy_editor import StrategyEditor
 from ..task.reads import CompletedGenerateWorker, ReadWorker
 
 class CompletedErpPage(QWidget):
@@ -17,8 +20,8 @@ class CompletedErpPage(QWidget):
         self.boxes = []
         self.auto_plan_pending = False
         layout = QVBoxLayout(self)
-        note = QLabel(self._strategy_note())
-        note.setWordWrap(True)
+        self.strategy_editor = StrategyEditor(
+            platform_name, getattr(owner, 'preferences', None), self)
         self.source = QComboBox()
         self.source.addItem('生产中', 5)
         self.source.addItem('已完成', 9)
@@ -54,13 +57,14 @@ class CompletedErpPage(QWidget):
         warning = QLabel('提交前会重新核验订单状态、整单范围、分组字段、来源批次和数量；'
                          '已补单的组不可重复生成。接口提交后若结果不明确，请先到平台核对，不要重试。')
         warning.setWordWrap(True)
-        layout.addWidget(note)
+        layout.addWidget(self.strategy_editor)
         layout.addLayout(controls)
         for widget in (self.summary, self.table, preview_title,
                        self.selection_preview, warning):
             layout.addWidget(widget)
         self.limit.valueChanged.connect(self.invalidate)
         self.source.currentIndexChanged.connect(self.invalidate)
+        self.strategy_editor.changed.connect(self.invalidate)
 
     def invalidate(self, *_):
         self.auto_plan_pending = False
@@ -87,12 +91,15 @@ class CompletedErpPage(QWidget):
             f'正在读取{self.source.currentText()}生产项与实际生产图面别…')
         self.owner._start_worker(ReadWorker(self.platform_name, 'completed_erp',
                                            self.limit.value(), self.limit.value(),
-                                           source_status=self.source.currentData()))
+                                           source_status=self.source.currentData(),
+                                           strategy=self.strategy_editor.strategy()))
 
     def show_result(self, result):
         if (result['scope'] != self.limit.value()
                 or result['platform'] != self.platform_name
-                or result.get('source_status', 9) != self.source.currentData()):
+                or result.get('source_status', 9) != self.source.currentData()
+                or (result.get('strategy') is not None and
+                    result['strategy'] != self.strategy_editor.strategy())):
             return
         data = result['data']
         self.groups = tuple(data['groups'])
@@ -113,8 +120,7 @@ class CompletedErpPage(QWidget):
             self.boxes.append(box)
             values = (group.logistics_code or '不分物流', group.order_composition,
                       style_label(group),
-                      group.color or ('不分颜色' if group.face == '双面' else '未记录'),
-                      group.face, group.size_group or '不分尺码',
+                      color_label(group), group.face, size_label(group),
                       str(len(group.item_ids)), ', '.join(group.source_batch_codes) or '未记录',
                       ', '.join(group.item_ids))
             for column, value in enumerate(values, 1):
@@ -160,6 +166,7 @@ class CompletedErpPage(QWidget):
         self.source.setEnabled(enabled)
         self.limit.setEnabled(enabled)
         self.rule.setEnabled(enabled)
+        self.strategy_editor.setEnabled(enabled)
         for box in self.boxes:
             box.setEnabled(enabled and not bool(box.toolTip()))
         self.generate_button.setEnabled(enabled and bool(self.selected_groups())
@@ -173,8 +180,11 @@ class CompletedErpPage(QWidget):
         dialog.setWindowTitle('生成前核对分组条件')
         dialog.resize(740, 360)
         layout = QVBoxLayout(dialog)
+        strategy = getattr(groups[0], 'strategy', None)
+        strategy_text = (' + '.join(strategy.enabled_labels()) or '不额外拆分') \
+            if strategy is not None else '平台默认组合'
         label = QLabel(f'{self.source.currentText()}来源的 {len(groups)} 个分组将分别生成补单批次。'
-                       '请先核对分组条件和件数：')
+                       f'实际组合：{strategy_text}。请先核对分组条件和件数：')
         layout.addWidget(label)
         details = QPlainTextEdit(selected_description(groups))
         details.setReadOnly(True)
@@ -198,13 +208,3 @@ class CompletedErpPage(QWidget):
         self.invalidate()
         self.summary.setText('已确认生成批次：' + ', '.join(codes) + '。请刷新生产批次列表下载。')
         self.owner.log.appendPlainText(self.summary.text())
-
-    def _strategy_note(self):
-        if self.platform_name == '隆丰':
-            return ('隆丰只使用 A00 默认工艺，不按物流、底款或尺码拆分；多件按订单组成，'
-                    '单项单件分单双面，单面再按颜色分组。始终保持整单。')
-        if self.platform_name == 'Haloo':
-            return ('Haloo 按物流和订单组成分组；单项单件分单双面，单面按黑色、白色、'
-                    '混色分组，黑白再分 S–XL 与 2XL–5XL。始终保持整单。')
-        return ('生产中与已完成共用补单分组策略：单项单件按物流、底款、颜色、面别和'
-                '尺码档分类；多件按物流、订单组成和面别分组。始终保持整单。')

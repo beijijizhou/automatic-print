@@ -8,7 +8,9 @@ from automatic_print.batch_ui.task.reads import CompletedGenerateWorker, ReadWor
 
 @pytest.mark.parametrize('platform_name', ('隆丰', '莆田', 'Haloo'))
 def test_completed_plan_reads_the_selected_erp_platform(platform_name):
-    worker = ReadWorker(platform_name, 'completed_erp', 30, 30)
+    strategy = object()
+    worker = ReadWorker(platform_name, 'completed_erp', 30, 30,
+                        strategy=strategy)
     with patch('playwright.sync_api.sync_playwright') as playwright, \
          patch('automatic_print.automation.browser.session.connect_debug_chrome') as connect, \
          patch('automatic_print.automation.providers.longfeng.find_longfeng_page') as find, \
@@ -27,6 +29,7 @@ def test_completed_plan_reads_the_selected_erp_platform(platform_name):
     find.assert_called_once_with(connect.return_value, platform_name)
     load.assert_called_once()
     assert plan.call_args.kwargs['platform_name'] == platform_name
+    assert plan.call_args.kwargs['strategy'] is strategy
     assert result['groups'] == ('group',)
     assert result['rules'] == ('rule',)
 

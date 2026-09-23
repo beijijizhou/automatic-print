@@ -16,6 +16,7 @@ from automatic_print.automation.batches.supplements.completed import (
 from automatic_print.automation.batches.supplements.completed import (
     _confirmed_group_codes, generate_completed_groups, verify_completed_group,
 )
+from automatic_print.automation.batches.supplements.strategies import GroupingStrategy
 from automatic_print.automation.api.erp.items import (
     generate_selected_batch,
     generate_supplement_batch,
@@ -298,6 +299,59 @@ def test_confirmed_strategy_rejects_unknown_single_fields(field, value, message)
         plan_completed_erp_batches(
             [row], {"1": detail}, platform_name="隆丰"
         )
+
+
+def test_customer_can_combine_longfeng_grouping_dimensions() -> None:
+    rows = [
+        _row("1", "a", style="base-a", color="黑色"),
+        _row("2", "b", style="base-b", color="白色"),
+        _row("3", "c", style="base-a", color="白色"),
+    ]
+    for row in rows:
+        row["process_route_code"] = "A00"
+    rows[2]["logistics_sorting_code"] = "GOFO"
+    strategy = GroupingStrategy(
+        by_logistics=True, by_face=False, by_color=False,
+        by_size=False, by_style=True,
+    )
+
+    groups = plan_completed_erp_batches(
+        rows, {row["id"]: _detail("A面") for row in rows},
+        platform_name="隆丰", strategy=strategy,
+    )
+
+    assert {(group.logistics_code, group.style_id): group.item_ids
+            for group in groups} == {
+        ("USPS", "base-a"): ("1",),
+        ("USPS", "base-b"): ("2",),
+        ("GOFO", "base-a"): ("3",),
+    }
+    assert {group.face for group in groups} == {"不区分面别"}
+    assert all(not group.color and not group.size_group for group in groups)
+    assert {group.strategy for group in groups} == {strategy}
+
+
+def test_customer_can_disable_order_composition_grouping() -> None:
+    rows = [
+        _row("1", "single"),
+        _row("2", "multi", composition=3),
+        _row("3", "multi", composition=3),
+    ]
+    for row in rows:
+        row["process_route_code"] = "A00"
+    strategy = GroupingStrategy(
+        by_logistics=False, by_face=False, by_color=False,
+        by_size=False, by_style=False, by_composition=False,
+    )
+
+    groups = plan_completed_erp_batches(
+        rows, {row["id"]: _detail("A面") for row in rows},
+        platform_name="隆丰", strategy=strategy,
+    )
+
+    assert len(groups) == 1
+    assert groups[0].order_composition == "不分订单组成"
+    assert groups[0].item_ids == ("1", "2", "3")
 
 
 def test_generation_rechecks_whole_order_and_confirms_one_code() -> None:
