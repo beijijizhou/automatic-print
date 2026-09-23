@@ -117,6 +117,17 @@ def test_board_only_enables_start_for_exact_ready_batch():
     assert not page.control_panel.clean_button.isEnabled()
 
 
+def test_board_stops_supabase_refresh_when_automation_is_closed():
+    page = MachineStatusPage(fetch=lambda: {"machines": [], "commands": []})
+    page.set_active(True)
+    assert page.timer.isActive()
+
+    page._automation_changed(False)
+
+    assert not page.timer.isActive()
+    assert "不再访问 Supabase" in page.message.text()
+
+
 def test_board_blocks_start_when_loaded_task_name_is_unverified():
     page = MachineStatusPage(fetch=lambda: [])
     page.apply_dashboard({"machines": [{

@@ -9,6 +9,7 @@ from time import monotonic
 
 from ..machine_status import claim_control, report_machine
 from ..machine_commands import CommandDispatcher
+from ....runtime.monitoring.control import AutomationWakeListener, automation_enabled
 from .controls import NativePrintExpControls
 from .discovery import find_installation, process_running, running_installations
 from .loaded_task import read_loaded_task
@@ -25,10 +26,14 @@ class PrintExpMonitor:
         send=report_machine,
         command_dispatcher=None,
         control_dispatcher=None,
+        automation_allowed=automation_enabled,
+        wake_listener=None,
     ):
         self.poll_seconds = float(poll_seconds)
         self.heartbeat_seconds = float(heartbeat_seconds)
         self.send = send
+        self.automation_allowed = automation_allowed
+        self.wake_listener = wake_listener or AutomationWakeListener()
         self.stop_event = Event()
         self.projector = StatusProjector()
         self.installation = None
@@ -41,21 +46,29 @@ class PrintExpMonitor:
         )
 
     def run(self):
+        self.wake_listener.start()
         next_status = 0.0
-        while not self.stop_event.is_set():
-            try:
-                self.control_dispatcher.tick()
-            except Exception as error:
-                self.logger.warning("Unable to poll realtime printer controls: %s", error)
-            try:
-                self.command_dispatcher.tick()
-            except Exception as error:
-                self.logger.warning("Unable to poll remote commands: %s", error)
-            now = monotonic()
-            if now >= next_status:
-                self.run_once()
-                next_status = now + self.poll_seconds
-            self.stop_event.wait(0.25)
+        try:
+            while not self.stop_event.is_set():
+                if not self.automation_allowed():
+                    self.last_signature = None
+                    self.stop_event.wait(0.25)
+                    continue
+                try:
+                    self.control_dispatcher.tick()
+                except Exception as error:
+                    self.logger.warning("Unable to poll realtime printer controls: %s", error)
+                try:
+                    self.command_dispatcher.tick()
+                except Exception as error:
+                    self.logger.warning("Unable to poll remote commands: %s", error)
+                now = monotonic()
+                if now >= next_status:
+                    self.run_once()
+                    next_status = now + self.poll_seconds
+                self.stop_event.wait(0.25)
+        finally:
+            self.wake_listener.stop()
 
     def run_once(self):
         active_installations = running_installations()
@@ -75,6 +88,9 @@ class PrintExpMonitor:
         status = self.projector.project(
             snapshot, online, printer_state=printer_state, loaded_task=loaded_task,
         )
+        if not self.automation_allowed():
+            self.last_signature = None
+            return status
         signature = _signature(status)
         now = monotonic()
         changed = signature != self.last_signature

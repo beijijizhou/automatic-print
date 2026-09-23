@@ -2,7 +2,7 @@ $ErrorActionPreference = "Stop"
 $ProgressPreference = "SilentlyContinue"
 
 # Update this marker when publishing a new bootstrap entry URL with a cache query.
-$bootstrapCacheVersion = "0.1.374"
+$bootstrapCacheVersion = "0.1.375"
 $repositoryUrl = "https://github.com/beijijizhou/automatic-print.git"
 $bootstrapUrl = "https://raw.githubusercontent.com/beijijizhou/automatic-print/main/windows/bootstrap-test-computer.ps1?v=$bootstrapCacheVersion"
 
@@ -294,6 +294,12 @@ Register-ScheduledTask -TaskName $taskName -Action $taskAction `
     -Trigger $taskTrigger -Principal $taskPrincipal -Settings $taskSettings `
     -Description "Haloo Automatic realtime PrintExp status and control" `
     -Force | Out-Null
+$firewallRule = "AutomaticPrint LAN Automation Wake"
+if (-not (Get-NetFirewallRule -DisplayName $firewallRule -ErrorAction SilentlyContinue)) {
+    New-NetFirewallRule -DisplayName $firewallRule -Direction Inbound `
+        -Action Allow -Protocol UDP -LocalPort 45873 `
+        -Profile Domain,Private -RemoteAddress LocalSubnet | Out-Null
+}
 Remove-ItemProperty -Path $runKey -Name "AutomaticPrintMonitor" `
     -ErrorAction SilentlyContinue
 Start-ScheduledTask -TaskName $taskName

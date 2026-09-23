@@ -20,6 +20,7 @@ from PySide6.QtWidgets import (
 from ..automation.api.machine_status import list_commands, list_machines
 from ..batch_ui.platform.remote_queue import machine_workload
 from .machine_command_ui import RemoteCommandPanel
+from .automation_toggle import AutomationToggle
 from .printer_control_ui import PrinterControlPanel
 from .machine_status_format import (
     heartbeat_text, machine_slots, remaining_text, status_text,
@@ -110,10 +111,13 @@ class MachineStatusPage(QWidget):
         self.command_panel.command_submitted.connect(self.refresh)
         self.control_panel = PrinterControlPanel(self)
         self.control_panel.command_submitted.connect(self.refresh)
+        self.automation_toggle = AutomationToggle(self)
+        self.automation_toggle.changed.connect(self._automation_changed)
 
         layout = QVBoxLayout(self)
         layout.addWidget(title)
         layout.addWidget(description)
+        layout.addWidget(self.automation_toggle)
         layout.addWidget(overview)
         layout.addWidget(self.table, 1)
         layout.addWidget(self.control_panel)
@@ -121,11 +125,19 @@ class MachineStatusPage(QWidget):
 
     def set_active(self, active):
         self._active = bool(active)
-        if self._active:
+        if self._active and self.automation_toggle.enabled:
             self.timer.start()
             self.refresh()
         else:
             self.timer.stop()
+
+    def _automation_changed(self, enabled):
+        if enabled and self._active:
+            self.timer.start()
+            self.refresh()
+        elif not enabled:
+            self.timer.stop()
+            self.message.setText("自动化已关闭：不再访问 Supabase；使用上方按钮可局域网唤起。")
 
     def refresh(self):
         if self.loader.refresh():
