@@ -3,6 +3,7 @@ from threading import Event
 
 from automatic_print.automation.api.machine_status import client
 from automatic_print.automation.api.machine_status import commands
+from automatic_print.automation.api.machine_status import identity
 from automatic_print.automation.api.machine_status.reporter import MachineStatusReporter
 from automatic_print.automation.api.printerexp.monitor import StatusProjector
 from automatic_print.automation.api.printerexp.state import read_snapshot
@@ -141,7 +142,7 @@ def test_printerexp_snapshot_reads_real_progress_and_task(tmp_path):
     snapshot = read_snapshot(tmp_path)
 
     assert snapshot.task_id == "job-123"
-    assert snapshot.progress == 38
+    assert snapshot.progress == 37.6
     assert snapshot.task_file == "JOB-88.prn"
     assert snapshot.task_folder == "BATCH-88"
 
@@ -161,6 +162,28 @@ def test_printerexp_projection_uses_progress_speed_for_batch_eta():
     assert status["remaining_seconds"] == 420
     assert status["estimate_scope"] == "batch"
     assert status["source_online"] is True
+
+
+def test_printerexp_projection_uses_fractional_progress_for_eta():
+    from automatic_print.automation.api.printerexp.state import PrintExpSnapshot
+
+    projector = StatusProjector()
+    first = PrintExpSnapshot("job", 20.1, "BATCH.prn", "0922", 1)
+    second = PrintExpSnapshot("job", 20.6, "BATCH.prn", "0922", 2)
+
+    projector.project(first, True, clock=100, timestamp="start")
+    status = projector.project(second, True, clock=130, timestamp="later")
+
+    assert status["progress_percent"] == 21
+    assert status["remaining_seconds"] == 4764
+
+
+def test_machine_name_prefers_saved_machine_number(monkeypatch):
+    monkeypatch.delenv("AUTOMATIC_PRINT_MACHINE_NAME", raising=False)
+    monkeypatch.setattr(identity, "saved_machine_number", lambda: "M7")
+    monkeypatch.setattr(identity.platform, "node", lambda: "DTF7")
+
+    assert identity.machine_name() == "M7"
 
 
 def test_printerexp_projection_distinguishes_idle_and_offline():

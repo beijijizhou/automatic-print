@@ -15,7 +15,7 @@ def test_board_keeps_eleven_slots_and_renders_live_machine():
     page.apply_dashboard(
         {"machines": [
             {
-                "machine_name": "DTF-01",
+                "machine_name": "M4",
                 "department": "DTF",
                 "state": "running",
                 "batch_name": "BATCH-88.prn",
@@ -31,14 +31,15 @@ def test_board_keeps_eleven_slots_and_renders_live_machine():
 
     assert page.table.rowCount() == 11
     assert page.summary.text() == "已接入 1 / 11 · 在线 1 · 打印中 1"
-    assert page.table.item(0, 0).text() == "DTF-01"
-    assert page.table.item(0, 2).text() == "打印中"
-    assert page.table.item(0, 3).text() == "BATCH-88.prn"
-    assert page.table.item(0, 5).text() == "1小时2分钟"
-    assert page.table.item(0, 6).text() == "7秒前"
-    assert page.table.item(1, 2).text() == "待接入"
-    assert isinstance(page.table.cellWidget(0, 4), QProgressBar)
-    assert page.table.cellWidget(0, 4).value() == 42
+    assert page.table.item(0, 0).text() == "M1"
+    assert page.table.item(0, 2).text() == "待接入"
+    assert page.table.item(3, 0).text() == "M4"
+    assert page.table.item(3, 2).text() == "打印中"
+    assert page.table.item(3, 3).text() == "BATCH-88.prn"
+    assert page.table.item(3, 5).text() == "1小时2分钟"
+    assert page.table.item(3, 6).text() == "7秒前"
+    assert isinstance(page.table.cellWidget(3, 4), QProgressBar)
+    assert page.table.cellWidget(3, 4).value() == 42
     assert page.command_panel.submit_button.isEnabled()
 
 

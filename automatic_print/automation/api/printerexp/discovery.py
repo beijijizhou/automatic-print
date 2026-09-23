@@ -39,22 +39,59 @@ def find_installation():
 
 
 def process_running():
+    return bool(_printerexp_processes())
+
+
+def running_installations():
+    """Return installations that own a currently running PrintExp process."""
+    installations = []
+    for process_id, _name in _printerexp_processes():
+        executable = _process_image(process_id)
+        result = _installation(executable.parent) if executable else None
+        if result and result not in installations:
+            installations.append(result)
+    return installations
+
+
+def _printerexp_processes():
     if os.name != "nt":
-        return False
-    snapshot = ctypes.windll.kernel32.CreateToolhelp32Snapshot(0x00000002, 0)
+        return []
+    kernel = ctypes.WinDLL("kernel32", use_last_error=True)
+    kernel.CreateToolhelp32Snapshot.restype = ctypes.c_void_p
+    kernel.CloseHandle.argtypes = (ctypes.c_void_p,)
+    snapshot = kernel.CreateToolhelp32Snapshot(0x00000002, 0)
     if snapshot == ctypes.c_void_p(-1).value:
-        return False
+        return []
     entry = _ProcessEntry()
     entry.dwSize = ctypes.sizeof(entry)
+    results = []
     try:
-        more = ctypes.windll.kernel32.Process32FirstW(snapshot, ctypes.byref(entry))
+        more = kernel.Process32FirstW(snapshot, ctypes.byref(entry))
         while more:
             if entry.szExeFile.casefold() in EXECUTABLE_NAMES:
-                return True
-            more = ctypes.windll.kernel32.Process32NextW(snapshot, ctypes.byref(entry))
+                results.append((entry.th32ProcessID, entry.szExeFile))
+            more = kernel.Process32NextW(snapshot, ctypes.byref(entry))
     finally:
-        ctypes.windll.kernel32.CloseHandle(snapshot)
-    return False
+        kernel.CloseHandle(snapshot)
+    return results
+
+
+def _process_image(process_id):
+    kernel = ctypes.WinDLL("kernel32", use_last_error=True)
+    kernel.OpenProcess.restype = ctypes.c_void_p
+    kernel.OpenProcess.argtypes = (ctypes.c_ulong, ctypes.c_int, ctypes.c_ulong)
+    kernel.CloseHandle.argtypes = (ctypes.c_void_p,)
+    handle = kernel.OpenProcess(0x1000, False, process_id)
+    if not handle:
+        return None
+    try:
+        size = ctypes.c_ulong(32768)
+        buffer = ctypes.create_unicode_buffer(size.value)
+        if kernel.QueryFullProcessImageNameW(handle, 0, buffer, ctypes.byref(size)):
+            return Path(buffer.value)
+    finally:
+        kernel.CloseHandle(handle)
+    return None
 
 
 def _installation(path):

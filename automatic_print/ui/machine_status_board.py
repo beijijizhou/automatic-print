@@ -1,5 +1,6 @@
 """Fleet view for PrintExp status and remote production commands."""
 
+import re
 from threading import Lock, Thread
 
 from PySide6.QtCore import QObject, QTimer, Qt, Signal
@@ -129,12 +130,9 @@ class MachineStatusPage(QWidget):
         self.command_panel.set_data(machines, dashboard.get("commands") or [])
 
     def apply_machines(self, machines):
-        machines = sorted(
-            (item for item in machines if isinstance(item, dict)),
-            key=lambda item: str(item.get("machine_name") or ""),
-        )
-        total_rows = max(EXPECTED_MACHINES, len(machines))
-        self.table.setRowCount(total_rows)
+        machines = [item for item in machines if isinstance(item, dict)]
+        slots = _machine_slots(machines)
+        self.table.setRowCount(EXPECTED_MACHINES)
         online = sum(bool(item.get("online")) for item in machines)
         running = sum(item.get("state") == "running" and item.get("online") for item in machines)
         self.summary.setText(
@@ -142,9 +140,9 @@ class MachineStatusPage(QWidget):
         )
         self.message.setText("状态每 10 秒自动刷新；超过 90 秒没有心跳会显示离线。")
         self.refresh_button.setEnabled(True)
-        for row in range(total_rows):
-            if row < len(machines):
-                self._fill_machine(row, machines[row])
+        for row, machine in enumerate(slots):
+            if machine is not None:
+                self._fill_machine(row, machine)
             else:
                 self._fill_pending(row)
 
@@ -176,10 +174,31 @@ class MachineStatusPage(QWidget):
         self.table.setCellWidget(row, 4, progress)
 
     def _fill_pending(self, row):
-        values = (f"待接入机位 {row + 1:02d}", "—", "待接入", "—", "", "—", "—")
+        values = (f"M{row + 1}", "—", "待接入", "—", "", "—", "—")
         for column, value in enumerate(values):
             self.table.setItem(row, column, QTableWidgetItem(value))
         self.table.removeCellWidget(row, 4)
+
+
+def _machine_slots(machines):
+    slots = [None] * EXPECTED_MACHINES
+    unmatched = []
+    for machine in machines:
+        match = re.fullmatch(
+            r"M(?:[1-9]|1[01])", str(machine.get("machine_name") or "").upper()
+        )
+        index = int(match.group()[1:]) - 1 if match else -1
+        if index >= 0 and slots[index] is None:
+            slots[index] = machine
+        else:
+            unmatched.append(machine)
+    for machine in unmatched:
+        try:
+            index = slots.index(None)
+        except ValueError:
+            break
+        slots[index] = machine
+    return slots
 
 
 def install_machine_status_tab(window, tabs):

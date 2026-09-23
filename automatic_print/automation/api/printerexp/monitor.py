@@ -11,7 +11,7 @@ from time import monotonic
 
 from ..machine_status import report_machine
 from ..machine_commands import CommandDispatcher
-from .discovery import find_installation, process_running
+from .discovery import find_installation, process_running, running_installations
 from .state import read_snapshot
 
 
@@ -43,7 +43,7 @@ class StatusProjector:
             remaining = self._remaining(snapshot.progress)
         return {
             **_base(state, phase, True),
-            "progress_percent": snapshot.progress,
+            "progress_percent": round(snapshot.progress),
             "batch_id": snapshot.task_id or snapshot.task_file or None,
             "batch_name": snapshot.task_file or snapshot.task_folder or None,
             "batch_info": {
@@ -68,7 +68,7 @@ class StatusProjector:
         start_time, start_progress = self.samples[0]
         end_time, end_progress = self.samples[-1]
         gained = end_progress - start_progress
-        if gained < 1 or end_time <= start_time:
+        if gained < 0.1 or end_time <= start_time:
             return None
         return round((end_time - start_time) / gained * (100 - progress))
 
@@ -103,7 +103,10 @@ class PrintExpMonitor:
             self.stop_event.wait(self.poll_seconds)
 
     def run_once(self):
-        if self.installation is None:
+        active_installations = running_installations()
+        if active_installations:
+            self.installation = max(active_installations, key=_status_modified_at)
+        elif self.installation is None:
             self.installation = find_installation()
         online = process_running()
         snapshot = None
@@ -144,6 +147,13 @@ def _signature(status):
         "state", "phase", "source_online", "progress_percent", "batch_id",
         "batch_name", "remaining_seconds", "error_message",
     ))
+
+
+def _status_modified_at(installation):
+    try:
+        return (Path(installation) / "Data" / "PrintInfo.ini").stat().st_mtime
+    except OSError:
+        return 0
 
 
 def _logger():

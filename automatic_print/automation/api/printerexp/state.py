@@ -11,7 +11,7 @@ VALUE = re.compile(r"^\s*([A-Z_]+)\s*=\s*(.*?)\s*$", re.MULTILINE)
 @dataclass(frozen=True)
 class PrintExpSnapshot:
     task_id: str
-    progress: int
+    progress: float
     task_file: str
     task_folder: str
     modified_at: float
@@ -24,7 +24,7 @@ def read_snapshot(installation):
     if "PRINT_PROGRESS" not in values:
         return None
     try:
-        progress = round(float(values["PRINT_PROGRESS"]))
+        progress = float(values["PRINT_PROGRESS"])
         modified = info_path.stat().st_mtime
     except (OSError, ValueError):
         return None

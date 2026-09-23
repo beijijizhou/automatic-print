@@ -2,6 +2,7 @@
 
 import os
 import platform
+import re
 import tempfile
 from pathlib import Path
 from uuid import UUID, uuid4
@@ -39,4 +40,21 @@ def machine_id():
 
 def machine_name():
     configured = os.environ.get("AUTOMATIC_PRINT_MACHINE_NAME", "").strip()
-    return configured or platform.node().strip() or "未命名机器"
+    return configured or saved_machine_number() or platform.node().strip() or "未命名机器"
+
+
+def saved_machine_number():
+    """Read the M1-M11 value saved by the desktop app without importing Qt."""
+    if os.name != "nt":
+        return ""
+    try:
+        import winreg
+
+        with winreg.OpenKey(
+            winreg.HKEY_CURRENT_USER,
+            r"Software\AutomaticPrint\AutomaticPrint\layout",
+        ) as key:
+            value = str(winreg.QueryValueEx(key, "machine_number")[0]).strip().upper()
+    except (ImportError, OSError, TypeError, ValueError):
+        return ""
+    return value if re.fullmatch(r"M(?:[1-9]|1[01])", value) else ""
