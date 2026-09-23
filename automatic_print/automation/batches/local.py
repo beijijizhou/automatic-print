@@ -19,10 +19,11 @@ class LocalBatch:
 def batch_number_from_folder(folder: Path) -> str:
     """Return the production batch code represented by an archive folder."""
     name = folder.name
-    if name.startswith("AS2B_"):
-        for part in name.split("_")[1:]:
-            if len(part) == 12 and part.isalnum():
-                return part
+    if len(name) == 12 and name.isalnum():
+        return name
+    for part in name.split("_"):
+        if len(part) == 12 and part.isalnum():
+            return part
     return name
 
 

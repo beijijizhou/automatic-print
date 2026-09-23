@@ -34,9 +34,17 @@ def submit_command(
     )["command"]
 
 
-def submit_printer_action(target_machine_id, action, *, expires_minutes=2, timeout=8):
-    if action not in {"pause_print", "clean_resume"}:
+def submit_printer_action(
+    target_machine_id, action, *, expected_batch_name="", expires_minutes=2, timeout=8,
+):
+    if action not in {"start_print", "pause_print", "clean_resume"}:
         raise ValueError("不支持的打印机控制指令。")
+    payload = {}
+    if action == "start_print":
+        expected_batch_name = str(expected_batch_name).strip()
+        if not expected_batch_name:
+            raise ValueError("开始打印前必须指定批次文件名。")
+        payload["expected_batch_name"] = expected_batch_name
     return _call(
         {
             "action": "send_control",
@@ -45,7 +53,7 @@ def submit_printer_action(target_machine_id, action, *, expires_minutes=2, timeo
             "machine_name": machine_name(),
             "target_machine_id": str(target_machine_id),
             "expires_minutes": int(expires_minutes),
-            "payload": {},
+            "payload": payload,
         },
         timeout=timeout,
     )["command"]

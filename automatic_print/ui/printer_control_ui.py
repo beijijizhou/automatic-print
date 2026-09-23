@@ -1,13 +1,13 @@
 """Explicit user-triggered controls for a selected PrintExp machine."""
 
-from PySide6.QtCore import Signal
+from PySide6.QtCore import Qt, Signal
 from PySide6.QtWidgets import (
     QComboBox, QGroupBox, QHBoxLayout, QLabel, QMessageBox, QPushButton, QVBoxLayout,
 )
 
 from ..automation.api.machine_status.commands import submit_printer_action
 from .machine_command_ui import CommandSubmitter
-from .machine_status_format import actionable_machines
+from .machine_status_format import actionable_machines, machine_printer_state
 
 
 class PrinterControlPanel(QGroupBox):
@@ -16,12 +16,16 @@ class PrinterControlPanel(QGroupBox):
     def __init__(self, parent=None):
         super().__init__("打印机控制", parent)
         self.machines = []
+        self.busy = False
         self.submitter = CommandSubmitter(self, submit=submit_printer_action)
         self.submitter.completed.connect(self._submitted)
         self.submitter.failed.connect(self._failed)
         self.target = QComboBox()
+        self.target.currentIndexChanged.connect(self._sync_controls)
+        self.start_button = QPushButton("开始打印")
         self.pause_button = QPushButton("暂停打印")
         self.clean_button = QPushButton("清洗后自动启动")
+        self.start_button.clicked.connect(lambda: self._request("start_print"))
         self.pause_button.clicked.connect(lambda: self._request("pause_print"))
         self.clean_button.clicked.connect(lambda: self._request("clean_resume"))
         self.status = QLabel(
@@ -29,9 +33,11 @@ class PrinterControlPanel(QGroupBox):
             "清洗命令完成后再继续打印。"
         )
         self.status.setWordWrap(True)
+        self.status.setTextInteractionFlags(Qt.TextSelectableByMouse)
         controls = QHBoxLayout()
         controls.addWidget(QLabel("目标打印机"))
         controls.addWidget(self.target, 1)
+        controls.addWidget(self.start_button)
         controls.addWidget(self.pause_button)
         controls.addWidget(self.clean_button)
         layout = QVBoxLayout(self)
@@ -52,13 +58,23 @@ class PrinterControlPanel(QGroupBox):
             index = self.target.findData(selected)
             if index >= 0:
                 self.target.setCurrentIndex(index)
-        self._set_enabled(bool(self.machines))
+        self._sync_controls()
 
     def _request(self, action):
         target_name = self.target.currentText()
         if not target_name:
             return
-        if action == "pause_print":
+        machine = self._selected_machine()
+        if machine is None:
+            return
+        batch_name = str(machine.get("batch_name") or "").strip()
+        if action == "start_print":
+            title = "确认开始打印"
+            detail = (
+                f"目标打印机：{target_name}\n当前待打印批次：{batch_name}\n\n"
+                "目标机将在执行前再次核对空闲状态、0% 进度和 PRN 文件名。"
+            )
+        elif action == "pause_print":
             title, detail = "确认暂停打印", f"将暂停 {target_name} 当前正在打印的任务。"
         else:
             title = "确认清洗后自动启动"
@@ -68,22 +84,39 @@ class PrinterControlPanel(QGroupBox):
             )
         if QMessageBox.question(self, title, detail) != QMessageBox.Yes:
             return
-        if self.submitter.start({
-            "target_machine_id": self.target.currentData(), "action": action,
-        }):
-            self._set_enabled(False)
+        request = {"target_machine_id": self.target.currentData(), "action": action}
+        if action == "start_print":
+            request["expected_batch_name"] = batch_name
+        if self.submitter.start(request):
+            self.busy = True
+            self._sync_controls()
             self.status.setText("正在向目标打印机提交控制指令…")
 
     def _submitted(self, command):
-        self._set_enabled(bool(self.machines))
+        self.busy = False
+        self._sync_controls()
         self.status.setText(f"指令已下达：{command.get('id')}；请在下方任务状态查看结果。")
         self.command_submitted.emit()
 
     def _failed(self, message):
-        self._set_enabled(bool(self.machines))
+        self.busy = False
+        self._sync_controls()
         self.status.setText(f"控制指令下达失败：{message}")
 
-    def _set_enabled(self, enabled):
-        self.target.setEnabled(enabled)
-        self.pause_button.setEnabled(enabled)
-        self.clean_button.setEnabled(enabled)
+    def _selected_machine(self):
+        machine_id = str(self.target.currentData() or "")
+        return next(
+            (item for item in self.machines if str(item.get("machine_id")) == machine_id),
+            None,
+        )
+
+    def _sync_controls(self, *_args):
+        machine = self._selected_machine()
+        state = machine_printer_state(machine or {})
+        available = machine is not None and not self.busy
+        self.target.setEnabled(bool(self.machines) and not self.busy)
+        self.start_button.setEnabled(
+            available and state == "ready" and bool(machine.get("batch_name"))
+        )
+        self.pause_button.setEnabled(available and state == "printing")
+        self.clean_button.setEnabled(available and state in {"printing", "paused"})

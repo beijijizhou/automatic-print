@@ -147,7 +147,7 @@ class MarkerExamples(QGroupBox):
                             '仅方向示意：当前参数没有可安全定位的标签文字。')
             picture.setToolTip(data['source'] or reason or
                 '示意图使用生产排版模块计算位置，不生成打印文件。')
-        self.focus.set_results(results, self.images)
+        self.focus.set_results(results)
         count = sum(r['production'] for r in results)
         mode = {'free':'自由排版','single':'单列切膜','dual':'自动多列切膜'}.get(settings.cutter_mode,settings.cutter_mode)
         self.status.setText(f'四种情况已更新 · {mode} · {count}种使用当前批次生产图，其余使用内置样本或代码示意。使用当前模式标记位置；'

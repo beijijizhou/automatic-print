@@ -38,9 +38,13 @@ def run_command(command_id):
     try:
         command = get_command(command_id)
         action = str(command.get("action") or "download_layout")
-        if action in {"pause_print", "clean_resume"}:
-            result = execute_printer_action(action, progress)
-            phase = "PrintExp 已暂停" if action == "pause_print" else "清洗完成，已继续打印"
+        if action in {"start_print", "pause_print", "clean_resume"}:
+            result = execute_printer_action(action, progress, command.get("payload") or {})
+            phase = {
+                "start_print": "PrintExp 已开始打印",
+                "pause_print": "PrintExp 已暂停",
+                "clean_resume": "清洗完成，已继续打印",
+            }[action]
             update_command(
                 command_id, "succeeded", phase=phase,
                 progress_percent=100, result=result,
@@ -65,9 +69,13 @@ def run_command(command_id):
         return 1
 
 
-def execute_printer_action(action, progress):
-    from ..printerexp.controls import clean_then_resume, pause_print
+def execute_printer_action(action, progress, payload=None):
+    from ..printerexp.controls import clean_then_resume, pause_print, start_print
 
+    if action == "start_print":
+        return start_print(
+            str((payload or {}).get("expected_batch_name") or ""), progress=progress,
+        )
     if action == "pause_print":
         return pause_print(progress=progress)
     if action == "clean_resume":

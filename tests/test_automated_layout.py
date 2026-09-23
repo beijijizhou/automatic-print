@@ -144,7 +144,10 @@ def test_s2b_prefixed_archive_root_uses_real_batch_for_layout(
 ):
     from automatic_print.batch_ui.local import processing
 
-    source = tmp_path / "S2B" / "BATCHES" / "AS2B_22UJ9KT4VCZA"
+    source = (
+        tmp_path / "S2B" / "BATCHES"
+        / "HS2B014______11_3CF7S82YMH9F_20260924_035438_np7st0f2"
+    )
     source.mkdir(parents=True)
     (source / "S" / "design.png").parent.mkdir()
     (source / "S" / "design.png").write_bytes(b"image")
@@ -157,16 +160,16 @@ def test_s2b_prefixed_archive_root_uses_real_batch_for_layout(
     )
 
     result = processing.process_local_batches(
-        tmp_path, "S2B", ["22UJ9KT4VCZA"], {}, object(), None, False,
+        tmp_path, "S2B", ["3CF7S82YMH9F"], {}, object(), None, False,
         lambda _message: None,
     )
 
     assert result["batches"] == [
-        ("22UJ9KT4VCZA", {"filename": "final.png"})
+        ("3CF7S82YMH9F", {"filename": "final.png"})
     ]
     assert calls[0][1:] == (
-        tmp_path / "S2B" / "PROCESSED" / "22UJ9KT4VCZA",
-        "22UJ9KT4VCZA",
+        tmp_path / "S2B" / "PROCESSED" / "3CF7S82YMH9F",
+        "3CF7S82YMH9F",
     )
 
 
@@ -176,12 +179,15 @@ def test_s2b_batch_type_is_saved_inside_prefixed_archive_root(tmp_path):
         save_downloaded_batch_types,
     )
 
-    source = tmp_path / "S2B" / "BATCHES" / "AS2B_22UJ9KT4VCZA"
+    source = (
+        tmp_path / "S2B" / "BATCHES"
+        / "质检_6G5GZIGQ3F7O_20260924_035035_f4u6jgom"
+    )
     source.mkdir(parents=True)
     (source / "design.png").write_bytes(b"image")
 
     save_downloaded_batch_types(
-        tmp_path, "S2B", {"22UJ9KT4VCZA": "单项单件"}
+        tmp_path, "S2B", {"6G5GZIGQ3F7O": "单项单件"}
     )
 
     assert load_batch_type(source) == "单项单件"

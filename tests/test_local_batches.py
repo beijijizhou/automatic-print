@@ -32,10 +32,13 @@ def test_local_batches_are_scoped_to_platform(tmp_path: Path) -> None:
     assert discover_local_batches(tmp_path, "Haloo") == []
 
 
-def test_discovers_s2b_alphanumeric_batch_inside_prefixed_archive_root(
+def test_discovers_s2b_batch_inside_real_export_archive_root(
     tmp_path: Path,
 ) -> None:
-    source = tmp_path / "S2B" / "BATCHES" / "AS2B_22UJ9KT4VCZA"
+    source = (
+        tmp_path / "S2B" / "BATCHES"
+        / "质检_6G5GZIGQ3F7O_20260924_035035_f4u6jgom"
+    )
     source.mkdir(parents=True)
     (source / "S" / "design.png").parent.mkdir()
     (source / "S" / "design.png").write_bytes(b"image")
@@ -43,5 +46,5 @@ def test_discovers_s2b_alphanumeric_batch_inside_prefixed_archive_root(
     assert discover_batch_folders(tmp_path / "S2B") == [source]
     records = discover_local_batches(tmp_path, "S2B")
     assert [(record.batch_number, record.folder) for record in records] == [
-        ("22UJ9KT4VCZA", source)
+        ("6G5GZIGQ3F7O", source)
     ]

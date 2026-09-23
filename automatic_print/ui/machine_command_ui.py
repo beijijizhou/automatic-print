@@ -192,6 +192,7 @@ def _command_status(status):
 
 
 def _command_summary(action, payload, batches):
+    if action == "start_print": return f"开始打印 · {payload.get('expected_batch_name') or '—'}"
     if action == "pause_print":
         return "暂停打印"
     if action == "clean_resume":

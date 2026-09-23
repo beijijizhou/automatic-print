@@ -10,7 +10,7 @@ const DEPARTMENTS = new Set(["DTF", "UV", "3D"]);
 const STALE_SECONDS = 90;
 const COMMAND_STATES = new Set(["running", "succeeded", "failed"]);
 const COMMAND_PLATFORMS = new Set(["Haloo", "莆田", "隆丰", "S2B"]);
-const COMMAND_ACTIONS = new Set(["download_layout", "pause_print", "clean_resume"]);
+const COMMAND_ACTIONS = new Set(["download_layout", "start_print", "pause_print", "clean_resume"]);
 
 class ClientError extends Error {
   constructor(message: string, public status: number) { super(message); }
@@ -136,29 +136,46 @@ async function sendControl(db: ReturnType<typeof createClient>, input: Record<st
   const target = machineId(input.target_machine_id);
   const requester = machineId(input.machine_id);
   const action = String(input.command_action || "");
-  if (action !== "pause_print" && action !== "clean_resume") {
+  if (!new Set(["start_print", "pause_print", "clean_resume"]).has(action)) {
     throw new ClientError("Unsupported control action", 400);
   }
   const { data: machine, error: machineError } = await db.from("machine_status_current")
-    .select("machine_id, heartbeat_at, source_online").eq("machine_id", target).maybeSingle();
+    .select("machine_id, heartbeat_at, source_online, state, batch_name, batch_info")
+    .eq("machine_id", target).maybeSingle();
   if (machineError) throw machineError;
   if (!machine) throw new ClientError("Target machine not found", 404);
   const age = (Date.now() - new Date(String(machine.heartbeat_at)).getTime()) / 1000;
   if (age > STALE_SECONDS) throw new ClientError("Target monitor is offline", 409);
   if (machine.source_online === false) throw new ClientError("Target PrintExp is offline", 409);
+  const requestedPayload = input.payload && typeof input.payload === "object"
+    ? input.payload as Record<string, unknown> : {};
+  const expectedBatch = String(requestedPayload.expected_batch_name || "").trim();
+  if (action === "start_print") {
+    const printerState = String(
+      (machine.batch_info as Record<string, unknown> | null)?.printer_state || "",
+    );
+    if (machine.state !== "idle" || printerState !== "ready") {
+      throw new ClientError("Target PrintExp is not idle and ready", 409);
+    }
+    if (!expectedBatch || expectedBatch.toLocaleLowerCase() !==
+        String(machine.batch_name || "").trim().toLocaleLowerCase()) {
+      throw new ClientError("Target batch changed before printing", 409);
+    }
+  }
   const now = new Date().toISOString();
   const { error: cancelError } = await db.from("machine_commands").update({
     status: "cancelled", phase: "由更新的实时控制指令替代",
     finished_at: now, updated_at: now,
   }).eq("target_machine_id", target).eq("status", "queued")
-    .in("action", ["pause_print", "clean_resume"]);
+    .in("action", ["start_print", "pause_print", "clean_resume"]);
   if (cancelError) throw cancelError;
   const expiry = optionalInteger(input.expires_minutes, 1, 5) ?? 2;
   const { data, error } = await db.from("machine_commands").insert({
     target_machine_id: target,
     requested_by_machine_id: requester,
     requested_by_name: text(input.machine_name, "machine_name", 100),
-    action, payload: {}, phase: "实时控制信号已发送",
+    action, payload: action === "start_print" ? { expected_batch_name: expectedBatch } : {},
+    phase: "实时控制信号已发送",
     expires_at: new Date(Date.now() + expiry * 60_000).toISOString(),
   }).select().single();
   if (error) throw error;

@@ -59,10 +59,24 @@ def submit_import_paths(process_id, paths, chunk_index=0):
         raise RuntimeError(f'文件选择框未完整接收图片清单，尚未执行导入。'
                            f'预期{len(selection)}字符，实际{len(actual)}字符：{actual[:120]!r}')
     native_dialog = Desktop(backend='win32').window(handle=dialogs[0].handle)
-    native_dialog.child_window(control_id=1, class_name='Button').click()
+    _submit_open_dialog(native_dialog)
     return dict(submitted_count=len(paths), files=[str(p) for p in paths],
                 chunk_index=chunk_index, chunk_count=len(chunks), total_count=len(all_paths),
                 state='submitted', message='已提交导入；需在RIIN核对加载完成后的图片数量。')
+
+
+def _submit_open_dialog(dialog):
+    """Submit a Windows Open split-button and verify that it really closed."""
+    button = dialog.child_window(control_id=1, class_name='Button')
+    button.click()
+    try:
+        dialog.wait_not('visible', timeout=2)
+    except Exception:
+        # Some Windows Open dialogs expose control 1 as a SplitButton and
+        # ignore BM_CLICK.  A single real input click is safe only after the
+        # edit value has already been read back and the dialog stayed open.
+        button.click_input()
+        dialog.wait_not('visible', timeout=30)
 
 
 def submit_import(process_id, source, chunk_index=0):

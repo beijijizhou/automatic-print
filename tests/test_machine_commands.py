@@ -133,7 +133,7 @@ def test_runner_routes_pause_command_without_starting_layout(monkeypatch):
     })
     monkeypatch.setattr(
         runner, "execute_printer_action",
-        lambda action, progress: {"state": "paused", "action": action},
+        lambda action, progress, payload: {"state": "paused", "action": action},
     )
     monkeypatch.setattr(
         runner, "update_command", lambda *args, **kwargs: updates.append((args, kwargs)),
@@ -142,3 +142,22 @@ def test_runner_routes_pause_command_without_starting_layout(monkeypatch):
     assert runner.run_command("command-1") == 0
     assert updates[-1][0][1] == "succeeded"
     assert updates[-1][1]["phase"] == "PrintExp 已暂停"
+
+
+def test_runner_routes_start_with_expected_batch(monkeypatch):
+    captured = {}
+    monkeypatch.setattr(runner, "get_command", lambda _command_id: {
+        "action": "start_print", "payload": {"expected_batch_name": "tangle.prn"},
+    })
+    monkeypatch.setattr(
+        runner, "execute_printer_action",
+        lambda action, progress, payload: captured.update(action=action, payload=payload) or {
+            "state": "printing",
+        },
+    )
+    monkeypatch.setattr(runner, "update_command", lambda *_args, **_kwargs: None)
+
+    assert runner.run_command("command-start") == 0
+    assert captured == {
+        "action": "start_print", "payload": {"expected_batch_name": "tangle.prn"},
+    }

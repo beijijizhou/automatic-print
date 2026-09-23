@@ -228,6 +228,21 @@ class AdminEntryTests(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, '没有PNG'):
                 png_import_paths(folder)
 
+    def test_open_dialog_uses_input_fallback_when_message_click_is_ignored(self):
+        from automatic_print.automation.api.riin.desktop_controls.desktop import (
+            _submit_open_dialog,
+        )
+
+        dialog = MagicMock()
+        button = dialog.child_window.return_value
+        dialog.wait_not.side_effect = [RuntimeError('timed out'), None]
+
+        _submit_open_dialog(dialog)
+
+        button.click.assert_called_once_with()
+        button.click_input.assert_called_once_with()
+        self.assertEqual(dialog.wait_not.call_count, 2)
+
     def test_non_admin_reports_failure_without_touching_riin(self):
         with tempfile.TemporaryDirectory() as folder:
             report = Path(folder) / 'result.json'

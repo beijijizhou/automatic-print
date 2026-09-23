@@ -76,15 +76,17 @@ def _render_case(path, settings, side, degrees, production):
     item = choices[0][0]
     if config.cutter_mode in {'single', 'dual'}:
         item = external_left_item(item)
-    pixels, size = render_example(path, item, labels, config)
     region = detect_guide_band(path)
     if region is None:
         raise ValueError(f'{original.name}：无法定位膜标签卡片')
     region = region.rotated(degrees)
+    pixels, size, focus_pixels, focus_size = render_example(
+        path, item, labels, config, region)
     return {'side': side, 'degrees': degrees, 'production': production,
         'dpi': config.dpi, 'mode': config.cutter_mode,
         'source': str(original) if production else '', 'item': item,
         'region': region, 'pixels': pixels, 'size': size,
+        'focus_pixels': focus_pixels, 'focus_size': focus_size,
         'label_text': labels.get(item.index, ''),
         'detail': f'刀码：左基准，距图顶 {(item.block_ry-item.image_ry)*25.4/config.dpi:.1f}毫米'
                   f' · 图外间隙 {(item.image_rx-item.block_rx-item.block_width)*25.4/config.dpi:.1f}毫米'
@@ -148,5 +150,6 @@ def build_examples(paths, settings):
                     'dpi': settings.dpi, 'mode': settings.cutter_mode,
                     'source': '', 'item': None, 'region': detect_guide_band(path).rotated(degrees),
                     'pixels': pixels, 'size': size,
+                    'focus_pixels': pixels, 'focus_size': size,
                     'detail': '当前参数未验证出安全的文字位置；仅展示方向，不代表可生产坐标。'})
         return results

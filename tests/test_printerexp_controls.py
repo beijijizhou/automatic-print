@@ -2,7 +2,9 @@ import pytest
 
 from automatic_print.automation.api.printerexp.controls import (
     ALL_HEADS, MEDIUM_CLEAN, NativePrintExpControls, clean_then_resume, pause_print,
+    start_print,
 )
+from automatic_print.automation.api.printerexp.state import PrintExpSnapshot
 
 
 class Clock:
@@ -23,6 +25,8 @@ class Controls:
         self.pause_clicks = 0
         self.clean_clicks = 0
         self.clean_parameters = None
+        self.print_clicks = 0
+        self.operation = "ready"
 
     def pause_caption(self):
         return self.caption
@@ -42,6 +46,16 @@ class Controls:
 
     def configure_clean(self, head_group, strength):
         self.clean_parameters = (head_group, strength)
+
+    def task_name(self):
+        return "tangle.prn"
+
+    def operation_state(self, task_loaded=False):
+        return self.operation
+
+    def click_print(self):
+        self.print_clicks += 1
+        self.operation = "printing"
 
 
 def test_native_control_sends_button_command_to_parent():
@@ -162,3 +176,25 @@ def test_native_control_persists_all_heads_medium_before_cleaning():
     controls.configure_clean(registry=Registry)
 
     assert values == {"GLOBAL_CLEAN_HEAD": ALL_HEADS, "GLOBAL_CLEAN_MODE": MEDIUM_CLEAN}
+
+
+def test_start_print_rechecks_zero_progress_and_exact_loaded_batch():
+    controls = Controls()
+    snapshot = PrintExpSnapshot("job", 0, "tangle.prn", "batch", 1)
+
+    result = start_print("tangle.prn", controls, snapshot=snapshot)
+
+    assert result["physical_print_started"] is True
+    assert result["batch_name"] == "tangle.prn"
+    assert controls.print_clicks == 1
+
+
+@pytest.mark.parametrize("progress,name", [(1, "tangle.prn"), (0, "other.prn")])
+def test_start_print_refuses_stale_progress_or_batch(progress, name):
+    controls = Controls()
+    snapshot = PrintExpSnapshot("job", progress, "tangle.prn", "batch", 1)
+
+    with pytest.raises(RuntimeError):
+        start_print(name, controls, snapshot=snapshot)
+
+    assert controls.print_clicks == 0

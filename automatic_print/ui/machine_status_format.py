@@ -10,6 +10,12 @@ def status_text(machine):
         return "监控离线"
     if not machine.get("source_online"):
         return "PrintExp 离线"
+    printer_state = machine_printer_state(machine)
+    if printer_state:
+        return {
+            "idle": "空闲", "ready": "待打印", "printing": "打印中",
+            "paused": "已暂停", "cleaning": "清洗中", "unknown": "状态未确认",
+        }.get(printer_state, "状态未确认")
     return {
         "running": "打印中",
         "idle": "空闲",
@@ -17,6 +23,13 @@ def status_text(machine):
         "failed": "异常",
         "stopped": "已停止",
     }.get(machine.get("state"), "未知")
+
+
+def machine_printer_state(machine):
+    value = str((machine.get("batch_info") or {}).get("printer_state") or "")
+    if value:
+        return value
+    return "printing" if machine.get("state") == "running" else ""
 
 
 def remaining_text(seconds, state):

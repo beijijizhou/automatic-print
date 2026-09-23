@@ -41,6 +41,7 @@ def test_board_keeps_eleven_slots_and_renders_live_machine():
     assert isinstance(page.table.cellWidget(3, 4), QProgressBar)
     assert page.table.cellWidget(3, 4).value() == 42
     assert page.command_panel.submit_button.isEnabled()
+    assert not page.control_panel.start_button.isEnabled()
     assert page.control_panel.pause_button.isEnabled()
     assert page.control_panel.clean_button.text() == "清洗后自动启动"
     assert "会先暂停打印" in page.control_panel.status.text()
@@ -95,4 +96,20 @@ def test_board_ignores_legacy_names_and_blocks_duplicate_machine_number():
     assert page.table.item(3, 0).text() == "M4"
     assert page.table.item(3, 2).text() == "机器号冲突"
     assert not page.control_panel.pause_button.isEnabled()
+    assert not page.control_panel.start_button.isEnabled()
     assert not page.command_panel.submit_button.isEnabled()
+
+
+def test_board_only_enables_start_for_exact_ready_batch():
+    page = MachineStatusPage(fetch=lambda: [])
+    page.apply_dashboard({"machines": [{
+        "machine_id": "ready-4", "machine_name": "M4", "state": "idle",
+        "batch_name": "tangle.prn", "batch_info": {"printer_state": "ready"},
+        "agent_online": True, "source_online": True, "online": True,
+        "heartbeat_age_seconds": 1,
+    }], "commands": []})
+
+    assert page.table.item(3, 2).text() == "待打印"
+    assert page.control_panel.start_button.isEnabled()
+    assert not page.control_panel.pause_button.isEnabled()
+    assert not page.control_panel.clean_button.isEnabled()
