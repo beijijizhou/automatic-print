@@ -62,7 +62,7 @@ class MachineCommandDialog(QDialog):
                 str(machine.get("machine_id")),
             )
         self.platform = QComboBox()
-        self.platform.addItems(("Haloo", "隆丰", "莆田"))
+        self.platform.addItems(("Haloo", "隆丰", "莆田", "S2B"))
         self.batches = QPlainTextEdit()
         self.batches.setPlaceholderText("每行一个 12 位批次号，最多 20 个")
         self.batches.setMaximumHeight(110)

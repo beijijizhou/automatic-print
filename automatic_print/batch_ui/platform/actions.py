@@ -113,6 +113,17 @@ class BatchActionsMixin:
     def download_and_print_selected(self) -> None:
         self._download_selected(auto_print=True)
 
+    def dispatch_selected_to_machine(self) -> None:
+        selected = self._selected_batch_numbers()
+        if not selected:
+            QMessageBox.warning(
+                self, "请选择批次", "请至少选择一个可下载批次。"
+            )
+            return
+        self.remote_batch_dispatcher.start(
+            self.platform.currentData(), selected, self._current_layout_settings()
+        )
+
     def _selected_batch_numbers(self) -> list[str]:
         return [
             self.table.item(row, 1).text()

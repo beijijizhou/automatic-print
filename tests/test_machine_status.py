@@ -108,6 +108,7 @@ def test_backend_contract_keeps_unknown_eta_nullable():
     assert "pause_print" in control_migration and "clean_resume" in control_migration
     assert 'action === "send_control"' in function
     assert 'action === "claim_control"' in function
+    assert '"S2B"' in function
     assert "claim_machine_control" in urgent_control_migration
     assert "action = 'download_layout'" in urgent_control_migration
 

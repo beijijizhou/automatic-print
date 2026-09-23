@@ -124,6 +124,7 @@ class ThreadActionsMixin:
             self.select_button,
             self.download_button,
             getattr(self, "automated_print_button", None),
+            getattr(self, "remote_dispatch_button", None),
             getattr(self, "shared_knife_button", None),
             getattr(self, "order_side_checkbox", None),
             getattr(self, "open_download_folder", None),

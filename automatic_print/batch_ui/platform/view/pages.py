@@ -114,6 +114,18 @@ def build_production_page(owner, output_row: QHBoxLayout) -> QWidget:
         "按当前打印参数生成最终PNG，再逐批交给RIIN生成PRN并加入PrinterExp；"
         "不会启动物理打印。"
     )
+    owner.remote_dispatch_button = QPushButton("发送到指定机器生成 PRN")
+    owner.remote_dispatch_button.clicked.connect(owner.dispatch_selected_to_machine)
+    owner.remote_dispatch_button.setToolTip(
+        "把当前勾选批次和当前排版参数发送给指定在线机器；目标机负责下载、"
+        "排版、生成PRN并加载PrintExp，不会启动物理打印。"
+    )
+    owner.remote_dispatch_status = QLabel(
+        "可将当前勾选批次发送到指定在线机器，从下载连续执行到 PRN。"
+    )
+    owner.remote_dispatch_status.setWordWrap(True)
+    from ..remote_dispatch import RemoteBatchDispatcher
+    owner.remote_batch_dispatcher = RemoteBatchDispatcher(owner)
     from ..controls.shared_knife import add_shared_knife_controls
     add_shared_knife_controls(owner)
     owner.open_download_folder = QCheckBox("下载完成后打开文件夹")
@@ -126,6 +138,7 @@ def build_production_page(owner, output_row: QHBoxLayout) -> QWidget:
         owner.select_button,
         owner.download_button,
         owner.automated_print_button,
+        owner.remote_dispatch_button,
         owner.shared_knife_button,
         owner.process_button,
     ):
@@ -175,6 +188,7 @@ def build_production_page(owner, output_row: QHBoxLayout) -> QWidget:
     layout.addWidget(owner.download_preview_only)
     layout.addWidget(owner.merge_batches)
     layout.addLayout(actions)
+    layout.addWidget(owner.remote_dispatch_status)
     if not getattr(owner, "local_only", False):
         layout.addWidget(owner.log)
     return page

@@ -74,6 +74,34 @@ def test_automated_print_action_uses_selected_batches_and_current_settings(
     owner.close()
 
 
+def test_remote_print_action_uses_current_selection_and_platform(
+    tmp_path, monkeypatch
+):
+    owner = window(tmp_path)
+    page = owner.production_platform_download_page
+    page.platform_checks["S2B"].setChecked(True)
+    APP.processEvents()
+    workbench = page.workbenches["S2B"]
+    workbench.table.setRowCount(1)
+    selected = QCheckBox()
+    selected.setChecked(True)
+    workbench.table.setCellWidget(0, 0, selected)
+    workbench.table.setItem(0, 1, QTableWidgetItem("609180613013"))
+    requests = []
+    monkeypatch.setattr(
+        workbench.remote_batch_dispatcher, "start",
+        lambda *args: requests.append(args) or True,
+    )
+
+    workbench.remote_dispatch_button.click()
+
+    platform, batches, settings = requests[0]
+    assert platform == "S2B"
+    assert batches == ["609180613013"]
+    assert settings.platform_name == "S2B"
+    owner.close()
+
+
 def test_download_worker_runs_download_layout_and_riin_in_order(tmp_path, monkeypatch):
     events = []
     archive = tmp_path / "batch.zip"

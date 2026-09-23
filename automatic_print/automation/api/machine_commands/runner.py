@@ -9,7 +9,9 @@ from PySide6.QtCore import QSettings
 from ....layout_engine import LayoutSettings
 from ....batch_ui.local.processing import process_local_batches
 from ....batch_ui.task.automatic_print import save_downloaded_batch_types
-from ...browser.batches import download_selected_batches, load_batch_records_between
+from ...browser.batches import (
+    download_selected_batches, load_batch_records, load_batch_records_between,
+)
 from ..machine_status.commands import get_command, update_command
 
 
@@ -85,7 +87,7 @@ def execute_download_layout(payload, progress):
     output = Path(output_text)
     output.mkdir(parents=True, exist_ok=True)
     progress("正在核对批次类型与生产图状态", force=True)
-    records = load_batch_records_between(platform, min(batches), max(batches))
+    records = _load_selected_records(platform, batches, progress)
     selected = {record.batch_number: record for record in records if record.batch_number in batches}
     missing = [number for number in batches if number not in selected]
     if missing:
@@ -126,6 +128,12 @@ def _printed_name(item):
     if isinstance(item, dict):
         return Path(item.get("output") or item.get("path") or item.get("file") or "").name
     return Path(str(item)).name
+
+
+def _load_selected_records(platform, batches, progress):
+    if platform == "S2B":
+        return load_batch_records(platform, progress)
+    return load_batch_records_between(platform, min(batches), max(batches))
 
 
 def _layout_settings(values, preferences):
