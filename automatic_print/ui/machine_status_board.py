@@ -20,7 +20,9 @@ from PySide6.QtWidgets import (
 from ..automation.api.machine_status import list_commands, list_machines
 from .machine_command_ui import RemoteCommandPanel
 from .printer_control_ui import PrinterControlPanel
-from .machine_status_format import heartbeat_text, machine_slots, remaining_text, status_text
+from .machine_status_format import (
+    heartbeat_text, machine_slots, remaining_text, status_text,
+)
 
 
 EXPECTED_MACHINES = 11
@@ -137,12 +139,24 @@ class MachineStatusPage(QWidget):
         machines = [item for item in machines if isinstance(item, dict)]
         slots = machine_slots(machines, EXPECTED_MACHINES)
         self.table.setRowCount(EXPECTED_MACHINES)
-        online = sum(bool(item.get("online")) for item in machines)
-        running = sum(item.get("state") == "running" and item.get("online") for item in machines)
-        self.summary.setText(
-            f"已接入 {len(machines)} / {EXPECTED_MACHINES} · 在线 {online} · 打印中 {running}"
+        connected = [item for item in slots if item is not None]
+        conflicts = sum(bool(item.get("identity_conflict")) for item in connected)
+        online = sum(
+            bool(item.get("online")) and not item.get("identity_conflict")
+            for item in connected
         )
-        self.message.setText("状态每 10 秒自动刷新；超过 90 秒没有心跳会显示离线。")
+        running = sum(
+            item.get("state") == "running" and item.get("online")
+            and not item.get("identity_conflict") for item in connected
+        )
+        conflict_text = f" · 机器号冲突 {conflicts}" if conflicts else ""
+        self.summary.setText(
+            f"已接入 {len(connected)} / {EXPECTED_MACHINES} · 在线 {online}"
+            f" · 打印中 {running}{conflict_text}"
+        )
+        self.message.setText(
+            "仅显示排版设置中的 M1–M11；同号电脑会标记冲突并禁止远程控制。"
+        )
         self.refresh_button.setEnabled(True)
         for row, machine in enumerate(slots):
             if machine is not None:
@@ -156,7 +170,7 @@ class MachineStatusPage(QWidget):
 
     def _fill_machine(self, row, machine):
         values = (
-            machine.get("machine_name") or machine.get("machine_id") or "未命名机器",
+            f"M{row + 1}",
             machine.get("department") or "—",
             status_text(machine),
             machine.get("batch_name") or machine.get("batch_id") or "—",

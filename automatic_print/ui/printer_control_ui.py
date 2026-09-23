@@ -7,6 +7,7 @@ from PySide6.QtWidgets import (
 
 from ..automation.api.machine_status.commands import submit_printer_action
 from .machine_command_ui import CommandSubmitter
+from .machine_status_format import actionable_machines
 
 
 class PrinterControlPanel(QGroupBox):
@@ -39,10 +40,7 @@ class PrinterControlPanel(QGroupBox):
 
     def set_data(self, machines):
         selected = self.target.currentData()
-        self.machines = [
-            item for item in machines
-            if item.get("agent_online") and item.get("source_online")
-        ]
+        self.machines = actionable_machines(machines, require_source=True)
         self.target.clear()
         for machine in self.machines:
             self.target.addItem(

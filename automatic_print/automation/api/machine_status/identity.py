@@ -1,7 +1,6 @@
 """Stable installation identity without exposing Windows account details."""
 
 import os
-import platform
 import re
 import tempfile
 from pathlib import Path
@@ -39,8 +38,10 @@ def machine_id():
 
 
 def machine_name():
-    configured = os.environ.get("AUTOMATIC_PRINT_MACHINE_NAME", "").strip()
-    return configured or saved_machine_number() or platform.node().strip() or "未命名机器"
+    saved = saved_machine_number()
+    configured = os.environ.get("AUTOMATIC_PRINT_MACHINE_NAME", "").strip().upper()
+    configured = configured if re.fullmatch(r"M(?:[1-9]|1[01])", configured) else ""
+    return saved or configured or "未设置机器号"
 
 
 def saved_machine_number():

@@ -202,11 +202,19 @@ def test_printerexp_projection_uses_fractional_progress_for_eta():
 
 
 def test_machine_name_prefers_saved_machine_number(monkeypatch):
-    monkeypatch.delenv("AUTOMATIC_PRINT_MACHINE_NAME", raising=False)
+    monkeypatch.setenv("AUTOMATIC_PRINT_MACHINE_NAME", "DTF7")
     monkeypatch.setattr(identity, "saved_machine_number", lambda: "M7")
-    monkeypatch.setattr(identity.platform, "node", lambda: "DTF7")
 
     assert identity.machine_name() == "M7"
+
+
+def test_machine_name_only_accepts_m1_to_m11_fallback(monkeypatch):
+    monkeypatch.setattr(identity, "saved_machine_number", lambda: "")
+    monkeypatch.setenv("AUTOMATIC_PRINT_MACHINE_NAME", "m9")
+    assert identity.machine_name() == "M9"
+
+    monkeypatch.setenv("AUTOMATIC_PRINT_MACHINE_NAME", "Printer3")
+    assert identity.machine_name() == "未设置机器号"
 
 
 def test_printerexp_projection_distinguishes_idle_and_offline():

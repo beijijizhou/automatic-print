@@ -23,6 +23,7 @@ from PySide6.QtWidgets import (
 )
 
 from ..automation.api.machine_status.commands import submit_command
+from .machine_status_format import actionable_machines
 
 
 class CommandSubmitter(QObject):
@@ -121,7 +122,7 @@ class RemoteCommandPanel(QGroupBox):
         layout.addWidget(self.table)
 
     def set_data(self, machines, commands):
-        self.machines = [item for item in machines if item.get("agent_online")]
+        self.machines = actionable_machines(machines)
         self.submit_button.setEnabled(bool(self.machines))
         self.table.setRowCount(min(10, len(commands)))
         names = {str(item.get("machine_id")): item.get("machine_name") for item in machines}

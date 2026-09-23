@@ -51,9 +51,9 @@ def test_board_distinguishes_monitor_and_printerexp_offline():
     page = MachineStatusPage(fetch=lambda: [])
     page.apply_dashboard(
         {"machines": [
-            {"machine_name": "A", "state": "stopped", "agent_online": False},
+            {"machine_name": "M1", "state": "stopped", "agent_online": False},
             {
-                "machine_name": "B",
+                "machine_name": "M2",
                 "state": "stopped",
                 "agent_online": True,
                 "source_online": False,
@@ -64,3 +64,34 @@ def test_board_distinguishes_monitor_and_printerexp_offline():
     assert page.table.item(0, 2).text() == "监控离线"
     assert page.table.item(1, 2).text() == "PrintExp 离线"
     assert page.command_panel.table.rowCount() == 0
+
+
+def test_board_ignores_legacy_names_and_blocks_duplicate_machine_number():
+    page = MachineStatusPage(fetch=lambda: [])
+    page.apply_dashboard({"machines": [
+        {
+            "machine_id": "legacy", "machine_name": "DTF7", "state": "running",
+            "agent_online": True, "source_online": True, "online": True,
+            "heartbeat_age_seconds": 1,
+        },
+        {
+            "machine_id": "m4-a", "machine_name": "M4", "state": "running",
+            "agent_online": True, "source_online": True, "online": True,
+            "heartbeat_age_seconds": 1,
+        },
+        {
+            "machine_id": "m4-b", "machine_name": "m4", "state": "running",
+            "agent_online": True, "source_online": True, "online": True,
+            "heartbeat_age_seconds": 2,
+        },
+    ], "commands": []})
+
+    assert page.summary.text() == (
+        "已接入 1 / 11 · 在线 0 · 打印中 0 · 机器号冲突 1"
+    )
+    assert page.table.item(0, 0).text() == "M1"
+    assert page.table.item(0, 2).text() == "待接入"
+    assert page.table.item(3, 0).text() == "M4"
+    assert page.table.item(3, 2).text() == "机器号冲突"
+    assert not page.control_panel.pause_button.isEnabled()
+    assert not page.command_panel.submit_button.isEnabled()

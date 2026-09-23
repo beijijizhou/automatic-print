@@ -4,6 +4,8 @@ import re
 
 
 def status_text(machine):
+    if machine.get("identity_conflict"):
+        return "机器号冲突"
     if not machine.get("agent_online"):
         return "监控离线"
     if not machine.get("source_online"):
@@ -35,19 +37,35 @@ def heartbeat_text(seconds):
 
 def machine_slots(machines, count=11):
     slots = [None] * count
-    unmatched = []
+    grouped = {}
     for machine in machines:
         match = re.fullmatch(
             r"M(?:[1-9]|1[01])", str(machine.get("machine_name") or "").upper()
         )
-        index = int(match.group()[1:]) - 1 if match else -1
-        if 0 <= index < count and slots[index] is None:
-            slots[index] = machine
-        else:
-            unmatched.append(machine)
-    for machine in unmatched:
-        try:
-            slots[slots.index(None)] = machine
-        except ValueError:
-            break
+        if not match:
+            continue
+        index = int(match.group()[1:]) - 1
+        if 0 <= index < count:
+            grouped.setdefault(index, []).append(machine)
+    for index, candidates in grouped.items():
+        selected = min(candidates, key=_freshness_key)
+        selected = {**selected, "machine_name": f"M{index + 1}"}
+        if len(candidates) > 1:
+            selected.update(identity_conflict=True, conflict_count=len(candidates))
+        slots[index] = selected
     return slots
+
+
+def actionable_machines(machines, *, require_source=False, count=11):
+    return [
+        machine for machine in machine_slots(machines, count)
+        if machine is not None
+        and not machine.get("identity_conflict")
+        and machine.get("agent_online")
+        and (not require_source or machine.get("source_online"))
+    ]
+
+
+def _freshness_key(machine):
+    age = machine.get("heartbeat_age_seconds")
+    return float("inf") if age is None else max(0, float(age))
