@@ -2,6 +2,7 @@ import json
 from threading import Event
 
 from automatic_print.automation.api.machine_status import client
+from automatic_print.automation.api.machine_status import commands
 from automatic_print.automation.api.machine_status.reporter import MachineStatusReporter
 from automatic_print.automation.api.printerexp.monitor import StatusProjector
 from automatic_print.automation.api.printerexp.state import read_snapshot
@@ -78,6 +79,10 @@ def test_backend_contract_keeps_unknown_eta_nullable():
         __import__("pathlib").Path(__file__).parents[1]
         / "supabase/migrations/202609220002_printerexp_status.sql"
     ).read_text(encoding="utf-8")
+    command_migration = (
+        __import__("pathlib").Path(__file__).parents[1]
+        / "supabase/migrations/202609230001_machine_commands.sql"
+    ).read_text(encoding="utf-8")
 
     assert "remaining_seconds integer" in migration
     assert "progress_percent smallint" in migration
@@ -86,6 +91,36 @@ def test_backend_contract_keeps_unknown_eta_nullable():
     assert "stale_after_seconds" in function
     assert "source_online boolean" in printerexp_migration
     assert "agent_online" in function
+    assert 'action === "enqueue_command"' in function
+    assert 'action === "claim_command"' in function
+    assert "create table if not exists public.machine_commands" in command_migration
+    assert "for update skip locked" in command_migration
+
+
+def test_submit_command_sends_target_batches_and_settings(monkeypatch):
+    captured = {}
+    monkeypatch.setattr(commands, "machine_id", lambda: "d9428888-122b-4c26-a127-3eafad1f5270")
+    monkeypatch.setattr(commands, "machine_name", lambda: "CONTROL-01")
+
+    def call(payload, **options):
+        captured.update(payload)
+        captured["options"] = options
+        return {"command": {"id": "command-1"}}
+
+    monkeypatch.setattr(commands, "_call", call)
+    result = commands.submit_command(
+        "b9428888-122b-4c26-a127-3eafad1f5271",
+        "Haloo",
+        ["609231234567"],
+        {"dpi": 300},
+        generate_prn=True,
+    )
+
+    assert result["id"] == "command-1"
+    assert captured["action"] == "enqueue_command"
+    assert captured["target_machine_id"].startswith("b942")
+    assert captured["payload"]["batch_numbers"] == ["609231234567"]
+    assert captured["payload"]["layout_settings"] == {"dpi": 300}
 
 
 def test_printerexp_snapshot_reads_real_progress_and_task(tmp_path):

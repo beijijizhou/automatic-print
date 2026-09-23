@@ -1,0 +1,192 @@
+"""Fleet view for PrintExp status and remote production commands."""
+
+from threading import Lock, Thread
+
+from PySide6.QtCore import QObject, QTimer, Qt, Signal
+from PySide6.QtWidgets import (
+    QAbstractItemView,
+    QGroupBox,
+    QHBoxLayout,
+    QHeaderView,
+    QLabel,
+    QProgressBar,
+    QPushButton,
+    QTableWidget,
+    QTableWidgetItem,
+    QVBoxLayout,
+    QWidget,
+)
+
+from ..automation.api.machine_status import list_commands, list_machines
+from .machine_command_ui import RemoteCommandPanel
+from .machine_status_format import heartbeat_text, remaining_text, status_text
+
+
+EXPECTED_MACHINES = 11
+
+
+def load_dashboard():
+    return {"machines": list_machines(), "commands": list_commands()}
+
+
+class MachineStatusLoader(QObject):
+    loaded = Signal(object)
+    failed = Signal(str)
+
+    def __init__(self, fetch=list_machines, parent=None):
+        super().__init__(parent)
+        self.fetch = fetch
+        self._lock = Lock()
+
+    def refresh(self):
+        if not self._lock.acquire(blocking=False):
+            return False
+        Thread(target=self._run, daemon=True, name="machine-status-list").start()
+        return True
+
+    def _run(self):
+        try:
+            self.loaded.emit(self.fetch())
+        except Exception as error:
+            self.failed.emit(str(error))
+        finally:
+            self._lock.release()
+
+
+class MachineStatusPage(QWidget):
+    def __init__(self, parent=None, fetch=load_dashboard):
+        super().__init__(parent)
+        self._active = False
+        self.loader = MachineStatusLoader(fetch, self)
+        self.loader.loaded.connect(self.apply_dashboard)
+        self.loader.failed.connect(self.show_error)
+        self.timer = QTimer(self)
+        self.timer.setInterval(10_000)
+        self.timer.timeout.connect(self.refresh)
+
+        title = QLabel("PrintExp 打印机状态")
+        title.setProperty("heading", True)
+        description = QLabel(
+            "显示各电脑上 PrintExp 的真实任务、打印百分比和预计剩余时间。"
+            "每台电脑需安装后台监控；关闭 AutomaticPrint 不影响持续上报。"
+        )
+        description.setWordWrap(True)
+        self.summary = QLabel("已接入 0 / 11 · 在线 0 · 打印中 0")
+        self.summary.setStyleSheet("font-size:16px;font-weight:700;color:#0f172a;")
+        self.message = QLabel("打开本页后自动读取；未接入的机位会显示为待接入。")
+        self.message.setTextInteractionFlags(Qt.TextSelectableByMouse)
+        self.refresh_button = QPushButton("刷新打印机状态")
+        self.refresh_button.clicked.connect(self.refresh)
+
+        header = QHBoxLayout()
+        header.addWidget(self.summary)
+        header.addStretch()
+        header.addWidget(self.refresh_button)
+        overview = QGroupBox("11 台打印机总览")
+        overview_layout = QVBoxLayout(overview)
+        overview_layout.addLayout(header)
+        overview_layout.addWidget(self.message)
+
+        self.table = QTableWidget(EXPECTED_MACHINES, 7)
+        self.table.setHorizontalHeaderLabels(
+            ("打印机", "部门", "状态", "当前批次", "进度", "剩余时间", "最后心跳")
+        )
+        self.table.setEditTriggers(QAbstractItemView.NoEditTriggers)
+        self.table.setSelectionBehavior(QAbstractItemView.SelectRows)
+        self.table.verticalHeader().setVisible(False)
+        header_view = self.table.horizontalHeader()
+        header_view.setSectionResizeMode(QHeaderView.ResizeToContents)
+        header_view.setSectionResizeMode(3, QHeaderView.Stretch)
+        self.apply_machines([])
+        self.command_panel = RemoteCommandPanel(parent or self.window(), self)
+        self.command_panel.command_submitted.connect(self.refresh)
+
+        layout = QVBoxLayout(self)
+        layout.addWidget(title)
+        layout.addWidget(description)
+        layout.addWidget(overview)
+        layout.addWidget(self.table, 1)
+        layout.addWidget(self.command_panel)
+
+    def set_active(self, active):
+        self._active = bool(active)
+        if self._active:
+            self.timer.start()
+            self.refresh()
+        else:
+            self.timer.stop()
+
+    def refresh(self):
+        if self.loader.refresh():
+            self.refresh_button.setEnabled(False)
+            self.message.setText("正在读取 Supabase 中的 PrintExp 状态…")
+
+    def apply_dashboard(self, dashboard):
+        if isinstance(dashboard, list):
+            dashboard = {"machines": dashboard, "commands": []}
+        machines = dashboard.get("machines") or []
+        self.apply_machines(machines)
+        self.command_panel.set_data(machines, dashboard.get("commands") or [])
+
+    def apply_machines(self, machines):
+        machines = sorted(
+            (item for item in machines if isinstance(item, dict)),
+            key=lambda item: str(item.get("machine_name") or ""),
+        )
+        total_rows = max(EXPECTED_MACHINES, len(machines))
+        self.table.setRowCount(total_rows)
+        online = sum(bool(item.get("online")) for item in machines)
+        running = sum(item.get("state") == "running" and item.get("online") for item in machines)
+        self.summary.setText(
+            f"已接入 {len(machines)} / {EXPECTED_MACHINES} · 在线 {online} · 打印中 {running}"
+        )
+        self.message.setText("状态每 10 秒自动刷新；超过 90 秒没有心跳会显示离线。")
+        self.refresh_button.setEnabled(True)
+        for row in range(total_rows):
+            if row < len(machines):
+                self._fill_machine(row, machines[row])
+            else:
+                self._fill_pending(row)
+
+    def show_error(self, message):
+        self.refresh_button.setEnabled(True)
+        self.message.setText(f"读取失败：{message}；已保留上一次显示结果，可手动重试。")
+
+    def _fill_machine(self, row, machine):
+        values = (
+            machine.get("machine_name") or machine.get("machine_id") or "未命名机器",
+            machine.get("department") or "—",
+            status_text(machine),
+            machine.get("batch_name") or machine.get("batch_id") or "—",
+            "",
+            remaining_text(machine.get("remaining_seconds"), machine.get("state")),
+            heartbeat_text(machine.get("heartbeat_age_seconds")),
+        )
+        for column, value in enumerate(values):
+            self.table.setItem(row, column, QTableWidgetItem(str(value)))
+        progress = QProgressBar()
+        value = machine.get("progress_percent")
+        if value is None:
+            progress.setRange(0, 0)
+            progress.setFormat("未知")
+        else:
+            progress.setRange(0, 100)
+            progress.setValue(max(0, min(100, int(value))))
+            progress.setFormat("%p%")
+        self.table.setCellWidget(row, 4, progress)
+
+    def _fill_pending(self, row):
+        values = (f"待接入机位 {row + 1:02d}", "—", "待接入", "—", "", "—", "—")
+        for column, value in enumerate(values):
+            self.table.setItem(row, column, QTableWidgetItem(value))
+        self.table.removeCellWidget(row, 4)
+
+
+def install_machine_status_tab(window, tabs):
+    page = MachineStatusPage(window)
+    index = tabs.addTab(page, "打印机状态")
+    tabs.setTabToolTip(index, "查看 11 台 PrintExp 打印机的在线、批次、进度与剩余时间。")
+    tabs.currentChanged.connect(lambda current: page.set_active(current == index))
+    window.machine_status_page = page
+    window.machine_status_tab_index = index
+    return page

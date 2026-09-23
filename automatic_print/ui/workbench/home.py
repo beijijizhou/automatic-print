@@ -14,6 +14,7 @@ from ...batch_ui.dialog import AutomationDialog
 from ..developer_mode import build_developer_mode
 from ..departments import build_department_workspace
 from ..erp_download_entry import install_production_platform_tab
+from ..machine_status_board import install_machine_status_tab
 
 
 def build_home(window) -> None:
@@ -40,6 +41,7 @@ def build_home(window) -> None:
     window.department_root_tab_index = window.workspace_tabs.addTab(
         department_workspace, "部门工作区"
     )
+    install_machine_status_tab(window, window.workspace_tabs)
     install_production_platform_tab(window, window.workspace_tabs)
 
     layout = QVBoxLayout()

@@ -10,6 +10,7 @@ from threading import Event
 from time import monotonic
 
 from ..machine_status import report_machine
+from ..machine_commands import CommandDispatcher
 from .discovery import find_installation, process_running
 from .state import read_snapshot
 
@@ -73,7 +74,14 @@ class StatusProjector:
 
 
 class PrintExpMonitor:
-    def __init__(self, *, poll_seconds=2, heartbeat_seconds=60, send=report_machine):
+    def __init__(
+        self,
+        *,
+        poll_seconds=2,
+        heartbeat_seconds=60,
+        send=report_machine,
+        command_dispatcher=None,
+    ):
         self.poll_seconds = float(poll_seconds)
         self.heartbeat_seconds = float(heartbeat_seconds)
         self.send = send
@@ -83,9 +91,14 @@ class PrintExpMonitor:
         self.last_signature = None
         self.last_attempt = 0.0
         self.logger = _logger()
+        self.command_dispatcher = command_dispatcher or CommandDispatcher()
 
     def run(self):
         while not self.stop_event.is_set():
+            try:
+                self.command_dispatcher.tick()
+            except Exception as error:
+                self.logger.warning("Unable to poll remote commands: %s", error)
             self.run_once()
             self.stop_event.wait(self.poll_seconds)
 
