@@ -1,7 +1,7 @@
 import pytest
 
 from automatic_print.automation.api.printerexp.controls import (
-    NativePrintExpControls, clean_then_resume, pause_print,
+    ALL_HEADS, MEDIUM_CLEAN, NativePrintExpControls, clean_then_resume, pause_print,
 )
 
 
@@ -22,6 +22,7 @@ class Controls:
         self.statuses = ["正在打印..."]
         self.pause_clicks = 0
         self.clean_clicks = 0
+        self.clean_parameters = None
 
     def pause_caption(self):
         return self.caption
@@ -38,6 +39,9 @@ class Controls:
     def click_clean(self):
         self.clean_clicks += 1
         self.statuses = ["正在清洗...", "正在清洗...", "打印暂停"]
+
+    def configure_clean(self, head_group, strength):
+        self.clean_parameters = (head_group, strength)
 
 
 def test_native_control_sends_button_command_to_parent():
@@ -78,6 +82,7 @@ def test_clean_then_resume_keeps_existing_pause_and_waits_for_cleaning():
     assert result["resumed"] is True
     assert result["auto_paused"] is False
     assert controls.clean_clicks == 1
+    assert controls.clean_parameters == (ALL_HEADS, MEDIUM_CLEAN)
     assert controls.pause_clicks == 1
     assert controls.caption == "暂停"
 
@@ -89,6 +94,8 @@ def test_clean_then_resume_auto_pauses_before_cleaning():
     result = clean_then_resume(controls, clock=clock, wait=clock.wait)
 
     assert result["auto_paused"] is True
+    assert result["head_group"] == "all_8"
+    assert result["clean_strength"] == "medium"
     assert controls.clean_clicks == 1
     assert controls.pause_clicks == 2
     assert controls.caption == "暂停"
@@ -121,3 +128,37 @@ def test_clean_then_resume_does_not_double_toggle_when_printexp_auto_resumes():
 
     assert result["resumed_by_printexp"] is True
     assert controls.pause_clicks == 0
+
+
+def test_native_control_persists_all_heads_medium_before_cleaning():
+    values = {"GLOBAL_CLEAN_HEAD": 7, "GLOBAL_CLEAN_MODE": 1}
+
+    class Key:
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *_args):
+            return None
+
+    class Registry:
+        HKEY_CURRENT_USER = object()
+        KEY_QUERY_VALUE = 1
+        KEY_SET_VALUE = 2
+        REG_DWORD = 4
+
+        @staticmethod
+        def OpenKey(*_args):
+            return Key()
+
+        @staticmethod
+        def SetValueEx(_key, name, _reserved, _kind, value):
+            values[name] = value
+
+        @staticmethod
+        def QueryValueEx(_key, name):
+            return values[name], Registry.REG_DWORD
+
+    controls = object.__new__(NativePrintExpControls)
+    controls.configure_clean(registry=Registry)
+
+    assert values == {"GLOBAL_CLEAN_HEAD": ALL_HEADS, "GLOBAL_CLEAN_MODE": MEDIUM_CLEAN}
