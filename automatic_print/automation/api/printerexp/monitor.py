@@ -5,6 +5,7 @@ import os
 from logging.handlers import RotatingFileHandler
 from pathlib import Path
 from threading import Event
+from time import monotonic
 
 from ..machine_status import claim_control, report_machine
 from ..machine_commands import CommandDispatcher
