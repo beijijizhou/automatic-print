@@ -31,15 +31,25 @@ def execute_source_update(payload, progress):
 def schedule_monitor_restart():
     """Reload the elevated monitor after the command receipt is committed."""
     if os.name != "nt":
-        return
-    flags = getattr(subprocess, "CREATE_NO_WINDOW", 0)
+        return False
+    flags = (
+        getattr(subprocess, "CREATE_NO_WINDOW", 0)
+        | getattr(subprocess, "DETACHED_PROCESS", 0)
+        | getattr(subprocess, "CREATE_BREAKAWAY_FROM_JOB", 0)
+    )
     script = (
         "Start-Sleep -Seconds 2; "
         "schtasks.exe /End /TN AutomaticPrintMonitor 2>$null; "
         "schtasks.exe /Run /TN AutomaticPrintMonitor 2>$null"
     )
-    subprocess.Popen(
-        ["powershell.exe", "-NoProfile", "-WindowStyle", "Hidden", "-Command", script],
-        stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
-        creationflags=flags,
-    )
+    command = [
+        "powershell.exe", "-NoProfile", "-WindowStyle", "Hidden", "-Command", script,
+    ]
+    try:
+        subprocess.Popen(
+            command, stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL, creationflags=flags, close_fds=True,
+        )
+    except OSError:
+        return False
+    return True

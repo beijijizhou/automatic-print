@@ -171,6 +171,22 @@ def test_runner_reports_source_update_before_scheduling_restart(monkeypatch):
     assert events == ["apply", "receipt", "restart"]
 
 
+def test_monitor_restart_helper_breaks_away_from_the_task_job(monkeypatch):
+    if source_update.os.name != "nt":
+        return
+    captured = {}
+    monkeypatch.setattr(
+        source_update.subprocess, "Popen",
+        lambda command, **options: captured.update(command=command, **options),
+    )
+
+    assert source_update.schedule_monitor_restart() is True
+    flags = captured["creationflags"]
+    assert flags & source_update.subprocess.DETACHED_PROCESS
+    assert flags & source_update.subprocess.CREATE_BREAKAWAY_FROM_JOB
+    assert captured["close_fds"] is True
+
+
 def test_backend_allows_and_claims_source_update_commands():
     from pathlib import Path
     root = Path(__file__).parents[1]
