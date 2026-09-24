@@ -213,6 +213,10 @@ def test_silent_check_only_displays_available_code(tmp_path, monkeypatch):
     window.check_for_updates(True)
     wait_until(lambda: window.update_thread is None)
     assert '2026-09-14' in window.update_status_label.text()
+    assert not any(
+        item['key'] == 'app-update'
+        for item in window.activity_hub.snapshot()['activities']
+    )
     assert window.pending_source_update is None
     window.close()
 

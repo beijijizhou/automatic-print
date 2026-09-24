@@ -23,12 +23,12 @@ def build_home(window) -> None:
     window.version_label = QLabel(f"版本 {__version_display__}")
     window.version_label.setToolTip(f"内部版本：{__version__}")
 
-    footer = QHBoxLayout()
-    footer.addWidget(window.version_label)
-    footer.addStretch()
+    top_menu = QHBoxLayout()
+    top_menu.addWidget(window.version_label)
+    top_menu.addStretch()
     window.automation_home.settings_button.setMinimumHeight(36)
-    footer.addWidget(window.automation_home.settings_button)
-    build_developer_mode(window, footer)
+    top_menu.addWidget(window.automation_home.settings_button)
+    build_developer_mode(window, top_menu)
 
     department_navigation, department_workspace = build_department_workspace(
         window, window.automation_home
@@ -46,11 +46,11 @@ def build_home(window) -> None:
     window.update_status_panel.setParent(window)
     window.update_status_panel.hide()
     window.global_activity_center = GlobalActivityCenter(window.activity_hub, window)
+    layout.addLayout(top_menu)
     layout.addWidget(window.global_cutter_mode)
     layout.addWidget(department_navigation)
     layout.addWidget(window.global_activity_center)
     layout.addWidget(window.workspace_tabs)
-    layout.addLayout(footer)
     container = QWidget()
     container.setLayout(layout)
     window.setCentralWidget(container)

@@ -132,18 +132,18 @@ def bind_developer_tab_visibility(window, tabs, page, index):
     sync()
 
 
-def build_developer_mode(window, footer):
+def build_developer_mode(window, menu):
     window.developer_features_dialog = DeveloperFeatureListDialog(window)
     feature_list = QPushButton('查看开发者功能')
     feature_list.setToolTip('查看开发者模式额外开放的全部功能。')
     feature_list.clicked.connect(lambda: show_developer_features(window))
     window.developer_features_button = feature_list
-    footer.addWidget(feature_list)
+    menu.addWidget(feature_list)
     checkbox = QCheckBox('开发者模式')
     checkbox.setToolTip('显示算法开销、排版历史和尚未开放给普通用户的实验排版功能。')
     window.developer_mode_checkbox = checkbox
     checkbox.setChecked(window.preferences.value('developer/enabled', False, bool))
-    footer.addWidget(checkbox)
+    menu.addWidget(checkbox)
 
     def changed(enabled):
         if not enabled and developer_task_active(window):
