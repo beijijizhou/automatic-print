@@ -2,6 +2,8 @@
 
 from pathlib import Path
 
+from ..state_machine import inspect_printer_state
+
 
 PRINT_CONTROL_ID = 4
 PAUSE_CONTROL_ID = 11027
@@ -49,16 +51,14 @@ class NativePrintExpControls:
 
     def operation_state(self, task_loaded=False):
         caption = self.pause_caption()
-        if "清洗" in self.status_text():
-            return "cleaning"
-        if self.pause_enabled():
-            if caption == "继续":
-                return "paused"
-            if caption == "暂停":
-                return "printing"
-        if self.print_enabled() and not self.pause_enabled():
-            return "ready" if task_loaded else "idle"
-        return "unknown"
+        pause_enabled = self.pause_enabled()
+        return inspect_printer_state(
+            status_text=self.status_text(),
+            pause_enabled=pause_enabled,
+            pause_caption=caption,
+            print_enabled=self.print_enabled(),
+            task_loaded=task_loaded,
+        )
 
     def click_print(self):
         self._command(PRINT_CONTROL_ID)

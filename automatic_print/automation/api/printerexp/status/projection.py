@@ -4,6 +4,8 @@ from collections import deque
 from datetime import datetime, timezone
 from time import monotonic
 
+from ..state_machine import IDLE, PRINTING, UNKNOWN, project_printer_state
+
 
 class StatusProjector:
     def __init__(self):
@@ -24,7 +26,7 @@ class StatusProjector:
             if loaded_task:
                 return _loaded_receipt(loaded_task)
             return _base("idle", "PrintExp在线，等待任务", True, "idle")
-        printer_state = printer_state or "printing"
+        printer_state = printer_state or PRINTING
         if (
             loaded_task
             and float(loaded_task.get("loaded_at") or 0) >= snapshot.modified_at
@@ -38,11 +40,11 @@ class StatusProjector:
             self.samples.clear()
             self.started_at = None
             state, phase, remaining = "idle", "PrintExp在线待机", None
-            printer_state = "idle"
+            printer_state = IDLE
         else:
             self._sample(now, snapshot.progress)
-            state, phase = _projected_state(printer_state)
-            remaining = self._remaining(snapshot.progress) if printer_state == "printing" else None
+            state, phase = project_printer_state(printer_state)
+            remaining = self._remaining(snapshot.progress) if printer_state == PRINTING else None
         return {
             **_base(state, phase, True),
             "progress_percent": round(snapshot.progress),
@@ -51,7 +53,7 @@ class StatusProjector:
             "batch_info": {
                 "provider": "PrintExp", "task_file": snapshot.task_file or None,
                 "task_folder": snapshot.task_folder or None,
-                "printer_state": printer_state or "unknown",
+                "printer_state": printer_state or UNKNOWN,
                 "task_name_verified": bool(snapshot.task_file),
                 "task_source": "PrintInfo.ini",
             },
@@ -104,13 +106,3 @@ def _loaded_receipt(receipt):
             "verification": receipt.get("verification"),
         },
     }
-
-
-def _projected_state(printer_state):
-    return {
-        "ready": ("idle", "PrintExp待打印"),
-        "printing": ("running", "PrintExp打印中"),
-        "paused": ("running", "PrintExp已暂停"),
-        "cleaning": ("running", "PrintExp清洗中"),
-        "idle": ("idle", "PrintExp在线待机"),
-    }.get(printer_state, ("failed", "PrintExp状态未确认"))

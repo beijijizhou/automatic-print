@@ -11,6 +11,15 @@ const FEEDBACK_TIMEOUT_SECONDS = 20;
 const COMMAND_STATES = new Set(["running", "succeeded", "failed"]);
 const COMMAND_PLATFORMS = new Set(["Haloo", "莆田", "隆丰", "S2B"]);
 const COMMAND_ACTIONS = new Set(["download_layout", "start_print", "pause_print", "clean_resume"]);
+const PRINTER_TO_MACHINE_STATE: Record<string, string> = {
+  idle: "idle", ready: "idle", printing: "running", paused: "running",
+  cleaning: "running", unknown: "failed",
+};
+const PRINTER_CONTROL_SOURCES: Record<string, Set<string>> = {
+  start_print: new Set(["ready", "paused"]),
+  pause_print: new Set(["printing"]),
+  clean_resume: new Set(["printing", "paused"]),
+};
 
 class ClientError extends Error {
   constructor(message: string, public status: number) { super(message); }
@@ -50,6 +59,8 @@ async function report(db: ReturnType<typeof createClient>, input: Record<string,
   const department = text(input.department || "DTF", "department", 3).toUpperCase();
   if (!DEPARTMENTS.has(department)) throw new ClientError("Invalid department", 400);
   const progress = optionalInteger(input.progress_percent, 0, 100);
+  const batchInfo = object(input.batch_info);
+  validateReportedPrinterState(state, batchInfo);
   const remaining = optionalInteger(input.remaining_seconds, 0, 31_536_000);
   const scope = input.estimate_scope == null ? null : String(input.estimate_scope);
   if (scope !== null && scope !== "phase" && scope !== "batch") {
@@ -65,7 +76,7 @@ async function report(db: ReturnType<typeof createClient>, input: Record<string,
     progress_percent: progress,
     batch_id: optionalText(input.batch_id, 160),
     batch_name: optionalText(input.batch_name, 240),
-    batch_info: object(input.batch_info),
+    batch_info: batchInfo,
     remaining_seconds: remaining,
     estimate_scope: remaining === null ? null : scope,
     estimated_finish_at: remaining === null
@@ -169,16 +180,12 @@ async function sendControl(db: ReturnType<typeof createClient>, input: Record<st
   const requestedPayload = input.payload && typeof input.payload === "object"
     ? input.payload as Record<string, unknown> : {};
   const expectedBatch = String(requestedPayload.expected_batch_name || "").trim();
+  const printerState = validatePrinterControlState(machine, action);
   if (action === "start_print") {
-    const printerState = String(
-      (machine.batch_info as Record<string, unknown> | null)?.printer_state || "",
-    );
     const machineProgress = machine.progress_percent == null
       ? Number.NaN : Number(machine.progress_percent);
-    const ready = machine.state === "idle" && printerState === "ready" &&
-      machineProgress === 0;
-    const paused = machine.state === "running" && printerState === "paused" &&
-      machineProgress >= 0 && machineProgress < 100;
+    const ready = printerState === "ready" && machineProgress === 0;
+    const paused = printerState === "paused" && machineProgress >= 0 && machineProgress < 100;
     if (!ready && !paused) {
       throw new ClientError("Target PrintExp is not ready or paused", 409);
     }
@@ -230,6 +237,27 @@ async function claimCommand(db: ReturnType<typeof createClient>, input: Record<s
   if (error) throw error;
   if (data) await markFeedback(db, id);
   return { command: data || null };
+}
+
+function validateReportedPrinterState(state: string, batchInfo: Record<string, unknown>) {
+  if (batchInfo.printer_state == null || batchInfo.printer_state === "") return;
+  const printerState = String(batchInfo.printer_state);
+  const expected = PRINTER_TO_MACHINE_STATE[printerState];
+  if (!expected) throw new ClientError("Invalid PrintExp printer_state", 400);
+  if (state !== expected) throw new ClientError("PrintExp state projection mismatch", 409);
+}
+
+function validatePrinterControlState(machine: Record<string, unknown>, action: string) {
+  const batchInfo = machine.batch_info && typeof machine.batch_info === "object"
+    ? machine.batch_info as Record<string, unknown> : {};
+  const printerState = String(batchInfo.printer_state || "");
+  if (!PRINTER_CONTROL_SOURCES[action]?.has(printerState)) {
+    throw new ClientError(`PrintExp state ${printerState || "unknown"} rejects ${action}`, 409);
+  }
+  if (machine.state !== PRINTER_TO_MACHINE_STATE[printerState]) {
+    throw new ClientError("Stored machine and PrintExp states are inconsistent", 409);
+  }
+  return printerState;
 }
 
 async function claimControl(db: ReturnType<typeof createClient>, input: Record<string, unknown>) {

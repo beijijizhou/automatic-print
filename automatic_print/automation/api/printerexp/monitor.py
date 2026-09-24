@@ -13,6 +13,7 @@ from .controls import NativePrintExpControls
 from .discovery import find_installation, process_running, running_installations
 from .status.loaded_task import read_loaded_task
 from .state import read_snapshot
+from .state_machine import IDLE, UNKNOWN
 from .status.projection import StatusProjector
 
 
@@ -114,7 +115,7 @@ def _printer_state(snapshot, online, logger, loaded_task=None):
     if not online:
         return None
     if snapshot is not None and snapshot.progress >= 100:
-        return "idle"
+        return IDLE
     loaded = bool(loaded_task or (snapshot and snapshot.progress == 0 and (
         snapshot.task_file or snapshot.task_folder
     )))
@@ -122,7 +123,7 @@ def _printer_state(snapshot, online, logger, loaded_task=None):
         return NativePrintExpControls().operation_state(task_loaded=loaded)
     except Exception as error:
         logger.warning("Unable to inspect PrintExp controls: %s", error)
-        return "unknown"
+        return UNKNOWN
 
 
 def _status_modified_at(installation):

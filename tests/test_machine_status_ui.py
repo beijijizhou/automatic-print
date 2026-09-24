@@ -104,6 +104,7 @@ def test_board_only_enables_start_for_exact_ready_batch():
     page = MachineStatusPage(fetch=lambda: [])
     page.apply_dashboard({"machines": [{
         "machine_id": "ready-4", "machine_name": "M4", "state": "idle",
+        "progress_percent": 0,
         "batch_name": "tangle.prn", "batch_info": {
             "printer_state": "ready", "task_name_verified": True,
         },

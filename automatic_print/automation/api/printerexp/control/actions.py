@@ -6,6 +6,9 @@ from time import monotonic, sleep
 
 from ..discovery import running_installations
 from ..state import read_snapshot
+from ..state_machine import (
+    PAUSED, PAUSE_PRINT, PRINTING, READY, START_PRINT, require_control,
+)
 from .native import ALL_HEADS, MEDIUM_CLEAN, NativePrintExpControls
 
 
@@ -26,22 +29,20 @@ def start_print(
     if _name(controls.task_name()) != expected:
         raise RuntimeError("PrintExp 界面当前装载的 PRN 与待启动批次不一致。")
     state = controls.operation_state(task_loaded=True)
-    if state == "ready":
-        if snapshot.progress != 0:
-            raise RuntimeError("PrintExp 待打印任务不是 0%，未发送开始指令。")
+    require_control(
+        START_PRINT, state, progress=snapshot.progress, task_name_verified=True,
+        batch_name=expected_batch_name,
+    )
+    if state == READY:
         _report(progress, f"已确认待打印批次 {expected_batch_name}；正在开始物理打印")
         controls.click_print()
         resumed = False
-    elif state == "paused":
-        if snapshot.progress >= 100:
-            raise RuntimeError("PrintExp 当前任务已完成，未发送继续指令。")
+    elif state == PAUSED:
         _report(progress, f"已确认暂停批次 {expected_batch_name}；正在继续打印")
         controls.click_pause()
         resumed = True
-    else:
-        raise RuntimeError("PrintExp 当前不是待打印或已暂停状态，未发送指令。")
     _wait_until(
-        lambda: controls.operation_state(task_loaded=True) == "printing", timeout,
+        lambda: controls.operation_state(task_loaded=True) == PRINTING, timeout,
         "PrintExp 未在限定时间内进入打印状态", clock, wait,
     )
     verb = "继续" if resumed else "开始"
@@ -52,14 +53,14 @@ def start_print(
 
 def pause_print(controls=None, *, progress=None, timeout=10, clock=monotonic, wait=sleep):
     controls = controls or NativePrintExpControls()
-    caption = controls.pause_caption()
-    if caption == "继续":
+    state = controls.operation_state(task_loaded=True)
+    if state == PAUSED:
         _report(progress, "PrintExp 已经暂停，无需重复操作")
         return {"state": "paused", "already_paused": True}
+    require_control(PAUSE_PRINT, state)
+    caption = controls.pause_caption()
     if caption != "暂停":
         raise RuntimeError(f"无法确认 PrintExp 暂停按钮，当前显示：{caption or '空白'}")
-    if "打印" not in controls.status_text():
-        raise RuntimeError("PrintExp 当前没有可确认的正在打印任务，未发送暂停指令。")
     _report(progress, "正在暂停 PrintExp 当前打印")
     controls.click_pause()
     _wait_until(lambda: controls.pause_caption() == "继续", timeout,

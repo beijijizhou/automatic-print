@@ -2,6 +2,8 @@
 
 import re
 
+from ..automation.api.printerexp.state_machine import printer_state_label
+
 
 def status_text(machine):
     if machine.get("identity_conflict"):
@@ -19,10 +21,7 @@ def status_text(machine):
             machine.get("batch_info") or {}
         ).get("task_name_verified") is False:
             return "待打印（待复核）"
-        return {
-            "idle": "空闲", "ready": "待打印", "printing": "打印中",
-            "paused": "已暂停", "cleaning": "清洗中", "unknown": "状态未确认",
-        }.get(printer_state, "状态未确认")
+        return printer_state_label(printer_state)
     return {
         "running": "打印中",
         "idle": "空闲",

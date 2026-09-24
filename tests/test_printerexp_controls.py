@@ -19,14 +19,14 @@ class Clock:
 
 
 class Controls:
-    def __init__(self, caption="暂停"):
+    def __init__(self, caption="暂停", operation=None):
         self.caption = caption
         self.statuses = ["正在打印..."]
         self.pause_clicks = 0
         self.clean_clicks = 0
         self.clean_parameters = None
         self.print_clicks = 0
-        self.operation = "ready"
+        self.operation = operation or ("paused" if caption == "继续" else "printing")
 
     def pause_caption(self):
         return self.caption
@@ -120,8 +120,9 @@ def test_clean_then_resume_auto_pauses_before_cleaning():
 def test_clean_then_resume_refuses_when_no_active_print_exists():
     controls = Controls(caption="暂停")
     controls.statuses = ["空闲"]
+    controls.operation = "unknown"
 
-    with pytest.raises(RuntimeError, match="没有可确认的正在打印任务"):
+    with pytest.raises(RuntimeError, match="不是正在打印"):
         clean_then_resume(controls)
 
     assert controls.clean_clicks == 0
@@ -181,7 +182,7 @@ def test_native_control_persists_all_heads_medium_before_cleaning():
 
 
 def test_start_print_rechecks_zero_progress_and_exact_loaded_batch():
-    controls = Controls()
+    controls = Controls(operation="ready")
     snapshot = PrintExpSnapshot("job", 0, "tangle.prn", "batch", 1)
 
     result = start_print("tangle.prn", controls, snapshot=snapshot)
@@ -194,7 +195,7 @@ def test_start_print_rechecks_zero_progress_and_exact_loaded_batch():
 
 @pytest.mark.parametrize("progress,name", [(1, "tangle.prn"), (0, "other.prn")])
 def test_start_print_refuses_stale_progress_or_batch(progress, name):
-    controls = Controls()
+    controls = Controls(operation="ready")
     snapshot = PrintExpSnapshot("job", progress, "tangle.prn", "batch", 1)
 
     with pytest.raises(RuntimeError):

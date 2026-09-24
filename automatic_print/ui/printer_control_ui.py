@@ -6,6 +6,10 @@ from PySide6.QtWidgets import (
 )
 
 from ..automation.api.machine_status.commands import submit_printer_action
+from ..automation.api.printerexp.state_machine import (
+    CLEAN_RESUME, PAUSED, PAUSE_PRINT, START_PRINT, control_allowed,
+    start_button_text,
+)
 from .machine_command_ui import CommandSubmitter
 from .machine_status_format import actionable_machines, machine_printer_state
 
@@ -69,7 +73,7 @@ class PrinterControlPanel(QGroupBox):
             return
         batch_name = str(machine.get("batch_name") or "").strip()
         if action == "start_print":
-            paused = machine_printer_state(machine) == "paused"
+            paused = machine_printer_state(machine) == PAUSED
             title = "确认继续打印" if paused else "确认开始打印"
             detail = (
                 f"目标打印机：{target_name}\n当前批次：{batch_name}\n\n"
@@ -117,11 +121,22 @@ class PrinterControlPanel(QGroupBox):
         machine = self._selected_machine()
         state = machine_printer_state(machine or {})
         available = machine is not None and not self.busy
-        self.start_button.setText("继续打印" if state == "paused" else "开始打印")
+        self.start_button.setText(start_button_text(state))
         self.target.setEnabled(bool(self.machines) and not self.busy)
+        facts = {
+            "progress": machine.get("progress_percent") if machine else None,
+            "task_name_verified": (
+                (machine.get("batch_info") or {}).get("task_name_verified") is True
+                if machine else False
+            ),
+            "batch_name": machine.get("batch_name") if machine else "",
+        }
         self.start_button.setEnabled(
-            available and state in {"ready", "paused"} and bool(machine.get("batch_name"))
-            and (machine.get("batch_info") or {}).get("task_name_verified") is True
+            available and control_allowed(START_PRINT, state, **facts)
         )
-        self.pause_button.setEnabled(available and state == "printing")
-        self.clean_button.setEnabled(available and state in {"printing", "paused"})
+        self.pause_button.setEnabled(
+            available and control_allowed(PAUSE_PRINT, state, **facts)
+        )
+        self.clean_button.setEnabled(
+            available and control_allowed(CLEAN_RESUME, state, **facts)
+        )
