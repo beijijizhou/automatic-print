@@ -32,6 +32,13 @@ def update_progress(window, stage, current, total, filename) -> None:
         window.progress.setFormat(f"{percent}% — {stage}")
     kind = "当前方案" if stage == "膜规格比较" else "当前文件"
     window.current_file.setText(f"{kind}：{filename}")
+    window.activity_hub.update(
+        "dtf-layout", title="DTF 排版", current_object=filename,
+        current=percent if total else None, total=100 if total else None,
+        progress_text=f"{percent}% — {stage}" if total else stage,
+        new_step=stage != getattr(window, "_global_activity_stage", ""),
+    )
+    window._global_activity_stage = stage
     refresh_timing(window)
 
 

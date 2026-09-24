@@ -6,6 +6,7 @@ from PySide6.QtWidgets import QTabWidget, QWidget
 from ..automation.providers.registry import ERP_PLATFORMS
 from ..layout_engine import LayoutSettings
 from ..ui.worker_bridge import BatchWorkerBridge
+from ..ui.activity_hub import ActivityHub
 from ..ui.layout_values import settings_from_window
 from .platform.actions import BatchActionsMixin
 from .platform.generation import GenerationActionsMixin
@@ -54,6 +55,9 @@ class AutomationDialog(
         self.resize(940, 640)
         self.thread = None
         self.worker = None
+        self.activity_key = f"platform-workflow:{id(self)}"
+        if not hasattr(self.window(), "activity_hub"):
+            self.activity_hub = ActivityHub(self)
         self.worker_bridge = BatchWorkerBridge(self)
         self.records = []
         self.pending_batch_plan = None

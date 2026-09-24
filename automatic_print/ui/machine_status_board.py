@@ -24,6 +24,7 @@ from .automation_toggle import AutomationToggle
 from .printer_control_ui import PrinterControlPanel
 from .machine_status_format import feedback_text, machine_slots, remaining_text, status_text
 from .machine_availability import MachineAvailabilityControl
+from .machine_status_layout import build_machine_status_layout
 
 
 EXPECTED_MACHINES = 11
@@ -99,6 +100,8 @@ class MachineStatusPage(QWidget):
         self.table.setEditTriggers(QAbstractItemView.NoEditTriggers)
         self.table.setSelectionBehavior(QAbstractItemView.SelectRows)
         self.table.verticalHeader().setVisible(False)
+        self.table.verticalHeader().setDefaultSectionSize(38)
+        self.table.setMinimumHeight(420)
         header_view = self.table.horizontalHeader()
         header_view.setSectionResizeMode(QHeaderView.ResizeToContents)
         header_view.setSectionResizeMode(3, QHeaderView.Stretch)
@@ -113,15 +116,7 @@ class MachineStatusPage(QWidget):
         self.availability_control = MachineAvailabilityControl(self)
         self.availability_control.changed.connect(self.refresh)
 
-        layout = QVBoxLayout(self)
-        layout.addWidget(title)
-        layout.addWidget(description)
-        layout.addWidget(self.automation_toggle)
-        layout.addWidget(self.availability_control)
-        layout.addWidget(overview)
-        layout.addWidget(self.table, 1)
-        layout.addWidget(self.control_panel)
-        layout.addWidget(self.command_panel)
+        build_machine_status_layout(self, title, description, overview)
 
     def set_active(self, active):
         self._active = bool(active)
@@ -225,7 +220,8 @@ def install_machine_status_tab(window, tabs):
     page = MachineStatusPage(window)
     index = tabs.addTab(page, "打印机状态")
     tabs.setTabToolTip(index, "查看 11 台 PrintExp 打印机的在线、批次、进度与剩余时间。")
-    tabs.currentChanged.connect(lambda current: page.set_active(current == index))
     window.machine_status_page = page
     window.machine_status_tab_index = index
+    tabs.currentChanged.connect(lambda current: page.set_active(current == index))
+    page.set_active(tabs.currentIndex() == index)
     return page

@@ -37,6 +37,12 @@ def start_generation(window, *, preview_only=False) -> None:
     window.preferences.setValue("output_location", str(base))
     window.active_staging_output = output
     window.job_path.setText(str(base / "切膜机文件"))
+    window.activity_hub.begin(
+        "dtf-layout", "DTF 排版",
+        "正在开始：后台扫描图片文件名，再读取尺寸与排版…",
+        stop=window.stop_generation, current_object=source.name,
+    )
+    window._global_activity_stage = ""
     window.status.setText("正在开始：后台扫描图片文件名，再读取尺寸与排版…")
     window.current_file.setText("当前文件：—")
     window.progress.setValue(0)

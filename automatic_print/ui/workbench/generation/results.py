@@ -61,6 +61,9 @@ def generation_finished(window, output, result) -> None:
         window.run_log.appendPlainText("S2B订单颜色提示：\n" + warning)
     window.run_log.appendPlainText(saving)
     window.status.setText(f"{window.status.text()} · {saving}")
+    window.activity_hub.finish(
+        "dtf-layout", window.status.text(), current_object=result["filename"],
+    )
     _set_idle(window)
     if _confirm_result(window, output, summary, warning):
         QDesktopServices.openUrl(QUrl.fromLocalFile(str(Path(output).resolve())))
@@ -72,6 +75,7 @@ def _show_preview_result(window) -> None:
     window.progress.setValue(100)
     window.progress.setFormat("预览完成")
     window.status.setText("整批预览完成，未生成最终文件；尚未进行输出像素验收。")
+    window.activity_hub.finish("dtf-layout", window.status.text())
     window.run_log.appendPlainText("仅预览完成：未生成打印文件。")
     window.job_path.clear()
     _set_idle(window)
@@ -108,6 +112,7 @@ def generation_failed(window, message) -> None:
     window.progress.setRange(0, 100)
     window.progress.setFormat("生成失败")
     window.status.setText("生成失败；请查看报错诊断区。")
+    window.activity_hub.finish("dtf-layout", window.status.text(), state="failed")
     window.run_log.appendPlainText(
         "生成失败；完整订单、参数及限制见独立报错诊断区。"
     )
@@ -121,6 +126,7 @@ def generation_cancelled(window) -> None:
     window.progress.setRange(0, 100)
     window.progress.setFormat("已停止")
     window.status.setText("当前排版已安全停止，已经完成的文件会保留。")
+    window.activity_hub.finish("dtf-layout", window.status.text(), state="stopped")
     window.run_log.appendPlainText("当前排版已安全停止。")
     _set_idle(window)
 

@@ -26,6 +26,8 @@ class UvWorkspace(QWidget):
     def __init__(self, window):
         super().__init__(window)
         self.host_window = window
+        self.activity_key = "uv-generation"
+        self._activity_stage = ""
         self.controller = UvGenerationController(self)
         self.folder = QLineEdit(
             window.preferences.value("uv/input_folder", "", str)
@@ -75,8 +77,6 @@ class UvWorkspace(QWidget):
         layout.addLayout(folder_row)
         layout.addWidget(facts)
         layout.addWidget(self.generate_button)
-        layout.addWidget(self.progress)
-        layout.addWidget(self.status)
         layout.addStretch()
 
         self.controller.progress.connect(self.show_progress)
@@ -115,12 +115,20 @@ class UvWorkspace(QWidget):
         folder = Path(self.folder.text().strip())
         if not folder.is_dir():
             self.status.setText("UV 批次文件夹不存在；请选择有效文件夹后重新生成。")
+            self.host_window.activity_hub.finish(
+                self.activity_key, self.status.text(), state="failed",
+            )
             return
         if self.controller.start(folder, self.material.currentData()):
             self.generate_button.setEnabled(False)
             self.material.setEnabled(False)
             self.progress.setRange(0, 0)
             self.status.setText(f"正在检查 UV 批次：{folder}")
+            self._activity_stage = ""
+            self.host_window.activity_hub.begin(
+                self.activity_key, "UV 合成", self.status.text(),
+                current_object=folder.name,
+            )
 
     def show_progress(self, stage, current, total, name):
         if total:
@@ -130,6 +138,13 @@ class UvWorkspace(QWidget):
         else:
             self.progress.setRange(0, 0)
         self.status.setText(f"{stage}：{name}")
+        self.host_window.activity_hub.update(
+            self.activity_key, title="UV 合成", message=self.status.text(),
+            current_object=name, current=current if total else None,
+            total=total or None, progress_text=f"{stage} · {current}/{total}" if total else stage,
+            new_step=stage != self._activity_stage,
+        )
+        self._activity_stage = stage
 
     def completed(self, result):
         self.generate_button.setEnabled(True)
@@ -143,6 +158,10 @@ class UvWorkspace(QWidget):
             f"{result['dpi']:g} DPI\n右下起排，同行向左，满行后向上\n"
             f"输出：{result['output']}"
         )
+        self.host_window.activity_hub.finish(
+            self.activity_key, self.status.text(),
+            current_object=result["output"],
+        )
 
     def failed(self, message):
         self.generate_button.setEnabled(True)
@@ -150,3 +169,6 @@ class UvWorkspace(QWidget):
         self.progress.setRange(0, 1)
         self.progress.setValue(0)
         self.status.setText(f"UV 合成未生成可打印文件：\n{message}")
+        self.host_window.activity_hub.finish(
+            self.activity_key, self.status.text(), state="failed",
+        )

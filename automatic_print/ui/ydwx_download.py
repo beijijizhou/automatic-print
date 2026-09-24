@@ -5,12 +5,11 @@ from math import ceil
 
 from PySide6.QtCore import QObject, QThread, Qt, Signal, Slot
 from PySide6.QtWidgets import (
-    QCheckBox, QFileDialog, QHeaderView, QHBoxLayout, QLabel, QLineEdit, QPlainTextEdit,
-    QPushButton, QTableWidget, QTableWidgetItem, QVBoxLayout, QWidget,
+    QCheckBox, QFileDialog, QHeaderView, QHBoxLayout, QLabel, QLineEdit,
+    QPlainTextEdit, QPushButton, QTableWidget, QTableWidgetItem, QVBoxLayout, QWidget,
 )
 
 from ..layout_engine.uv import identify_uv_batch_material, uv_sheet_capacity
-
 
 class YdwxWorker(QObject):
     progress = Signal(str)
@@ -35,24 +34,21 @@ class YdwxWorker(QObject):
         except Exception as error:
             self.failed.emit(str(error))
 
-
 class YdwxDownloadPage(QWidget):
     idle = Signal()
 
     def __init__(self, window):
         super().__init__(window)
         self.host_window = window
+        self.activity_key = "ydwx-download"
         self.thread = self.worker = None
         self.records = []
-        self.output = QLineEdit(
-            window.preferences.value("uv/ydwx_output", "", str)
-        )
+        self.output = QLineEdit(window.preferences.value("uv/ydwx_output", "", str))
         browse = QPushButton("选择保存位置…")
         browse.clicked.connect(self.choose_output)
         output_row = QHBoxLayout()
         output_row.addWidget(self.output, 1)
         output_row.addWidget(browse)
-
         self.refresh = QPushButton("读取生产批次")
         self.refresh.clicked.connect(self.load_batches)
         self.download = QPushButton("下载并按 UV 材质分组")
@@ -67,14 +63,15 @@ class YdwxDownloadPage(QWidget):
             ["选择", "日期", "批次名称", "批次号", "稿件已下载/总数", "产品件数",
              "识别材质", "每画布/预计组数"]
         )
-        self.table.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeToContents)
+        self.table.horizontalHeader().setSectionResizeMode(
+            QHeaderView.ResizeToContents
+        )
         self.table.horizontalHeader().setSectionResizeMode(2, QHeaderView.Stretch)
         self.status = QLabel("通过共享登录服务读取批次；勾选具体批次才会下载。")
         self.status.setWordWrap(True)
         self.status.setTextInteractionFlags(Qt.TextSelectableByMouse)
         self.log = QPlainTextEdit()
         self.log.setReadOnly(True)
-
         layout = QVBoxLayout(self)
         intro = QLabel(
             "当前以 UV 为主；亿点万象也有 DTF 订单。接口未提供可靠的部门字段，"
@@ -88,7 +85,6 @@ class YdwxDownloadPage(QWidget):
         layout.addWidget(QLabel("下载保存位置"))
         layout.addLayout(output_row)
         layout.addLayout(actions)
-        layout.addWidget(self.status)
         layout.addWidget(self.table, 1)
         layout.addWidget(self.log)
 
@@ -113,10 +109,14 @@ class YdwxDownloadPage(QWidget):
         ]
         if not selected:
             self.status.setText("请先勾选要下载的批次名称。")
+            self.host_window.activity_hub.finish(
+                self.activity_key, self.status.text(), state="failed")
             return
         output = Path(self.output.text().strip())
         if not output.is_dir():
             self.status.setText("保存位置不存在；请选择有效文件夹。")
+            self.host_window.activity_hub.finish(
+                self.activity_key, self.status.text(), state="failed")
             return
         self.host_window.preferences.setValue("uv/ydwx_output", str(output))
         self._start("download", selected, output)
@@ -137,13 +137,19 @@ class YdwxDownloadPage(QWidget):
         self.thread.finished.connect(self._clear)
         self.refresh.setEnabled(False)
         self.download.setEnabled(False)
-        self.status.setText("正在读取批次…" if action == "list" else "正在下载选中批次…")
+        text = "正在读取批次…" if action == "list" else "正在下载选中批次…"
+        self.status.setText(text)
+        self.host_window.activity_hub.begin(
+            self.activity_key, "亿点万象批次",
+            self.status.text(), current_object=str(output or "批次列表"))
         self.thread.start()
 
     @Slot(str)
     def _progress(self, message):
         self.status.setText(message)
         self.log.appendPlainText(message)
+        self.host_window.activity_hub.update(
+            self.activity_key, message=message, current_object=message, new_step=True)
 
     @Slot(object)
     def _finished(self, result):
@@ -175,11 +181,14 @@ class YdwxDownloadPage(QWidget):
             )
             for name, reason in failures:
                 self.log.appendPlainText(f"{name}：{reason}")
+        self.host_window.activity_hub.finish(self.activity_key, self.status.text())
 
     @Slot(str)
     def _failed(self, message):
         self.status.setText(f"本次操作未完成：{message}")
         self.log.appendPlainText(message)
+        self.host_window.activity_hub.finish(
+            self.activity_key, self.status.text(), state="failed")
 
     @Slot()
     def _clear(self):

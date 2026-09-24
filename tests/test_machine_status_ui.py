@@ -40,6 +40,8 @@ def test_board_keeps_eleven_slots_and_renders_live_machine():
     assert page.table.item(3, 6).text() == "7秒前"
     assert isinstance(page.table.cellWidget(3, 4), QProgressBar)
     assert page.table.cellWidget(3, 4).value() == 42
+    assert page.sections.currentWidget() is page.status_section
+    assert page.table.minimumHeight() == 420
     assert page.command_panel.submit_button.isEnabled()
     assert not page.control_panel.start_button.isEnabled()
     assert page.control_panel.pause_button.isEnabled()

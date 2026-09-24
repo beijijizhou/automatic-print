@@ -16,6 +16,7 @@ from ..departments import build_department_workspace
 from ..erp_download_entry import install_production_platform_tab
 from ..machine_status_board import install_machine_status_tab
 from ..cutter_mode_banner import CutterModeBanner
+from ..global_activity_center import GlobalActivityCenter
 
 
 def build_home(window) -> None:
@@ -47,9 +48,13 @@ def build_home(window) -> None:
 
     layout = QVBoxLayout()
     window.global_cutter_mode = CutterModeBanner(window)
+    window.update_status_panel = window.build_update_status()
+    window.update_status_panel.setParent(window)
+    window.update_status_panel.hide()
+    window.global_activity_center = GlobalActivityCenter(window.activity_hub, window)
     layout.addWidget(window.global_cutter_mode)
     layout.addWidget(department_navigation)
-    layout.addWidget(window.build_update_status())
+    layout.addWidget(window.global_activity_center)
     layout.addWidget(window.workspace_tabs)
     layout.addLayout(footer)
     container = QWidget()

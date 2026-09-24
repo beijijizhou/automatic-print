@@ -58,7 +58,7 @@ def test_current_automation_step_shows_step_and_elapsed_time():
     ui._task_started_at = 90
 
     with patch(
-        "automatic_print.batch_ui.task.actions.monotonic",
+        "automatic_print.ui.batch_activity.monotonic",
         side_effect=(100, 106),
     ):
         ui.show_progress_message("正在等待生产批次表格加载…")

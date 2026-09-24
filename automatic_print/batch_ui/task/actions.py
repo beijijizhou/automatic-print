@@ -1,9 +1,10 @@
-import re
-from time import monotonic
 from PySide6.QtCore import QThread, Qt, Slot, QTimer
 from PySide6.QtWidgets import QMessageBox
 
 from .worker import AutomationWorker
+from ...ui.batch_activity import (
+    begin_activity, finish_activity, finish_running_activity, update_activity,
+)
 from ...ui.thread_lifecycle import (
     defer_finished_thread_cleanup,
     discard_stopped_thread,
@@ -16,16 +17,10 @@ class ThreadActionsMixin:
             if not discard_stopped_thread(self, "thread", "worker"):
                 return
         self._set_actions_enabled(False)
-        self.loading_bar.setRange(0, 0)
-        self._task_started_at = monotonic()
-        self._task_step_started_at = self._task_started_at
-        self._task_step_number = 0
-        self._task_step_text = ""
-        self._ensure_task_status_timer()
+        begin_activity(self, worker)
         self.show_progress_message(
             f"正在启动 {worker.platform_name} · {worker.task_title}…"
         )
-        self.loading_panel.show()
         self.stop_button.setEnabled(True)
         self.thread = QThread(self)
         self.worker = worker
@@ -71,44 +66,7 @@ class ThreadActionsMixin:
 
     @Slot(str)
     def show_progress_message(self, message: str) -> None:
-        self._task_step_number = getattr(self, "_task_step_number", 0) + 1
-        self._task_step_text = message
-        self._task_step_started_at = monotonic()
-        self._render_task_status()
-        step = re.search(r"\[(\d+)/(\d+)\]", message)
-        if step:
-            current, total = map(int, step.groups())
-            self.loading_bar.setRange(0, total)
-            self.loading_bar.setValue(current)
-            self.loading_bar.setTextVisible(True)
-            self.loading_bar.setFormat(f"{current} / {total}")
-        else:
-            self.loading_bar.setRange(0, 0)
-            self.loading_bar.setTextVisible(False)
-
-    def _ensure_task_status_timer(self) -> None:
-        timer = getattr(self, "_task_status_timer", None)
-        if timer is None:
-            timer = QTimer(self)
-            timer.setInterval(1_000)
-            timer.timeout.connect(self._render_task_status)
-            self._task_status_timer = timer
-        timer.start()
-
-    def _render_task_status(self) -> None:
-        message = getattr(self, "_task_step_text", "")
-        if not message:
-            return
-        number = getattr(self, "_task_step_number", 0)
-        now = monotonic()
-        step_seconds = int(now - getattr(self, "_task_step_started_at", now))
-        total_seconds = int(now - getattr(self, "_task_started_at", now))
-        elapsed = (
-            f"（本步骤 {step_seconds} 秒 · 总计 {total_seconds} 秒）"
-            if step_seconds > 0
-            else ""
-        )
-        self.loading_label.setText(f"步骤 {number} · {message}{elapsed}")
+        update_activity(self, message)
 
     @Slot()
     def stop_current_task(self) -> None:
@@ -127,14 +85,15 @@ class ThreadActionsMixin:
             if self.worker is not None
             else "当前处理已停止。"
         )
-        timer = getattr(self, "_task_status_timer", None)
-        if timer is not None:
-            timer.stop()
         self.loading_label.setText(text)
         self.log.appendPlainText(text)
+        finish_activity(self, text, "stopped")
 
     @Slot(object)
     def action_finished(self, result: dict) -> None:
+        finish_activity(
+            self, getattr(self, "_task_step_text", "处理完成") or "处理完成",
+        )
         if result.get('type') == 'completed_erp_generated':
             self.completed_page.show_generation_result(result)
             return
@@ -151,11 +110,9 @@ class ThreadActionsMixin:
 
     @Slot(str)
     def failed(self, message: str) -> None:
-        timer = getattr(self, "_task_status_timer", None)
-        if timer is not None:
-            timer.stop()
         self.loading_label.setText(f"停止：{message}")
         self.log.appendPlainText(f"停止：{message}")
+        finish_activity(self, f"停止：{message}", "failed")
         QMessageBox.critical(self, "操作已停止", message)
 
     def _set_actions_enabled(self, enabled: bool) -> None:
@@ -222,6 +179,7 @@ class ThreadActionsMixin:
         self.loading_panel.hide()
         self.stop_button.setEnabled(False)
         self._set_actions_enabled(True)
+        finish_running_activity(self)
         defer_finished_thread_cleanup(self, "thread", "worker")
         if getattr(self, 'pending_local_read', None) is not None:
             QTimer.singleShot(0, self._start_pending_local_read)
