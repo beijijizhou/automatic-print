@@ -49,8 +49,6 @@ def _validate_result(result, target_machine_id, expected_machine_name):
         raise MachinePreflightError(
             f"回应机器号为 {actual_name or '未知'}，不是 {expected_machine_name}。"
         )
-    if result.get("automation_enabled") is not True:
-        raise MachinePreflightError("目标机自动化未开启。")
     if result.get("source_online") is not True:
         raise MachinePreflightError("目标机已回应，但 PrintExp 没有连接。")
     if not str(result.get("app_version") or "").strip():

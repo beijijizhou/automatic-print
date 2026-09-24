@@ -1,5 +1,6 @@
 """Remote download/layout command requests over the restricted Edge Function."""
 
+from ....runtime.monitoring.control import notify_machine
 from .client import _call
 from .identity import machine_id, machine_name
 
@@ -15,7 +16,7 @@ def submit_command(
     expires_minutes=30,
     timeout=8,
 ):
-    return _call(
+    command = _call(
         {
             "action": "enqueue_command",
             "machine_id": machine_id(),
@@ -32,6 +33,7 @@ def submit_command(
         },
         timeout=timeout,
     )["command"]
+    return _notify_target(command, target_machine_id)
 
 
 def submit_printer_action(
@@ -45,7 +47,7 @@ def submit_printer_action(
         if not expected_batch_name:
             raise ValueError("开始打印前必须指定批次文件名。")
         payload["expected_batch_name"] = expected_batch_name
-    return _call(
+    command = _call(
         {
             "action": "send_control",
             "command_action": action,
@@ -57,10 +59,11 @@ def submit_printer_action(
         },
         timeout=timeout,
     )["command"]
+    return _notify_target(command, target_machine_id)
 
 
 def submit_probe(target_machine_id, *, expires_minutes=1, timeout=8):
-    return _call(
+    command = _call(
         {
             "action": "send_control",
             "command_action": "probe",
@@ -72,6 +75,21 @@ def submit_probe(target_machine_id, *, expires_minutes=1, timeout=8):
         },
         timeout=timeout,
     )["command"]
+    return _notify_target(command, target_machine_id)
+
+
+def _notify_target(command, target_machine_id):
+    command_id = str(command.get("id") or "")
+    try:
+        notify_machine(target_machine_id, command_id=command_id)
+    except OSError as error:
+        if command_id:
+            try:
+                cancel_command(command_id)
+            except Exception:
+                pass
+        raise RuntimeError(f"无法通知目标机领取任务：{error}") from error
+    return command
 
 
 def list_commands(*, timeout=8):

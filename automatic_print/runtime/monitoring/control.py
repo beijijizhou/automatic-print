@@ -38,11 +38,27 @@ def set_automation_enabled(enabled, *, target=None):
 
 def broadcast_automation(enabled, *, key=None, address="255.255.255.255", port=AUTOMATION_PORT):
     message = encode_message(enabled, key=key)
+    _broadcast(message, address=address, port=port)
+    return set_automation_enabled(enabled)
+
+
+def notify_machine(
+    target_machine_id, *, command_id="", key=None,
+    address="255.255.255.255", port=AUTOMATION_PORT,
+):
+    """Wake one target for a single command claim without enabling polling."""
+    message = encode_dispatch_message(
+        target_machine_id, command_id=command_id, key=key,
+    )
+    _broadcast(message, address=address, port=port)
+    return True
+
+
+def _broadcast(message, *, address, port):
     with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as stream:
         stream.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
         for _attempt in range(3):
             stream.sendto(message, (address, int(port)))
-    return set_automation_enabled(enabled)
 
 
 def encode_message(enabled, *, key=None, timestamp=None, nonce=None):
@@ -51,12 +67,45 @@ def encode_message(enabled, *, key=None, timestamp=None, nonce=None):
         "timestamp": int(time.time() if timestamp is None else timestamp),
         "nonce": nonce or secrets.token_hex(12),
     }
+    return _encode_payload(payload, key=key)
+
+
+def encode_dispatch_message(
+    target_machine_id, *, command_id="", key=None, timestamp=None, nonce=None,
+):
+    payload = {
+        "action": "dispatch",
+        "target_machine_id": str(target_machine_id),
+        "command_id": str(command_id),
+        "timestamp": int(time.time() if timestamp is None else timestamp),
+        "nonce": nonce or secrets.token_hex(12),
+    }
+    return _encode_payload(payload, key=key)
+
+
+def _encode_payload(payload, *, key=None):
     raw = json.dumps(payload, sort_keys=True, separators=(",", ":")).encode("utf-8")
     secret = str(key or shared_client_key()).encode("utf-8")
     return raw + b"." + hmac.new(secret, raw, hashlib.sha256).hexdigest().encode("ascii")
 
 
 def decode_message(message, *, key=None, now=None):
+    payload = _decode_payload(message, key=key, now=now)
+    if not payload or payload.get("action") not in {"enable", "disable"}:
+        return None
+    return payload["action"] == "enable"
+
+
+def decode_dispatch_message(message, *, key=None, now=None):
+    payload = _decode_payload(message, key=key, now=now)
+    if not payload or payload.get("action") != "dispatch":
+        return None
+    if not payload.get("target_machine_id"):
+        return None
+    return payload
+
+
+def _decode_payload(message, *, key=None, now=None):
     try:
         raw, signature = bytes(message).rsplit(b".", 1)
         secret = str(key or shared_client_key()).encode("utf-8")
@@ -67,17 +116,22 @@ def decode_message(message, *, key=None, now=None):
         current = int(time.time() if now is None else now)
         if abs(current - int(payload["timestamp"])) > MAX_MESSAGE_AGE:
             return None
-        if payload.get("action") not in {"enable", "disable"}:
+        if payload.get("action") not in {"enable", "disable", "dispatch"}:
             return None
-        return payload["action"] == "enable"
+        return payload
     except (KeyError, OSError, RuntimeError, TypeError, ValueError, json.JSONDecodeError):
         return None
 
 
 class AutomationWakeListener:
-    def __init__(self, *, port=AUTOMATION_PORT, apply=set_automation_enabled):
+    def __init__(
+        self, *, port=AUTOMATION_PORT, apply=set_automation_enabled,
+        dispatch=None, target_machine_id="",
+    ):
         self.port = int(port)
         self.apply = apply
+        self.dispatch = dispatch
+        self.target_machine_id = str(target_machine_id)
         self.stop_event = Event()
         self.thread = None
 
@@ -100,8 +154,15 @@ class AutomationWakeListener:
                         message, _sender = stream.recvfrom(2048)
                     except TimeoutError:
                         continue
-                    enabled = decode_message(message)
-                    if enabled is not None:
-                        self.apply(enabled)
+                    payload = _decode_payload(message)
+                    if not payload:
+                        continue
+                    if payload["action"] in {"enable", "disable"}:
+                        self.apply(payload["action"] == "enable")
+                    elif (
+                        self.dispatch is not None and
+                        payload.get("target_machine_id") == self.target_machine_id
+                    ):
+                        self.dispatch(payload)
         except OSError:
             return

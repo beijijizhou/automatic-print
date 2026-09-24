@@ -151,7 +151,7 @@ def test_runner_answers_probe_with_fresh_machine_facts(monkeypatch):
     })
     monkeypatch.setattr(runner, "inspect_machine", lambda: {
         "machine_id": "machine-1", "machine_name": "M1",
-        "app_version": "0.1.384", "automation_enabled": True,
+        "app_version": "0.1.386",
         "source_online": True, "status": {"state": "idle"},
     })
     monkeypatch.setattr(

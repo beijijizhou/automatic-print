@@ -11,6 +11,7 @@ def test_submit_command_keeps_batch_piece_counts(monkeypatch):
     monkeypatch.setattr(commands, "_call", call)
     monkeypatch.setattr(commands, "machine_id", lambda: "requester-id")
     monkeypatch.setattr(commands, "machine_name", lambda: "M11")
+    monkeypatch.setattr(commands, "notify_machine", lambda *args, **kwargs: True)
     details = [{
         "batch_number": "609180613013", "item_count": 12, "piece_count": 30,
     }]

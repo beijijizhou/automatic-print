@@ -2,7 +2,7 @@
 
 from threading import Lock, Thread
 
-from PySide6.QtCore import QObject, QTimer, Qt, Signal
+from PySide6.QtCore import QObject, Qt, Signal
 from PySide6.QtWidgets import (
     QAbstractItemView,
     QGroupBox,
@@ -20,7 +20,6 @@ from PySide6.QtWidgets import (
 from ..automation.api.machine_status import list_commands, list_machines
 from ..batch_ui.platform.remote.queue import machine_workload
 from .machine_command_ui import RemoteCommandPanel
-from .automation_toggle import AutomationToggle
 from .printer_control_ui import PrinterControlPanel
 from .machine_status_format import feedback_text, machine_slots, remaining_text, status_text
 from .machine_availability import MachineAvailabilityControl
@@ -65,14 +64,10 @@ class MachineStatusPage(QWidget):
         self.loader = MachineStatusLoader(fetch, self)
         self.loader.loaded.connect(self.apply_dashboard)
         self.loader.failed.connect(self.show_error)
-        self.timer = QTimer(self)
-        self.timer.setInterval(60_000)
-        self.timer.timeout.connect(self.refresh)
-
         title = QLabel("PrintExp 打印机状态")
         title.setProperty("heading", True)
-        description = QLabel("显示各电脑上 PrintExp 的真实任务、打印百分比和预计剩余时间。"
-                             "机器启动和状态变化时反馈；不发送周期心跳。")
+        description = QLabel("显示最近一次机器回执；发送任务前会现场查询指定机器的"
+                             "PrintExp 状态，不发送周期心跳。")
         description.setWordWrap(True)
         self.summary = QLabel("已接入 0 / 11 · 在线 0 · 打印中 0")
         self.summary.setStyleSheet("font-size:16px;font-weight:700;color:#0f172a;")
@@ -111,8 +106,6 @@ class MachineStatusPage(QWidget):
         self.command_panel.command_submitted.connect(self.refresh)
         self.control_panel = PrinterControlPanel(self)
         self.control_panel.command_submitted.connect(self.refresh)
-        self.automation_toggle = AutomationToggle(self)
-        self.automation_toggle.changed.connect(self._automation_changed)
         self.availability_control = MachineAvailabilityControl(self)
         self.availability_control.changed.connect(self.refresh)
 
@@ -120,19 +113,8 @@ class MachineStatusPage(QWidget):
 
     def set_active(self, active):
         self._active = bool(active)
-        if self._active and self.automation_toggle.enabled:
-            self.timer.start()
+        if self._active:
             self.refresh()
-        else:
-            self.timer.stop()
-
-    def _automation_changed(self, enabled):
-        if enabled and self._active:
-            self.timer.start()
-            self.refresh()
-        elif not enabled:
-            self.timer.stop()
-            self.message.setText("自动化已关闭：不再访问 Supabase；使用上方按钮可局域网唤起。")
 
     def refresh(self):
         if self.loader.refresh():

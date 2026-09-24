@@ -18,7 +18,7 @@ OWNERS = []
 
 
 def test_version_is_date_and_fixed_daily_iteration(tmp_path):
-    assert __version_display__ == '0.1.385 · 2026-09-24 · 第06次更新'
+    assert __version_display__ == '0.1.386 · 2026-09-24 · 第07次更新'
     prefs = QSettings(str(tmp_path/'version.ini'), QSettings.IniFormat)
     for _ in range(2):
         window = MainWindow(prefs)

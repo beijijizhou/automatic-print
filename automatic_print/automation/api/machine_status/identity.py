@@ -18,6 +18,11 @@ def machine_name_file():
     return identity_file().with_name("machine-name")
 
 
+def machine_binding_file():
+    """Identity owned by the background agent, isolated from old UI settings."""
+    return machine_name_file().with_name("machine-binding")
+
+
 def machine_id():
     target = identity_file()
     try:
@@ -43,10 +48,26 @@ def machine_id():
 
 
 def machine_name():
+    bound = bound_machine_number()
+    if bound:
+        return bound
     saved = saved_machine_number()
     configured = os.environ.get("AUTOMATIC_PRINT_MACHINE_NAME", "").strip().upper()
     configured = configured if re.fullmatch(r"M(?:[1-9]|1[01])", configured) else ""
-    return saved or configured or "未设置机器号"
+    migrated = saved or configured
+    if migrated:
+        _write_machine_number(machine_binding_file(), migrated)
+    return migrated or "未设置机器号"
+
+
+def bound_machine_number():
+    try:
+        value = machine_binding_file().read_text(encoding="utf-8").strip().upper()
+        if re.fullmatch(r"M(?:[1-9]|1[01])", value):
+            return value
+    except (OSError, UnicodeError):
+        pass
+    return ""
 
 
 def saved_machine_number():
@@ -73,11 +94,16 @@ def saved_machine_number():
 
 
 def persist_machine_number(value):
-    """Persist the machine slot where scheduled tasks and the UI both see it."""
+    """Explicitly bind the agent and mirror the choice for older UI versions."""
     normalized = str(value or "").strip().upper()
     if not re.fullmatch(r"M(?:[1-9]|1[01])", normalized):
         raise ValueError("机器号必须是 M1-M11。")
-    target = machine_name_file()
+    _write_machine_number(machine_binding_file(), normalized)
+    _write_machine_number(machine_name_file(), normalized)
+    return normalized
+
+
+def _write_machine_number(target, normalized):
     temporary = None
     try:
         target.parent.mkdir(parents=True, exist_ok=True)
@@ -95,4 +121,3 @@ def persist_machine_number(value):
                 Path(temporary).unlink(missing_ok=True)
             except OSError:
                 pass
-    return normalized

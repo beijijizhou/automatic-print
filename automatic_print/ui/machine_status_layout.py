@@ -14,7 +14,6 @@ def build_machine_status_layout(page, title, description, overview):
     control_page = QWidget()
     control_layout = QVBoxLayout(control_page)
     control_layout.setContentsMargins(0, 8, 0, 0)
-    control_layout.addWidget(page.automation_toggle)
     control_layout.addWidget(page.availability_control)
     control_layout.addWidget(page.control_panel)
     control_layout.addWidget(page.command_panel)

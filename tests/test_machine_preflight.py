@@ -10,7 +10,7 @@ def test_preflight_waits_for_matching_live_printer_response():
         {"status": "claimed"},
         {"status": "succeeded", "result": {
             "machine_id": "machine-1", "machine_name": "M1",
-            "app_version": "0.1.384", "automation_enabled": True,
+            "app_version": "0.1.386",
             "source_online": True,
             "status": {"state": "running", "batch_name": "current.prn"},
         }},
@@ -35,7 +35,7 @@ def test_preflight_rejects_ack_without_printexp():
             submit=lambda _target: {"id": "probe-1"},
             fetch=lambda _command: {"status": "succeeded", "result": {
                 "machine_id": "machine-1", "machine_name": "M1",
-                "app_version": "0.1.384", "automation_enabled": True,
+                "app_version": "0.1.386",
                 "source_online": False,
             }},
         )
@@ -43,6 +43,20 @@ def test_preflight_rejects_ack_without_printexp():
         assert "PrintExp 没有连接" in str(error)
     else:
         raise AssertionError("PrintExp 离线时不应通过发送前检测")
+
+
+def test_preflight_does_not_require_an_automation_switch():
+    result = preflight_machine(
+        "machine-1", "M1",
+        submit=lambda _target: {"id": "probe-1"},
+        fetch=lambda _command: {"status": "succeeded", "result": {
+            "machine_id": "machine-1", "machine_name": "M1",
+            "app_version": "0.1.386",
+            "source_online": True,
+        }},
+    )
+
+    assert result["machine_name"] == "M1"
 
 
 def test_preflight_timeout_does_not_send_production_task():
