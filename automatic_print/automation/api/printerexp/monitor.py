@@ -11,7 +11,7 @@ from ..machine_status import claim_control, report_machine
 from ..machine_status.identity import machine_id
 from ..machine_commands import CommandDispatcher
 from ..machine_commands.lifecycle import recover_pending_receipts, reconcile_printer_status
-from ....runtime.monitoring.control import AutomationWakeListener
+from ....runtime.monitoring.cloud_wake import HybridWakeListener
 from .control import NativePrintExpControls
 from .discovery import find_installation, process_running, running_installations
 from .status.loaded_task import read_loaded_task
@@ -35,7 +35,7 @@ class PrintExpMonitor:
         self.send = send
         self.automation_allowed = automation_allowed
         self.dispatch_event = Event()
-        self.wake_listener = wake_listener or AutomationWakeListener(
+        self.wake_listener = wake_listener or HybridWakeListener(
             dispatch=self.request_dispatch, target_machine_id=machine_id(),
         )
         self.stop_event = Event()

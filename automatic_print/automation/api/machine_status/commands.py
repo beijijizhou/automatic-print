@@ -1,6 +1,7 @@
 """Remote download/layout command requests over the restricted Edge Function."""
 
 from ....runtime.monitoring.control import notify_machine
+from ....runtime.monitoring.cloud_wake import notify_machine_via_cloud
 from .client import _call
 from .identity import machine_id, machine_name
 
@@ -101,7 +102,13 @@ def submit_source_update(
 def _notify_target(command, target_machine_id):
     command_id = str(command.get("id") or "")
     try:
-        notify_machine(target_machine_id, command_id=command_id)
+        try:
+            acknowledged = notify_machine(target_machine_id, command_id=command_id)
+        except OSError:
+            acknowledged = False
+        if acknowledged:
+            return command
+        notify_machine_via_cloud(target_machine_id, command_id=command_id)
     except OSError as error:
         if command_id:
             try:

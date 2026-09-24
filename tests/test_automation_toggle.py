@@ -1,12 +1,17 @@
 from types import SimpleNamespace
+import base64
+import json
 
 from automatic_print.runtime.monitoring.control import (
+    decode_dispatch_ack,
     decode_dispatch_message,
     decode_message,
+    encode_dispatch_ack,
     encode_dispatch_message,
     encode_message,
 )
 from automatic_print.automation.api.printerexp import monitor as monitor_module
+from automatic_print.runtime.monitoring import cloud_wake
 
 
 def test_lan_wake_message_is_signed_and_expires():
@@ -28,6 +33,68 @@ def test_targeted_dispatch_wake_is_signed_and_machine_specific():
     assert payload["target_machine_id"] == "machine-11"
     assert payload["command_id"] == "command-1"
     assert decode_message(message, key="k" * 32, now=101) is None
+
+
+def test_dispatch_ack_is_signed_and_tied_to_original_nonce():
+    dispatch = decode_dispatch_message(encode_dispatch_message(
+        "machine-11", command_id="command-1", key="k" * 32,
+        timestamp=100, nonce="dispatch-nonce",
+    ), key="k" * 32, now=100)
+
+    acknowledgement = decode_dispatch_ack(encode_dispatch_ack(
+        dispatch, key="k" * 32, timestamp=101, nonce="ack-nonce",
+    ), key="k" * 32, now=101)
+
+    assert acknowledgement["target_machine_id"] == "machine-11"
+    assert acknowledgement["command_id"] == "command-1"
+    assert acknowledgement["dispatch_nonce"] == "dispatch-nonce"
+
+
+def test_cloud_topic_is_keyed_and_received_payload_stays_signed():
+    received = []
+    listener = cloud_wake.CloudWakeListener(
+        target_machine_id="machine-11", dispatch=received.append, key="k" * 32,
+    )
+    message = encode_dispatch_message(
+        "machine-11", command_id="command-1", key="k" * 32,
+    )
+
+    listener._receive({"payload": {
+        "message": base64.b64encode(message).decode("ascii"),
+    }})
+    listener._receive({"payload": {"message": "not-signed"}})
+
+    assert cloud_wake.machine_topic("machine-11", key="k" * 32).startswith(
+        "automatic-print:dispatch:"
+    )
+    assert [item["command_id"] for item in received] == ["command-1"]
+
+
+def test_cloud_publish_contains_only_a_signed_wake(monkeypatch):
+    captured = {}
+
+    class Response:
+        status = 202
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *_args):
+            return None
+
+    def open_request(request, timeout):
+        captured.update(url=request.full_url, body=json.loads(request.data), timeout=timeout)
+        return Response()
+
+    monkeypatch.setattr(cloud_wake, "urlopen", open_request)
+    cloud_wake.notify_machine_via_cloud(
+        "machine-11", command_id="command-1", key="k" * 32, timeout=3,
+    )
+
+    signed = base64.b64decode(captured["body"]["message"])
+    assert decode_dispatch_message(signed, key="k" * 32)["command_id"] == "command-1"
+    assert "/events/machine-command" in captured["url"]
+    assert captured["timeout"] == 3
 
 
 def test_monitor_has_no_periodic_heartbeat_and_ignores_eta_changes():

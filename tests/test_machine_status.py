@@ -174,6 +174,36 @@ def test_submit_probe_uses_short_lived_control_channel(monkeypatch):
     }
 
 
+def test_cloud_wake_is_only_used_after_lan_ack_timeout(monkeypatch):
+    cloud = []
+    monkeypatch.setattr(commands, "notify_machine", lambda *_args, **_options: False)
+    monkeypatch.setattr(
+        commands, "notify_machine_via_cloud",
+        lambda target, **options: cloud.append((target, options)) or True,
+    )
+
+    result = commands._notify_target(
+        {"id": "command-2"}, "b9428888-122b-4c26-a127-3eafad1f5271",
+    )
+
+    assert result == {"id": "command-2"}
+    assert cloud == [("b9428888-122b-4c26-a127-3eafad1f5271", {
+        "command_id": "command-2",
+    })]
+
+
+def test_lan_ack_avoids_cloud_wake(monkeypatch):
+    monkeypatch.setattr(commands, "notify_machine", lambda *_args, **_options: True)
+    monkeypatch.setattr(
+        commands, "notify_machine_via_cloud",
+        lambda *_args, **_options: (_ for _ in ()).throw(AssertionError("cloud used")),
+    )
+
+    assert commands._notify_target({"id": "command-3"}, "machine") == {
+        "id": "command-3",
+    }
+
+
 def test_submit_printer_action_is_explicit_and_has_no_layout_payload(monkeypatch):
     captured = {}
     monkeypatch.setattr(commands, "machine_id", lambda: "d9428888-122b-4c26-a127-3eafad1f5270")
