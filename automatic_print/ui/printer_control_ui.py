@@ -11,7 +11,9 @@ from ..automation.api.printerexp.state_machine import (
     start_button_text,
 )
 from .machine_command_ui import CommandSubmitter
-from .machine_status_format import actionable_machines, machine_printer_state
+from .machine_status_format import (
+    actionable_machines, machine_display_name, machine_printer_state,
+)
 
 
 class PrinterControlPanel(QGroupBox):
@@ -55,7 +57,7 @@ class PrinterControlPanel(QGroupBox):
         self.target.clear()
         for machine in self.machines:
             self.target.addItem(
-                str(machine.get("machine_name") or machine.get("machine_id")),
+                machine_display_name(machine),
                 str(machine.get("machine_id")),
             )
         if selected:

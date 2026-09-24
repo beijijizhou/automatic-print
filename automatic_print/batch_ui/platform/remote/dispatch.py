@@ -9,13 +9,19 @@ from PySide6.QtWidgets import QDialog, QMessageBox
 from ....automation.api.machine_status import (
     list_commands, list_machines, preflight_machine, submit_command,
 )
-from ....ui.machine_status_format import machine_slots
+from ....automation.api.machine_status.identity import machine_id
+from ....ui.machine_status_format import (
+    machine_display_name, machine_slots, mark_local_machine,
+)
 from .dialog import RemoteMachineDialog
 from .queue import selected_batch_details, selection_text, workload_detail
 
 
 def load_remote_targets():
-    return {"machines": list_machines(), "commands": list_commands()}
+    return {
+        "machines": mark_local_machine(list_machines(), machine_id()),
+        "commands": list_commands(),
+    }
 
 
 class RemoteBatchDispatcher(QObject):
@@ -99,7 +105,7 @@ class RemoteBatchDispatcher(QObject):
             self._finish("没有选中目标机器；批次选择保持不变。")
             return
         self._selected_machine = machine
-        selected = str(machine.get("machine_name") or machine.get("machine_id"))
+        selected = machine_display_name(machine)
         self._set_busy(True, f"正在向 {selected} 发起实时检测；收到回应后才能发送任务…")
         Thread(target=self._preflight, daemon=True, name="remote-machine-preflight").start()
 
@@ -115,7 +121,7 @@ class RemoteBatchDispatcher(QObject):
 
     def _confirm_after_preflight(self, result):
         machine = self._selected_machine
-        selected = str(machine.get("machine_name") or machine.get("machine_id"))
+        selected = machine_display_name(machine)
         live = {**machine, **(result.get("status") or {})}
         detail = (
             f"实时检测通过：{selected} · AutomaticPrint {result['app_version']}\n"

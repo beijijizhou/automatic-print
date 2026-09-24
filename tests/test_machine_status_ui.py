@@ -5,6 +5,7 @@ os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 from PySide6.QtWidgets import QApplication, QProgressBar
 
 from automatic_print.ui.machine_status_board import MachineStatusPage
+from automatic_print.ui.machine_status_format import mark_local_machine
 
 
 APP = QApplication.instance() or QApplication([])
@@ -174,3 +175,24 @@ def test_board_exposes_shared_manual_availability_setting():
     assert page.table.horizontalHeaderItem(6).text() == "最后反馈"
     assert page.availability_control.target.currentText() == "M4"
     assert page.availability_control.availability.currentData() == "unavailable"
+
+
+def test_board_marks_the_current_machine_everywhere_by_machine_id():
+    machines = mark_local_machine([
+        {
+            "machine_id": "remote-id", "machine_name": "M1", "state": "idle",
+            "available": True, "source_online": True,
+        },
+        {
+            "machine_id": "local-id", "machine_name": "M11", "state": "idle",
+            "available": True, "source_online": True,
+        },
+    ], "local-id")
+    page = MachineStatusPage(fetch=lambda: [])
+
+    page.apply_dashboard({"machines": machines, "commands": []})
+
+    assert page.table.item(0, 0).text() == "M1"
+    assert page.table.item(10, 0).text() == "M11（本机）"
+    assert page.control_panel.target.findText("M11（本机）") >= 0
+    assert page.availability_control.target.findText("M11（本机）") >= 0

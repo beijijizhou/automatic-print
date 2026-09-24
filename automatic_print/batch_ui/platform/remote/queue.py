@@ -2,7 +2,7 @@
 
 import re
 
-from ....ui.machine_status_format import remaining_text, status_text
+from ....ui.machine_status_format import machine_display_name, remaining_text, status_text
 
 
 ACTIVE_STATUSES = {"claimed", "running"}
@@ -45,7 +45,7 @@ def machine_workload(machine, commands):
     active_text = _command_text(active[0]) if active else "无"
     next_text = _command_text(queued[0]) if queued else "无"
     return {
-        "machine": str(machine.get("machine_name") or machine_id),
+        "machine": machine_display_name(machine),
         "status": status_text(machine),
         "current_print": current_print,
         "active_task": active_text,

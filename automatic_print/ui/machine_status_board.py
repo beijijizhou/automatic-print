@@ -18,10 +18,14 @@ from PySide6.QtWidgets import (
 )
 
 from ..automation.api.machine_status import list_commands, list_machines
+from ..automation.api.machine_status.identity import machine_id
 from ..batch_ui.platform.remote.queue import machine_workload
 from .machine_command_ui import RemoteCommandPanel
 from .printer_control_ui import PrinterControlPanel
-from .machine_status_format import feedback_text, machine_slots, remaining_text, status_text
+from .machine_status_format import (
+    feedback_text, machine_display_name, machine_slots, mark_local_machine,
+    remaining_text, status_text,
+)
 from .machine_availability import MachineAvailabilityControl
 from .machine_status_layout import build_machine_status_layout
 
@@ -30,7 +34,10 @@ EXPECTED_MACHINES = 11
 
 
 def load_dashboard():
-    return {"machines": list_machines(), "commands": list_commands()}
+    return {
+        "machines": mark_local_machine(list_machines(), machine_id()),
+        "commands": list_commands(),
+    }
 
 
 class MachineStatusLoader(QObject):
@@ -166,7 +173,7 @@ class MachineStatusPage(QWidget):
     def _fill_machine(self, row, machine, commands):
         workload = machine_workload(machine, commands)
         values = (
-            f"M{row + 1}",
+            machine_display_name(machine),
             machine.get("department") or "—",
             status_text(machine),
             machine.get("batch_name") or machine.get("batch_id") or "—",

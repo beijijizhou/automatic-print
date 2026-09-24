@@ -6,7 +6,7 @@ from PySide6.QtCore import QObject, Signal
 from PySide6.QtWidgets import QComboBox, QGroupBox, QHBoxLayout, QLabel, QPushButton
 
 from ..automation.api.machine_status import set_machine_availability
-from .machine_status_format import machine_slots
+from .machine_status_format import machine_display_name, machine_slots
 
 
 class _AvailabilityWorker(QObject):
@@ -50,7 +50,7 @@ class MachineAvailabilityControl(QGroupBox):
         self.target.blockSignals(True)
         self.target.clear()
         for machine in self.machines:
-            self.target.addItem(machine["machine_name"], machine["machine_id"])
+            self.target.addItem(machine_display_name(machine), machine["machine_id"])
         index = self.target.findData(selected)
         self.target.setCurrentIndex(index if index >= 0 else 0)
         self.target.blockSignals(False)

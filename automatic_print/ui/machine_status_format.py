@@ -57,6 +57,19 @@ def feedback_text(seconds):
 heartbeat_text = feedback_text
 
 
+def mark_local_machine(machines, local_machine_id):
+    local = str(local_machine_id or "")
+    return [
+        {**machine, "is_local": str(machine.get("machine_id") or "") == local}
+        for machine in machines
+    ]
+
+
+def machine_display_name(machine):
+    name = str(machine.get("machine_name") or machine.get("machine_id") or "")
+    return f"{name}（本机）" if machine.get("is_local") else name
+
+
 def machine_slots(machines, count=11):
     slots = [None] * count
     grouped = {}
