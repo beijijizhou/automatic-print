@@ -92,9 +92,9 @@
 - 生成完成弹窗由 `layout_engine/output/output_file_info.py` 汇总最终生产结果；膜规格表把当前膜行替换为
   同一最终计划的真实统计，输出名由 `layout_engine/output/output_name.py` 同时写入订单数和件数。
 - `layout_engine/output/output_name.py` 统一管理输出落点：生成期间写入 `排版日志/.处理中` 隔离目录，
-  安全检查完成后由`layout_engine/cutting/knife_folders.py`复核逐文件实际刀位，将普通切膜PNG分别
-  移入`切膜机文件/常规`或`切膜机文件/旋转`；整批仅规划为旋转区但所有段共用同一条非空实际纵刀位时仍归常规，
-  不用图片旋转角度或规划区名代替换刀事实；非切膜PNG直接进入`切膜机文件`。
+  安全检查完成后由`layout_engine/cutting/knife_folders.py`复核逐文件实际刀位与排版区域，将常规区PNG固定
+  移入`切膜机文件/常规`，旋转区PNG固定移入`切膜机文件/旋转`；即使两区实际纵刀位相同也不合并，
+  非切膜PNG直接进入`切膜机文件`。
   `planning/columns/choice/planner.py`的顺序旋转候选允许个别图片调整方向，但所有排共用同一刀位，归入常规区。
   文本报告保存在平级 `排版日志`，不写输出JSON。
 - 多批次生成控制：`automatic_print/controllers/bulk_generation.py` 管理线程、取消和释放；

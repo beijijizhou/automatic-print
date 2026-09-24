@@ -10,7 +10,7 @@ from automatic_print.layout_engine.cutting.validation.cut_validation import corr
 from automatic_print.ui.workers import GenerateWorker
 
 
-def test_whole_rotated_batch_with_one_actual_knife_is_regular():
+def test_whole_rotated_batch_with_one_actual_knife_stays_in_rotation_folder():
     part = {
         'filename': 'batch 旋转区 第001段.png',
         'placements': [
@@ -23,7 +23,25 @@ def test_whole_rotated_batch_with_one_actual_knife_is_regular():
     }
     result = {'cutter_mode': 'dual', 'placements': part['placements'],
               'parts': [part]}
-    assert knife_output_folders(result) == {part['filename']: '常规'}
+    assert knife_output_folders(result) == {part['filename']: '旋转'}
+
+
+def test_matching_knife_does_not_merge_rotation_part_into_regular_folder():
+    parts = [
+        {'filename': 'regular.png',
+         'placements': [{'cut_zone': '常规区', 'cut_knife_xs_px': (1960,)}],
+         'order_check': {'orders': 1},
+         'cut_corridor': {'pixel_verified': True}},
+        {'filename': 'rotation.png',
+         'placements': [{'cut_zone': '旋转区', 'cut_knife_xs_px': (1960,)}],
+         'order_check': {'orders': 1},
+         'cut_corridor': {'pixel_verified': True}},
+    ]
+    result = {'cutter_mode': 'dual', 'parts': parts}
+    assert knife_output_folders(result) == {
+        'regular.png': '常规',
+        'rotation.png': '旋转',
+    }
 
 
 def test_whole_rotated_batch_with_changed_knife_remains_separate():
