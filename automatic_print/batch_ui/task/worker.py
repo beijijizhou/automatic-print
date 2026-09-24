@@ -78,6 +78,7 @@ class AutomationWorker(QObject):
             "list_range": "读取批次范围",
             "status": "刷新平台状态",
             "status_and_list": "刷新状态和批次",
+            "open_browser": "打开 Playwright 浏览器",
             "read": "读取数据",
             "preview_rules": "预览批次规则",
             "preview_route": "预览工艺路线",
@@ -194,6 +195,19 @@ class AutomationWorker(QObject):
                 )
                 self._report(f"批次信息读取完成：共 {len(records)} 个批次。")
                 self._deliver(self.batches_loaded, records)
+        elif self.action == "open_browser":
+            from ...automation.browser.session import show_debug_browser
+            from ...automation.providers.registry import get_erp_platform
+
+            url = get_erp_platform(self.platform_name).production_items_url
+            current = show_debug_browser(
+                url, self.cancellation.check, self._report,
+            )
+            self._deliver(self.completed, {
+                "type": "browser_opened",
+                "platform": self.platform_name,
+                "url": current,
+            })
         elif self.action in GENERATION_ACTIONS:
             run_generation_action(self)
         elif self.action == "download":

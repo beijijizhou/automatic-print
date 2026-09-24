@@ -25,7 +25,7 @@ def window(tmp_path):
 def test_automated_print_action_moved_to_platform_download(tmp_path):
     owner = window(tmp_path)
     page = owner.production_platform_download_page
-    page.platform_checks["Haloo"].setChecked(True)
+    page.select_platform("Haloo")
     APP.processEvents()
     workbench = page.workbenches["Haloo"]
 
@@ -50,7 +50,7 @@ def test_automated_print_action_uses_selected_batches_and_current_settings(
 ):
     owner = window(tmp_path)
     page = owner.production_platform_download_page
-    page.platform_checks["Haloo"].setChecked(True)
+    page.select_platform("Haloo")
     APP.processEvents()
     workbench = page.workbenches["Haloo"]
     workbench.output.setText(str(tmp_path))
@@ -82,7 +82,7 @@ def test_remote_print_action_uses_current_selection_and_platform(
 ):
     owner = window(tmp_path)
     page = owner.production_platform_download_page
-    page.platform_checks["S2B"].setChecked(True)
+    page.select_platform("S2B")
     APP.processEvents()
     workbench = page.workbenches["S2B"]
     workbench.table.setRowCount(1)

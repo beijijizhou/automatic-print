@@ -114,6 +114,33 @@ def connect_debug_chrome(
     return browser
 
 
+def show_debug_browser(start_url: str, check_cancel=None, progress=None) -> str:
+    """Open or foreground one Playwright Chrome tab without waiting for login."""
+    from playwright.sync_api import sync_playwright
+
+    check = check_cancel or (lambda: None)
+    report = progress or (lambda _message: None)
+    with sync_playwright() as playwright:
+        browser = connect_debug_chrome(playwright, start_url, check, report)
+        check()
+        host = urlsplit(start_url).netloc
+        pages = [
+            page for context in browser.contexts for page in context.pages
+            if host in page.url
+        ]
+        if pages:
+            page = pages[-1]
+            report(f"正在显示已打开的 {host} 页面…")
+        else:
+            context = browser.contexts[0]
+            page = context.new_page()
+            report(f"正在打开 {host}…")
+            page.goto(start_url, wait_until="domcontentloaded", timeout=30_000)
+        page.bring_to_front()
+        report("Playwright 浏览器已显示；可先完成登录，再点击读取预览。")
+        return page.url
+
+
 def open_authenticated_page(
     browser,
     target_url: str,

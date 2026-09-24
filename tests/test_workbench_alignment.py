@@ -29,7 +29,7 @@ def test_completed_preview_shows_style_and_color_before_generation(tmp_path, mon
     owner = MainWindow(QSettings(str(tmp_path/'prefs.ini'), QSettings.IniFormat))
     owner.startup_update_timer.stop()
     owner.developer_mode_checkbox.setChecked(True)
-    owner.production_platform_download_page.platform_checks['Haloo'].setChecked(True)
+    owner.production_platform_download_page.select_platform('Haloo')
     workbench = owner.production_platform_download_page.workbenches['Haloo']
     page = workbench.completed_page
     page.source.setCurrentIndex(1)
@@ -84,7 +84,7 @@ def test_completed_plan_tab_is_available_on_every_erp_platform(tmp_path, platfor
     owner.show()
     owner.developer_mode_checkbox.setChecked(True)
     owner.workspace_tabs.setCurrentIndex(owner.production_platform_tab_index)
-    owner.production_platform_download_page.platform_checks[platform_name].setChecked(True)
+    owner.production_platform_download_page.select_platform(platform_name)
     workbench = owner.production_platform_download_page.workbenches[platform_name]
     page = workbench.completed_page
     workbench.main_tabs.setCurrentIndex(1)
@@ -92,6 +92,9 @@ def test_completed_plan_tab_is_available_on_every_erp_platform(tmp_path, platfor
     APP.processEvents()
     assert page.platform_name == platform_name
     assert workbench.main_tabs.tabText(1) == '批次生成'
+    assert workbench.open_playwright_button.text() == (
+        f'打开 {platform_name} Playwright 浏览器'
+    )
     assert workbench.generation_sections.tabText(
         workbench.generation_sections.indexOf(page)
     ) == '生产中批次策略'
@@ -139,7 +142,7 @@ def test_completed_preview_keeps_groups_when_rules_are_temporarily_unavailable(t
     owner = MainWindow(QSettings(str(tmp_path/'prefs.ini'), QSettings.IniFormat))
     owner.startup_update_timer.stop()
     owner.developer_mode_checkbox.setChecked(True)
-    owner.production_platform_download_page.platform_checks['Haloo'].setChecked(True)
+    owner.production_platform_download_page.select_platform('Haloo')
     page = owner.production_platform_download_page.workbenches['Haloo'].completed_page
     page.source.setCurrentIndex(1)
     group = SimpleNamespace(logistics_code='GOFO', order_composition='多项多件',
