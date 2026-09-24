@@ -6,6 +6,7 @@ from PySide6.QtWidgets import QApplication
 
 from automatic_print.ui.main_window import MainWindow
 from automatic_print.ui.workbench.overview import label_controls
+from automatic_print.automation.api.machine_status import identity
 
 APP = QApplication.instance() or QApplication([])
 OWNERS = []
@@ -55,7 +56,7 @@ def test_one_row_highlight_and_default_comparison_migration(tmp_path):
 
 def test_machine_identity_only_changes_after_explicit_combo_activation(tmp_path, monkeypatch):
     saved = []
-    monkeypatch.setattr(label_controls, "persist_machine_number", saved.append)
+    monkeypatch.setattr(label_controls, "bind_machine_slot", saved.append)
     prefs = QSettings(str(tmp_path / "machine.ini"), QSettings.IniFormat)
     prefs.setValue("layout/machine_number", "M11")
     window = MainWindow(prefs)
@@ -69,4 +70,24 @@ def test_machine_identity_only_changes_after_explicit_combo_activation(tmp_path,
     assert saved == []
     panel.machine.activated.emit(index)
     assert saved == ["M2"]
+    window.close()
+
+
+def test_layout_autosave_cannot_replace_bound_machine_slot(tmp_path, monkeypatch):
+    monkeypatch.setenv("LOCALAPPDATA", str(tmp_path / "profile"))
+    identity.bind_machine_slot("M11")
+    prefs = QSettings(str(tmp_path / "machine.ini"), QSettings.IniFormat)
+    prefs.setValue("layout/machine_number", "M1")
+    window = MainWindow(prefs)
+    OWNERS.append(window)
+    window.startup_update_timer.stop()
+
+    window.save_layout_preferences(notify=False)
+    identity._write_machine_number(identity.machine_name_file(), "M1")
+    identity._write_machine_number(
+        identity.identity_file().with_name("machine-binding"), "M1",
+    )
+
+    assert identity.machine_name() == "M11"
+    assert identity.machine_slot_file().read_text(encoding="utf-8") == "M11"
     window.close()

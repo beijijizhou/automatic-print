@@ -248,42 +248,32 @@ def test_printerexp_projection_uses_fractional_progress_for_eta():
     assert status["remaining_seconds"] == 4764
 
 
-def test_machine_name_prefers_saved_machine_number(monkeypatch):
-    monkeypatch.setenv("AUTOMATIC_PRINT_MACHINE_NAME", "DTF7")
-    monkeypatch.setattr(identity, "bound_machine_number", lambda: "")
-    monkeypatch.setattr(identity, "saved_machine_number", lambda: "M7")
-
-    assert identity.machine_name() == "M7"
-
-
 def test_persisted_machine_number_is_shared_outside_registry(tmp_path, monkeypatch):
-    target = tmp_path / "machine-name"
-    monkeypatch.setattr(identity, "machine_name_file", lambda: target)
+    target = tmp_path / "machine-slot-v2"
+    monkeypatch.setattr(identity, "machine_slot_file", lambda: target)
 
-    assert identity.persist_machine_number("m11") == "M11"
+    assert identity.bind_machine_slot("m11") == "M11"
     assert target.read_text(encoding="utf-8") == "M11"
-    assert identity.machine_binding_file().read_text(encoding="utf-8") == "M11"
     assert identity.bound_machine_number() == "M11"
-    assert identity.saved_machine_number() == "M11"
 
 
 def test_background_binding_is_not_overwritten_by_legacy_machine_name(tmp_path, monkeypatch):
     legacy = tmp_path / "machine-name"
+    old_binding = tmp_path / "machine-binding"
+    slot = tmp_path / "machine-slot-v2"
     monkeypatch.setattr(identity, "machine_name_file", lambda: legacy)
-    identity.persist_machine_number("M11")
+    monkeypatch.setattr(identity, "machine_slot_file", lambda: slot)
+    identity.bind_machine_slot("M11")
 
     legacy.write_text("M1", encoding="utf-8")
+    old_binding.write_text("M1", encoding="utf-8")
 
     assert identity.machine_name() == "M11"
 
 
-def test_machine_name_only_accepts_m1_to_m11_fallback(monkeypatch):
+def test_machine_name_requires_explicit_v2_binding(monkeypatch):
     monkeypatch.setattr(identity, "bound_machine_number", lambda: "")
-    monkeypatch.setattr(identity, "saved_machine_number", lambda: "")
     monkeypatch.setenv("AUTOMATIC_PRINT_MACHINE_NAME", "m9")
-    assert identity.machine_name() == "M9"
-
-    monkeypatch.setenv("AUTOMATIC_PRINT_MACHINE_NAME", "Printer3")
     assert identity.machine_name() == "未设置机器号"
 
 

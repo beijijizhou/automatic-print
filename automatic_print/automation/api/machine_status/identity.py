@@ -18,9 +18,9 @@ def machine_name_file():
     return identity_file().with_name("machine-name")
 
 
-def machine_binding_file():
-    """Identity owned by the background agent, isolated from old UI settings."""
-    return machine_name_file().with_name("machine-binding")
+def machine_slot_file():
+    """V2 identity store unknown to legacy settings and background processes."""
+    return identity_file().with_name("machine-slot-v2")
 
 
 def machine_id():
@@ -48,21 +48,12 @@ def machine_id():
 
 
 def machine_name():
-    bound = bound_machine_number()
-    if bound:
-        return bound
-    saved = saved_machine_number()
-    configured = os.environ.get("AUTOMATIC_PRINT_MACHINE_NAME", "").strip().upper()
-    configured = configured if re.fullmatch(r"M(?:[1-9]|1[01])", configured) else ""
-    migrated = saved or configured
-    if migrated:
-        _write_machine_number(machine_binding_file(), migrated)
-    return migrated or "未设置机器号"
+    return bound_machine_number() or "未设置机器号"
 
 
 def bound_machine_number():
     try:
-        value = machine_binding_file().read_text(encoding="utf-8").strip().upper()
+        value = machine_slot_file().read_text(encoding="utf-8").strip().upper()
         if re.fullmatch(r"M(?:[1-9]|1[01])", value):
             return value
     except (OSError, UnicodeError):
@@ -93,13 +84,12 @@ def saved_machine_number():
     return value if re.fullmatch(r"M(?:[1-9]|1[01])", value) else ""
 
 
-def persist_machine_number(value):
-    """Explicitly bind the agent and mirror the choice for older UI versions."""
+def bind_machine_slot(value):
+    """Bind this agent only after an explicit user machine-slot selection."""
     normalized = str(value or "").strip().upper()
     if not re.fullmatch(r"M(?:[1-9]|1[01])", normalized):
         raise ValueError("机器号必须是 M1-M11。")
-    _write_machine_number(machine_binding_file(), normalized)
-    _write_machine_number(machine_name_file(), normalized)
+    _write_machine_number(machine_slot_file(), normalized)
     return normalized
 
 
