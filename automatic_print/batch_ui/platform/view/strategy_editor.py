@@ -5,7 +5,7 @@ from PySide6.QtWidgets import (
     QCheckBox, QGridLayout, QGroupBox, QLabel, QPushButton, QVBoxLayout, QWidget,
 )
 
-from ....automation.batches.supplements.strategies import (
+from ....automation.batches.supplements.grouping.strategy import (
     GroupingStrategy,
     default_strategy,
 )

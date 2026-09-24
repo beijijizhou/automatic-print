@@ -12,7 +12,7 @@ from ...api.erp import (
 )
 from ...api.erp.items import list_order_items
 from .source import COMPLETED_STATUS, SUPPLEMENT_SOURCES, special_strategy_issue
-from .strategies import GroupingStrategy, default_strategy, grouping_values
+from .grouping.strategy import GroupingStrategy, default_strategy, grouping_values
 
 
 @dataclass(frozen=True)

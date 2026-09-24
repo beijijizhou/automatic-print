@@ -18,7 +18,7 @@ from PySide6.QtWidgets import (
 )
 
 from ..automation.api.machine_status import list_commands, list_machines
-from ..batch_ui.platform.remote_queue import machine_workload
+from ..batch_ui.platform.remote.queue import machine_workload
 from .machine_command_ui import RemoteCommandPanel
 from .automation_toggle import AutomationToggle
 from .printer_control_ui import PrinterControlPanel

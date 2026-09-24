@@ -124,7 +124,7 @@ def build_production_page(owner, output_row: QHBoxLayout) -> QWidget:
         "可将当前勾选批次发送到指定在线机器，从下载连续执行到 PRN。"
     )
     owner.remote_dispatch_status.setWordWrap(True)
-    from ..remote_dispatch import RemoteBatchDispatcher
+    from ..remote.dispatch import RemoteBatchDispatcher
     owner.remote_batch_dispatcher = RemoteBatchDispatcher(owner)
     owner.open_download_folder = QCheckBox("下载完成后打开文件夹")
     owner.open_download_folder.setChecked(True)

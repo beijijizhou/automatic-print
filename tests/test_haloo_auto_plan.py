@@ -9,7 +9,7 @@ from PySide6.QtWidgets import QApplication, QLabel, QWidget
 from automatic_print.automation.batches.supplements.completed import plan_completed_erp_batches
 from automatic_print.automation.batches.supplements.completed import CompletedBatchGroup
 from automatic_print.batch_ui.platform.completed import CompletedErpPage
-from automatic_print.automation.batches.supplements.strategies import (
+from automatic_print.automation.batches.supplements.grouping.strategy import (
     default_strategy,
     grouping_values,
 )

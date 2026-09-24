@@ -7,7 +7,7 @@ from pathlib import Path
 def load_printexp(output):
     from pywinauto import Desktop
 
-    from ..printerexp.loaded_task import record_loaded_task
+    from ...printerexp.status.loaded_task import record_loaded_task
 
     target = Path(output).resolve()
     if target.suffix.lower() != '.prn' or not target.is_file() or not target.stat().st_size:

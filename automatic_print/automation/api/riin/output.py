@@ -162,6 +162,6 @@ def inspect_printexp():
 
 def load_printexp(output):
     """Load an existing PRN into the open dialog; do not start printing."""
-    from .printexp_loader import load_printexp as submit_prn
+    from .printexp.loader import load_printexp as submit_prn
 
     return submit_prn(output)

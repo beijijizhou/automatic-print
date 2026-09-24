@@ -5,8 +5,8 @@ os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
 from PySide6.QtWidgets import QApplication
 
-from automatic_print.batch_ui.platform.remote_machine_dialog import RemoteMachineDialog
-from automatic_print.batch_ui.platform.remote_queue import (
+from automatic_print.batch_ui.platform.remote.dialog import RemoteMachineDialog
+from automatic_print.batch_ui.platform.remote.queue import (
     compact_machine_text,
     machine_workload,
     selected_batch_details,

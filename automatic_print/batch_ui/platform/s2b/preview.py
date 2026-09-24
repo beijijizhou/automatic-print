@@ -5,9 +5,9 @@ from PySide6.QtWidgets import (
     QLabel, QPushButton, QTableWidgetItem, QVBoxLayout, QWidget,
 )
 
-from .view.pages import table_widget
-from .view.strategy_editor import StrategyEditor
-from ..task.reads import ReadWorker
+from ..view.pages import table_widget
+from ..view.strategy_editor import StrategyEditor
+from ...task.reads import ReadWorker
 
 
 class S2BPreviewPage(QWidget):

@@ -20,11 +20,11 @@ def cache_root():
 def scaled_copy(path, factor):
     stat=path.stat()
     key=sha256(repr((str(path.resolve()),stat.st_mtime_ns,stat.st_size,factor,'v1')).encode()).hexdigest()
-    target=cache_root()/key/path.name
+    target=cache_root()/key[:24]/path.name
     if target.is_file() and time()-target.stat().st_mtime<86400:
         return target
     target.parent.mkdir(parents=True,exist_ok=True)
-    temporary=target.with_name(target.name+'.'+uuid4().hex+'.未完成')
+    temporary=target.with_name(target.name+'.'+uuid4().hex[:8]+'.未完成')
     try:
         with Image.open(path) as source:
             dpi=source.info.get('dpi')

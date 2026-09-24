@@ -16,7 +16,7 @@ from automatic_print.automation.batches.supplements.completed import (
 from automatic_print.automation.batches.supplements.completed import (
     _confirmed_group_codes, generate_completed_groups, verify_completed_group,
 )
-from automatic_print.automation.batches.supplements.strategies import GroupingStrategy
+from automatic_print.automation.batches.supplements.grouping.strategy import GroupingStrategy
 from automatic_print.automation.api.erp.items import (
     generate_selected_batch,
     generate_supplement_batch,

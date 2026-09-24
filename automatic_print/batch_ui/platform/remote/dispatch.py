@@ -6,10 +6,10 @@ from threading import Lock, Thread
 from PySide6.QtCore import QObject, Signal
 from PySide6.QtWidgets import QDialog, QMessageBox
 
-from ...automation.api.machine_status import list_commands, list_machines, submit_command
-from ...ui.machine_status_format import actionable_machines
-from .remote_machine_dialog import RemoteMachineDialog
-from .remote_queue import selected_batch_details, selection_text, workload_detail
+from ....automation.api.machine_status import list_commands, list_machines, submit_command
+from ....ui.machine_status_format import actionable_machines
+from .dialog import RemoteMachineDialog
+from .queue import selected_batch_details, selection_text, workload_detail
 
 
 def load_remote_targets():

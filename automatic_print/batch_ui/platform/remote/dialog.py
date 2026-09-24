@@ -8,7 +8,7 @@ from PySide6.QtWidgets import (
     QVBoxLayout,
 )
 
-from .remote_queue import compact_machine_text, workload_detail
+from .queue import compact_machine_text, workload_detail
 
 
 class RemoteMachineDialog(QDialog):

@@ -2,7 +2,7 @@
 
 import re
 
-from ...ui.machine_status_format import remaining_text, status_text
+from ....ui.machine_status_format import remaining_text, status_text
 
 
 ACTIVE_STATUSES = {"claimed", "running"}

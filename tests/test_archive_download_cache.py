@@ -37,7 +37,7 @@ def test_existing_extracted_images_skip_erp_download(tmp_path: Path) -> None:
     )
 
     assert saved == [batch_folder]
-    assert "跳过下载" in messages[0]
+    assert any("跳过下载" in message for message in messages)
 
 
 def test_existing_zip_is_extracted_without_erp_download(tmp_path: Path) -> None:

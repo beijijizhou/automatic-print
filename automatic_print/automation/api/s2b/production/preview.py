@@ -6,7 +6,7 @@ from collections import defaultdict
 from dataclasses import dataclass
 
 from ....batches.classification import size_band
-from ....batches.supplements.strategies import GroupingStrategy, default_strategy
+from ....batches.supplements.grouping.strategy import GroupingStrategy, default_strategy
 from .gateway import preview_items
 
 

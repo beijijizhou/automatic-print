@@ -5,10 +5,10 @@ os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 from PySide6.QtWidgets import QApplication, QWidget
 
 from automatic_print.automation.api.s2b.production.preview import plan_s2b_preview
-from automatic_print.automation.batches.supplements.strategies import (
+from automatic_print.automation.batches.supplements.grouping.strategy import (
     GroupingStrategy, default_strategy,
 )
-from automatic_print.batch_ui.platform.s2b_preview import S2BPreviewPage
+from automatic_print.batch_ui.platform.s2b.preview import S2BPreviewPage
 
 
 APP = QApplication.instance() or QApplication([])

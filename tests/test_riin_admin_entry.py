@@ -162,7 +162,7 @@ class AdminEntryTests(unittest.TestCase):
                 return native_desktop if backend == 'win32' else uia_desktop
 
             with patch('pywinauto.Desktop', side_effect=desktop), patch(
-                'automatic_print.automation.api.printerexp.loaded_task.record_loaded_task'
+                'automatic_print.automation.api.printerexp.status.loaded_task.record_loaded_task'
             ):
                 result = load_printexp(target)
             self.assertEqual(result['state'], 'printexp_loaded')
@@ -197,7 +197,7 @@ class AdminEntryTests(unittest.TestCase):
                 return native_desktop if backend == 'win32' else uia_desktop
 
             with patch('pywinauto.Desktop', side_effect=desktop), patch(
-                'automatic_print.automation.api.printerexp.loaded_task.record_loaded_task'
+                'automatic_print.automation.api.printerexp.status.loaded_task.record_loaded_task'
             ):
                 result = load_printexp(target)
             main.set_focus.assert_not_called()
@@ -227,10 +227,10 @@ class AdminEntryTests(unittest.TestCase):
                 'verification': 'load_dialog_closed',
             }
             with patch('pywinauto.Desktop', side_effect=desktop), patch(
-                'automatic_print.automation.api.printerexp.loaded_task.record_loaded_task',
+                'automatic_print.automation.api.printerexp.status.loaded_task.record_loaded_task',
                 return_value=receipt,
             ), patch(
-                'automatic_print.automation.api.riin.printexp_loader.time.monotonic',
+                'automatic_print.automation.api.riin.printexp.loader.time.monotonic',
                 side_effect=[0, 3],
             ):
                 result = load_printexp(target)

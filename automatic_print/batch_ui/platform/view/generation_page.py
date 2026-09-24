@@ -8,7 +8,7 @@ from PySide6.QtWidgets import (
 from ..completed import CompletedErpPage
 from .pages import build_generation_page, table_widget
 from .route_view import build_route_page
-from ..s2b_preview import S2BPreviewPage
+from ..s2b.preview import S2BPreviewPage
 
 
 def build_accepted_page(owner) -> QWidget:

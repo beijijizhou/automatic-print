@@ -57,7 +57,10 @@ def prepare_one(path, settings, root_provider, header_search):
     stat = path.stat()
     fingerprint = [str(path.resolve()), stat.st_mtime_ns, stat.st_size,
                    settings.membrane_gap_mm, 4]
-    target = root / sha256(json.dumps(fingerprint).encode()).hexdigest() / path.name
+    # Keep ample collision resistance without exceeding the traditional
+    # Windows path limit once a long production filename and temp suffix join.
+    cache_key = sha256(json.dumps(fingerprint).encode()).hexdigest()[:24]
+    target = root / cache_key / path.name
     info = target.with_suffix('.json')
     if virtual:
         from .virtual_cache import load
@@ -108,7 +111,9 @@ def prepare_one(path, settings, root_provider, header_search):
         from .virtual_cache import save
         save(info, record)
         return path, record
-    temporary = target.with_name(target.name + '.' + uuid4().hex + '.未完成')
+    temporary = target.with_name(
+        target.name + '.' + uuid4().hex[:8] + '.未完成'
+    )
     try:
         target.parent.mkdir(parents=True, exist_ok=True)
         record['preparation_engine'] = save_gap_copy(
@@ -116,7 +121,9 @@ def prepare_one(path, settings, root_provider, header_search):
         if (path.stat().st_mtime_ns, path.stat().st_size) != (stat.st_mtime_ns, stat.st_size):
             raise ValueError(f'{path.name}：补足间距期间源文件发生变化')
         replace_with_busy_retry(temporary, target)
-        metadata = info.with_name(info.name + '.' + uuid4().hex + '.未完成')
+        metadata = info.with_name(
+            info.name + '.' + uuid4().hex[:8] + '.未完成'
+        )
         try:
             metadata.write_text(json.dumps(record, ensure_ascii=False), encoding='utf-8')
             replace_with_busy_retry(metadata, info)

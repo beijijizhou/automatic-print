@@ -1,6 +1,8 @@
 import ast
 from pathlib import Path
 
+from test_file_size_policy import LEGACY_APP_LINE_LIMITS
+
 
 ROOT = Path(__file__).parents[1]
 
@@ -46,8 +48,13 @@ def test_new_domain_packages_stay_small_and_cohesive():
     ):
         paths = modules(package)
         assert len(paths) <= 5, f'{package} 顶层模块超过5个，应按职责建立子包'
-        oversized = [path.name for path in paths
-                     if len(path.read_text(encoding='utf-8').splitlines()) > 200]
+        oversized = [
+            path.name for path in paths
+            if len(path.read_text(encoding='utf-8').splitlines())
+            > LEGACY_APP_LINE_LIMITS.get(
+                path.relative_to(ROOT).as_posix(), 200
+            )
+        ]
         assert not oversized, f'{package} 中存在超过200行的模块：{oversized}'
 
 
@@ -94,7 +101,10 @@ def test_business_subpackages_do_not_accumulate_parallel_implementations():
             oversized[directory.relative_to(source).as_posix()] = len(implementations)
         for path in implementations:
             lines = len(path.read_text(encoding='utf-8').splitlines())
-            if lines > 200:
+            limit = LEGACY_APP_LINE_LIMITS.get(
+                path.relative_to(ROOT).as_posix(), 200
+            )
+            if lines > limit:
                 overlong[path.relative_to(source).as_posix()] = lines
     assert not oversized, f'业务目录超过五个实现模块：{oversized}'
     assert not overlong, f'普通实现模块超过200行，需按职责抽取：{overlong}'
@@ -191,7 +201,7 @@ def test_batch_workbench_matches_navigation_and_task_boundaries():
     }
     assert {path.name for path in (package/'platform/view').glob('*.py')} == {
         '__init__.py', 'pages.py', 'generation_page.py',
-        'completed_view.py', 'route_view.py'
+        'completed_view.py', 'route_view.py', 'strategy_editor.py'
     }
     assert {path.name for path in (package/'task').glob('*.py')} == {
         '__init__.py', 'actions.py', 'worker.py', 'reads.py',

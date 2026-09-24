@@ -1,4 +1,4 @@
-from automatic_print.automation.api.printerexp.loaded_task import (
+from automatic_print.automation.api.printerexp.status.loaded_task import (
     read_loaded_task, record_loaded_task,
 )
 

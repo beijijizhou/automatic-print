@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from ..classification import (
+from ...classification import (
     BACK_FACE,
     BASE_COMPOSITIONS,
     DOUBLE_FACE_DETAIL,

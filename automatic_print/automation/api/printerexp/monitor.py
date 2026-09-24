@@ -12,7 +12,7 @@ from ..machine_commands import CommandDispatcher
 from ....runtime.monitoring.control import AutomationWakeListener, automation_enabled
 from .controls import NativePrintExpControls
 from .discovery import find_installation, process_running, running_installations
-from .loaded_task import read_loaded_task
+from .status.loaded_task import read_loaded_task
 from .state import read_snapshot
 from .status.projection import StatusProjector
 
