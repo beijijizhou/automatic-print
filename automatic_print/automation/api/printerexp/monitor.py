@@ -10,8 +10,9 @@ from time import monotonic
 from ..machine_status import claim_control, report_machine
 from ..machine_status.identity import machine_id
 from ..machine_commands import CommandDispatcher
+from ..machine_commands.lifecycle import recover_pending_receipts, reconcile_printer_status
 from ....runtime.monitoring.control import AutomationWakeListener
-from .controls import NativePrintExpControls
+from .control import NativePrintExpControls
 from .discovery import find_installation, process_running, running_installations
 from .status.loaded_task import read_loaded_task
 from .state import read_snapshot
@@ -70,6 +71,7 @@ class PrintExpMonitor:
     def _claim_startup_command(self):
         """One startup read recovers a fleet update missed while powered off."""
         try:
+            recover_pending_receipts()
             self.command_dispatcher.next_poll = 0.0
             self.command_dispatcher.tick()
         except Exception as error:
@@ -93,6 +95,11 @@ class PrintExpMonitor:
         changed = signature != self.last_signature
         if not changed:
             return status
+        try:
+            reconcile_printer_status(status)
+            recover_pending_receipts()
+        except Exception as error:
+            self.logger.warning("Unable to reconcile local command journal: %s", error)
         try:
             self.send(status)
         except Exception as error:

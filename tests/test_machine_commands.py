@@ -201,5 +201,5 @@ def test_runner_marks_prn_error_as_failed_and_preserves_result(monkeypatch):
     assert runner.run_command("command-failed") == 1
     assert updates[-1][0][1] == "failed"
     assert updates[-1][1]["phase"] == "PRN生成或装载失败"
-    assert updates[-1][1]["result"] is result
+    assert updates[-1][1]["result"] == result
     assert "PrintExp 装载失败" in updates[-1][1]["error_message"]

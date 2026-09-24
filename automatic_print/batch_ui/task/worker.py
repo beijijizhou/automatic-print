@@ -190,7 +190,7 @@ class AutomationWorker(QObject):
                 self._report(f"批次信息读取完成：共 {len(records)} 个批次。")
                 self._deliver(self.batches_loaded, records)
         elif self.action == "open_browser":
-            from .browser_action import open_platform_browser
+            from ...automation.browser.session import open_platform_browser
             self._deliver(self.completed, open_platform_browser(
                 self.platform_name, self.cancellation.check, self._report,
             ))

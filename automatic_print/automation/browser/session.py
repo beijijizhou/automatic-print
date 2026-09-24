@@ -47,6 +47,17 @@ def show_debug_browser(start_url: str, check_cancel=None, progress=None) -> str:
         return page.url
 
 
+def open_platform_browser(platform_name, check_cancel, progress):
+    """Show the configured ERP production page and report the final URL."""
+    from ..providers.registry import get_erp_platform
+
+    url = get_erp_platform(platform_name).production_items_url
+    current = show_debug_browser(url, check_cancel, progress)
+    return {
+        "type": "browser_opened", "platform": platform_name, "url": current,
+    }
+
+
 def open_authenticated_page(
     browser,
     target_url: str,

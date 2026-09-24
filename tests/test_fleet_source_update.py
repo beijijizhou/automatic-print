@@ -6,7 +6,7 @@ os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 from PySide6.QtWidgets import QApplication
 from PySide6.QtCore import Qt
 
-from automatic_print import __version__
+from automatic_print import __release_iteration__, __version__
 from automatic_print.updates.source import SourceVersion
 from automatic_print.automation.api.machine_commands import runner, source_update
 from automatic_print.automation.api.machine_status import commands
@@ -18,7 +18,7 @@ APP = QApplication.instance() or QApplication([])
 
 def load_versions(panel):
     panel._versions_loaded([
-        SourceVersion("b" * 40, __version__, "2026-09-24", 15),
+        SourceVersion("b" * 40, __version__, "2026-09-24", __release_iteration__),
         SourceVersion("a" * 40, "0.1.393", "2026-09-24", 14),
     ])
 
