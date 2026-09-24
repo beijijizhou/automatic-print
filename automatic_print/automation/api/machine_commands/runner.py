@@ -13,7 +13,6 @@ from ...browser.batches import (
     download_selected_batches, load_batch_records, load_batch_records_between,
 )
 from ..machine_status.commands import get_command, update_command
-
 class CommandProgress:
     def __init__(self, command_id, send=update_command, interval=2):
         self.command_id = command_id
@@ -48,7 +47,8 @@ def run_command(command_id):
             from .source_update import execute_source_update, schedule_monitor_restart
             result = execute_source_update(command.get("payload") or {}, progress)
             update_command(
-                command_id, "succeeded", phase="源码更新完成，等待程序安全重启",
+                command_id, "succeeded",
+                phase=f"源码{'回滚' if result.get('rollback') else '更新'}完成，等待程序安全重启",
                 progress_percent=100, result=result,
             )
             schedule_monitor_restart()

@@ -27,10 +27,23 @@ class SourceUpdateInfo:
     commits: int
     repair: bool = False
     release_iteration: int = 0
+    rollback: bool = False
 
     @property
     def needs_update(self):
         return self.current != self.target or self.repair
+
+    @property
+    def display_version(self):
+        return release_display(self.version, self.release_date, self.release_iteration)
+
+
+@dataclass(frozen=True)
+class SourceVersion:
+    revision: str
+    version: str
+    release_date: str
+    release_iteration: int = 0
 
     @property
     def display_version(self):
@@ -92,16 +105,35 @@ class SourceUpdater:
         if not re.fullmatch(r'[0-9a-f]{40}', selected):
             raise ValueError('目标源码提交号格式不正确。')
         self.git_run('merge-base', '--is-ancestor', selected, latest)
-        self.git_run('merge-base', '--is-ancestor', current, selected)
+        self.git_run('merge-base', '--is-ancestor', current, latest)
         content = self.git_run('show', f'{selected}:automatic_print/__init__.py')
-        version = re.search(r'__version__\s*=\s*[\'"]([^\'"]+)', content)
-        date = re.search(r'__release_date__\s*=\s*[\'"]([^\'"]+)', content)
-        iteration = re.search(r'__release_iteration__\s*=\s*(\d+)', content)
-        return SourceUpdateInfo(current, selected, version[1] if version else '待确认',
-                                date[1] if date else self.git_run('show', '-s', '--format=%cs', selected),
-                                int(self.git_run('rev-list', '--count', f'{current}..{selected}')),
-                                (self.root/LOCK_NAME).exists(),
-                                int(iteration[1]) if iteration else 0)
+        metadata = _source_version(selected, content, self)
+        forward = int(self.git_run('rev-list', '--count', f'{current}..{selected}'))
+        backward = int(self.git_run('rev-list', '--count', f'{selected}..{current}'))
+        if forward and backward:
+            raise ValueError('当前版本与目标版本不在同一条main历史上。')
+        return SourceUpdateInfo(
+            current, selected, metadata.version, metadata.release_date,
+            max(forward, backward), (self.root/LOCK_NAME).exists(),
+            metadata.release_iteration, rollback=bool(backward),
+        )
+
+    def available_versions(self, limit=20):
+        self.validate()
+        self.progress('正在连接代码仓库，读取可回滚版本…')
+        self.git_run('fetch', 'origin', 'main')
+        latest = self.git_run('rev-parse', 'refs/remotes/origin/main')
+        revisions = self.git_run(
+            'log', f'--max-count={int(limit)}', '--format=%H', latest,
+            '--', 'automatic_print/__init__.py',
+        ).splitlines()
+        versions = []
+        for revision in revisions:
+            content = self.git_run('show', f'{revision}:automatic_print/__init__.py')
+            version = _source_version(revision, content, self)
+            if _version_key(version.version) >= (0, 1, 393):
+                versions.append(version)
+        return versions
 
     def apply(self, info):
         self.progress('正在复核本地代码及待更新版本…')
@@ -111,11 +143,31 @@ class SourceUpdater:
         lock = self.root/LOCK_NAME
         lock.touch()
         # Leave the reload guard on failure: do not restart into incomplete dependencies.
-        self.progress('正在拉取并应用已确认的新代码…')
-        self.git_run('merge', '--ff-only', info.target)
+        if info.rollback:
+            self.progress('正在安全回滚到已确认的历史版本…')
+            self.git_run('reset', '--keep', info.target)
+        else:
+            self.progress('正在拉取并应用已确认的新代码…')
+            self.git_run('merge', '--ff-only', info.target)
         self.progress('正在检查和更新运行依赖，请稍候…')
         self.run([sys.executable, '-m', 'pip', 'install', '--disable-pip-version-check',
                   '-r', str(self.root/'requirements.txt')], timeout=600)
         self.progress('代码和依赖更新完成，正在准备安全重启…')
         lock.unlink(missing_ok=True)
         return info
+
+
+def _source_version(revision, content, updater):
+    version = re.search(r'__version__\s*=\s*[\'"]([^\'"]+)', content)
+    date = re.search(r'__release_date__\s*=\s*[\'"]([^\'"]+)', content)
+    iteration = re.search(r'__release_iteration__\s*=\s*(\d+)', content)
+    return SourceVersion(
+        revision, version[1] if version else '待确认',
+        date[1] if date else updater.git_run('show', '-s', '--format=%cs', revision),
+        int(iteration[1]) if iteration else 0,
+    )
+
+
+def _version_key(value):
+    match = re.fullmatch(r'(\d+)\.(\d+)\.(\d+)', str(value))
+    return tuple(map(int, match.groups())) if match else (0, 0, 0)

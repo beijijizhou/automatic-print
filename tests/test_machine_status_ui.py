@@ -43,7 +43,7 @@ def test_board_keeps_eleven_slots_and_renders_live_machine():
     assert page.table.cellWidget(3, 4).value() == 42
     assert page.sections.currentWidget() is page.status_section
     assert page.sections.indexOf(page.update_section) == 2
-    assert page.sections.tabText(2) == "电脑更新"
+    assert page.sections.tabText(2) == "版本管理"
     assert page.table.minimumHeight() == 420
     assert page.command_panel.submit_button.isEnabled()
     assert not page.control_panel.start_button.isEnabled()

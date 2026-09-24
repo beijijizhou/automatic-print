@@ -7,12 +7,20 @@ from PySide6.QtWidgets import QApplication
 from PySide6.QtCore import Qt
 
 from automatic_print import __version__
+from automatic_print.updates.source import SourceVersion
 from automatic_print.automation.api.machine_commands import runner, source_update
 from automatic_print.automation.api.machine_status import commands
 from automatic_print.ui.fleet_update import FleetUpdatePanel, update_state
 
 
 APP = QApplication.instance() or QApplication([])
+
+
+def load_versions(panel):
+    panel._versions_loaded([
+        SourceVersion("b" * 40, __version__, "2026-09-24", 15),
+        SourceVersion("a" * 40, "0.1.393", "2026-09-24", 14),
+    ])
 
 
 def machine(number, version="0.1.1"):
@@ -47,6 +55,7 @@ def test_submit_source_update_reuses_command_and_udp_channels(monkeypatch):
 
 def test_update_panel_shows_all_eleven_version_receipts():
     panel = FleetUpdatePanel()
+    load_versions(panel)
     machines = [machine(1, __version__), {**machine(2, "0.1.1"), "is_local": True}]
     command = {
         "action": "source_update", "target_machine_id": machine(2)["machine_id"],
@@ -58,17 +67,18 @@ def test_update_panel_shows_all_eleven_version_receipts():
     assert panel.table.rowCount() == 11
     assert panel.table.columnCount() == 4
     assert panel.table.item(0, 2).text() == __version__
-    assert panel.table.item(0, 3).text() == "已更新"
+    assert panel.table.item(0, 3).text() == "已是目标版本"
     assert panel.table.item(1, 1).text() == "M2（本机）"
     assert panel.table.item(1, 2).text() == "0.1.1"
     assert panel.table.item(1, 3).text() == "更新中 · 正在安装依赖"
     assert panel.table.item(2, 3).text() == "未接入"
-    assert "已更新 1/11" in panel.summary.text()
+    assert "已匹配 1/11" in panel.summary.text()
     assert panel.has_active_updates()
 
 
 def test_update_panel_selects_only_requested_pending_machines():
     panel = FleetUpdatePanel()
+    load_versions(panel)
     panel.set_data([machine(1, __version__), machine(2), machine(3)], [])
 
     assert panel.table.item(0, 0).checkState() == Qt.Unchecked
@@ -77,7 +87,7 @@ def test_update_panel_selects_only_requested_pending_machines():
     panel.table.item(1, 0).setCheckState(Qt.Unchecked)
 
     assert [item["machine_name"] for item in panel._selected_targets()] == ["M3"]
-    assert panel.button.text() == "更新已选电脑（1）"
+    assert panel.button.text() == "切换已选电脑（1）"
     panel.clear_button.click()
     assert panel._selected_targets() == []
 
@@ -89,14 +99,36 @@ def test_terminal_receipt_waits_for_restarted_version_report():
         "status": "succeeded", "phase": "源码更新完成", "created_at": "2",
     }
     assert update_state(target, [command], "0.1.390").startswith(
-        "源码已更新，等待重启回报"
+        "源码已切换，等待重启回报"
     )
+
+
+def test_panel_selects_a_published_rollback_target():
+    panel = FleetUpdatePanel()
+    load_versions(panel)
+    panel.versions.setCurrentIndex(1)
+    panel.set_data([machine(1, __version__)], [])
+
+    assert panel.target().version == "0.1.393"
+    assert panel.table.item(0, 3).text() == "待回滚"
+    assert panel.button.text() == "回滚已选电脑（1）"
+
+
+def test_state_ignores_receipt_for_a_different_selected_version():
+    target = machine(3, __version__)
+    old_command = {
+        "action": "source_update", "target_machine_id": target["machine_id"],
+        "status": "succeeded", "created_at": "2",
+        "payload": {"target_version": __version__},
+    }
+
+    assert update_state(target, [old_command], "0.1.393") == "待回滚"
 
 
 def test_update_executor_checks_pinned_revision_before_applying(monkeypatch):
     events = []
     info = SimpleNamespace(
-        target="b" * 40, version="0.1.390", needs_update=True,
+        target="b" * 40, version="0.1.390", needs_update=True, rollback=True,
     )
 
     class Updater:
@@ -114,6 +146,7 @@ def test_update_executor_checks_pinned_revision_before_applying(monkeypatch):
 
     assert events == ["init", ("check", "b" * 40), ("apply", "b" * 40)]
     assert result["restart_pending"] is True
+    assert result["rollback"] is True
 
 
 def test_runner_reports_source_update_before_scheduling_restart(monkeypatch):

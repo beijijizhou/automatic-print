@@ -22,6 +22,8 @@ def execute_source_update(payload, progress):
         "target_revision": info.target,
         "target_version": info.version,
         "updated": info.needs_update,
+        "rollback": info.rollback,
+        "operation": "rollback" if info.rollback else "update",
         "restart_pending": True,
     }
 

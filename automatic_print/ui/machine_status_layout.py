@@ -27,7 +27,7 @@ def build_machine_status_layout(page, title, description, overview):
 
     sections.addTab(status_page, "11 台机器状态")
     sections.addTab(control_page, "控制与任务")
-    sections.addTab(update_page, "电脑更新")
+    sections.addTab(update_page, "版本管理")
     layout = QVBoxLayout(page)
     layout.addWidget(title)
     layout.addWidget(description)
