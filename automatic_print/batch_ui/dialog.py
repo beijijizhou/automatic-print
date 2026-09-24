@@ -174,7 +174,10 @@ class AutomationDialog(
     def _current_layout_settings(self) -> LayoutSettings:
         window = self.settings_host or self.window()
         if window is None or not hasattr(window, "width"):
-            settings = LayoutSettings(png_engine="libvips")
+            from ..history.layout_settings import load_layout_settings
+            settings = load_layout_settings(
+                self.preferences, LayoutSettings(png_engine="libvips"),
+            )
         else:
             settings = settings_from_window(window)
         platform = self.platform.currentData()

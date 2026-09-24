@@ -52,11 +52,21 @@ def test_command_progress_rate_limits_repeated_updates():
     assert sent[0][1]["phase"] == "第一步"
 
 
-def test_remote_settings_keep_target_machine_number():
-    preferences = SimpleNamespace(value=lambda key, default, value_type: "M8")
-    settings = _layout_settings({"dpi": 200, "machine_number": "M1", "unknown": 3}, preferences)
+def test_remote_settings_use_target_machine_layout_snapshot(tmp_path):
+    from PySide6.QtCore import QSettings
+    from automatic_print.history.layout_settings import save_layout_settings
+    from automatic_print.layout_engine import LayoutSettings
 
-    assert settings.dpi == 200
+    preferences = QSettings(str(tmp_path / "target.ini"), QSettings.IniFormat)
+    save_layout_settings(preferences, LayoutSettings(
+        dpi=360, cutter_mode="single", machine_number="M8",
+    ))
+    settings = _layout_settings({
+        "dpi": 200, "cutter_mode": "dual", "machine_number": "M1", "unknown": 3,
+    }, preferences)
+
+    assert settings.dpi == 360
+    assert settings.cutter_mode == "single"
     assert settings.machine_number == "M8"
 
 
