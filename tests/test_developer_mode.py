@@ -44,8 +44,8 @@ def test_default_shows_production_layout_but_hides_diagnostic_tools(tmp_path, mo
     assert not owner._layout_settings().compare_reference_films
     assert not owner.cutter_settings.force_small_pair.isHidden()
     assert owner.cutter_settings.force_small_pair.isChecked()
-    assert owner.cutter_settings.knife_change_gap.isHidden()
-    assert owner._layout_settings().cutter_knife_change_gap_mm == 0
+    assert not owner.cutter_settings.knife_change_gap.isHidden()
+    assert owner._layout_settings().cutter_knife_change_gap_mm == 600
     assert owner.quick_force_small_pair.isVisible()
     assert owner.quick_force_small_pair.isChecked()
     assert owner._layout_settings().force_small_pair_width
@@ -76,7 +76,6 @@ def test_default_shows_production_layout_but_hides_diagnostic_tools(tmp_path, mo
         '切膜刀码开关', '平台＋尺码标签开关', '批次顺序标注',
         'S2B 批次信息查询', '批次下载与自动化打印', '隆丰 ERP 下载', 'S2B 生产图下载',
         '莆田平台', '并行分块 TIFF',
-        '换刀与批次结束停止距离',
     ]
     assert feature_dialog.grab().save(str(tmp_path/'developer-feature-list.png'))
     feature_dialog.close()

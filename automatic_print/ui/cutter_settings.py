@@ -198,5 +198,5 @@ class CutterSettingsPanel(QWidget):
     def set_developer_mode(self, enabled):
         self.force_small_pair.setVisible(True)
         self.force_small_pair_label.setVisible(True)
-        self.knife_change_gap.setVisible(enabled)
-        self.knife_change_gap_label.setVisible(enabled)
+        self.knife_change_gap.setVisible(True)
+        self.knife_change_gap_label.setVisible(True)

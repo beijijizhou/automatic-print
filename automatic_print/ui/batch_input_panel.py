@@ -76,6 +76,8 @@ def build_batch_input(owner, panel):
     from .header_gap import build_quick_force_pair, build_quick_header_gap
     gap = build_quick_header_gap(owner.window())
     force_pair = build_quick_force_pair(owner.window())
+    from .cutter_quick_settings import build_quick_cutter_settings
+    cutter_controls = build_quick_cutter_settings(owner.window(), gap)
     panel.reference_films_label = QLabel('方案比较：45 / 60 厘米')
     panel.source_order = QCheckBox('批次文件夹名＋正序/倒序')
     panel.source_order.setChecked(panel.label.source_order.isChecked())
@@ -84,7 +86,8 @@ def build_batch_input(owner, panel):
     panel.source_order_control, panel.source_order_label = _copyable_toggle(
         panel.source_order, '批次文件夹名＋正序/倒序')
     panel.cutter_group = _parameter_group(
-        '切膜机 · 刀码与补距', panel.cutter_marker_enabled, gap)
+        '切膜机 · 刀码与补距', cutter_controls)
+    panel.cutter_marker_enabled.hide()
     panel.automatic_layout_group = _parameter_group(
         '自动排版', force_pair, panel.platform_enabled,
         panel.source_order_control, panel.reference_films_label)
@@ -96,7 +99,6 @@ def build_batch_input(owner, panel):
     panel.cutter_group.setStyleSheet(cutter_highlight)
     def sync_cutter_controls(*_args):
         enabled = owner.window().cutter_settings.mode.currentData() != 'free'
-        gap.setVisible(enabled)
         force_pair.setVisible(enabled)
         panel.reference_films_label.setVisible(
             enabled and getattr(owner.window(), 'developer_mode_enabled', False))

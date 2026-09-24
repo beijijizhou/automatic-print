@@ -1,5 +1,6 @@
 from test_developer_mode import window, APP
 from PySide6.QtCore import Qt
+from PySide6.QtWidgets import QCheckBox
 
 
 def test_department_navigation_defaults_to_independent_uv_workspace(tmp_path):
@@ -136,9 +137,25 @@ def test_everyday_parameters_are_grouped_and_text_layout_is_default(tmp_path):
     assert home.batch_input_panel.isAncestorOf(owner.quick_header_gap_group)
     assert home.batch_input_panel.isAncestorOf(owner.quick_force_small_pair)
     assert panel.cutter_group.isAncestorOf(owner.quick_header_gap_group)
+    assert panel.cutter_group.isAncestorOf(owner.quick_knife_mode)
+    assert panel.cutter_group.isAncestorOf(owner.quick_knife_position)
+    assert panel.cutter_group.isAncestorOf(owner.quick_left_marker_lift)
+    assert panel.cutter_group.isAncestorOf(owner.quick_knife_change_gap)
     assert panel.automatic_layout_group.isAncestorOf(owner.quick_force_small_pair)
     assert panel.automatic_layout_group.isAncestorOf(panel.platform_enabled)
     assert '#fb923c' in panel.cutter_group.styleSheet()
+    visible_checks = [
+        control for control in panel.cutter_group.findChildren(QCheckBox)
+        if control.isVisibleTo(owner)
+    ]
+    assert visible_checks == [owner.quick_membrane_gap_enabled]
+    owner.quick_knife_mode.setCurrentIndex(
+        owner.quick_knife_mode.findData(False))
+    assert not owner.cutter_settings.auto_knife.isChecked()
+    assert owner.quick_knife_position.isEnabled()
+    owner.quick_knife_change_gap.setValue(550)
+    assert owner.cutter_settings.knife_change_gap.value() == 550
+    assert owner._layout_settings().cutter_knife_change_gap_mm == 550
     assert home.batch_input_panel.isAncestorOf(owner.quick_output_width)
     assert home.batch_input_panel.isAncestorOf(panel.source_order)
     assert panel.source_order.isChecked()
@@ -151,7 +168,7 @@ def test_everyday_parameters_are_grouped_and_text_layout_is_default(tmp_path):
     assert owner.quick_header_gap_group.isHidden()
     assert not owner.quick_force_small_pair.isVisibleTo(owner)
     assert panel.automatic_layout_group.isVisibleTo(owner)
-    assert panel.cutter_marker_enabled.isVisibleTo(owner)
+    assert not panel.cutter_marker_enabled.isVisibleTo(owner)
     owner.close()
 
 
