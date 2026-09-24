@@ -21,14 +21,12 @@ class CurrentFilmLabel(QWidget):
         self.summary.setTextInteractionFlags(Qt.TextSelectableByMouse)
 
         self.film = QComboBox()
-        self.mode = QComboBox()
         self.custom_width = QDoubleSpinBox()
         self.custom_width.setRange(5, 500)
         self.custom_width.setDecimals(2)
         self.custom_width.setSingleStep(0.5)
         self.custom_width.setSuffix(" 厘米")
         self._copy_items(self.cutter.film, self.film)
-        self._copy_items(self.cutter.mode, self.mode)
 
         layout = QHBoxLayout(self)
         layout.setContentsMargins(10, 8, 10, 8)
@@ -36,16 +34,13 @@ class CurrentFilmLabel(QWidget):
         layout.addWidget(QLabel("膜规格"))
         layout.addWidget(self.film)
         layout.addWidget(self.custom_width)
-        layout.addWidget(QLabel("排版"))
-        layout.addWidget(self.mode, 1)
+        layout.addStretch(1)
         layout.addWidget(self.summary)
 
         self.film.currentIndexChanged.connect(self._film_requested)
-        self.mode.currentIndexChanged.connect(self._mode_requested)
         self.custom_width.valueChanged.connect(self._custom_requested)
         for signal in (
             self.cutter.film.currentIndexChanged,
-            self.cutter.mode.currentIndexChanged,
             self.cutter.width_control.valueChanged,
             self.cutter.custom_film.value.valueChanged,
             self.cutter.printable.left.valueChanged,
@@ -86,13 +81,9 @@ class CurrentFilmLabel(QWidget):
             self.summary.setText("预留超过膜宽，禁止生成")
 
     def _sync_controls(self) -> None:
-        self._copy_items(self.cutter.mode, self.mode)
         self.film.blockSignals(True)
         self.film.setCurrentIndex(self.cutter.film.currentIndex())
         self.film.blockSignals(False)
-        self.mode.blockSignals(True)
-        self.mode.setCurrentIndex(self.cutter.mode.currentIndex())
-        self.mode.blockSignals(False)
         self.custom_width.blockSignals(True)
         self.custom_width.setValue(self.cutter.custom_film.value.value())
         self.custom_width.blockSignals(False)
@@ -103,10 +94,6 @@ class CurrentFilmLabel(QWidget):
     def _film_requested(self, index: int) -> None:
         if index >= 0:
             self.cutter.film.setCurrentIndex(index)
-
-    def _mode_requested(self, index: int) -> None:
-        if index >= 0:
-            self.cutter.mode.setCurrentIndex(index)
 
     def _custom_requested(self, value: float) -> None:
         self.cutter.custom_film.value.setValue(value)

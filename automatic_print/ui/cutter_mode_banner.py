@@ -14,7 +14,11 @@ class CutterModeBanner(QWidget):
         self.title.setObjectName("cutterModeTitle")
         self.mode = QComboBox()
         self.mode.setMinimumWidth(220)
-        self.mode.setAccessibleName("全局生产排版模式")
+        self.mode.setAccessibleName("当前生产模式")
+        self.mode.setToolTip(
+            "这里是生产模式的唯一入口：正常排版不生成刀码；"
+            "强制单列和自动多列会生成切膜刀码。"
+        )
         self.status = QLabel()
         self.status.setWordWrap(True)
 
@@ -50,7 +54,8 @@ class CutterModeBanner(QWidget):
         self.setProperty("cuttingMode", cutting)
         if cutting:
             self.status.setText(
-                "切膜机模式已开启：会生成刀码并应用刀位；开始排版前请确认膜规格与刀位。"
+                f"{self.cutter.mode.currentText()}：会生成刀码并应用刀位；"
+                "开始排版前请确认膜规格与刀位。"
             )
             background, foreground, border = "#fff7ed", "#9a3412", "#f97316"
         else:
