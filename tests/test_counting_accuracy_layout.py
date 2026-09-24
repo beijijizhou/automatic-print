@@ -51,6 +51,16 @@ def test_counting_layout_numbers_final_canvas_and_keeps_double_rows_exact(tmp_pa
     rotated = [members for (zone, _row), members in rows.items() if zone == '旋转区']
     assert regular and all(len(members) == 2 for members in regular)
     assert all(not placement.rotation_degrees for members in regular for _path, placement in members)
+    ordered_regular = sorted(
+        regular,
+        key=lambda members: members[0][1].row_y_px,
+    )
+    for row_index, members in enumerate(ordered_regular):
+        left, right = sorted(members, key=lambda member: member[1].x_px)
+        assert [left[1].sequence_number, right[1].sequence_number] == [
+            row_index * 2 + 1,
+            row_index * 2 + 2,
+        ]
     assert rotated and all(len(members) == 1 for members in rotated)
 
 
