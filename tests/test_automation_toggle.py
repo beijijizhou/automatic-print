@@ -16,12 +16,17 @@ APP = QApplication.instance() or QApplication([])
 
 
 def test_disable_and_enable_persist_local_automation_state(tmp_path):
-    target = tmp_path / "automation-disabled"
+    target = tmp_path / "automation-enabled"
 
+    assert not automation_enabled(target=target)
     assert set_automation_enabled(False, target=target) is False
     assert not automation_enabled(target=target)
     assert set_automation_enabled(True, target=target) is True
     assert automation_enabled(target=target)
+
+
+def test_automation_is_fail_closed_without_opt_in_file(tmp_path):
+    assert not automation_enabled(target=tmp_path / "missing-enabled-marker")
 
 
 def test_lan_wake_message_is_signed_and_expires():
@@ -57,6 +62,22 @@ def test_monitor_suppresses_reports_when_automation_is_disabled(monkeypatch):
     allowed["value"] = True
     monitor.run_once()
     assert sent and sent[-1]["source_online"] is False
+
+
+def test_monitor_defaults_to_five_minute_heartbeat_and_ignores_eta_changes():
+    monitor = monitor_module.PrintExpMonitor(
+        send=lambda _status: None, automation_allowed=lambda: False,
+    )
+    base = {
+        "state": "running", "phase": "PrintExp打印中", "source_online": True,
+        "progress_percent": 42, "batch_id": "batch", "batch_name": "batch.prn",
+        "batch_info": {"printer_state": "printing"}, "remaining_seconds": 120,
+        "error_message": None,
+    }
+    changed_eta = {**base, "remaining_seconds": 118}
+
+    assert monitor.heartbeat_seconds == 300
+    assert monitor_module._signature(base) == monitor_module._signature(changed_eta)
 
 
 def test_disabled_monitor_makes_no_cloud_dispatch_calls():

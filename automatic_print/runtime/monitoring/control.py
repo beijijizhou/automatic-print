@@ -19,20 +19,20 @@ MAX_MESSAGE_AGE = 30
 
 def automation_state_file():
     root = Path(os.environ.get("LOCALAPPDATA") or Path.home() / ".automatic-print")
-    return root / "AutomaticPrint" / "automation-disabled"
+    return root / "AutomaticPrint" / "automation-enabled"
 
 
 def automation_enabled(*, target=None):
-    return not Path(target or automation_state_file()).exists()
+    return Path(target or automation_state_file()).exists()
 
 
 def set_automation_enabled(enabled, *, target=None):
     state = Path(target or automation_state_file())
     if enabled:
-        state.unlink(missing_ok=True)
+        state.parent.mkdir(parents=True, exist_ok=True)
+        state.write_text("enabled\n", encoding="utf-8")
         return True
-    state.parent.mkdir(parents=True, exist_ok=True)
-    state.write_text("disabled\n", encoding="utf-8")
+    state.unlink(missing_ok=True)
     return False
 
 

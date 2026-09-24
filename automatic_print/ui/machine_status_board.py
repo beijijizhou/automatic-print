@@ -66,7 +66,7 @@ class MachineStatusPage(QWidget):
         self.loader.loaded.connect(self.apply_dashboard)
         self.loader.failed.connect(self.show_error)
         self.timer = QTimer(self)
-        self.timer.setInterval(10_000)
+        self.timer.setInterval(60_000)
         self.timer.timeout.connect(self.refresh)
 
         title = QLabel("PrintExp 打印机状态")

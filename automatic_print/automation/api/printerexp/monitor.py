@@ -22,7 +22,7 @@ class PrintExpMonitor:
         self,
         *,
         poll_seconds=2,
-        heartbeat_seconds=60,
+        heartbeat_seconds=300,
         send=report_machine,
         command_dispatcher=None,
         control_dispatcher=None,
@@ -110,7 +110,7 @@ class PrintExpMonitor:
 def _signature(status):
     return tuple(str(status.get(name)) for name in (
         "state", "phase", "source_online", "progress_percent", "batch_id",
-        "batch_name", "batch_info", "remaining_seconds", "error_message",
+        "batch_name", "batch_info", "error_message",
     ))
 
 

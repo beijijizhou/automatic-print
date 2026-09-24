@@ -7,7 +7,7 @@ const CORS = {
 };
 const STATES = new Set(["idle", "running", "completed", "failed", "stopped"]);
 const DEPARTMENTS = new Set(["DTF", "UV", "3D"]);
-const STALE_SECONDS = 90;
+const STALE_SECONDS = 420;
 const COMMAND_STATES = new Set(["running", "succeeded", "failed"]);
 const COMMAND_PLATFORMS = new Set(["Haloo", "莆田", "隆丰", "S2B"]);
 const COMMAND_ACTIONS = new Set(["download_layout", "start_print", "pause_print", "clean_resume"]);

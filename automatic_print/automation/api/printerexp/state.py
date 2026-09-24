@@ -2,7 +2,7 @@
 
 import re
 from dataclasses import dataclass
-from pathlib import Path
+from pathlib import Path, PureWindowsPath
 
 
 VALUE = re.compile(r"^\s*([A-Z_]+)\s*=\s*(.*?)\s*$", re.MULTILINE)
@@ -30,20 +30,24 @@ def read_snapshot(installation):
         return None
     task_path = _task_path(root / "Data" / "printTask.tf")
     task_folder = _value(root / "Data" / "Temp.ini", "TASK_FOLDER")
-    task_file = Path(task_path).name if task_path else ""
+    task_file = _windows_name(task_path)
     if not task_file and task_folder:
-        task_file = Path(task_folder.rstrip("\\/ ")).name
+        task_file = _windows_name(task_folder)
     return PrintExpSnapshot(
         task_id=values.get("TASK_GUID", "").strip(),
         progress=max(0, min(100, progress)),
         task_file=task_file,
-        task_folder=Path(task_folder.rstrip("\\/ ")).name if task_folder else "",
+        task_folder=_windows_name(task_folder),
         modified_at=modified,
     )
 
 
 def _value(path, name):
     return dict(VALUE.findall(_read_text(path))).get(name, "").strip()
+
+
+def _windows_name(value):
+    return PureWindowsPath(str(value).rstrip("\\/ ")).name if value else ""
 
 
 def _read_text(path):

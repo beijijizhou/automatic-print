@@ -119,8 +119,10 @@ def test_board_only_enables_start_for_exact_ready_batch():
 
 def test_board_stops_supabase_refresh_when_automation_is_closed():
     page = MachineStatusPage(fetch=lambda: {"machines": [], "commands": []})
+    page.automation_toggle.enabled = True
     page.set_active(True)
     assert page.timer.isActive()
+    assert page.timer.interval() == 60_000
 
     page._automation_changed(False)
 
