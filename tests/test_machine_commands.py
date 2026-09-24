@@ -144,6 +144,26 @@ def test_runner_routes_pause_command_without_starting_layout(monkeypatch):
     assert updates[-1][1]["phase"] == "PrintExp 已暂停"
 
 
+def test_runner_answers_probe_with_fresh_machine_facts(monkeypatch):
+    updates = []
+    monkeypatch.setattr(runner, "get_command", lambda _command_id: {
+        "action": "probe", "payload": {},
+    })
+    monkeypatch.setattr(runner, "inspect_machine", lambda: {
+        "machine_id": "machine-1", "machine_name": "M1",
+        "app_version": "0.1.384", "automation_enabled": True,
+        "source_online": True, "status": {"state": "idle"},
+    })
+    monkeypatch.setattr(
+        runner, "update_command", lambda *args, **kwargs: updates.append((args, kwargs)),
+    )
+
+    assert runner.run_command("probe-1") == 0
+    assert updates[-1][0][1] == "succeeded"
+    assert updates[-1][1]["phase"] == "目标机实时检测通过"
+    assert updates[-1][1]["result"]["machine_name"] == "M1"
+
+
 def test_runner_routes_start_with_expected_batch(monkeypatch):
     captured = {}
     monkeypatch.setattr(runner, "get_command", lambda _command_id: {

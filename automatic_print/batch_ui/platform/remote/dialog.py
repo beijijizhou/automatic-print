@@ -19,7 +19,7 @@ class RemoteMachineDialog(QDialog):
         self.setWindowTitle("选择目标打印机")
         self.resize(820, 300)
         instruction = QLabel(
-            "先核对目标机正在打印什么、后台正在处理什么，以及队列中的下一任务。"
+            "选择后先实时检测目标机；收到 AutomaticPrint 和 PrintExp 回应后才允许发送。"
         )
         instruction.setWordWrap(True)
         self.target = QComboBox()
@@ -34,7 +34,7 @@ class RemoteMachineDialog(QDialog):
         request = QLabel(f"本次准备发送：{request_text}")
         request.setWordWrap(True)
         buttons = QDialogButtonBox(QDialogButtonBox.Cancel | QDialogButtonBox.Ok)
-        buttons.button(QDialogButtonBox.Ok).setText("发送到这台机器")
+        buttons.button(QDialogButtonBox.Ok).setText("检测这台机器")
         buttons.accepted.connect(self.accept)
         buttons.rejected.connect(self.reject)
         layout = QVBoxLayout(self)

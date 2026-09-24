@@ -3,7 +3,7 @@ from types import SimpleNamespace
 
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
-from PySide6.QtWidgets import QApplication
+from PySide6.QtWidgets import QApplication, QDialogButtonBox
 
 from automatic_print.batch_ui.platform.remote.dialog import RemoteMachineDialog
 from automatic_print.batch_ui.platform.remote.queue import (
@@ -62,6 +62,8 @@ def test_machine_picker_updates_full_workload_for_selected_machine():
     dialog.target.setCurrentIndex(1)
 
     assert "M8" in dialog.target.currentText()
+    buttons = dialog.findChild(QDialogButtonBox)
+    assert buttons.button(QDialogButtonBox.Ok).text() == "检测这台机器"
     assert "当前打印：current-60件.prn · 60件 · 50%" in dialog.detail.text()
     assert "接下来：S2B · 609180000004 · 1批 · 2项目 · 24件" in dialog.detail.text()
 

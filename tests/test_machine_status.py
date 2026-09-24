@@ -92,6 +92,10 @@ def test_backend_contract_keeps_unknown_eta_nullable():
         __import__("pathlib").Path(__file__).parents[1]
         / "supabase/migrations/202609230003_urgent_printer_controls.sql"
     ).read_text(encoding="utf-8")
+    probe_migration = (
+        __import__("pathlib").Path(__file__).parents[1]
+        / "supabase/migrations/202609240002_machine_preflight_probe.sql"
+    ).read_text(encoding="utf-8")
 
     assert "remaining_seconds integer" in migration
     assert "progress_percent smallint" in migration
@@ -113,6 +117,11 @@ def test_backend_contract_keeps_unknown_eta_nullable():
     assert '"S2B"' in function
     assert "claim_machine_control" in urgent_control_migration
     assert "action = 'download_layout'" in urgent_control_migration
+    assert '"probe"' in function
+    assert "requested_by_machine_id.eq" in function
+    assert "action in ('start_print', 'pause_print', 'clean_resume', 'probe')" in probe_migration
+
+
 def test_submit_command_sends_target_batches_and_settings(monkeypatch):
     captured = {}
     monkeypatch.setattr(commands, "machine_id", lambda: "d9428888-122b-4c26-a127-3eafad1f5270")
@@ -137,6 +146,23 @@ def test_submit_command_sends_target_batches_and_settings(monkeypatch):
     assert captured["target_machine_id"].startswith("b942")
     assert captured["payload"]["batch_numbers"] == ["609231234567"]
     assert captured["payload"]["layout_settings"] == {"dpi": 300}
+
+
+def test_submit_probe_uses_short_lived_control_channel(monkeypatch):
+    captured = {}
+    monkeypatch.setattr(commands, "machine_id", lambda: "d9428888-122b-4c26-a127-3eafad1f5270")
+    monkeypatch.setattr(commands, "machine_name", lambda: "M11")
+    monkeypatch.setattr(
+        commands, "_call",
+        lambda payload, **_options: captured.update(payload) or {"command": {"id": "probe-1"}},
+    )
+
+    result = commands.submit_probe("b9428888-122b-4c26-a127-3eafad1f5271")
+
+    assert result["id"] == "probe-1"
+    assert captured["action"] == "send_control"
+    assert captured["command_action"] == "probe"
+    assert captured["expires_minutes"] == 1
 
 
 def test_submit_printer_action_is_explicit_and_has_no_layout_payload(monkeypatch):

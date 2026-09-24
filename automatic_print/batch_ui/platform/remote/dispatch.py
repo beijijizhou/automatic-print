@@ -6,8 +6,10 @@ from threading import Lock, Thread
 from PySide6.QtCore import QObject, Signal
 from PySide6.QtWidgets import QDialog, QMessageBox
 
-from ....automation.api.machine_status import list_commands, list_machines, submit_command
-from ....ui.machine_status_format import actionable_machines
+from ....automation.api.machine_status import (
+    list_commands, list_machines, preflight_machine, submit_command,
+)
+from ....ui.machine_status_format import machine_slots
 from .dialog import RemoteMachineDialog
 from .queue import selected_batch_details, selection_text, workload_detail
 
@@ -18,17 +20,27 @@ def load_remote_targets():
 
 class RemoteBatchDispatcher(QObject):
     machines_loaded = Signal(object)
+    preflight_succeeded = Signal(object)
     submitted = Signal(object)
     failed = Signal(str)
 
-    def __init__(self, owner, *, fetch=load_remote_targets, submit=submit_command):
+    def __init__(
+        self, owner, *, fetch=load_remote_targets, submit=submit_command,
+        preflight=preflight_machine,
+    ):
         super().__init__(owner)
         self.owner = owner
         self.fetch = fetch
         self.submit = submit
+        self.preflight = preflight
         self._lock = Lock()
         self._request = None
+        self._selected_machine = None
+        self._dashboard_commands = []
+        self._request_text = ""
+        self._activity_active = False
         self.machines_loaded.connect(self._choose_machine)
+        self.preflight_succeeded.connect(self._confirm_after_preflight)
         self.submitted.connect(self._submitted)
         self.failed.connect(self._failed)
 
@@ -62,9 +74,12 @@ class RemoteBatchDispatcher(QObject):
             commands = dashboard.get("commands") or []
         else:
             rows, commands = dashboard, []
-        machines = actionable_machines(rows, require_source=True)
+        machines = [
+            machine for machine in machine_slots(rows)
+            if machine is not None and not machine.get("identity_conflict")
+        ]
         if not machines:
-            self._finish("没有监控和 PrintExp 都在线且机器号不冲突的目标机器。")
+            self._finish("没有已登记且机器号不冲突的目标机器。")
             QMessageBox.warning(self.owner, "没有可用打印机", self.owner.remote_dispatch_status.text())
             return
         batches = self._request["batch_numbers"]
@@ -73,6 +88,8 @@ class RemoteBatchDispatcher(QObject):
             f"{selection_text(self._request['batch_details'], batches)} · "
             f"批次 {'、'.join(batches)}"
         )
+        self._dashboard_commands = commands
+        self._request_text = request_text
         dialog = RemoteMachineDialog(machines, commands, request_text, self.owner)
         if dialog.exec() != QDialog.Accepted:
             self._finish("已取消发送；批次选择保持不变。")
@@ -81,10 +98,29 @@ class RemoteBatchDispatcher(QObject):
         if machine is None:
             self._finish("没有选中目标机器；批次选择保持不变。")
             return
+        self._selected_machine = machine
         selected = str(machine.get("machine_name") or machine.get("machine_id"))
+        self._set_busy(True, f"正在向 {selected} 发起实时检测；收到回应后才能发送任务…")
+        Thread(target=self._preflight, daemon=True, name="remote-machine-preflight").start()
+
+    def _preflight(self):
+        try:
+            machine = self._selected_machine
+            result = self.preflight(
+                machine["machine_id"], str(machine.get("machine_name") or ""),
+            )
+            self.preflight_succeeded.emit(result)
+        except Exception as error:
+            self.failed.emit(str(error))
+
+    def _confirm_after_preflight(self, result):
+        machine = self._selected_machine
+        selected = str(machine.get("machine_name") or machine.get("machine_id"))
+        live = {**machine, **(result.get("status") or {})}
         detail = (
-            f"目标：{selected}\n{workload_detail(machine, commands)}\n\n"
-            f"本次发送：{request_text}\n"
+            f"实时检测通过：{selected} · AutomaticPrint {result['app_version']}\n"
+            f"{workload_detail(live, self._dashboard_commands)}\n\n"
+            f"本次发送：{self._request_text}\n"
             "目标机随后下载、排版、生成 PRN 并加载到 PrintExp；不会开始物理打印。"
         )
         if QMessageBox.question(self.owner, "确认发送到指定机器", detail) != QMessageBox.Yes:
@@ -108,11 +144,12 @@ class RemoteBatchDispatcher(QObject):
             page.refresh()
 
     def _failed(self, message):
-        self._finish(f"远程任务发送失败：{message}")
+        self._finish(f"机器检测或远程发送失败：{message}")
         QMessageBox.critical(self.owner, "远程任务失败", str(message))
 
     def _finish(self, message):
         self._request = None
+        self._selected_machine = None
         if self._lock.locked():
             self._lock.release()
         self._set_busy(False, message)
@@ -120,3 +157,19 @@ class RemoteBatchDispatcher(QObject):
     def _set_busy(self, busy, message):
         self.owner.remote_dispatch_button.setEnabled(not busy)
         self.owner.remote_dispatch_status.setText(message)
+        window = self.owner.window() if hasattr(self.owner, "window") else None
+        hub = getattr(window, "activity_hub", None)
+        if hub is None:
+            return
+        key = f"remote-dispatch-{id(self)}"
+        if busy and not self._activity_active:
+            hub.begin(key, "发送到指定打印机", message)
+            self._activity_active = True
+        elif busy:
+            hub.update(key, message=message, current_object=message, new_step=True)
+        elif self._activity_active:
+            state = "failed" if "失败" in message or "没有回应" in message else "completed"
+            if "取消" in message:
+                state = "stopped"
+            hub.finish(key, message, state=state)
+            self._activity_active = False

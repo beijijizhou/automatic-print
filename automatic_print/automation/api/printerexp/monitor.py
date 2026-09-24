@@ -68,6 +68,23 @@ class PrintExpMonitor:
             self.wake_listener.stop()
 
     def run_once(self):
+        status = self.collect_status()
+        if not self.automation_allowed():
+            self.last_signature = None
+            return status
+        signature = _signature(status)
+        changed = signature != self.last_signature
+        if not changed:
+            return status
+        try:
+            self.send(status)
+        except Exception as error:
+            self.logger.warning("Unable to publish PrintExp status: %s", error)
+        else:
+            self.last_signature = signature
+        return status
+
+    def collect_status(self):
         active_installations = running_installations()
         if active_installations:
             self.installation = max(active_installations, key=_status_modified_at)
@@ -85,19 +102,6 @@ class PrintExpMonitor:
         status = self.projector.project(
             snapshot, online, printer_state=printer_state, loaded_task=loaded_task,
         )
-        if not self.automation_allowed():
-            self.last_signature = None
-            return status
-        signature = _signature(status)
-        changed = signature != self.last_signature
-        if not changed:
-            return status
-        try:
-            self.send(status)
-        except Exception as error:
-            self.logger.warning("Unable to publish PrintExp status: %s", error)
-        else:
-            self.last_signature = signature
         return status
 
     def stop(self):

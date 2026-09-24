@@ -59,6 +59,21 @@ def submit_printer_action(
     )["command"]
 
 
+def submit_probe(target_machine_id, *, expires_minutes=1, timeout=8):
+    return _call(
+        {
+            "action": "send_control",
+            "command_action": "probe",
+            "machine_id": machine_id(),
+            "machine_name": machine_name(),
+            "target_machine_id": str(target_machine_id),
+            "expires_minutes": int(expires_minutes),
+            "payload": {},
+        },
+        timeout=timeout,
+    )["command"]
+
+
 def list_commands(*, timeout=8):
     return _call({"action": "list_commands"}, timeout=timeout)["commands"]
 

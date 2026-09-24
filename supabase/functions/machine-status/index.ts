@@ -10,7 +10,7 @@ const DEPARTMENTS = new Set(["DTF", "UV", "3D"]);
 const FEEDBACK_TIMEOUT_SECONDS = 20;
 const COMMAND_STATES = new Set(["running", "succeeded", "failed"]);
 const COMMAND_PLATFORMS = new Set(["Haloo", "莆田", "隆丰", "S2B"]);
-const COMMAND_ACTIONS = new Set(["download_layout", "start_print", "pause_print", "clean_resume"]);
+const COMMAND_ACTIONS = new Set(["download_layout", "start_print", "pause_print", "clean_resume", "probe"]);
 const PRINTER_TO_MACHINE_STATE: Record<string, string> = {
   idle: "idle", ready: "idle", printing: "running", paused: "running",
   cleaning: "running", unknown: "failed",
@@ -167,7 +167,7 @@ async function sendControl(db: ReturnType<typeof createClient>, input: Record<st
   const target = machineId(input.target_machine_id);
   const requester = machineId(input.machine_id);
   const action = String(input.command_action || "");
-  if (!new Set(["start_print", "pause_print", "clean_resume"]).has(action)) {
+  if (!new Set(["start_print", "pause_print", "clean_resume", "probe"]).has(action)) {
     throw new ClientError("Unsupported control action", 400);
   }
   const { data: machine, error: machineError } = await db.from("machine_status_current")
@@ -175,12 +175,16 @@ async function sendControl(db: ReturnType<typeof createClient>, input: Record<st
     .eq("machine_id", target).maybeSingle();
   if (machineError) throw machineError;
   if (!machine) throw new ClientError("Target machine not found", 404);
-  if (!isAvailable(machine)) throw new ClientError("Target machine is unavailable", 409);
-  if (machine.source_online === false) throw new ClientError("Target PrintExp is offline", 409);
+  if (action !== "probe" && !isAvailable(machine)) {
+    throw new ClientError("Target machine is unavailable", 409);
+  }
+  if (action !== "probe" && machine.source_online === false) {
+    throw new ClientError("Target PrintExp is offline", 409);
+  }
   const requestedPayload = input.payload && typeof input.payload === "object"
     ? input.payload as Record<string, unknown> : {};
   const expectedBatch = String(requestedPayload.expected_batch_name || "").trim();
-  const printerState = validatePrinterControlState(machine, action);
+  const printerState = action === "probe" ? "" : validatePrinterControlState(machine, action);
   if (action === "start_print") {
     const machineProgress = machine.progress_percent == null
       ? Number.NaN : Number(machine.progress_percent);
@@ -202,7 +206,7 @@ async function sendControl(db: ReturnType<typeof createClient>, input: Record<st
     status: "cancelled", phase: "由更新的实时控制指令替代",
     finished_at: now, updated_at: now,
   }).eq("target_machine_id", target).eq("status", "queued")
-    .in("action", ["start_print", "pause_print", "clean_resume"]);
+    .in("action", action === "probe" ? ["probe"] : ["start_print", "pause_print", "clean_resume"]);
   if (cancelError) throw cancelError;
   const expiry = optionalInteger(input.expires_minutes, 1, 5) ?? 2;
   const { data, error } = await db.from("machine_commands").insert({
@@ -219,11 +223,12 @@ async function sendControl(db: ReturnType<typeof createClient>, input: Record<st
 
 async function listCommands(db: ReturnType<typeof createClient>) {
   const { data: active, error: activeError } = await db.from("machine_commands")
-    .select("*").in("status", ["queued", "claimed", "running"])
+    .select("*").neq("action", "probe").in("status", ["queued", "claimed", "running"])
     .order("created_at", { ascending: true }).limit(200);
   if (activeError) throw activeError;
   const { data: recent, error: recentError } = await db.from("machine_commands")
-    .select("*").in("status", ["succeeded", "failed", "cancelled", "expired"])
+    .select("*").neq("action", "probe")
+    .in("status", ["succeeded", "failed", "cancelled", "expired"])
     .order("created_at", { ascending: false }).limit(50);
   if (recentError) throw recentError;
   const rows = [...(active || []), ...(recent || [])];
@@ -269,10 +274,12 @@ async function claimControl(db: ReturnType<typeof createClient>, input: Record<s
 }
 
 async function getCommand(db: ReturnType<typeof createClient>, input: Record<string, unknown>) {
-  const target = machineId(input.machine_id);
+  const requester = machineId(input.machine_id);
   const id = uuid(input.command_id, "command_id");
   const { data, error } = await db.from("machine_commands").select("*")
-    .eq("id", id).eq("target_machine_id", target).maybeSingle();
+    .eq("id", id)
+    .or(`target_machine_id.eq.${requester},requested_by_machine_id.eq.${requester}`)
+    .maybeSingle();
   if (error) throw error;
   if (!data) throw new ClientError("Command not found", 404);
   return { command: data };

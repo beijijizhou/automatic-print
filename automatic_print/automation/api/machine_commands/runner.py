@@ -38,6 +38,13 @@ def run_command(command_id):
     try:
         command = get_command(command_id)
         action = str(command.get("action") or "download_layout")
+        if action == "probe":
+            result = inspect_machine()
+            update_command(
+                command_id, "succeeded", phase="目标机实时检测通过",
+                progress_percent=100, result=result,
+            )
+            return 0
         if action in {"start_print", "pause_print", "clean_resume"}:
             result = execute_printer_action(action, progress, command.get("payload") or {})
             phase = {
@@ -70,7 +77,11 @@ def run_command(command_id):
         return 0
     except Exception as error:
         try:
-            phase = "打印机控制失败" if action != "download_layout" else "远程下载排版失败"
+            phase = (
+                "目标机实时检测失败" if action == "probe" else
+                "打印机控制失败" if action != "download_layout" else
+                "远程下载排版失败"
+            )
             update_command(
                 command_id, "failed", phase=phase,
                 error_message=str(error)[:2000],
@@ -78,6 +89,23 @@ def run_command(command_id):
         except Exception:
             pass
         return 1
+
+
+def inspect_machine():
+    from automatic_print import __version__
+    from ....runtime.monitoring.control import automation_enabled
+    from ..machine_status.identity import machine_id, machine_name
+    from ..printerexp.monitor import PrintExpMonitor
+
+    status = PrintExpMonitor(send=lambda _status: None).collect_status()
+    return {
+        "machine_id": machine_id(),
+        "machine_name": machine_name(),
+        "app_version": __version__,
+        "automation_enabled": automation_enabled(),
+        "source_online": status.get("source_online") is True,
+        "status": status,
+    }
 
 
 def execute_printer_action(action, progress, payload=None):
