@@ -122,6 +122,7 @@ class LayoutSettings:
     order_side_shared_knife: bool = False  # Explicit per-run opt-in; never changes normal layouts.
     cutter_rotation_zone: bool = False
     cutter_majority_two_zone: bool = False
+    counting_accuracy_layout: bool = False
     cutter_tail_rotation: bool = False
     sequence_numbers: tuple[tuple[str, int], ...] = ()
     label_sequence_enabled: bool = False

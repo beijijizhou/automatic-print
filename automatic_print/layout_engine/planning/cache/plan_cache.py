@@ -16,6 +16,7 @@ LAYOUT_ALGORITHM_REVISION = 14
 DEVELOPER_LAYOUT_ALGORITHM_REVISION = 23
 SHARED_KNIFE_LAYOUT_ALGORITHM_REVISION = 9
 ORDER_SIDE_LAYOUT_ALGORITHM_REVISION = 5
+COUNTING_ACCURACY_LAYOUT_ALGORITHM_REVISION = 24
 TTL_SECONDS = 24 * 60 * 60
 CACHE_LOCK_TIMEOUT_SECONDS = .25
 
@@ -59,7 +60,11 @@ def cache_key(paths, settings, created_at, progress=None):
         settings_data.pop('developer_compact_cutter_layout', None)
     if not settings.order_side_shared_knife:
         settings_data.pop('order_side_shared_knife', None)
-    algorithm_revision = (ORDER_SIDE_LAYOUT_ALGORITHM_REVISION
+    if not settings.counting_accuracy_layout:
+        settings_data.pop('counting_accuracy_layout', None)
+    algorithm_revision = (COUNTING_ACCURACY_LAYOUT_ALGORITHM_REVISION
+                          if settings.counting_accuracy_layout else
+                          ORDER_SIDE_LAYOUT_ALGORITHM_REVISION
                           if settings.order_side_shared_knife else
                           SHARED_KNIFE_LAYOUT_ALGORITHM_REVISION
                           if settings.strict_fixed_knife else

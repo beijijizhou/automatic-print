@@ -6,7 +6,7 @@ from automatic_print.layout_engine.planning.columns.cutter_planner import (
     read_cutter_items, solve_groups,
 )
 from automatic_print.layout_engine.domain.models import mm_to_px
-from automatic_print.layout_engine.orders.order_groups import complete_orders, ordered_paths
+from automatic_print.layout_engine.orders.order_groups import complete_orders, order_key, ordered_paths
 from automatic_print.layout_engine.orders.single_order_sequence import lane_fits
 from automatic_print.layout_engine.planning.packing.units import build_units
 from automatic_print.layout_engine.orders.color_policy import order_color, order_color_key
@@ -15,7 +15,9 @@ from automatic_print.layout_engine.orders.color_policy import order_color, order
 def plan_adaptive_knife_zones(paths, settings, progress, prepared=None):
     """Keep the pairable majority together and rotate complete leftovers."""
     fixed = settings.strict_fixed_knife
-    if settings.cutter_mode != 'dual' or not (settings.cutter_auto_knife or fixed):
+    counting = settings.counting_accuracy_layout
+    if settings.cutter_mode != 'dual' or not (
+            settings.cutter_auto_knife or fixed or counting):
         raise ValueError('多数并排分区只适用于自动多列切膜模式。')
     base = replace(settings, cutter_rotation_zone=False, cutter_tail_rotation=False,
                    allow_rotation=False)
@@ -40,7 +42,7 @@ def plan_adaptive_knife_zones(paths, settings, progress, prepared=None):
         normal = None
     normal_paths = [path for order in double_orders for path in order]
     rotated_paths = [path for order in leftovers for path in order]
-    if not fixed and len(normal_paths) <= len(rotated_paths):
+    if not fixed and not counting and len(normal_paths) <= len(rotated_paths):
         raise ValueError('可安全双排的图片未超过半数，改用常规旋转方案比较。')
 
     effective = [base]
@@ -50,11 +52,28 @@ def plan_adaptive_knife_zones(paths, settings, progress, prepared=None):
         if progress:
             progress('并排区：'+stage, current, total, filename)
     if normal is None and normal_paths:
-        normal = (plan_cutter_layout(
-            normal_paths, base, report,
-            prepared=([[items[path]] for path in normal_paths], labels),
-            preserve_sequence=True,
-        ))
+        while normal_paths:
+            normal = plan_cutter_layout(
+                normal_paths, base, report,
+                prepared=([[items[path]] for path in normal_paths], labels),
+                preserve_sequence=True,
+            )
+            if not counting:
+                break
+            rejected = _non_double_orders(normal[0])
+            if not rejected:
+                break
+            moved = [order for order in double_orders
+                     if order_key(order[0]) in rejected]
+            if not moved:
+                raise ValueError('计数准确策略无法隔离未配对的排版行。')
+            double_orders = [order for order in double_orders if order not in moved]
+            double_orders, leftovers = _color_boundary(
+                double_orders, leftovers + moved,
+            )
+            normal_paths = [path for order in double_orders for path in order]
+            rotated_paths = [path for order in leftovers for path in order]
+            normal = None
 
     if not rotated_paths:
         knife = mm_to_px(effective[0].cutter_knife_mm, base.dpi)
@@ -97,7 +116,15 @@ def plan_adaptive_knife_zones(paths, settings, progress, prepared=None):
         rotated_height = rotated[3]
     else:
         from automatic_print.layout_engine.planning.rotation.rotation_zones import _rotated
-        rotated = _rotated(rotated_paths, base, (rotated_items, rotated_labels))
+        rotated_settings = replace(
+            base,
+            cutter_mode='single' if counting else base.cutter_mode,
+            cutter_auto_knife=False if counting else base.cutter_auto_knife,
+            counting_accuracy_layout=False,
+        )
+        rotated = _rotated(
+            rotated_paths, rotated_settings, (rotated_items, rotated_labels),
+        )
         rotated_height = rotated[2]
     boundary = normal[3]+spacing if normal else 0
     normal_knife = mm_to_px(effective[0].cutter_knife_mm, base.dpi)
@@ -165,3 +192,27 @@ def _shift(path, placement, offset):
         platform_y_px=placement.platform_y_px+offset,
         cut_zone='旋转区',
     )
+
+
+def _non_double_orders(planned):
+    rows = {}
+    for path, placement in planned:
+        rows.setdefault(placement.row_y_px, []).append((path, placement))
+    rejected = set()
+    for members in rows.values():
+        knives = {
+            placement.cut_knife_x_px
+            for _path, placement in members
+            if placement.cut_knife_x_px is not None
+        }
+        knife = next(iter(knives)) if len(knives) == 1 else None
+        left_count = sum(placement.x_px < knife for _path, placement in members) if knife else 0
+        valid = (
+            len(members) == 2
+            and knife is not None
+            and left_count == 1
+            and all(not placement.rotation_degrees for _path, placement in members)
+        )
+        if not valid:
+            rejected.update(order_key(path) for path, _placement in members)
+    return rejected

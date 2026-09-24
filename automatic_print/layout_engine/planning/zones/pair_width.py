@@ -15,7 +15,8 @@ PAIR_WIDTH_TITLES = ('所选尺码并排宽度上限：', '共刀并排等比缩
 def apply_pair_width_cap(paths, settings, progress=None):
     fixed = settings.strict_fixed_knife
     if not (settings.force_small_pair_width and settings.cutter_mode == 'dual'
-            and (settings.cutter_majority_two_zone or fixed)):
+            and (settings.cutter_majority_two_zone
+                 or settings.counting_accuracy_layout or fixed)):
         return settings
     requested_cap = settings.force_small_pair_width_mm
     source_limit = settings.force_small_pair_source_limit_mm

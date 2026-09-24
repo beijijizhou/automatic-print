@@ -34,6 +34,8 @@ def select_columns(groups, settings, spacing, progress=None):
     width = mm_to_px(settings.media_width_mm, settings.dpi)
     maximum = min(MAX_COLUMNS, max(1, len(groups),
                                    max(map(len, groups), default=1)))
+    if settings.counting_accuracy_layout:
+        maximum = min(2, maximum)
     candidates = []
     # Two columns may need an asymmetric knife (for example a wide image on the
     # left and a small companion on the right). Preserve that exact optimizer.
