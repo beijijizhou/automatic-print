@@ -162,6 +162,7 @@ class RemoteBatchDispatcher(QObject):
 
     def _set_busy(self, busy, message):
         self.owner.remote_dispatch_button.setEnabled(not busy)
+        self.owner.remote_broadcast_button.setEnabled(not busy)
         self.owner.remote_dispatch_status.setText(message)
         window = self.owner.window() if hasattr(self.owner, "window") else None
         hub = getattr(window, "activity_hub", None)

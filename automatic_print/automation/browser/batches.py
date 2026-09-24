@@ -219,19 +219,19 @@ def _batch_page(browser, url: str, progress=None, check_cancel=None):
         progress(f"正在复用已打开的生产批次页面：{page.url}")
     check()
     if "/productionBatch/index" not in page.url:
-        if progress:
-            progress("当前不在生产批次页；正在打开“生产”菜单…")
+        if progress: progress("当前不在生产批次页；正在打开生产批次…")
         production = page.get_by_text("生产", exact=True)
         if production.count():
             production.first.click()
         check()
         link = page.locator("a[href*='/productionBatch/index']")
-        if progress:
-            progress("正在等待“生产批次”入口…")
-        link.first.wait_for(state="visible", timeout=10_000)
-        link.first.click()
-        if progress:
-            progress("已点击“生产批次”；正在等待页面跳转…")
+        if link.count():
+            link.first.click()
+            if progress:
+                progress("已点击“生产批次”；正在等待页面跳转…")
+        else:
+            if progress: progress("未显示侧栏入口；正在直接打开生产批次地址…")
+            page.goto(url, wait_until="domcontentloaded", timeout=30_000)
         page.wait_for_url("**/productionBatch/index", timeout=30_000)
         check()
     if progress:

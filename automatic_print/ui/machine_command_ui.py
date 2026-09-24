@@ -57,10 +57,7 @@ class MachineCommandDialog(QDialog):
         self.resize(560, 360)
         self.target = QComboBox()
         for machine in machines:
-            self.target.addItem(
-                machine_display_name(machine),
-                str(machine.get("machine_id")),
-            )
+            self.target.addItem(machine_display_name(machine), str(machine.get("machine_id")))
         self.platform = QComboBox()
         self.platform.addItems(("Haloo", "隆丰", "莆田", "S2B"))
         self.batches = QPlainTextEdit()

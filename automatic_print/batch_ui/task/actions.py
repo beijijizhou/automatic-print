@@ -133,6 +133,7 @@ class ThreadActionsMixin:
             self.download_button,
             getattr(self, "automated_print_button", None),
             getattr(self, "remote_dispatch_button", None),
+            getattr(self, "remote_broadcast_button", None),
             getattr(self, "order_side_checkbox", None),
             getattr(self, "open_download_folder", None),
             self.process_button,

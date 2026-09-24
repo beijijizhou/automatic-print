@@ -54,6 +54,9 @@ def test_delayed_login_redirect_is_consumed_in_one_open_call():
             self.waits = 0
             self.goto_calls = []
 
+        def bring_to_front(self):
+            pass
+
         def locator(self, _selector):
             return Locator()
 
@@ -83,6 +86,19 @@ def test_delayed_login_redirect_is_consumed_in_one_open_call():
     assert page.goto_calls == [target]
     assert sum('完成登录' in message for message in messages) == 1
     assert any('登录成功' in message for message in messages)
+
+
+def test_authenticated_platform_page_is_brought_to_front():
+    target = 'https://longfeng.merchant.hihumbird.com/factory/items'
+    page = MagicMock(url=target)
+    page.locator.return_value.first.count.return_value = 1
+    page.locator.return_value.first.is_visible.return_value = True
+    browser = MagicMock(contexts=[MagicMock(pages=[page])])
+
+    result = open_authenticated_page(browser, target, '.search-container')
+
+    assert result is page
+    page.bring_to_front.assert_called_once_with()
 
 
 def test_show_debug_browser_foregrounds_existing_login_page():
