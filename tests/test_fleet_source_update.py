@@ -47,7 +47,7 @@ def test_submit_source_update_reuses_command_and_udp_channels(monkeypatch):
 
 def test_update_panel_shows_all_eleven_version_receipts():
     panel = FleetUpdatePanel()
-    machines = [machine(1, __version__), machine(2, "0.1.1")]
+    machines = [machine(1, __version__), {**machine(2, "0.1.1"), "is_local": True}]
     command = {
         "action": "source_update", "target_machine_id": machine(2)["machine_id"],
         "status": "running", "phase": "正在安装依赖", "created_at": "2026-09-24T10:00:00Z",
@@ -59,6 +59,7 @@ def test_update_panel_shows_all_eleven_version_receipts():
     assert panel.table.columnCount() == 4
     assert panel.table.item(0, 2).text() == __version__
     assert panel.table.item(0, 3).text() == "已更新"
+    assert panel.table.item(1, 1).text() == "M2（本机）"
     assert panel.table.item(1, 2).text() == "0.1.1"
     assert panel.table.item(1, 3).text() == "更新中 · 正在安装依赖"
     assert panel.table.item(2, 3).text() == "未接入"

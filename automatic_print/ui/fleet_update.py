@@ -9,7 +9,7 @@ from PySide6.QtWidgets import (
 from .. import __version__
 from ..automation.api.machine_status.commands import submit_source_update
 from ..updates.source import SourceUpdater, source_install
-from .machine_status_format import machine_slots
+from .machine_status_format import machine_display_name, machine_slots
 ACTIVE = {"queued", "claimed", "running"}
 
 
@@ -87,7 +87,7 @@ class FleetUpdatePanel(QGroupBox):
         updated = registered = 0
         self.refreshing = True
         for row, machine in enumerate(self.slots):
-            name, version, state = f"M{row + 1}", "—", "未接入"
+            name, version, state = (machine_display_name(machine) if machine else f"M{row + 1}"), "—", "未接入"
             selectable = self._eligible(machine)
             if machine is not None:
                 registered += 1
