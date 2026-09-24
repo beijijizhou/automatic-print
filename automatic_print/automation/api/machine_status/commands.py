@@ -78,6 +78,26 @@ def submit_probe(target_machine_id, *, expires_minutes=1, timeout=8):
     return _notify_target(command, target_machine_id)
 
 
+def submit_source_update(
+    target_machine_id, target_revision, target_version, *, expires_minutes=1440, timeout=8,
+):
+    command = _call(
+        {
+            "action": "enqueue_update",
+            "machine_id": machine_id(),
+            "machine_name": machine_name(),
+            "target_machine_id": str(target_machine_id),
+            "expires_minutes": int(expires_minutes),
+            "payload": {
+                "target_revision": str(target_revision),
+                "target_version": str(target_version),
+            },
+        },
+        timeout=timeout,
+    )["command"]
+    return _notify_target(command, target_machine_id)
+
+
 def _notify_target(command, target_machine_id):
     command_id = str(command.get("id") or "")
     try:

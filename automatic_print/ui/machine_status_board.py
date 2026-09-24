@@ -2,7 +2,7 @@
 
 from threading import Lock, Thread
 
-from PySide6.QtCore import QObject, Qt, Signal
+from PySide6.QtCore import QObject, QTimer, Qt, Signal
 from PySide6.QtWidgets import (
     QAbstractItemView,
     QGroupBox,
@@ -28,6 +28,7 @@ from .machine_status_format import (
 )
 from .machine_availability import MachineAvailabilityControl
 from .machine_status_layout import build_machine_status_layout
+from .fleet_update import FleetUpdatePanel
 
 
 EXPECTED_MACHINES = 11
@@ -71,6 +72,9 @@ class MachineStatusPage(QWidget):
         self.loader = MachineStatusLoader(fetch, self)
         self.loader.loaded.connect(self.apply_dashboard)
         self.loader.failed.connect(self.show_error)
+        self.update_timer = QTimer(self)
+        self.update_timer.setInterval(5_000)
+        self.update_timer.timeout.connect(self.refresh)
         title = QLabel("PrintExp 打印机状态")
         title.setProperty("heading", True)
         description = QLabel("显示最近一次机器回执；发送任务前会现场查询指定机器的"
@@ -115,6 +119,8 @@ class MachineStatusPage(QWidget):
         self.control_panel.command_submitted.connect(self.refresh)
         self.availability_control = MachineAvailabilityControl(self)
         self.availability_control.changed.connect(self.refresh)
+        self.update_panel = FleetUpdatePanel(self)
+        self.update_panel.commands_submitted.connect(self._track_updates)
 
         build_machine_status_layout(self, title, description, overview)
 
@@ -137,6 +143,15 @@ class MachineStatusPage(QWidget):
         self.control_panel.set_data(machines)
         self.command_panel.set_data(machines, commands)
         self.availability_control.set_data(machines)
+        self.update_panel.set_data(machines, commands)
+        if self.update_panel.has_active_updates():
+            self.update_timer.start()
+        else:
+            self.update_timer.stop()
+
+    def _track_updates(self):
+        self.update_timer.start()
+        self.refresh()
 
     def apply_machines(self, machines, commands=None):
         machines = [item for item in machines if isinstance(item, dict)]

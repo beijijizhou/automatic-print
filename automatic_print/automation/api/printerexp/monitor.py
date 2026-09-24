@@ -49,6 +49,7 @@ class PrintExpMonitor:
 
     def run(self):
         self.wake_listener.start()
+        self._claim_startup_command()
         next_status = 0.0
         try:
             while not self.stop_event.is_set():
@@ -65,6 +66,14 @@ class PrintExpMonitor:
 
     def request_dispatch(self, _payload=None):
         self.dispatch_event.set()
+
+    def _claim_startup_command(self):
+        """One startup read recovers a fleet update missed while powered off."""
+        try:
+            self.command_dispatcher.next_poll = 0.0
+            self.command_dispatcher.tick()
+        except Exception as error:
+            self.logger.warning("Unable to recover startup command: %s", error)
 
     def _tick_dispatchers(self, *, force=False):
         for label, dispatcher in (

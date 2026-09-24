@@ -10,7 +10,9 @@ const DEPARTMENTS = new Set(["DTF", "UV", "3D"]);
 const FEEDBACK_TIMEOUT_SECONDS = 20;
 const COMMAND_STATES = new Set(["running", "succeeded", "failed"]);
 const COMMAND_PLATFORMS = new Set(["Haloo", "莆田", "隆丰", "S2B"]);
-const COMMAND_ACTIONS = new Set(["download_layout", "start_print", "pause_print", "clean_resume", "probe"]);
+const COMMAND_ACTIONS = new Set([
+  "download_layout", "start_print", "pause_print", "clean_resume", "probe", "source_update",
+]);
 const PRINTER_TO_MACHINE_STATE: Record<string, string> = {
   idle: "idle", ready: "idle", printing: "running", paused: "running",
   cleaning: "running", unknown: "failed",
@@ -38,6 +40,7 @@ Deno.serve(async (request) => {
     if (action === "get") return json(await get(db, machineId(input.machine_id)));
     if (action === "set_availability") return json(await setAvailability(db, input));
     if (action === "enqueue_command") return json(await enqueueCommand(db, input));
+    if (action === "enqueue_update") return json(await enqueueUpdate(db, input));
     if (action === "send_control") return json(await sendControl(db, input));
     if (action === "list_commands") return json(await listCommands(db));
     if (action === "claim_command") return json(await claimCommand(db, input));
@@ -242,6 +245,39 @@ async function claimCommand(db: ReturnType<typeof createClient>, input: Record<s
   if (error) throw error;
   if (data) await markFeedback(db, id);
   return { command: data || null };
+}
+
+async function enqueueUpdate(db: ReturnType<typeof createClient>, input: Record<string, unknown>) {
+  const target = machineId(input.target_machine_id);
+  const requester = machineId(input.machine_id);
+  const requested = object(input.payload);
+  const revision = String(requested.target_revision || "").trim().toLowerCase();
+  if (!/^[0-9a-f]{40}$/.test(revision)) {
+    throw new ClientError("Invalid source revision", 400);
+  }
+  const version = text(requested.target_version, "target_version", 40);
+  const { data: machine, error: machineError } = await db.from("machine_status_current")
+    .select("machine_id").eq("machine_id", target).maybeSingle();
+  if (machineError) throw machineError;
+  if (!machine) throw new ClientError("Target machine not found", 404);
+  const now = new Date().toISOString();
+  const { error: cancelError } = await db.from("machine_commands").update({
+    status: "cancelled", phase: "由更新的源码版本替代",
+    finished_at: now, updated_at: now,
+  }).eq("target_machine_id", target).eq("action", "source_update").eq("status", "queued");
+  if (cancelError) throw cancelError;
+  const expiry = optionalInteger(input.expires_minutes, 5, 1440) ?? 1440;
+  const { data, error } = await db.from("machine_commands").insert({
+    target_machine_id: target,
+    requested_by_machine_id: requester,
+    requested_by_name: text(input.machine_name, "machine_name", 100),
+    action: "source_update",
+    payload: { target_revision: revision, target_version: version },
+    phase: "等待目标机领取源码更新",
+    expires_at: new Date(Date.now() + expiry * 60_000).toISOString(),
+  }).select().single();
+  if (error) throw error;
+  return { command: data };
 }
 
 function validateReportedPrinterState(state: string, batchInfo: Record<string, unknown>) {

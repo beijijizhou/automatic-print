@@ -14,7 +14,6 @@ from ...browser.batches import (
 )
 from ..machine_status.commands import get_command, update_command
 
-
 class CommandProgress:
     def __init__(self, command_id, send=update_command, interval=2):
         self.command_id = command_id
@@ -44,6 +43,15 @@ def run_command(command_id):
                 command_id, "succeeded", phase="目标机实时检测通过",
                 progress_percent=100, result=result,
             )
+            return 0
+        if action == "source_update":
+            from .source_update import execute_source_update, schedule_monitor_restart
+            result = execute_source_update(command.get("payload") or {}, progress)
+            update_command(
+                command_id, "succeeded", phase="源码更新完成，等待程序安全重启",
+                progress_percent=100, result=result,
+            )
+            schedule_monitor_restart()
             return 0
         if action in {"start_print", "pause_print", "clean_resume"}:
             result = execute_printer_action(action, progress, command.get("payload") or {})
@@ -79,6 +87,7 @@ def run_command(command_id):
         try:
             phase = (
                 "目标机实时检测失败" if action == "probe" else
+                "源码更新失败" if action == "source_update" else
                 "打印机控制失败" if action != "download_layout" else
                 "远程下载排版失败"
             )

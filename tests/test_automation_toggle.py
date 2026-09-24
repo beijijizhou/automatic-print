@@ -76,7 +76,7 @@ def _one_loop():
     return OneLoop()
 
 
-def test_idle_monitor_makes_no_cloud_calls():
+def test_idle_monitor_checks_pending_commands_once_at_startup():
     events = []
     wake = SimpleNamespace(
         start=lambda: events.append("wake-start"),
@@ -92,7 +92,7 @@ def test_idle_monitor_makes_no_cloud_calls():
 
     monitor.run()
 
-    assert events == ["wake-start", "wake-stop"]
+    assert events == ["wake-start", "cloud", "wake-stop"]
 
 
 def test_idle_monitor_claims_once_after_targeted_wake():
@@ -112,4 +112,4 @@ def test_idle_monitor_claims_once_after_targeted_wake():
 
     monitor.run()
 
-    assert events == ["wake-start", "claim", "claim", "wake-stop"]
+    assert events == ["wake-start", "claim", "claim", "claim", "wake-stop"]

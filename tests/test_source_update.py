@@ -62,6 +62,18 @@ def test_check_and_apply_fast_forward_without_installer(repositories, monkeypatc
     assert any('依赖' in stage for stage in stages)
 
 
+def test_check_can_pin_an_older_commit_already_on_remote_main(repositories):
+    seed, client = repositories
+    original = git(client, 'rev-parse', 'HEAD')
+    publish(seed)
+
+    info = source.SourceUpdater(client).check(original)
+
+    assert info.target == original
+    assert info.version == '0.1.1'
+    assert not info.needs_update
+
+
 def test_local_changes_and_wrong_branch_are_protected(repositories):
     seed, client = repositories
     publish(seed)

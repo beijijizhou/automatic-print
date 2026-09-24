@@ -19,8 +19,15 @@ def build_machine_status_layout(page, title, description, overview):
     control_layout.addWidget(page.command_panel)
     control_layout.addStretch()
 
+    update_page = QWidget()
+    update_layout = QVBoxLayout(update_page)
+    update_layout.setContentsMargins(0, 8, 0, 0)
+    update_layout.addWidget(page.update_panel)
+    update_layout.addStretch()
+
     sections.addTab(status_page, "11 台机器状态")
     sections.addTab(control_page, "控制与任务")
+    sections.addTab(update_page, "电脑更新")
     layout = QVBoxLayout(page)
     layout.addWidget(title)
     layout.addWidget(description)
@@ -28,3 +35,4 @@ def build_machine_status_layout(page, title, description, overview):
     page.sections = sections
     page.status_section = status_page
     page.control_section = control_page
+    page.update_section = update_page

@@ -81,21 +81,25 @@ class SourceUpdater:
         if self.git_run('status', '--porcelain', '--untracked-files=no'):
             raise ValueError('发现本地代码修改（已跟踪文件），更新已停止，不会覆盖。')
 
-    def check(self):
+    def check(self, target=None):
         self.progress('正在检查安装目录及本地代码…')
         self.validate()
         self.progress('正在连接代码仓库，检查最新提交…')
         self.git_run('fetch', 'origin', 'main')
         current = self.git_run('rev-parse', 'HEAD')
-        target = self.git_run('rev-parse', 'refs/remotes/origin/main')
-        self.git_run('merge-base', '--is-ancestor', current, target)
-        content = self.git_run('show', f'{target}:automatic_print/__init__.py')
+        latest = self.git_run('rev-parse', 'refs/remotes/origin/main')
+        selected = str(target or latest).strip().lower()
+        if not re.fullmatch(r'[0-9a-f]{40}', selected):
+            raise ValueError('目标源码提交号格式不正确。')
+        self.git_run('merge-base', '--is-ancestor', selected, latest)
+        self.git_run('merge-base', '--is-ancestor', current, selected)
+        content = self.git_run('show', f'{selected}:automatic_print/__init__.py')
         version = re.search(r'__version__\s*=\s*[\'"]([^\'"]+)', content)
         date = re.search(r'__release_date__\s*=\s*[\'"]([^\'"]+)', content)
         iteration = re.search(r'__release_iteration__\s*=\s*(\d+)', content)
-        return SourceUpdateInfo(current, target, version[1] if version else '待确认',
-                                date[1] if date else self.git_run('show', '-s', '--format=%cs', target),
-                                int(self.git_run('rev-list', '--count', f'{current}..{target}')),
+        return SourceUpdateInfo(current, selected, version[1] if version else '待确认',
+                                date[1] if date else self.git_run('show', '-s', '--format=%cs', selected),
+                                int(self.git_run('rev-list', '--count', f'{current}..{selected}')),
                                 (self.root/LOCK_NAME).exists(),
                                 int(iteration[1]) if iteration else 0)
 
