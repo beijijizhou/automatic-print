@@ -58,7 +58,7 @@ def build_quick_force_pair(window):
     group = QWidget()
     row = QHBoxLayout(group)
     row.setContentsMargins(0, 0, 0, 0)
-    control = QCheckBox('并排等比缩小（自动扣除刀码占位）')
+    control = QCheckBox('并排等比缩小（改变打印尺寸）')
     canonical = window.cutter_settings.force_small_pair
     control.setChecked(canonical.isChecked())
     control.setToolTip(canonical.toolTip())

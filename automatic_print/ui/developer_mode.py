@@ -161,7 +161,7 @@ def build_developer_mode(window, footer):
             window.cutter_rules_form.setRowVisible(
                 window.membrane_gap_enabled, cutting)
             window.cutter_rules_form.setRowVisible(window.membrane_gap, cutting)
-            window.cutter_rules_form.setRowVisible(
+            window.layout_rules_form.setRowVisible(
                 window.cutter_settings.two_zone, True)
             window.cutter_settings.set_developer_mode(enabled)
             if not enabled:

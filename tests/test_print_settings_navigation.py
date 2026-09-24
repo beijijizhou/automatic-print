@@ -1,3 +1,5 @@
+from PySide6.QtWidgets import QLabel
+
 from test_developer_mode import window, APP
 
 
@@ -6,12 +8,19 @@ def test_settings_categories_reuse_controls_and_persist_parallelism(tmp_path, mo
     owner = window(path)
     tabs = owner.print_settings_tabs
     assert [tabs.tabText(i) for i in range(tabs.count())] == [
-        '切膜机专用', '排版规则', '标签与文字', '输出与并行']
+        '切膜机', '自动排版', '标签与文字', '输出与并行']
     assert tabs.widget(0).isAncestorOf(owner.cutter_settings.film)
     assert tabs.widget(0).isAncestorOf(owner.cutter_settings.printable)
     assert tabs.widget(0).isAncestorOf(owner.cutter_settings.knife)
+    assert tabs.widget(1).isAncestorOf(owner.cutter_settings.force_small_pair)
+    assert tabs.widget(1).isAncestorOf(owner.cutter_settings.force_small_pair_sizes)
+    assert tabs.widget(1).isAncestorOf(owner.cutter_settings.force_small_pair_limit)
     assert tabs.widget(0).isAncestorOf(owner.membrane_gap_enabled)
     assert tabs.widget(0).isAncestorOf(owner.membrane_gap)
+    assert any(
+        '剪膜机色块' in label.text()
+        for label in tabs.widget(0).findChildren(QLabel)
+    )
     assert tabs.widget(1).isAncestorOf(owner.spacing)
     assert tabs.widget(3).isAncestorOf(owner.bulk_parallelism)
     assert owner.automation_home.isAncestorOf(owner.combine_bulk_batches)
@@ -30,8 +39,16 @@ def test_settings_categories_reuse_controls_and_persist_parallelism(tmp_path, mo
     owner.cutter_settings.mode.setCurrentIndex(owner.cutter_settings.mode.findData('free'))
     assert not owner.cutter_rules_form.isRowVisible(owner.membrane_gap_enabled)
     assert not owner.cutter_rules_form.isRowVisible(owner.membrane_gap)
+    shrink_label = owner.layout_rules_form.labelForField(
+        owner.cutter_settings.force_small_pair)
+    assert shrink_label.text() == '并排缩小'
+    gap_label = owner.cutter_rules_form.labelForField(owner.membrane_gap)
+    assert gap_label.text().startswith('● 切膜 · ')
+    assert owner.auto_fit_width.property('cutterProductionSetting') is not True
     label = tabs.widget(1).layout().labelForField(owner.spacing)
     assert '自由排版' in label.text()
+    owner.cutter_settings.mode.setCurrentIndex(
+        owner.cutter_settings.mode.findData('dual'))
     owner.settings_dialog.show()
     APP.processEvents()
     assert not owner.generate_button.isVisible()
@@ -53,3 +70,37 @@ def test_settings_categories_reuse_controls_and_persist_parallelism(tmp_path, mo
     assert reopened.combine_bulk_batches.isChecked()
     assert reopened.worker_threads.value() == 3
     reopened.close()
+
+
+def test_cutter_mode_is_pinned_above_every_main_and_settings_tab(tmp_path):
+    owner = window(tmp_path/'pinned-mode.ini')
+    owner.show()
+    APP.processEvents()
+
+    main_banner = owner.global_cutter_mode
+    assert main_banner.isVisibleTo(owner)
+    assert main_banner.mapTo(owner, main_banner.rect().topLeft()).y() < (
+        owner.workspace_tabs.mapTo(owner, owner.workspace_tabs.rect().topLeft()).y())
+    for index in range(owner.workspace_tabs.count()):
+        if owner.workspace_tabs.isTabVisible(index):
+            owner.workspace_tabs.setCurrentIndex(index)
+            APP.processEvents()
+            assert main_banner.isVisibleTo(owner)
+
+    owner.settings_dialog.show()
+    APP.processEvents()
+    settings_banner = owner.settings_cutter_mode
+    assert owner.settings_dialog.layout().indexOf(settings_banner) == 0
+    for index in range(owner.print_settings_tabs.count()):
+        owner.print_settings_tabs.setCurrentIndex(index)
+        APP.processEvents()
+        assert settings_banner.isVisibleTo(owner.settings_dialog)
+
+    free = main_banner.mode.findData('free')
+    main_banner.mode.setCurrentIndex(free)
+    APP.processEvents()
+    assert owner.cutter_settings.mode.currentData() == 'free'
+    assert settings_banner.mode.currentData() == 'free'
+    assert '无刀码' in main_banner.status.text()
+    assert main_banner.property('cuttingMode') is False
+    owner.close()

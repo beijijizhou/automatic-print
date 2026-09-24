@@ -15,6 +15,7 @@ from ..developer_mode import build_developer_mode
 from ..departments import build_department_workspace
 from ..erp_download_entry import install_production_platform_tab
 from ..machine_status_board import install_machine_status_tab
+from ..cutter_mode_banner import CutterModeBanner
 
 
 def build_home(window) -> None:
@@ -45,6 +46,8 @@ def build_home(window) -> None:
     install_production_platform_tab(window, window.workspace_tabs)
 
     layout = QVBoxLayout()
+    window.global_cutter_mode = CutterModeBanner(window)
+    layout.addWidget(window.global_cutter_mode)
     layout.addWidget(department_navigation)
     layout.addWidget(window.build_update_status())
     layout.addWidget(window.workspace_tabs)

@@ -34,7 +34,7 @@ def test_default_shows_production_layout_but_hides_diagnostic_tools(tmp_path, mo
     assert owner.quick_header_gap_group.isVisible()
     assert owner.cutter_rules_form.isRowVisible(owner.membrane_gap_enabled)
     assert owner.cutter_rules_form.isRowVisible(owner.membrane_gap)
-    assert owner.cutter_rules_form.isRowVisible(owner.cutter_settings.two_zone)
+    assert owner.layout_rules_form.isRowVisible(owner.cutter_settings.two_zone)
     assert owner._layout_settings().cutter_majority_two_zone
     assert not hasattr(owner, 'batch_record_group')
     assert panel.summary.gap_loss.isVisible()
@@ -125,11 +125,11 @@ def test_two_zone_layout_stays_visible_and_active_outside_developer_mode(tmp_pat
     assert owner.label_settings.form.isRowVisible(owner.label_settings.source_order)
     owner.label_settings.source_order.setChecked(True)
     assert owner._layout_settings().label_source_order_enabled
-    assert owner.cutter_rules_form.isRowVisible(control)
+    assert owner.layout_rules_form.isRowVisible(control)
     control.setChecked(True)
     assert owner._layout_settings().cutter_majority_two_zone
     owner.developer_mode_checkbox.setChecked(False)
-    assert owner.cutter_rules_form.isRowVisible(control)
+    assert owner.layout_rules_form.isRowVisible(control)
     assert owner._layout_settings().cutter_majority_two_zone
     owner.close()
 

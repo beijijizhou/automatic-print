@@ -2,11 +2,28 @@
 from PySide6.QtCore import QTimer
 from PySide6.QtWidgets import QTabWidget, QWidget, QFormLayout, QSpinBox, QCheckBox
 
+_CUTTER_ROW_STYLE = (
+    'background:#fff7ed;color:#9a3412;border:1px solid #fb923c;'
+    'border-radius:5px;padding:4px;font-weight:600;'
+)
+
+
+def _highlight_cutter_row(label, field):
+    """Make production-paced cutter settings conspicuous in every category tab."""
+    if label is not None:
+        text = label.text()
+        if not text.startswith('● 切膜 · '):
+            label.setText('● 切膜 · ' + text)
+        label.setStyleSheet(_CUTTER_ROW_STYLE)
+        label.setToolTip('切膜机生产参数：修改会影响当前排版与生产节奏。')
+    if isinstance(field, QWidget):
+        field.setProperty('cutterProductionSetting', True)
+
 
 def build_settings_navigation(window, source):
     tabs = QTabWidget()
     forms = {}
-    for name in ('切膜机专用', '排版规则', '标签与文字', '输出与并行'):
+    for name in ('切膜机', '自动排版', '标签与文字', '输出与并行'):
         page = QWidget()
         forms[name] = QFormLayout(page)
         forms[name].setFieldGrowthPolicy(QFormLayout.AllNonFixedFieldsGrow)
@@ -16,18 +33,35 @@ def build_settings_navigation(window, source):
               window.auto_fit_width}
     labels = {'标签与文字', '剪膜机色块'}
 
+    cutter_machine = {
+        cutter.film, cutter.custom_film, cutter.printable,
+        cutter.mode, cutter.auto_knife,
+        cutter.knife_change_gap, cutter.transitions,
+        cutter.knife, cutter.safety, cutter.marker_offset, cutter.left_marker_lift,
+    }
+    automatic_layout = {
+        cutter.quick_mode, cutter.rotation_zone, cutter.two_zone,
+        cutter.force_small_pair, cutter.force_small_pair_sizes,
+        cutter.force_small_pair_limit, cutter.tail_rotation,
+        cutter.compare_films,
+    }
+
     def transfer(form, classify):
         while form.rowCount():
             row = form.takeRow(0)
             label = row.labelItem.widget() if row.labelItem else None
             field = row.fieldItem.widget() or row.fieldItem.layout()
-            target = forms[classify(label, field)]
+            category = classify(label, field)
+            target = forms[category]
+            if category == '切膜机':
+                _highlight_cutter_row(label, field)
             if label:
                 target.addRow(label, field)
             else:
                 target.addRow(field)
 
-    transfer(cutter.layout(), lambda _label, _field: '切膜机专用')
+    transfer(cutter.layout(), lambda _label, field: (
+        '自动排版' if field in automatic_layout else '切膜机'))
     cutter.hide()
     # The empty cutter container is no longer needed as a form row.
     for index in range(source.rowCount()):
@@ -35,9 +69,13 @@ def build_settings_navigation(window, source):
             row = source.takeRow(index)
             row.labelItem.widget().deleteLater()
             break
-    cutter_only = {window.membrane_gap_enabled, window.membrane_gap}
-    transfer(source, lambda label, field: '切膜机专用' if field in cutter_only else (
-        '排版规则' if field in layout else (
+    cutter_fields = {
+        window.membrane_gap_enabled, window.membrane_gap, window.job_path,
+    }
+    transfer(source, lambda label, field: '切膜机' if (
+        field in cutter_fields or (label and label.text() == '剪膜机色块')
+    ) else (
+        '自动排版' if field in layout else (
         '标签与文字' if label and label.text() in labels else '输出与并行'))
     )
     window.bulk_parallelism = QSpinBox()
@@ -84,8 +122,9 @@ def build_settings_navigation(window, source):
     window.label_settings.platform.currentTextChanged.connect(platform_defaults)
     platform_defaults(window.label_settings.platform.currentText(), initial=True)
     window.print_settings_tabs = tabs
-    window.cutter_rules_form = forms['切膜机专用']
-    window.layout_rules_form = forms['排版规则']
+    window.cutter_rules_form = forms['切膜机']
+    window.layout_rules_form = forms['自动排版']
+    window.label_rules_form = forms['标签与文字']
     window.output_parallel_form = forms['输出与并行']
     def sync_cutter_only_rows(*_args):
         cutting = cutter.mode.currentData() != 'free'

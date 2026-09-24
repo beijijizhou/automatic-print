@@ -27,6 +27,7 @@ from ..settings.output import (
     build_output_settings,
 )
 from ..print_settings_navigation import build_settings_navigation
+from ..cutter_mode_banner import CutterModeBanner
 from ..spacing_settings import bind_spacing_description
 from ..spinbox_style import double_spinbox
 
@@ -143,5 +144,7 @@ def build_settings(window) -> None:
     scroll.setWidgetResizable(True)
     scroll.setWidget(container)
     dialog_layout = QVBoxLayout(window.settings_dialog)
+    window.settings_cutter_mode = CutterModeBanner(window, window.settings_dialog)
+    dialog_layout.addWidget(window.settings_cutter_mode)
     dialog_layout.addWidget(scroll)
     dialog_layout.addLayout(actions)

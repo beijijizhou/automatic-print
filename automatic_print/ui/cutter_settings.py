@@ -31,12 +31,14 @@ class CutterSettingsPanel(QWidget):
         legacy = preferences.value('developer/majority_two_zone', True, bool)
         self.two_zone.setChecked(preferences.value('layout/majority_two_zone', legacy, bool))
         self.two_zone.setToolTip('能安全双排的完整订单优先集中双排，其余进入旋转区；最多两个区域。')
-        self.force_small_pair = QCheckBox('并排等比缩小（自动扣除刀码占位）')
+        self.force_small_pair = QCheckBox('并排等比缩小（改变打印尺寸）')
         if not preferences.value('layout/force_small_pair_default_on_v1', False, bool):
             preferences.setValue('layout/force_small_pair_width', True)
             preferences.setValue('layout/force_small_pair_default_on_v1', True)
         self.force_small_pair.setChecked(preferences.value('layout/force_small_pair_width', True, bool))
-        self.force_small_pair.setToolTip('默认开启；选中尺码的原图在设定宽度内可等比缩小，不放大小图，刀码仍按区域统一刀位。')
+        self.force_small_pair.setToolTip(
+            '默认开启；这是自动排版的尺寸策略。'
+            '选中尺码的原图在设定宽度内可等比缩小，不放大小图。')
         self.force_small_pair_limit = pair_width_limit(preferences)
         self.force_small_pair_sizes = pair_size_selector(preferences)
         self.tail_rotation = QCheckBox('单件批次末尾 3XL 及以上：省膜时整尺码块旋转')
