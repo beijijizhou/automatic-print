@@ -4,6 +4,7 @@ from types import SimpleNamespace
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
 from PySide6.QtWidgets import QApplication
+from PySide6.QtCore import Qt
 
 from automatic_print import __version__
 from automatic_print.automation.api.machine_commands import runner, source_update
@@ -55,11 +56,29 @@ def test_update_panel_shows_all_eleven_version_receipts():
     panel.set_data(machines, [command])
 
     assert panel.table.rowCount() == 11
-    assert panel.table.item(0, 2).text() == "已更新"
-    assert panel.table.item(1, 2).text() == "更新中 · 正在安装依赖"
-    assert panel.table.item(2, 2).text() == "未接入"
+    assert panel.table.columnCount() == 4
+    assert panel.table.item(0, 2).text() == __version__
+    assert panel.table.item(0, 3).text() == "已更新"
+    assert panel.table.item(1, 2).text() == "0.1.1"
+    assert panel.table.item(1, 3).text() == "更新中 · 正在安装依赖"
+    assert panel.table.item(2, 3).text() == "未接入"
     assert "已更新 1/11" in panel.summary.text()
     assert panel.has_active_updates()
+
+
+def test_update_panel_selects_only_requested_pending_machines():
+    panel = FleetUpdatePanel()
+    panel.set_data([machine(1, __version__), machine(2), machine(3)], [])
+
+    assert panel.table.item(0, 0).checkState() == Qt.Unchecked
+    assert panel.table.item(1, 0).checkState() == Qt.Checked
+    assert panel.table.item(2, 0).checkState() == Qt.Checked
+    panel.table.item(1, 0).setCheckState(Qt.Unchecked)
+
+    assert [item["machine_name"] for item in panel._selected_targets()] == ["M3"]
+    assert panel.button.text() == "更新已选电脑（1）"
+    panel.clear_button.click()
+    assert panel._selected_targets() == []
 
 
 def test_terminal_receipt_waits_for_restarted_version_report():
