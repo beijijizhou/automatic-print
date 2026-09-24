@@ -22,9 +22,8 @@ from ..batch_ui.platform.remote.queue import machine_workload
 from .machine_command_ui import RemoteCommandPanel
 from .automation_toggle import AutomationToggle
 from .printer_control_ui import PrinterControlPanel
-from .machine_status_format import (
-    heartbeat_text, machine_slots, remaining_text, status_text,
-)
+from .machine_status_format import feedback_text, machine_slots, remaining_text, status_text
+from .machine_availability import MachineAvailabilityControl
 
 
 EXPECTED_MACHINES = 11
@@ -71,10 +70,8 @@ class MachineStatusPage(QWidget):
 
         title = QLabel("PrintExp 打印机状态")
         title.setProperty("heading", True)
-        description = QLabel(
-            "显示各电脑上 PrintExp 的真实任务、打印百分比和预计剩余时间。"
-            "每台电脑需安装后台监控；关闭 AutomaticPrint 不影响持续上报。"
-        )
+        description = QLabel("显示各电脑上 PrintExp 的真实任务、打印百分比和预计剩余时间。"
+                             "机器启动和状态变化时反馈；不发送周期心跳。")
         description.setWordWrap(True)
         self.summary = QLabel("已接入 0 / 11 · 在线 0 · 打印中 0")
         self.summary.setStyleSheet("font-size:16px;font-weight:700;color:#0f172a;")
@@ -96,7 +93,7 @@ class MachineStatusPage(QWidget):
         self.table.setHorizontalHeaderLabels(
             (
                 "打印机", "部门", "状态", "当前批次", "进度", "剩余时间",
-                "最后心跳", "后台处理中", "下一任务",
+                "最后反馈", "后台处理中", "下一任务",
             )
         )
         self.table.setEditTriggers(QAbstractItemView.NoEditTriggers)
@@ -113,11 +110,14 @@ class MachineStatusPage(QWidget):
         self.control_panel.command_submitted.connect(self.refresh)
         self.automation_toggle = AutomationToggle(self)
         self.automation_toggle.changed.connect(self._automation_changed)
+        self.availability_control = MachineAvailabilityControl(self)
+        self.availability_control.changed.connect(self.refresh)
 
         layout = QVBoxLayout(self)
         layout.addWidget(title)
         layout.addWidget(description)
         layout.addWidget(self.automation_toggle)
+        layout.addWidget(self.availability_control)
         layout.addWidget(overview)
         layout.addWidget(self.table, 1)
         layout.addWidget(self.control_panel)
@@ -152,6 +152,7 @@ class MachineStatusPage(QWidget):
         self.apply_machines(machines, commands)
         self.control_panel.set_data(machines)
         self.command_panel.set_data(machines, commands)
+        self.availability_control.set_data(machines)
 
     def apply_machines(self, machines, commands=None):
         machines = [item for item in machines if isinstance(item, dict)]
@@ -160,17 +161,15 @@ class MachineStatusPage(QWidget):
         self.table.setRowCount(EXPECTED_MACHINES)
         connected = [item for item in slots if item is not None]
         conflicts = sum(bool(item.get("identity_conflict")) for item in connected)
-        online = sum(
-            bool(item.get("online")) and not item.get("identity_conflict")
-            for item in connected
-        )
+        online = sum(bool(item.get("available", item.get("online")))
+                     and not item.get("identity_conflict") for item in connected)
         running = sum(
-            item.get("state") == "running" and item.get("online")
+            item.get("state") == "running" and item.get("available", item.get("online"))
             and not item.get("identity_conflict") for item in connected
         )
         conflict_text = f" · 机器号冲突 {conflicts}" if conflicts else ""
         self.summary.setText(
-            f"已接入 {len(connected)} / {EXPECTED_MACHINES} · 在线 {online}"
+            f"已接入 {len(connected)} / {EXPECTED_MACHINES} · 可用 {online}"
             f" · 打印中 {running}{conflict_text}"
         )
         self.message.setText(
@@ -196,7 +195,7 @@ class MachineStatusPage(QWidget):
             machine.get("batch_name") or machine.get("batch_id") or "—",
             "",
             remaining_text(machine.get("remaining_seconds"), machine.get("state")),
-            heartbeat_text(machine.get("heartbeat_age_seconds")),
+            feedback_text(machine.get("feedback_age_seconds", machine.get("heartbeat_age_seconds"))),
             workload["active_task"],
             workload["next_task"],
         )

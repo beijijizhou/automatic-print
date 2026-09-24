@@ -30,7 +30,7 @@ def test_board_keeps_eleven_slots_and_renders_live_machine():
     )
 
     assert page.table.rowCount() == 11
-    assert page.summary.text() == "已接入 1 / 11 · 在线 1 · 打印中 1"
+    assert page.summary.text() == "已接入 1 / 11 · 可用 1 · 打印中 1"
     assert page.table.item(0, 0).text() == "M1"
     assert page.table.item(0, 2).text() == "待接入"
     assert page.table.item(3, 0).text() == "M4"
@@ -49,7 +49,7 @@ def test_board_keeps_eleven_slots_and_renders_live_machine():
     assert page.control_panel.target.currentText() == "M4"
 
 
-def test_board_distinguishes_monitor_and_printerexp_offline():
+def test_board_distinguishes_no_feedback_and_printerexp_offline():
     page = MachineStatusPage(fetch=lambda: [])
     page.apply_dashboard(
         {"machines": [
@@ -63,7 +63,7 @@ def test_board_distinguishes_monitor_and_printerexp_offline():
         ], "commands": []}
     )
 
-    assert page.table.item(0, 2).text() == "监控离线"
+    assert page.table.item(0, 2).text() == "无反馈，不可用"
     assert page.table.item(1, 2).text() == "PrintExp 离线"
     assert page.command_panel.table.rowCount() == 0
 
@@ -89,7 +89,7 @@ def test_board_ignores_legacy_names_and_blocks_duplicate_machine_number():
     ], "commands": []})
 
     assert page.summary.text() == (
-        "已接入 1 / 11 · 在线 0 · 打印中 0 · 机器号冲突 1"
+        "已接入 1 / 11 · 可用 0 · 打印中 0 · 机器号冲突 1"
     )
     assert page.table.item(0, 0).text() == "M1"
     assert page.table.item(0, 2).text() == "待接入"
@@ -143,3 +143,32 @@ def test_board_blocks_start_when_loaded_task_name_is_unverified():
 
     assert page.table.item(3, 2).text() == "待打印（待复核）"
     assert not page.control_panel.start_button.isEnabled()
+
+
+def test_board_allows_the_same_start_action_to_resume_a_paused_batch():
+    page = MachineStatusPage(fetch=lambda: [])
+    page.apply_dashboard({"machines": [{
+        "machine_id": "paused-4", "machine_name": "M4", "state": "running",
+        "progress_percent": 42, "batch_name": "tangle.prn", "batch_info": {
+            "printer_state": "paused", "task_name_verified": True,
+        },
+        "agent_online": True, "source_online": True, "online": True,
+        "heartbeat_age_seconds": 1,
+    }], "commands": []})
+
+    assert page.control_panel.start_button.text() == "继续打印"
+    assert page.control_panel.start_button.isEnabled()
+
+
+def test_board_exposes_shared_manual_availability_setting():
+    page = MachineStatusPage(fetch=lambda: [])
+    page.apply_dashboard({"machines": [{
+        "machine_id": "machine-4", "machine_name": "M4", "state": "idle",
+        "available": False, "source_online": True,
+        "availability_override": "unavailable", "feedback_age_seconds": 99,
+    }], "commands": []})
+
+    assert page.table.item(3, 2).text() == "无反馈，不可用"
+    assert page.table.horizontalHeaderItem(6).text() == "最后反馈"
+    assert page.availability_control.target.currentText() == "M4"
+    assert page.availability_control.availability.currentData() == "unavailable"

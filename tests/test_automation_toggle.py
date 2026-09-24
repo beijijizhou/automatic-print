@@ -64,7 +64,7 @@ def test_monitor_suppresses_reports_when_automation_is_disabled(monkeypatch):
     assert sent and sent[-1]["source_online"] is False
 
 
-def test_monitor_defaults_to_five_minute_heartbeat_and_ignores_eta_changes():
+def test_monitor_has_no_periodic_heartbeat_and_ignores_eta_changes():
     monitor = monitor_module.PrintExpMonitor(
         send=lambda _status: None, automation_allowed=lambda: False,
     )
@@ -76,8 +76,27 @@ def test_monitor_defaults_to_five_minute_heartbeat_and_ignores_eta_changes():
     }
     changed_eta = {**base, "remaining_seconds": 118}
 
-    assert monitor.heartbeat_seconds == 300
+    assert not hasattr(monitor, "heartbeat_seconds")
     assert monitor_module._signature(base) == monitor_module._signature(changed_eta)
+
+
+def test_monitor_retries_failed_event_report_without_waiting_for_a_heartbeat(monkeypatch):
+    attempts = []
+    monkeypatch.setattr(monitor_module, "running_installations", lambda: [])
+    monkeypatch.setattr(monitor_module, "find_installation", lambda: None)
+    monkeypatch.setattr(monitor_module, "process_running", lambda: False)
+
+    def send(_status):
+        attempts.append("send")
+        if len(attempts) == 1:
+            raise OSError("offline")
+
+    monitor = monitor_module.PrintExpMonitor(send=send, automation_allowed=lambda: True)
+    monitor.run_once()
+    monitor.run_once()
+    monitor.run_once()
+
+    assert attempts == ["send", "send"]
 
 
 def test_disabled_monitor_makes_no_cloud_dispatch_calls():

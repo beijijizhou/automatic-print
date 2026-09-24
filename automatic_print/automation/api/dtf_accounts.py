@@ -5,15 +5,12 @@ from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
 
 from automatic_print.automation.api.ydwx.credentials import client_key
+from automatic_print.automation.api.supabase_public import PUBLIC_ANON_JWT
 
 
 ENDPOINT = (
     "https://bhhbztpmwlzuzbzfmsos.supabase.co/functions/v1/dtf-platform-auth"
 )
-# Supabase legacy anon JWT is public. Platform credentials remain server-side.
-PUBLIC_ANON_JWT = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJoaGJ6dHBtd2x6dXpiemZtc29zIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODAzMjg4MzksImV4cCI6MjA5NTkwNDgzOX0.ysq6YlYMaTckj9iH88zrAhYal8xiFJdBNTzluqDcEKk"
-
-
 def account_status():
     return _call({"action": "status"})["platforms"]
 

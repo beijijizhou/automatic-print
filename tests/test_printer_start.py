@@ -30,9 +30,15 @@ def test_backend_and_control_claim_allow_safety_gated_start():
     migration = (
         ROOT / "supabase/migrations/202609230004_start_print_control.sql"
     ).read_text(encoding="utf-8")
+    action_migration = (
+        ROOT / "supabase/migrations/202609230005_start_print_action.sql"
+    ).read_text(encoding="utf-8")
 
     assert '"start_print"' in function
-    assert 'printerState !== "ready"' in function
+    assert 'printerState === "ready"' in function
+    assert 'printerState === "paused"' in function
     assert 'task_name_verified !== true' in function
     assert "expected_batch_name" in function
     assert "start_print" in migration
+    assert "machine_commands_action_check" in action_migration
+    assert "'start_print'" in action_migration

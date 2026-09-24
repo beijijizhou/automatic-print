@@ -17,25 +17,37 @@ def start_print(
     if not expected:
         raise ValueError("开始打印前必须指定并确认批次文件名。")
     snapshot = snapshot if snapshot is not None else _current_snapshot()
-    if snapshot is None or snapshot.progress != 0:
-        raise RuntimeError("PrintExp 当前不是 0% 待打印状态，未开始打印。")
+    if snapshot is None:
+        raise RuntimeError("PrintExp 当前没有可确认的打印任务。")
     loaded = {_name(snapshot.task_file), _name(snapshot.task_folder)} - {""}
     if expected not in loaded:
         raise RuntimeError("PrintExp 状态文件中的当前批次与待启动批次不一致。")
     controls = controls or NativePrintExpControls()
     if _name(controls.task_name()) != expected:
         raise RuntimeError("PrintExp 界面当前装载的 PRN 与待启动批次不一致。")
-    if controls.operation_state(task_loaded=True) != "ready":
-        raise RuntimeError("PrintExp 不是空闲待打印状态，未发送开始指令。")
-    _report(progress, f"已确认待打印批次 {expected_batch_name}；正在开始物理打印")
-    controls.click_print()
+    state = controls.operation_state(task_loaded=True)
+    if state == "ready":
+        if snapshot.progress != 0:
+            raise RuntimeError("PrintExp 待打印任务不是 0%，未发送开始指令。")
+        _report(progress, f"已确认待打印批次 {expected_batch_name}；正在开始物理打印")
+        controls.click_print()
+        resumed = False
+    elif state == "paused":
+        if snapshot.progress >= 100:
+            raise RuntimeError("PrintExp 当前任务已完成，未发送继续指令。")
+        _report(progress, f"已确认暂停批次 {expected_batch_name}；正在继续打印")
+        controls.click_pause()
+        resumed = True
+    else:
+        raise RuntimeError("PrintExp 当前不是待打印或已暂停状态，未发送指令。")
     _wait_until(
         lambda: controls.operation_state(task_loaded=True) == "printing", timeout,
         "PrintExp 未在限定时间内进入打印状态", clock, wait,
     )
-    _report(progress, f"PrintExp 已开始打印 {expected_batch_name}")
+    verb = "继续" if resumed else "开始"
+    _report(progress, f"PrintExp 已{verb}打印 {expected_batch_name}")
     return {"state": "printing", "batch_name": expected_batch_name,
-            "physical_print_started": True}
+            "physical_print_started": True, "resumed": resumed}
 
 
 def pause_print(controls=None, *, progress=None, timeout=10, clock=monotonic, wait=sleep):

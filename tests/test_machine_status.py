@@ -46,7 +46,7 @@ def test_report_uses_stable_identity_and_restricted_header(monkeypatch):
     assert result["machine"]["online"] is True
     assert captured["payload"]["machine_name"] == "DTF-01"
     assert captured["payload"]["progress_percent"] == 42
-    assert captured["headers"]["X-automatic-print-key"] == "factory-key"
+    assert captured["headers"]["X-automatic-print-key"] == "factory-key" and captured["headers"]["Authorization"].startswith("Bearer eyJ")
     assert captured["timeout"] == 3
 
 
@@ -97,7 +97,9 @@ def test_backend_contract_keeps_unknown_eta_nullable():
     assert "progress_percent smallint" in migration
     assert 'action === "report"' in function
     assert 'action === "list"' in function
-    assert "stale_after_seconds" in function
+    assert "feedback_timeout_seconds" in function
+    assert 'action === "set_availability"' in function
+    assert "markUnresponsiveMachines" in function
     assert "source_online boolean" in printerexp_migration
     assert "agent_online" in function
     assert 'action === "enqueue_command"' in function
@@ -111,8 +113,6 @@ def test_backend_contract_keeps_unknown_eta_nullable():
     assert '"S2B"' in function
     assert "claim_machine_control" in urgent_control_migration
     assert "action = 'download_layout'" in urgent_control_migration
-
-
 def test_submit_command_sends_target_batches_and_settings(monkeypatch):
     captured = {}
     monkeypatch.setattr(commands, "machine_id", lambda: "d9428888-122b-4c26-a127-3eafad1f5270")

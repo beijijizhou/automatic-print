@@ -55,6 +55,38 @@ def cache_key_file():
     return Path.home() / ".automatic-print" / "credentials" / "ydwx-gateway.key"
 
 
+def cached_client_key_available():
+    """Report whether the current Windows user has a valid local key."""
+    return bool(_read_key(cache_key_file()))
+
+
+def store_local_client_key(value):
+    """Validate and atomically store a manually supplied restricted key."""
+    value = str(value or "").strip()
+    if len(value) < 32 or "\n" in value or "\r" in value:
+        raise ValueError("工厂服务密钥格式不正确；请粘贴完整的单行密钥。")
+    target = cache_key_file()
+    temporary = None
+    target.parent.mkdir(parents=True, exist_ok=True)
+    try:
+        descriptor, temporary = tempfile.mkstemp(prefix=".gateway-", dir=target.parent)
+        with os.fdopen(descriptor, "w", encoding="utf-8") as stream:
+            stream.write(value)
+        try:
+            os.chmod(temporary, 0o600)
+        except OSError:
+            pass
+        os.replace(temporary, target)
+        temporary = None
+    finally:
+        if temporary:
+            try:
+                Path(temporary).unlink(missing_ok=True)
+            except OSError:
+                pass
+    return target
+
+
 def _read_key(path):
     try:
         value = path.read_text(encoding="utf-8").strip()
@@ -64,19 +96,7 @@ def _read_key(path):
 
 
 def _cache_key(value):
-    target = cache_key_file()
-    temporary = None
     try:
-        target.parent.mkdir(parents=True, exist_ok=True)
-        descriptor, temporary = tempfile.mkstemp(prefix=".gateway-", dir=target.parent)
-        with os.fdopen(descriptor, "w", encoding="utf-8") as stream:
-            stream.write(value)
-        os.replace(temporary, target)
+        store_local_client_key(value)
     except OSError:
         return
-    finally:
-        if temporary:
-            try:
-                Path(temporary).unlink(missing_ok=True)
-            except OSError:
-                pass

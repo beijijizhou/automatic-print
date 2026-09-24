@@ -1,6 +1,6 @@
 """Supabase-backed machine heartbeat API."""
 
-from .client import list_machines, report_machine
+from .client import list_machines, report_machine, set_machine_availability
 from .commands import claim_control, list_commands, submit_command
 from .reporter import MachineStatusReporter
 
@@ -10,5 +10,6 @@ __all__ = [
     "list_commands",
     "list_machines",
     "report_machine",
+    "set_machine_availability",
     "submit_command",
 ]

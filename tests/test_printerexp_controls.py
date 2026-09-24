@@ -39,6 +39,8 @@ class Controls:
     def click_pause(self):
         self.pause_clicks += 1
         self.caption = "继续" if self.caption == "暂停" else "暂停"
+        if self.operation == "paused":
+            self.operation = "printing"
 
     def click_clean(self):
         self.clean_clicks += 1
@@ -185,6 +187,7 @@ def test_start_print_rechecks_zero_progress_and_exact_loaded_batch():
     result = start_print("tangle.prn", controls, snapshot=snapshot)
 
     assert result["physical_print_started"] is True
+    assert result["resumed"] is False
     assert result["batch_name"] == "tangle.prn"
     assert controls.print_clicks == 1
 
@@ -197,4 +200,16 @@ def test_start_print_refuses_stale_progress_or_batch(progress, name):
     with pytest.raises(RuntimeError):
         start_print(name, controls, snapshot=snapshot)
 
+    assert controls.print_clicks == 0
+
+
+def test_start_print_resumes_the_exact_paused_batch():
+    controls = Controls(caption="继续")
+    controls.operation = "paused"
+    snapshot = PrintExpSnapshot("job", 42, "tangle.prn", "batch", 1)
+
+    result = start_print("tangle.prn", controls, snapshot=snapshot)
+
+    assert result["resumed"] is True
+    assert controls.pause_clicks == 1
     assert controls.print_clicks == 0

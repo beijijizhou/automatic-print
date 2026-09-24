@@ -7,6 +7,7 @@ import pytest
 
 from automatic_print.automation.api.ydwx import YdwxBatch, parse_batches
 from automatic_print.automation.api.ydwx import batches, credentials, downloads, gateway
+from automatic_print.automation.api import gateway_credentials
 
 
 def batch(task_id=11, name="K_YX_05_Tie_2030__322", count=2, downloaded=2):
@@ -68,6 +69,16 @@ def test_source_gateway_key_is_read_once_from_share_then_cached(tmp_path, monkey
     assert cached.read_text(encoding="utf-8") == "s" * 48
     shared.unlink()
     assert credentials.client_key() == "s" * 48
+
+
+def test_manual_gateway_key_is_validated_and_stored_for_current_user(tmp_path, monkeypatch):
+    monkeypatch.setenv("LOCALAPPDATA", str(tmp_path / "profile"))
+    with pytest.raises(ValueError, match="格式不正确"):
+        gateway_credentials.store_local_client_key("too-short")
+    target = gateway_credentials.store_local_client_key("k" * 64)
+    assert target == tmp_path / "profile" / "AutomaticPrint" / "credentials" / "ydwx-gateway.key"
+    assert target.read_text(encoding="utf-8") == "k" * 64
+    assert gateway_credentials.cached_client_key_available()
 
 
 def test_source_gateway_reports_missing_share_without_login(tmp_path, monkeypatch):

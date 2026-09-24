@@ -2,6 +2,9 @@
 from PySide6.QtCore import QTimer
 from PySide6.QtWidgets import QTabWidget, QWidget, QFormLayout, QSpinBox, QCheckBox
 
+from .gateway_key_settings import build_gateway_key_settings
+
+
 _CUTTER_ROW_STYLE = (
     'background:#fff7ed;color:#9a3412;border:1px solid #fb923c;'
     'border-radius:5px;padding:4px;font-weight:600;'
@@ -83,6 +86,9 @@ def build_settings_navigation(window, source):
     window.bulk_parallelism.setValue(window.preferences.value('developer/bulk_parallelism', 4, int))
     window.bulk_parallelism.setToolTip('独立批次滚动处理；完成一批立即补下一批。启动后使用参数快照。')
     forms['输出与并行'].insertRow(0, '同时处理批次数', window.bulk_parallelism)
+    forms['输出与并行'].insertRow(
+        1, '工厂服务密钥', build_gateway_key_settings(window),
+    )
     window.combine_bulk_batches = QCheckBox('合并所有子文件夹为一个批次')
     window.combine_bulk_batches.setChecked(
         window.preferences.value('layout/combine_bulk_batches', False, bool))

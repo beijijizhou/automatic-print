@@ -2,12 +2,12 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const CORS = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "content-type, x-automatic-print-key",
+  "Access-Control-Allow-Headers": "authorization, apikey, content-type, x-automatic-print-key",
   "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
 const STATES = new Set(["idle", "running", "completed", "failed", "stopped"]);
 const DEPARTMENTS = new Set(["DTF", "UV", "3D"]);
-const STALE_SECONDS = 420;
+const FEEDBACK_TIMEOUT_SECONDS = 20;
 const COMMAND_STATES = new Set(["running", "succeeded", "failed"]);
 const COMMAND_PLATFORMS = new Set(["Haloo", "莆田", "隆丰", "S2B"]);
 const COMMAND_ACTIONS = new Set(["download_layout", "start_print", "pause_print", "clean_resume"]);
@@ -27,6 +27,7 @@ Deno.serve(async (request) => {
     if (action === "report") return json(await report(db, input));
     if (action === "list") return json(await list(db));
     if (action === "get") return json(await get(db, machineId(input.machine_id)));
+    if (action === "set_availability") return json(await setAvailability(db, input));
     if (action === "enqueue_command") return json(await enqueueCommand(db, input));
     if (action === "send_control") return json(await sendControl(db, input));
     if (action === "list_commands") return json(await listCommands(db));
@@ -74,6 +75,9 @@ async function report(db: ReturnType<typeof createClient>, input: Record<string,
     app_version: String(input.app_version || "").slice(0, 40),
     error_message: optionalText(input.error_message, 1000),
     source_online: optionalBoolean(input.source_online, true),
+    auto_available: true,
+    availability_reason: "",
+    last_feedback_at: now.toISOString(),
     updated_at: now.toISOString(),
   };
   const { data: previous, error: readError } = await db.from("machine_status_current")
@@ -87,10 +91,11 @@ async function report(db: ReturnType<typeof createClient>, input: Record<string,
 }
 
 async function list(db: ReturnType<typeof createClient>) {
+  await markUnresponsiveMachines(db);
   const { data, error } = await db.from("machine_status_current").select("*")
     .order("machine_name", { ascending: true });
   if (error) throw error;
-  return { machines: (data || []).map(decorate), stale_after_seconds: STALE_SECONDS };
+  return { machines: (data || []).map(decorate), feedback_timeout_seconds: FEEDBACK_TIMEOUT_SECONDS };
 }
 
 async function get(db: ReturnType<typeof createClient>, id: string) {
@@ -98,7 +103,22 @@ async function get(db: ReturnType<typeof createClient>, id: string) {
     .eq("machine_id", id).maybeSingle();
   if (error) throw error;
   if (!data) throw new ClientError("Machine not found", 404);
-  return { machine: decorate(data), stale_after_seconds: STALE_SECONDS };
+  return { machine: decorate(data), feedback_timeout_seconds: FEEDBACK_TIMEOUT_SECONDS };
+}
+
+async function setAvailability(db: ReturnType<typeof createClient>, input: Record<string, unknown>) {
+  const target = machineId(input.target_machine_id);
+  const availability = String(input.availability || "");
+  if (!new Set(["auto", "available", "unavailable"]).has(availability)) {
+    throw new ClientError("Invalid availability", 400);
+  }
+  const { data, error } = await db.from("machine_status_current").update({
+    availability_override: availability,
+    updated_at: new Date().toISOString(),
+  }).eq("machine_id", target).select().maybeSingle();
+  if (error) throw error;
+  if (!data) throw new ClientError("Target machine not found", 404);
+  return { machine: decorate(data) };
 }
 
 async function enqueueCommand(db: ReturnType<typeof createClient>, input: Record<string, unknown>) {
@@ -111,11 +131,11 @@ async function enqueueCommand(db: ReturnType<typeof createClient>, input: Record
   const action = "download_layout";
   const payload = commandPayload(input.payload);
   const { data: machine, error: machineError } = await db.from("machine_status_current")
-    .select("machine_id, heartbeat_at, source_online").eq("machine_id", target).maybeSingle();
+    .select("machine_id, source_online, availability_override, auto_available")
+    .eq("machine_id", target).maybeSingle();
   if (machineError) throw machineError;
   if (!machine) throw new ClientError("Target machine not found", 404);
-  const age = (Date.now() - new Date(String(machine.heartbeat_at)).getTime()) / 1000;
-  if (age > STALE_SECONDS) throw new ClientError("Target monitor is offline", 409);
+  if (!isAvailable(machine)) throw new ClientError("Target machine is unavailable", 409);
   if (payload.generate_prn && machine.source_online === false) {
     throw new ClientError("Target PrintExp is offline", 409);
   }
@@ -140,12 +160,11 @@ async function sendControl(db: ReturnType<typeof createClient>, input: Record<st
     throw new ClientError("Unsupported control action", 400);
   }
   const { data: machine, error: machineError } = await db.from("machine_status_current")
-    .select("machine_id, heartbeat_at, source_online, state, batch_name, batch_info")
+    .select("machine_id, source_online, state, progress_percent, batch_name, batch_info, availability_override, auto_available")
     .eq("machine_id", target).maybeSingle();
   if (machineError) throw machineError;
   if (!machine) throw new ClientError("Target machine not found", 404);
-  const age = (Date.now() - new Date(String(machine.heartbeat_at)).getTime()) / 1000;
-  if (age > STALE_SECONDS) throw new ClientError("Target monitor is offline", 409);
+  if (!isAvailable(machine)) throw new ClientError("Target machine is unavailable", 409);
   if (machine.source_online === false) throw new ClientError("Target PrintExp is offline", 409);
   const requestedPayload = input.payload && typeof input.payload === "object"
     ? input.payload as Record<string, unknown> : {};
@@ -154,8 +173,14 @@ async function sendControl(db: ReturnType<typeof createClient>, input: Record<st
     const printerState = String(
       (machine.batch_info as Record<string, unknown> | null)?.printer_state || "",
     );
-    if (machine.state !== "idle" || printerState !== "ready") {
-      throw new ClientError("Target PrintExp is not idle and ready", 409);
+    const machineProgress = machine.progress_percent == null
+      ? Number.NaN : Number(machine.progress_percent);
+    const ready = machine.state === "idle" && printerState === "ready" &&
+      machineProgress === 0;
+    const paused = machine.state === "running" && printerState === "paused" &&
+      machineProgress >= 0 && machineProgress < 100;
+    if (!ready && !paused) {
+      throw new ClientError("Target PrintExp is not ready or paused", 409);
     }
     if ((machine.batch_info as Record<string, unknown> | null)?.task_name_verified !== true) {
       throw new ClientError("Target PRN task name is not verified", 409);
@@ -203,6 +228,7 @@ async function claimCommand(db: ReturnType<typeof createClient>, input: Record<s
   const id = machineId(input.machine_id);
   const { data, error } = await db.rpc("claim_machine_command", { target_id: id }).maybeSingle();
   if (error) throw error;
+  if (data) await markFeedback(db, id);
   return { command: data || null };
 }
 
@@ -210,6 +236,7 @@ async function claimControl(db: ReturnType<typeof createClient>, input: Record<s
   const id = machineId(input.machine_id);
   const { data, error } = await db.rpc("claim_machine_control", { target_id: id }).maybeSingle();
   if (error) throw error;
+  if (data) await markFeedback(db, id);
   return { command: data || null };
 }
 
@@ -250,6 +277,7 @@ async function updateCommand(db: ReturnType<typeof createClient>, input: Record<
   const { data, error } = await db.from("machine_commands").update(changes)
     .eq("id", id).eq("target_machine_id", target).select().single();
   if (error) throw error;
+  await markFeedback(db, target);
   return { command: data };
 }
 
@@ -299,14 +327,61 @@ function commandPayload(value: unknown) {
 }
 
 function decorate(row: Record<string, unknown>) {
-  const age = Math.max(0, (Date.now() - new Date(String(row.heartbeat_at)).getTime()) / 1000);
-  const agentOnline = age <= STALE_SECONDS;
+  const feedbackAt = row.last_feedback_at || row.heartbeat_at;
+  const age = Math.max(0, (Date.now() - new Date(String(feedbackAt)).getTime()) / 1000);
+  const available = isAvailable(row);
   return {
     ...row,
-    agent_online: agentOnline,
-    online: agentOnline && row.source_online !== false,
+    available,
+    agent_online: available,
+    online: available && row.source_online !== false,
+    feedback_age_seconds: Math.round(age),
     heartbeat_age_seconds: Math.round(age),
   };
+}
+
+function isAvailable(row: Record<string, unknown>) {
+  if (row.availability_override === "available") return true;
+  if (row.availability_override === "unavailable") return false;
+  return row.auto_available !== false;
+}
+
+async function markFeedback(db: ReturnType<typeof createClient>, target: string) {
+  const now = new Date().toISOString();
+  const { error } = await db.from("machine_status_current").update({
+    auto_available: true,
+    availability_reason: "",
+    last_feedback_at: now,
+    updated_at: now,
+  }).eq("machine_id", target);
+  if (error) throw error;
+}
+
+async function markUnresponsiveMachines(db: ReturnType<typeof createClient>) {
+  const cutoff = new Date(Date.now() - FEEDBACK_TIMEOUT_SECONDS * 1000).toISOString();
+  const { data: commands, error } = await db.from("machine_commands")
+    .select("target_machine_id, created_at").eq("status", "queued")
+    .lt("created_at", cutoff).order("created_at", { ascending: false }).limit(200);
+  if (error) throw error;
+  const checked = new Set<string>();
+  for (const command of commands || []) {
+    const target = String(command.target_machine_id || "");
+    if (!target || checked.has(target)) continue;
+    checked.add(target);
+    const { data: machine, error: readError } = await db.from("machine_status_current")
+      .select("last_feedback_at, availability_override").eq("machine_id", target).maybeSingle();
+    if (readError) throw readError;
+    if (!machine || machine.availability_override !== "auto") continue;
+    if (machine.last_feedback_at &&
+        new Date(String(machine.last_feedback_at)).getTime() >
+        new Date(String(command.created_at)).getTime()) continue;
+    const { error: updateError } = await db.from("machine_status_current").update({
+      auto_available: false,
+      availability_reason: `任务下发 ${FEEDBACK_TIMEOUT_SECONDS} 秒内没有反馈`,
+      updated_at: new Date().toISOString(),
+    }).eq("machine_id", target).eq("availability_override", "auto");
+    if (updateError) throw updateError;
+  }
 }
 
 async function authorize(request: Request) {

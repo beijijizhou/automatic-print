@@ -7,6 +7,7 @@ from urllib.request import Request, urlopen
 
 from automatic_print import __version__
 from automatic_print.automation.api.gateway_credentials import shared_client_key
+from automatic_print.automation.api.supabase_public import PUBLIC_ANON_JWT
 
 from .identity import machine_id, machine_name
 
@@ -37,6 +38,20 @@ def list_machines(*, endpoint=None, access_key=None, timeout=8):
     )["machines"]
 
 
+def set_machine_availability(machine, availability, *, endpoint=None, access_key=None, timeout=8):
+    value = str(availability).strip().lower()
+    if value not in {"auto", "available", "unavailable"}:
+        raise ValueError("机器可用性必须是自动判断、可用或不可用。")
+    return _call(
+        {
+            "action": "set_availability",
+            "target_machine_id": str(machine),
+            "availability": value,
+        },
+        endpoint=endpoint, access_key=access_key, timeout=timeout,
+    )["machine"]
+
+
 def _call(payload, *, endpoint=None, access_key=None, timeout=8):
     endpoint = str(endpoint or os.environ.get(
         "AUTOMATIC_PRINT_MACHINE_STATUS_URL", DEFAULT_ENDPOINT)).strip()
@@ -50,6 +65,8 @@ def _call(payload, *, endpoint=None, access_key=None, timeout=8):
         headers={
             "Content-Type": "application/json",
             "Accept": "application/json",
+            "Authorization": f"Bearer {PUBLIC_ANON_JWT}",
+            "apikey": PUBLIC_ANON_JWT,
             "X-Automatic-Print-Key": str(configured_key).strip(),
         },
     )

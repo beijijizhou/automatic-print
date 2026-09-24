@@ -6,8 +6,11 @@ import re
 def status_text(machine):
     if machine.get("identity_conflict"):
         return "机器号冲突"
-    if not machine.get("agent_online"):
-        return "监控离线"
+    available = machine.get("available")
+    if available is None:
+        available = machine.get("agent_online")
+    if not available:
+        return "无反馈，不可用"
     if not machine.get("source_online"):
         return "PrintExp 离线"
     printer_state = machine_printer_state(machine)
@@ -45,11 +48,14 @@ def remaining_text(seconds, state):
     return f"{hours}小时{minutes}分钟" if hours else f"{minutes}分钟"
 
 
-def heartbeat_text(seconds):
+def feedback_text(seconds):
     if seconds is None:
         return "—"
     seconds = max(0, int(seconds))
     return f"{seconds}秒前" if seconds < 60 else f"{seconds // 60}分钟前"
+
+
+heartbeat_text = feedback_text
 
 
 def machine_slots(machines, count=11):
@@ -78,11 +84,11 @@ def actionable_machines(machines, *, require_source=False, count=11):
         machine for machine in machine_slots(machines, count)
         if machine is not None
         and not machine.get("identity_conflict")
-        and machine.get("agent_online")
+        and machine.get("available", machine.get("agent_online", True))
         and (not require_source or machine.get("source_online"))
     ]
 
 
 def _freshness_key(machine):
-    age = machine.get("heartbeat_age_seconds")
+    age = machine.get("feedback_age_seconds", machine.get("heartbeat_age_seconds"))
     return float("inf") if age is None else max(0, float(age))

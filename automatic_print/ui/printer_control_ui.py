@@ -69,10 +69,13 @@ class PrinterControlPanel(QGroupBox):
             return
         batch_name = str(machine.get("batch_name") or "").strip()
         if action == "start_print":
-            title = "确认开始打印"
+            paused = machine_printer_state(machine) == "paused"
+            title = "确认继续打印" if paused else "确认开始打印"
             detail = (
-                f"目标打印机：{target_name}\n当前待打印批次：{batch_name}\n\n"
-                "目标机将在执行前再次核对空闲状态、0% 进度和 PRN 文件名。"
+                f"目标打印机：{target_name}\n当前批次：{batch_name}\n\n"
+                + ("目标机将核对已暂停状态和 PRN 文件名，然后继续打印。"
+                   if paused else
+                   "目标机将在执行前再次核对待打印状态、0% 进度和 PRN 文件名。")
             )
         elif action == "pause_print":
             title, detail = "确认暂停打印", f"将暂停 {target_name} 当前正在打印的任务。"
@@ -114,9 +117,10 @@ class PrinterControlPanel(QGroupBox):
         machine = self._selected_machine()
         state = machine_printer_state(machine or {})
         available = machine is not None and not self.busy
+        self.start_button.setText("继续打印" if state == "paused" else "开始打印")
         self.target.setEnabled(bool(self.machines) and not self.busy)
         self.start_button.setEnabled(
-            available and state == "ready" and bool(machine.get("batch_name"))
+            available and state in {"ready", "paused"} and bool(machine.get("batch_name"))
             and (machine.get("batch_info") or {}).get("task_name_verified") is True
         )
         self.pause_button.setEnabled(available and state == "printing")

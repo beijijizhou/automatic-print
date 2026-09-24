@@ -5,7 +5,6 @@ import os
 from logging.handlers import RotatingFileHandler
 from pathlib import Path
 from threading import Event
-from time import monotonic
 
 from ..machine_status import claim_control, report_machine
 from ..machine_commands import CommandDispatcher
@@ -22,7 +21,6 @@ class PrintExpMonitor:
         self,
         *,
         poll_seconds=2,
-        heartbeat_seconds=300,
         send=report_machine,
         command_dispatcher=None,
         control_dispatcher=None,
@@ -30,7 +28,6 @@ class PrintExpMonitor:
         wake_listener=None,
     ):
         self.poll_seconds = float(poll_seconds)
-        self.heartbeat_seconds = float(heartbeat_seconds)
         self.send = send
         self.automation_allowed = automation_allowed
         self.wake_listener = wake_listener or AutomationWakeListener()
@@ -38,7 +35,6 @@ class PrintExpMonitor:
         self.projector = StatusProjector()
         self.installation = None
         self.last_signature = None
-        self.last_attempt = 0.0
         self.logger = _logger()
         self.command_dispatcher = command_dispatcher or CommandDispatcher()
         self.control_dispatcher = control_dispatcher or CommandDispatcher(
@@ -92,15 +88,15 @@ class PrintExpMonitor:
             self.last_signature = None
             return status
         signature = _signature(status)
-        now = monotonic()
         changed = signature != self.last_signature
-        if not changed and now - self.last_attempt < self.heartbeat_seconds:
+        if not changed:
             return status
-        self.last_signature, self.last_attempt = signature, now
         try:
             self.send(status)
         except Exception as error:
             self.logger.warning("Unable to publish PrintExp status: %s", error)
+        else:
+            self.last_signature = signature
         return status
 
     def stop(self):
