@@ -26,7 +26,7 @@ def test_workbench_action_hierarchy_and_icons(tmp_path):
     assert start.isVisible() and start.isEnabled()
     assert window.stop_generation_button.property('importance') == 'danger'
     assert not window.stop_generation_button.isEnabled()
-    assert window.check_update_button.property('importance') == 'secondary'
+    assert not hasattr(window, 'check_update_button')
     assert not window.settings_dialog.isVisible()
     assert window.grab().save(str(tmp_path/'automatic-print-ui.png'))
     window.close()

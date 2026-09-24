@@ -59,8 +59,6 @@ class UpdateActionsMixin:
         self.start_update_worker(worker)
 
     def start_update_worker(self, worker):
-        self.check_update_button.setEnabled(False)
-        self.check_update_button.setText('正在更新…' if self.source_update_applying else '正在检查…')
         self.update_started = monotonic()
         self.activity_hub.begin(
             "app-update", "软件更新",
@@ -104,7 +102,7 @@ class UpdateActionsMixin:
                     '源码已更新；当前任务完成后自动安全重启…' if source_code_changed()
                     else f'源码已是最新 · {update.display_version}')
             elif not self.update_is_silent and self.source_update_busy():
-                self.show_update_progress('发现新代码；请等待排版/保存完成，或停止后台预览，再点击检查更新。')
+                self.show_update_progress('发现新代码；当前生产任务结束后，下次启动会重新检查。')
             else:
                 self.show_update_progress(f'发现源码更新：{update.display_version} · {update.commits} 个新提交')
             return
@@ -127,7 +125,7 @@ class UpdateActionsMixin:
         if self.update_is_silent:
             return
         if self.source_update_busy():
-            self.show_update_progress('发现新代码；请等待排版/保存完成，或停止后台预览，再点击检查更新。')
+            self.show_update_progress('发现新代码；当前生产任务结束后，下次启动会重新检查。')
             return
         answer = QMessageBox.question(self, '发现源码更新',
             f'新版本：{update.display_version}\n当前版本：{__version_display__}\n\n'
@@ -142,7 +140,7 @@ class UpdateActionsMixin:
         if not info:
             return
         if self.source_update_busy():
-            self.show_update_progress('有任务正在执行，更新已暂停；任务完成后请重新检查更新。')
+            self.show_update_progress('有任务正在执行，更新已暂停；下次启动会重新检查。')
             return
         self.preference_autosave.flush()
         self.source_update_applying = True
@@ -154,7 +152,7 @@ class UpdateActionsMixin:
     def update_check_failed(self, message):
         self.pending_source_update = None
         self.completed_source_check = None
-        self.show_update_progress(f'更新未完成：{message}\n可重新点击检查更新重试；不会覆盖本地修改。')
+        self.show_update_progress(f'更新未完成：{message}\n下次启动会自动重试；不会覆盖本地修改。')
         self.activity_hub.finish("app-update", self.update_message, state="failed")
         if not self.update_is_silent or self.source_update_applying:
             QMessageBox.warning(self, '更新未完成', message)
@@ -178,8 +176,6 @@ class UpdateActionsMixin:
         if self.update_thread is not None:
             QTimer.singleShot(30, self.update_cleanup_finished)
             return
-        self.check_update_button.setEnabled(True)
-        self.check_update_button.setText('检查更新')
         if self.update_restart_pending:
             self.update_restart_pending = False
             self.source_update_applying = False

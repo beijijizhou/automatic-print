@@ -80,6 +80,8 @@ def test_cutter_mode_is_pinned_above_every_main_and_settings_tab(tmp_path):
 
     main_banner = owner.global_cutter_mode
     assert not hasattr(owner.automation_home.label_quick_panel.current_film, 'mode')
+    assert '机器 M1' in main_banner.production.text()
+    assert '有效画布 570 毫米' in main_banner.production.text()
     assert main_banner.isVisibleTo(owner)
     assert main_banner.mapTo(owner, main_banner.rect().topLeft()).y() < (
         owner.workspace_tabs.mapTo(owner, owner.workspace_tabs.rect().topLeft()).y())

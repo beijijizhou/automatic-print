@@ -3,7 +3,6 @@
 from PySide6.QtWidgets import (
     QHBoxLayout,
     QLabel,
-    QPushButton,
     QTabWidget,
     QVBoxLayout,
     QWidget,
@@ -23,17 +22,12 @@ def build_home(window) -> None:
     window.automation_home = AutomationDialog(window)
     window.version_label = QLabel(f"版本 {__version_display__}")
     window.version_label.setToolTip(f"内部版本：{__version__}")
-    window.check_update_button = QPushButton("检查更新")
-    window.check_update_button.clicked.connect(
-        lambda: window.check_for_updates(False)
-    )
 
     footer = QHBoxLayout()
     footer.addWidget(window.version_label)
     footer.addStretch()
     window.automation_home.settings_button.setMinimumHeight(36)
     footer.addWidget(window.automation_home.settings_button)
-    footer.addWidget(window.check_update_button)
     build_developer_mode(window, footer)
 
     department_navigation, department_workspace = build_department_workspace(
