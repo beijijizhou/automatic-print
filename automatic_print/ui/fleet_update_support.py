@@ -59,9 +59,15 @@ class FleetVersionLoader(QObject):
         try:
             versions = self.updater_factory().available_versions()
         except Exception as error:
-            self.failed.emit(str(error))
+            try:
+                self.failed.emit(str(error))
+            except RuntimeError:
+                pass
         else:
-            self.completed.emit(versions)
+            try:
+                self.completed.emit(versions)
+            except RuntimeError:
+                pass
         finally:
             self.lock.release()
 

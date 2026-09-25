@@ -85,7 +85,7 @@ class SourceUpdater:
     def git_run(self, *args):
         return self.run([self.git, *args])
 
-    def validate(self):
+    def validate(self, *, require_clean=True):
         if not source_install(self.root):
             raise ValueError('当前不是源码安装，无法直接拉取代码。')
         if Path(self.git_run('rev-parse', '--show-toplevel')).resolve() != self.root.resolve():
@@ -94,7 +94,7 @@ class SourceUpdater:
             raise ValueError('更新来源不是本项目官方仓库，更新已停止。')
         if self.git_run('branch', '--show-current') != 'main':
             raise ValueError('当前不在主分支，更新已停止以保护本地开发代码。')
-        if self.git_run('status', '--porcelain', '--untracked-files=no'):
+        if require_clean and self.git_run('status', '--porcelain', '--untracked-files=no'):
             raise ValueError('发现本地代码修改（已跟踪文件），更新已停止，不会覆盖。')
 
     def check(self, target=None):
@@ -123,7 +123,10 @@ class SourceUpdater:
         )
 
     def available_versions(self, limit=20):
-        self.validate()
+        # The controller only reads immutable metadata from origin/main here.
+        # Its own tracked edits must not prevent managing another machine; the
+        # target still performs the strict clean-worktree check before apply.
+        self.validate(require_clean=False)
         self.progress('正在连接代码仓库，读取可回滚版本…')
         self.git_run('fetch', 'origin', 'main')
         latest = self.git_run('rev-parse', 'refs/remotes/origin/main')

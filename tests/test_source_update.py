@@ -120,6 +120,18 @@ def test_available_versions_are_published_and_recoverable(repositories):
     assert all(len(item.revision) == 40 for item in versions)
 
 
+def test_available_versions_allow_controller_tracked_changes(repositories):
+    seed, client = repositories
+    publish(seed)
+    (client/'requirements.txt').write_text('controller-only local edit')
+
+    versions = source.SourceUpdater(client).available_versions()
+
+    assert [item.version for item in versions] == ['0.1.394', '0.1.393']
+    with pytest.raises(ValueError, match='本地代码修改'):
+        source.SourceUpdater(client).check()
+
+
 def test_local_changes_and_wrong_branch_are_protected(repositories):
     seed, client = repositories
     publish(seed)
