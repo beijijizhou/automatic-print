@@ -240,6 +240,11 @@ def test_monitor_restart_helper_breaks_away_from_the_task_job(monkeypatch):
     assert flags & source_update.subprocess.DETACHED_PROCESS
     assert flags & source_update.subprocess.CREATE_BREAKAWAY_FROM_JOB
     assert captured["close_fds"] is True
+    script = captured["command"][-1]
+    assert "Get-CimInstance Win32_Process" in script
+    assert "run_printerexp_monitor.py" in script
+    assert "schtasks.exe /End" not in script
+    assert "schtasks.exe /Run /TN AutomaticPrintMonitor" in script
 
 
 def test_backend_allows_and_claims_source_update_commands():

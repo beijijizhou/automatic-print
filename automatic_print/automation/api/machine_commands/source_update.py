@@ -37,9 +37,17 @@ def schedule_monitor_restart():
         | getattr(subprocess, "DETACHED_PROCESS", 0)
         | getattr(subprocess, "CREATE_BREAKAWAY_FROM_JOB", 0)
     )
+    # Do not end the scheduled task itself here.  On some Windows machines
+    # /End also terminates this detached helper before it can issue /Run.
+    # Stop only the old Python monitor process, then start the registered task.
     script = (
-        "Start-Sleep -Seconds 2; "
-        "schtasks.exe /End /TN AutomaticPrintMonitor 2>$null; "
+        f"$owner={os.getpid()}; Start-Sleep -Seconds 2; "
+        "Get-CimInstance Win32_Process -ErrorAction SilentlyContinue | "
+        "Where-Object { $_.ProcessId -ne $PID -and $_.ProcessId -ne $owner "
+        "-and $_.CommandLine -like '*run_printerexp_monitor.py*' } | "
+        "ForEach-Object { Stop-Process -Id $_.ProcessId -Force "
+        "-ErrorAction SilentlyContinue }; "
+        "Start-Sleep -Seconds 1; "
         "schtasks.exe /Run /TN AutomaticPrintMonitor 2>$null"
     )
     command = [
