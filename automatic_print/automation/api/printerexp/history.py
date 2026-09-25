@@ -24,14 +24,17 @@ def read_print_history(installation=None, *, limit=500, days=2, today=None):
     range_days = max(1, min(int(days), 31))
     last_day = today or date.today()
     first_day = last_day - timedelta(days=range_days - 1)
-    task_path = root / "Data" / "recordTask.tf"
-    task_records = _task_records(task_path)
+    task_candidates = _task_candidates(root / "Data")
+    task_path, task_records = max(task_candidates, key=lambda item: len(item[1]))
     sources = {
         item["task_name"].casefold(): item["source_path"]
         for item in task_records if item.get("task_name") and item.get("source_path")
     }
     records, diagnostics = _completed_jobs(root, first_day, last_day, sources)
-    diagnostics["task_file"] = _task_file_diagnostics(task_path)
+    diagnostics["task_file_selected"] = task_path.name
+    diagnostics["task_files"] = [
+        _task_file_diagnostics(path) for path, _records in task_candidates
+    ]
     task_fallback = not records and diagnostics.get("range_fallback") and task_records
     diagnostics["task_file_fallback"] = bool(task_fallback)
     if task_fallback:
@@ -176,6 +179,14 @@ def _task_records(path):
         return []
 
 
+def _task_candidates(data_directory):
+    names = ("recordTask.tf", "HistoryTask.tf", "fileTask.tf", "printTask.tf")
+    return [
+        (data_directory / name, _task_records(data_directory / name))
+        for name in names
+    ]
+
+
 def _task_file_diagnostics(path):
     info = {"path": str(path), "exists": path.is_file()}
     try:
@@ -189,11 +200,6 @@ def _task_file_diagnostics(path):
                     if len(raw) >= 12 and raw[:4] == MAGIC else None
                 ),
             })
-        data = path.parent
-        info["related_files"] = sorted(
-            item.name for item in data.iterdir()
-            if item.is_file() and ("task" in item.name.casefold() or "history" in item.name.casefold())
-        )[:20]
     except (OSError, struct.error) as error:
         info["error"] = str(error)
     return info
