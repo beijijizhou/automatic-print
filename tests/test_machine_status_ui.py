@@ -44,6 +44,8 @@ def test_board_keeps_eleven_slots_and_renders_live_machine():
     assert page.sections.currentWidget() is page.status_section
     assert page.sections.indexOf(page.update_section) == 2
     assert page.sections.tabText(2) == "版本管理"
+    assert page.sections.indexOf(page.history_section) == 3
+    assert page.sections.tabText(3) == "打印历史"
     assert page.table.minimumHeight() == 420
     assert page.command_panel.submit_button.isEnabled()
     assert not page.control_panel.start_button.isEnabled()
@@ -52,6 +54,7 @@ def test_board_keeps_eleven_slots_and_renders_live_machine():
     assert "会先暂停打印" in page.control_panel.status.text()
     assert "8 个喷头全部、强度中" in page.control_panel.status.text()
     assert page.control_panel.target.currentText() == "M4"
+    assert page.history_panel.target.currentText() == "M4"
 
 
 def test_board_distinguishes_no_feedback_and_printerexp_offline():

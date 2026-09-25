@@ -24,9 +24,17 @@ def run_command(command_id):
         action = str(command.get("action") or "download_layout")
         payload = command.get("payload") or {}
         if action == "probe":
-            result = inspect_machine()
+            if payload.get("request") == "printer_history":
+                from ..printerexp.history import read_print_history
+                result = read_print_history(
+                    limit=payload.get("limit", 500), days=payload.get("days", 2),
+                )
+                phase = "PrintExp 打印历史读取完成"
+            else:
+                result = inspect_machine()
+                phase = "目标机实时检测通过"
             update_command(
-                command_id, "succeeded", phase="目标机实时检测通过",
+                command_id, "succeeded", phase=phase,
                 progress_percent=100, result=result,
             )
             return 0

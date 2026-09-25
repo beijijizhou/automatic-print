@@ -78,6 +78,7 @@ class PrintExpMonitor:
             self.logger.warning("Unable to recover startup command: %s", error)
 
     def _tick_dispatchers(self, *, force=False):
+        busy = False
         for label, dispatcher in (
             ("realtime printer controls", self.control_dispatcher),
             ("remote commands", self.command_dispatcher),
@@ -88,6 +89,9 @@ class PrintExpMonitor:
                 dispatcher.tick()
             except Exception as error:
                 self.logger.warning("Unable to poll %s: %s", label, error)
+            busy = busy or dispatcher.process is not None
+        if force and busy:
+            self.dispatch_event.set()
 
     def run_once(self):
         status = self.collect_status()

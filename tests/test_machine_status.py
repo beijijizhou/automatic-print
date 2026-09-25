@@ -117,6 +117,8 @@ def test_backend_contract_keeps_unknown_eta_nullable():
     assert "claim_machine_control" in urgent_control_migration
     assert "action = 'download_layout'" in urgent_control_migration
     assert '"probe"' in function
+    assert 'action === "consume_command_result"' in function
+    assert '.delete()' in function
     assert "requested_by_machine_id.eq" in function
     assert "action in ('start_print', 'pause_print', 'clean_resume', 'probe')" in probe_migration
 
@@ -171,6 +173,41 @@ def test_submit_probe_uses_short_lived_control_channel(monkeypatch):
     assert notified == {
         "target": "b9428888-122b-4c26-a127-3eafad1f5271",
         "command_id": "probe-1",
+    }
+
+
+def test_submit_history_request_uses_probe_envelope(monkeypatch):
+    captured = {}
+    monkeypatch.setattr(commands, "machine_id", lambda: "local-id")
+    monkeypatch.setattr(commands, "machine_name", lambda: "M11")
+    monkeypatch.setattr(commands, "notify_machine", lambda *_args, **_kwargs: True)
+    monkeypatch.setattr(
+        commands, "_call",
+        lambda payload, **_options: captured.update(payload) or {"command": {"id": "history-1"}},
+    )
+
+    result = commands.submit_history_request("remote-id", limit=500, days=2)
+
+    assert result["id"] == "history-1"
+    assert captured["command_action"] == "probe"
+    assert captured["payload"] == {
+        "request": "printer_history", "limit": 500, "days": 2,
+    }
+
+
+def test_consume_history_result_targets_requesting_machine(monkeypatch):
+    captured = {}
+    monkeypatch.setattr(commands, "machine_id", lambda: "local-id")
+    monkeypatch.setattr(
+        commands, "_call",
+        lambda payload, **_options: captured.update(payload) or {"result": {"records": []}},
+    )
+
+    assert commands.consume_command_result("history-1") == {"records": []}
+    assert captured == {
+        "action": "consume_command_result",
+        "machine_id": "local-id",
+        "command_id": "history-1",
     }
 
 

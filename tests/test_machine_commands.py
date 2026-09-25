@@ -42,6 +42,21 @@ def test_monitor_accepts_independent_control_dispatcher():
     assert monitor.control_dispatcher is control
 
 
+def test_monitor_keeps_dispatch_pending_while_worker_is_busy():
+    process = SimpleNamespace(poll=lambda: None)
+    download = SimpleNamespace(tick=lambda: None, process=None, next_poll=0)
+    control = SimpleNamespace(tick=lambda: None, process=process, next_poll=0)
+    monitor = PrintExpMonitor(
+        send=lambda _status: None,
+        command_dispatcher=download,
+        control_dispatcher=control,
+    )
+
+    monitor._tick_dispatchers(force=True)
+
+    assert monitor.dispatch_event.is_set()
+
+
 def test_command_progress_rate_limits_repeated_updates():
     sent = []
     progress = CommandProgress("command-1", send=lambda *a, **k: sent.append((a, k)), interval=999)
@@ -162,6 +177,24 @@ def test_runner_answers_probe_with_fresh_machine_facts(monkeypatch):
     assert updates[-1][0][1] == "succeeded"
     assert updates[-1][1]["phase"] == "目标机实时检测通过"
     assert updates[-1][1]["result"]["machine_name"] == "M1"
+
+
+def test_runner_reads_printexp_history_only_when_requested(monkeypatch):
+    updates = []
+    monkeypatch.setattr(runner, "get_command", lambda _command_id: {
+        "action": "probe", "payload": {"request": "printer_history", "limit": 20},
+    })
+    monkeypatch.setattr(
+        "automatic_print.automation.api.printerexp.history.read_print_history",
+        lambda limit, days: {"records": [{"task_name": "job.prn"}], "total_records": 1},
+    )
+    monkeypatch.setattr(
+        runner, "update_command", lambda *args, **kwargs: updates.append((args, kwargs)),
+    )
+
+    assert runner.run_command("history-1") == 0
+    assert updates[-1][1]["phase"] == "PrintExp 打印历史读取完成"
+    assert updates[-1][1]["result"]["records"][0]["task_name"] == "job.prn"
 
 
 def test_runner_routes_start_with_expected_batch(monkeypatch):

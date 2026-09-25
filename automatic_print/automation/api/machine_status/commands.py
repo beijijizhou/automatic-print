@@ -79,6 +79,26 @@ def submit_probe(target_machine_id, *, expires_minutes=1, timeout=8):
     return _notify_target(command, target_machine_id)
 
 
+def submit_history_request(target_machine_id, *, limit=500, days=2, expires_minutes=1, timeout=8):
+    command = _call(
+        {
+            "action": "send_control",
+            "command_action": "probe",
+            "machine_id": machine_id(),
+            "machine_name": machine_name(),
+            "target_machine_id": str(target_machine_id),
+            "expires_minutes": int(expires_minutes),
+            "payload": {
+                "request": "printer_history",
+                "limit": max(1, min(int(limit), 500)),
+                "days": max(1, min(int(days), 31)),
+            },
+        },
+        timeout=timeout,
+    )["command"]
+    return _notify_target(command, target_machine_id)
+
+
 def submit_source_update(
     target_machine_id, target_revision, target_version, *, expires_minutes=1440, timeout=8,
 ):
@@ -176,3 +196,14 @@ def cancel_command(command_id, *, timeout=8):
         {"action": "cancel_command", "command_id": str(command_id)},
         timeout=timeout,
     )["command"]
+
+
+def consume_command_result(command_id, *, timeout=8):
+    return _call(
+        {
+            "action": "consume_command_result",
+            "machine_id": machine_id(),
+            "command_id": str(command_id),
+        },
+        timeout=timeout,
+    )["result"]

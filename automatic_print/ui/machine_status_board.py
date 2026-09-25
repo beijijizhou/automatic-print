@@ -29,6 +29,7 @@ from .machine_status_format import (
 from .machine_availability import MachineAvailabilityControl
 from .machine_status_layout import build_machine_status_layout
 from .fleet_update import FleetUpdatePanel
+from .printer_history import PrinterHistoryPanel
 
 
 EXPECTED_MACHINES = 11
@@ -121,6 +122,7 @@ class MachineStatusPage(QWidget):
         self.availability_control.changed.connect(self.refresh)
         self.update_panel = FleetUpdatePanel(self)
         self.update_panel.commands_submitted.connect(self._track_updates)
+        self.history_panel = PrinterHistoryPanel(self)
 
         build_machine_status_layout(self, title, description, overview)
 
@@ -144,6 +146,7 @@ class MachineStatusPage(QWidget):
         self.command_panel.set_data(machines, commands)
         self.availability_control.set_data(machines)
         self.update_panel.set_data(machines, commands)
+        self.history_panel.set_data(machines)
         if self.update_panel.has_active_updates():
             self.update_timer.start()
         else:
