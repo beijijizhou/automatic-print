@@ -82,3 +82,21 @@ def test_falls_back_to_latest_available_logs_without_claiming_recent_dates(tmp_p
     assert result["records"][0]["started_at"] == "2026-03-24T09:00:00"
     assert result["diagnostics"]["range_fallback"] is True
     assert result["diagnostics"]["log_files_checked"] == ["Log[2026_03_24].txt"]
+
+
+def test_falls_back_to_task_file_when_logs_have_no_time_events(tmp_path):
+    data = tmp_path / "Data"
+    data.mkdir()
+    task = _task_record("known.prn", r"C:\jobs\known.prn")
+    (data / "recordTask.tf").write_bytes(
+        b"T\x00S\x00" + struct.pack("<II", 25, 1) + task
+    )
+    _write_log(tmp_path, "2026_03_24", ["[09:00:00.000][软件][调试] 普通日志"])
+
+    result = read_print_history(tmp_path, days=2, today=date(2026, 9, 25))
+
+    assert result["total_records"] == 1
+    assert result["records"][0]["task_name"] == "known.prn"
+    assert result["records"][0]["started_at"] == ""
+    assert result["records"][0]["time_unavailable"] is True
+    assert result["diagnostics"]["task_file_fallback"] is True

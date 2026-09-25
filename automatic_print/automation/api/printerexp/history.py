@@ -24,11 +24,19 @@ def read_print_history(installation=None, *, limit=500, days=2, today=None):
     range_days = max(1, min(int(days), 31))
     last_day = today or date.today()
     first_day = last_day - timedelta(days=range_days - 1)
-    sources = _task_sources(root / "Data" / "recordTask.tf")
+    task_records = _task_records(root / "Data" / "recordTask.tf")
+    sources = {
+        item["task_name"].casefold(): item["source_path"]
+        for item in task_records if item.get("task_name") and item.get("source_path")
+    }
     records, diagnostics = _completed_jobs(root, first_day, last_day, sources)
+    task_fallback = not records and diagnostics.get("range_fallback") and task_records
+    diagnostics["task_file_fallback"] = bool(task_fallback)
+    if task_fallback:
+        records = task_records
     count = max(1, min(int(limit), 500))
     return {
-        "records": list(reversed(records))[:count],
+        "records": records[:count] if task_fallback else list(reversed(records))[:count],
         "total_records": len(records),
         "range_days": range_days,
         "diagnostics": diagnostics,
@@ -137,25 +145,33 @@ def _timestamp(day, value):
     return datetime.combine(day, parsed)
 
 
-def _task_sources(path):
+def _task_records(path):
     try:
         raw = path.read_bytes()
         if len(raw) < 12 or raw[:4] != MAGIC:
-            return {}
+            return []
         declared = struct.unpack_from("<I", raw, 8)[0]
-        sources, offset = {}, 12
-        for _index in range(declared):
+        records, offset = [], 12
+        for index in range(declared):
             size = struct.unpack_from("<I", raw, offset)[0]
             block = raw[offset + 4:offset + 4 + size]
             name, cursor = _string(block, 4)
             _unused, cursor = _string(block, cursor)
             source, _cursor = _string(block, cursor)
-            if name and source:
-                sources.setdefault(name.casefold(), source)
+            if name:
+                records.append({
+                    "sequence": index + 1,
+                    "task_name": PureWindowsPath(name).name,
+                    "source_path": source,
+                    "started_at": "",
+                    "finished_at": "",
+                    "duration_seconds": 0,
+                    "time_unavailable": True,
+                })
             offset += 4 + size
-        return sources
+        return records
     except (OSError, UnicodeError, struct.error, ValueError):
-        return {}
+        return []
 
 
 def _string(block, offset):

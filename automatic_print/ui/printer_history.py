@@ -134,7 +134,12 @@ class PrinterHistoryPanel(QGroupBox):
                 self.table.setItem(row, column, QTableWidgetItem(str(value or "—")))
         self.read_button.setEnabled(bool(self.machines))
         diagnostics = result.get("diagnostics") or {}
-        if diagnostics.get("range_fallback"):
+        if diagnostics.get("task_file_fallback"):
+            self.status.setText(
+                f"目标机日志无法提供打印时间；当前显示 PrintExp 本地任务记录"
+                f" {result.get('total_records', 0)} 条，开始和结束时间不可用。"
+            )
+        elif diagnostics.get("range_fallback"):
             files = "、".join(diagnostics.get("log_files_checked") or []) or "未知"
             self.status.setText(
                 f"目标机缺少今天/昨天日志；当前显示最近可用日志 {files} 中的"
