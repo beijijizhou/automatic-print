@@ -133,9 +133,17 @@ class PrinterHistoryPanel(QGroupBox):
             for column, value in enumerate(values):
                 self.table.setItem(row, column, QTableWidgetItem(str(value or "—")))
         self.read_button.setEnabled(bool(self.machines))
-        self.status.setText(
-            f"今天和昨天共 {result.get('total_records', 0)} 条；当前显示 {len(records)} 条。"
-        )
+        diagnostics = result.get("diagnostics") or {}
+        if diagnostics.get("range_fallback"):
+            files = "、".join(diagnostics.get("log_files_checked") or []) or "未知"
+            self.status.setText(
+                f"目标机缺少今天/昨天日志；当前显示最近可用日志 {files} 中的"
+                f" {result.get('total_records', 0)} 条记录，时间不是今天/昨天。"
+            )
+        else:
+            self.status.setText(
+                f"今天和昨天共 {result.get('total_records', 0)} 条；当前显示 {len(records)} 条。"
+            )
 
     def _failed(self, message):
         self.read_button.setEnabled(bool(self.machines))

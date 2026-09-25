@@ -68,3 +68,17 @@ def test_ignores_maintenance_and_unfinished_jobs(tmp_path):
 
     assert result["records"] == []
     assert result["total_records"] == 0
+
+
+def test_falls_back_to_latest_available_logs_without_claiming_recent_dates(tmp_path):
+    _write_log(tmp_path, "2026_03_24", [
+        "[09:00:00.000][软件][调试] 启动任务：old.prn",
+        "[09:01:00.000][软件][调试] 作业打印完成.作业ID：1",
+    ])
+
+    result = read_print_history(tmp_path, days=2, today=date(2026, 9, 25))
+
+    assert result["total_records"] == 1
+    assert result["records"][0]["started_at"] == "2026-03-24T09:00:00"
+    assert result["diagnostics"]["range_fallback"] is True
+    assert result["diagnostics"]["log_files_checked"] == ["Log[2026_03_24].txt"]

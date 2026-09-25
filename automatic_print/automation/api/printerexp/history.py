@@ -13,6 +13,7 @@ START_RE = re.compile(
     r"^\[(\d{2}:\d{2}:\d{2}\.\d{3})\].*?启动任务：(.*?)\s*$"
 )
 TIME_RE = re.compile(r"^\[(\d{2}:\d{2}:\d{2}\.\d{3})\]")
+LOG_NAME_RE = re.compile(r"^Log\[(\d{4})_(\d{2})_(\d{2})\]\.txt$", re.IGNORECASE)
 COMPLETED_MARKER = "作业打印完成."
 
 
@@ -44,18 +45,19 @@ def _completed_jobs(root, first_day, last_day, sources):
         "log_files_checked": [],
         "start_events": 0,
         "completion_events": 0,
+        "range_fallback": False,
     }
-    day = first_day
-    while day <= last_day:
-        path = root / "Log" / "main" / f"Log[{day:%Y_%m_%d}].txt"
-        if path.is_file():
-            diagnostics["log_files_checked"].append(path.name)
-            active, starts, completions = _read_log(
-                path, day, active, records, sources,
-            )
-            diagnostics["start_events"] += starts
-            diagnostics["completion_events"] += completions
-        day += timedelta(days=1)
+    candidates = _dated_logs(log_directory, first_day, last_day)
+    if not candidates:
+        candidates = _latest_dated_logs(log_directory, limit=2)
+        diagnostics["range_fallback"] = bool(candidates)
+    for day, path in candidates:
+        diagnostics["log_files_checked"].append(path.name)
+        active, starts, completions = _read_log(
+            path, day, active, records, sources,
+        )
+        diagnostics["start_events"] += starts
+        diagnostics["completion_events"] += completions
     for sequence, record in enumerate(records, 1):
         record["sequence"] = sequence
     return records, diagnostics
@@ -66,6 +68,35 @@ def _recent_log_names(directory, limit=10):
         files = [path for path in directory.iterdir() if path.is_file()]
         files.sort(key=lambda path: (path.stat().st_mtime, path.name), reverse=True)
         return [path.name for path in files[:limit]]
+    except OSError:
+        return []
+
+
+def _dated_logs(directory, first_day, last_day):
+    paths = []
+    day = first_day
+    while day <= last_day:
+        path = directory / f"Log[{day:%Y_%m_%d}].txt"
+        if path.is_file():
+            paths.append((day, path))
+        day += timedelta(days=1)
+    return paths
+
+
+def _latest_dated_logs(directory, limit=2):
+    try:
+        candidates = []
+        for path in directory.iterdir():
+            matched = LOG_NAME_RE.match(path.name)
+            if not path.is_file() or matched is None:
+                continue
+            try:
+                day = date(*(int(value) for value in matched.groups()))
+            except ValueError:
+                continue
+            candidates.append((day, path))
+        candidates.sort(key=lambda item: item[0])
+        return candidates[-max(1, int(limit)):]
     except OSError:
         return []
 
