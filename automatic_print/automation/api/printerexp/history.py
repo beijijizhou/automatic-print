@@ -36,9 +36,11 @@ def read_print_history(installation=None, *, limit=500, days=2, today=None):
 
 def _completed_jobs(root, first_day, last_day, sources):
     records, active = [], None
+    log_directory = root / "Log" / "main"
     diagnostics = {
         "installation": str(root),
-        "log_directory_exists": (root / "Log" / "main").is_dir(),
+        "log_directory_exists": log_directory.is_dir(),
+        "available_log_files": _recent_log_names(log_directory),
         "log_files_checked": [],
         "start_events": 0,
         "completion_events": 0,
@@ -57,6 +59,15 @@ def _completed_jobs(root, first_day, last_day, sources):
     for sequence, record in enumerate(records, 1):
         record["sequence"] = sequence
     return records, diagnostics
+
+
+def _recent_log_names(directory, limit=10):
+    try:
+        files = [path for path in directory.iterdir() if path.is_file()]
+        files.sort(key=lambda path: (path.stat().st_mtime, path.name), reverse=True)
+        return [path.name for path in files[:limit]]
+    except OSError:
+        return []
 
 
 def _read_log(path, day, active, records, sources):

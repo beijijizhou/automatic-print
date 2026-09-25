@@ -42,6 +42,9 @@ def test_reads_completed_prn_jobs_from_printexp_logs(tmp_path):
     assert result["diagnostics"]["log_files_checked"] == [
         "Log[2026_09_24].txt", "Log[2026_09_25].txt",
     ]
+    assert result["diagnostics"]["available_log_files"] == [
+        "Log[2026_09_25].txt", "Log[2026_09_24].txt",
+    ]
     assert result["diagnostics"]["start_events"] == 2
     assert result["diagnostics"]["completion_events"] == 2
     assert result["records"] == [{

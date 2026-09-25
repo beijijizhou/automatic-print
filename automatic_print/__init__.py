@@ -2,9 +2,9 @@
 
 from .updates.versioning import release_display
 
-__version__ = "0.1.401"
+__version__ = "0.1.402"
 __release_date__ = "2026-09-25"
-__release_iteration__ = 4
+__release_iteration__ = 5
 __release_notes__ = (
     "修复 PrintExp 打印历史时间来源：改为读取每日主日志中的真实开始和完成事件。",
     "打印历史默认显示今天和昨天，并包含开始时间、结束时间、实际用时、PRN 文件名和原始路径。",
