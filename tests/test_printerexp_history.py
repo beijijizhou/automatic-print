@@ -1,6 +1,7 @@
 import struct
 from datetime import date
 
+from automatic_print.automation.api.printerexp import history
 from automatic_print.automation.api.printerexp.history import read_print_history
 
 
@@ -120,3 +121,22 @@ def test_selects_the_populated_native_task_file(tmp_path):
 
     assert result["records"][0]["task_name"] == "history.prn"
     assert result["diagnostics"]["task_file_selected"] == "HistoryTask.tf"
+
+
+def test_prefers_the_running_printexp_installation(monkeypatch, tmp_path):
+    stale = tmp_path / "stale"
+    active = tmp_path / "active"
+    for root in (stale, active):
+        (root / "Data").mkdir(parents=True)
+        (root / "Data" / "PrintInfo.ini").write_text("", encoding="utf-8")
+    _write_log(active, "2026_09_25", [
+        "[09:00:00.000][软件][调试] 启动任务：active.prn",
+        "[09:01:00.000][软件][调试] 作业打印完成.作业ID：1",
+    ])
+    monkeypatch.setattr(history, "running_installations", lambda: [active])
+    monkeypatch.setattr(history, "find_installation", lambda: stale)
+
+    result = read_print_history(days=2, today=date(2026, 9, 25))
+
+    assert result["records"][0]["task_name"] == "active.prn"
+    assert result["diagnostics"]["installation"] == str(active)

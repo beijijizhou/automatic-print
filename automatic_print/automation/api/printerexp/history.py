@@ -5,7 +5,7 @@ from pathlib import Path, PureWindowsPath
 import re
 import struct
 
-from .discovery import find_installation
+from .discovery import find_installation, running_installations
 
 
 MAGIC = b"T\x00S\x00"
@@ -18,7 +18,7 @@ COMPLETED_MARKER = "作业打印完成."
 
 
 def read_print_history(installation=None, *, limit=500, days=2, today=None):
-    root = Path(installation) if installation else find_installation()
+    root = Path(installation) if installation else _active_installation()
     if root is None:
         raise RuntimeError("未找到 PrintExp 安装目录。")
     range_days = max(1, min(int(days), 31))
@@ -46,6 +46,20 @@ def read_print_history(installation=None, *, limit=500, days=2, today=None):
         "range_days": range_days,
         "diagnostics": diagnostics,
     }
+
+
+def _active_installation():
+    active = running_installations()
+    if active:
+        return max(active, key=_status_modified_at)
+    return find_installation()
+
+
+def _status_modified_at(root):
+    try:
+        return (Path(root) / "Data" / "PrintInfo.ini").stat().st_mtime
+    except OSError:
+        return 0
 
 
 def _completed_jobs(root, first_day, last_day, sources):
