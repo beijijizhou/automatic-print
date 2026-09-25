@@ -30,6 +30,8 @@ class SourceUpdateInfo:
     release_iteration: int = 0
     rollback: bool = False
     release_notes: tuple[str, ...] = ()
+    command_protocol: int = 0
+    command_capabilities: tuple[str, ...] = ()
 
     @property
     def needs_update(self):
@@ -47,6 +49,8 @@ class SourceVersion:
     release_date: str
     release_iteration: int = 0
     release_notes: tuple[str, ...] = ()
+    command_protocol: int = 0
+    command_capabilities: tuple[str, ...] = ()
 
     @property
     def display_version(self):
@@ -120,6 +124,8 @@ class SourceUpdater:
             max(forward, backward), (self.root/LOCK_NAME).exists(),
             metadata.release_iteration, rollback=bool(backward),
             release_notes=metadata.release_notes,
+            command_protocol=metadata.command_protocol,
+            command_capabilities=metadata.command_capabilities,
         )
 
     def available_versions(self, limit=20):
@@ -168,20 +174,27 @@ def _source_version(revision, content, updater):
     version = re.search(r'__version__\s*=\s*[\'"]([^\'"]+)', content)
     date = re.search(r'__release_date__\s*=\s*[\'"]([^\'"]+)', content)
     iteration = re.search(r'__release_iteration__\s*=\s*(\d+)', content)
+    protocol = re.search(r'__command_protocol__\s*=\s*(\d+)', content)
     return SourceVersion(
         revision, version[1] if version else '待确认',
         date[1] if date else updater.git_run('show', '-s', '--format=%cs', revision),
         int(iteration[1]) if iteration else 0, _release_notes(content),
+        int(protocol[1]) if protocol else 0,
+        _literal_string_tuple(content, "__command_capabilities__"),
     )
 
 
 def _release_notes(content):
+    return _literal_string_tuple(content, "__release_notes__")
+
+
+def _literal_string_tuple(content, variable):
     try:
         module = ast.parse(content)
         for node in module.body:
             if not isinstance(node, ast.Assign):
                 continue
-            if any(isinstance(target, ast.Name) and target.id == "__release_notes__"
+            if any(isinstance(target, ast.Name) and target.id == variable
                    for target in node.targets):
                 value = ast.literal_eval(node.value)
                 if isinstance(value, (list, tuple)):

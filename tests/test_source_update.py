@@ -132,6 +132,20 @@ def test_available_versions_allow_controller_tracked_changes(repositories):
         source.SourceUpdater(client).check()
 
 
+def test_source_metadata_includes_command_protocol_and_capabilities(repositories):
+    _seed, client = repositories
+    content = (
+        '__version__ = "0.1.410"\n__release_date__ = "2026-09-25"\n'
+        '__release_iteration__ = 13\n__command_protocol__ = 2\n'
+        '__command_capabilities__ = ("probe", "future_action")\n'
+    )
+
+    metadata = source._source_version("a" * 40, content, source.SourceUpdater(client))
+
+    assert metadata.command_protocol == 2
+    assert metadata.command_capabilities == ("probe", "future_action")
+
+
 def test_local_changes_and_wrong_branch_are_protected(repositories):
     seed, client = repositories
     publish(seed)

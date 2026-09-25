@@ -16,6 +16,7 @@ from .queue import selected_batch_details, selection_text, workload_detail
 def _live_probe(machine, preflight):
     return preflight(
         machine["machine_id"], str(machine.get("machine_name") or ""),
+        required_capability="download_layout",
     )
 
 

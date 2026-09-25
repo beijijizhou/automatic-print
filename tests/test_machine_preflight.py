@@ -73,3 +73,20 @@ def test_preflight_timeout_does_not_send_production_task():
         assert "未发送生产任务" in str(error)
     else:
         raise AssertionError("超时探测不应被视为可用")
+
+
+def test_preflight_requires_declared_command_capability():
+    try:
+        preflight_machine(
+            "machine-1", "M1", required_capability="download_layout",
+            submit=lambda _target: {"id": "probe-1"},
+            fetch=lambda _command: {"status": "succeeded", "result": {
+                "machine_id": "machine-1", "machine_name": "M1",
+                "app_version": "0.1.410", "source_online": True,
+                "capabilities": ["probe"],
+            }},
+        )
+    except MachinePreflightError as error:
+        assert "download_layout" in str(error)
+    else:
+        raise AssertionError("缺少指令能力时不应通过检测")

@@ -24,8 +24,8 @@ def test_broadcast_probes_every_machine_and_submits_to_every_responder(tmp_path)
     probed = []
     submitted = []
 
-    def preflight(machine_id, machine_name):
-        probed.append((machine_id, machine_name))
+    def preflight(machine_id, machine_name, **options):
+        probed.append((machine_id, machine_name, options.get("required_capability")))
         if machine_name == "M2":
             raise RuntimeError("没有回应")
         return {
@@ -51,7 +51,11 @@ def test_broadcast_probes_every_machine_and_submits_to_every_responder(tmp_path)
 
     dispatcher._probe_all(candidates)
 
-    assert sorted(probed) == [("id-1", "M1"), ("id-11", "M11"), ("id-2", "M2")]
+    assert sorted(probed) == [
+        ("id-1", "M1", "download_layout"),
+        ("id-11", "M11", "download_layout"),
+        ("id-2", "M2", "download_layout"),
+    ]
     result = probe_results[0]
     assert [item[0]["machine_name"] for item in result["responsive"]] == ["M1", "M11"]
     assert [item[0]["machine_name"] for item in result["rejected"]] == ["M2"]

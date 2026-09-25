@@ -114,6 +114,7 @@ class RemoteBatchDispatcher(QObject):
             machine = self._selected_machine
             result = self.preflight(
                 machine["machine_id"], str(machine.get("machine_name") or ""),
+                required_capability="download_layout",
             )
             self.preflight_succeeded.emit(result)
         except Exception as error:

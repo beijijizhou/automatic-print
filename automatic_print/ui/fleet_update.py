@@ -6,11 +6,16 @@ from PySide6.QtWidgets import (
     QTableWidget, QTableWidgetItem, QVBoxLayout,
 )
 
-from .. import __release_date__, __release_iteration__, __release_notes__, __version__
+from .. import (
+    __command_capabilities__, __command_protocol__, __release_date__,
+    __release_iteration__, __release_notes__, __version__,
+)
 from ..updates.source import SourceVersion, source_install
 from .fleet_update_support import (
-    ACTIVE, FleetUpdateSubmitter, FleetVersionLoader, update_state, version_key,
+    ACTIVE, FleetCapabilityVerifier, FleetUpdateSubmitter, FleetVersionLoader,
+    update_state, version_key,
 )
+from .fleet_update_view import release_notes_text, switch_confirmation_text, target_state
 from .machine_status_format import machine_display_name, machine_slots
 
 __all__ = ["FleetUpdatePanel", "update_state"]
@@ -25,6 +30,8 @@ class FleetUpdatePanel(QGroupBox):
         self.refreshing = False
         self.submitter = FleetUpdateSubmitter(self)
         self.submitter.completed.connect(self._completed)
+        self.verifier = FleetCapabilityVerifier(self)
+        self.verifier.completed.connect(self._verification_submitted)
         self.loader = FleetVersionLoader(self)
         self.loader.completed.connect(self._versions_loaded)
         self.loader.failed.connect(self._versions_failed)
@@ -34,6 +41,7 @@ class FleetUpdatePanel(QGroupBox):
         self.versions.setMinimumWidth(260)
         current = SourceVersion(
             "", __version__, __release_date__, __release_iteration__, __release_notes__,
+            __command_protocol__, __command_capabilities__,
         )
         self.versions.addItem(current.display_version, current)
         self.versions.currentIndexChanged.connect(self._target_changed)
@@ -107,10 +115,7 @@ class FleetUpdatePanel(QGroupBox):
         self.set_data(self.machines, self.commands)
 
     def _show_release_notes(self):
-        target = self.target()
-        notes = tuple(getattr(target, "release_notes", ()) or ())
-        text = "\n".join(f"• {item}" for item in notes) if notes else "当前版本没有提供说明。"
-        self.release_notes.setText(f"版本说明：\n{text}")
+        self.release_notes.setText(release_notes_text(self.target()))
 
     def set_data(self, machines, commands):
         self.machines, self.commands = list(machines), list(commands)
@@ -126,8 +131,8 @@ class FleetUpdatePanel(QGroupBox):
             if machine is not None:
                 registered += 1
                 current = str(machine.get("app_version") or "未知")
-                state = update_state(machine, self.commands, target_version)
-                matched += current == target_version
+                state = target_state(machine, self.commands, target)
+                matched += state in {"功能已确认", "已是目标版本"}
             machine_id = str((machine or {}).get("machine_id") or "")
             self.selected.setdefault(machine_id, selectable)
             choice = QTableWidgetItem()
@@ -140,6 +145,7 @@ class FleetUpdatePanel(QGroupBox):
         self.refreshing = False
         self.summary.setText(f"目标 {target_version} · 已匹配 {matched}/11 · 已登记 {registered}/11")
         self._update_button()
+        self.verifier.start_needed([item for item in self.slots if item], self.commands, target)
 
     def _eligible(self, machine):
         target = self.target()
@@ -175,8 +181,10 @@ class FleetUpdatePanel(QGroupBox):
                                and not self.has_active_updates())
 
     def has_active_updates(self):
-        return any(item.get("action") == "source_update" and item.get("status") in ACTIVE
-                   for item in self.commands)
+        return self.verifier.lock.locked() or any(
+            item.get("action") in {"source_update", "probe"}
+            and item.get("status") in ACTIVE for item in self.commands
+        )
 
     def start_all(self):
         target, targets = self.target(), self._selected_targets()
@@ -186,14 +194,7 @@ class FleetUpdatePanel(QGroupBox):
         if not targets:
             self.summary.setText("请先勾选需要切换版本的电脑。")
             return
-        names = "\n".join(f"{item.get('machine_name') or '未知机器'}："
-                           f"{item.get('app_version') or '未知'} → {target.version}"
-                           for item in targets)
-        text = (f"将 {len(targets)} 台电脑切换到 {target.display_version}\n"
-                f"提交：{target.revision}\n\n{names}\n\n"
-                + ("本次功能：\n" + "\n".join(f"• {item}" for item in target.release_notes) + "\n\n"
-                   if target.release_notes else "")
-                + "目标机若有已跟踪的本地代码修改会拒绝切换；生产任务不会被强制停止，完成后安全重启。")
+        text = switch_confirmation_text(target, targets)
         if QMessageBox.question(self, "确认切换版本", text) != QMessageBox.Yes:
             return
         if self.submitter.start(targets, target.revision, target.version):
@@ -205,4 +206,14 @@ class FleetUpdatePanel(QGroupBox):
         self.summary.setText(f"已下发 {len(sent)} 台 · 失败 {len(failures)} 台；正在等待目标机回执。"
                              + (" " + "；".join(f"{i['machine']}：{i['error']}" for i in failures)
                                 if failures else ""))
+        self.commands_submitted.emit()
+
+    def _verification_submitted(self, result):
+        failures = result["failures"]
+        if failures:
+            self.summary.setText(
+                "功能检测下发失败：" + "；".join(
+                    f"{item['machine']}：{item['error']}" for item in failures
+                )
+            )
         self.commands_submitted.emit()

@@ -111,7 +111,7 @@ def run_command(command_id):
 
 
 def inspect_machine():
-    from automatic_print import __version__
+    from .capabilities import runtime_manifest
     from ..machine_status import report_machine
     from ..machine_status.identity import machine_id, machine_name
     from ..printerexp.monitor import PrintExpMonitor
@@ -119,9 +119,9 @@ def inspect_machine():
     status = PrintExpMonitor(send=lambda _status: None).collect_status()
     report_machine(status)
     return {
+        **runtime_manifest(),
         "machine_id": machine_id(),
         "machine_name": machine_name(),
-        "app_version": __version__,
         "source_online": status.get("source_online") is True,
         "status": status,
     }

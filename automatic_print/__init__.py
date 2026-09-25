@@ -2,12 +2,17 @@
 
 from .updates.versioning import release_display
 
-__version__ = "0.1.409"
+__version__ = "0.1.410"
 __release_date__ = "2026-09-25"
-__release_iteration__ = 12
+__release_iteration__ = 13
+__command_protocol__ = 1
+__command_capabilities__ = (
+    "probe", "printer_history", "source_update", "launch_app",
+    "download_layout", "start_print", "pause_print", "clean_resume",
+)
 __release_notes__ = (
-    "远程版本管理允许选择 origin/main 中已发布的历史版本并安全回滚指定电脑。",
-    "控制端有本地代码修改时仍可只读版本列表；目标机执行前仍会拒绝覆盖它的已跟踪修改。",
-    "M1 远程唤起和单实例回执已通过实机验证。",
+    "远程更新后自动探测新进程，同时核对版本、完整提交号、指令协议和功能清单。",
+    "版本号一致但提交或功能不完整时不再显示更新完成。",
+    "远程生产任务发送前会确认目标机支持 download_layout 能力。",
 )
 __version_display__ = release_display(__version__, __release_date__, __release_iteration__)

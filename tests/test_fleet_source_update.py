@@ -11,6 +11,7 @@ from automatic_print.updates.source import SourceVersion
 from automatic_print.automation.api.machine_commands import runner, source_update
 from automatic_print.automation.api.machine_status import commands
 from automatic_print.ui.fleet_update import FleetUpdatePanel, update_state
+from automatic_print.ui.fleet_update_support import verification_needed
 
 
 APP = QApplication.instance() or QApplication([])
@@ -104,6 +105,56 @@ def test_terminal_receipt_waits_for_restarted_version_report():
     }
     assert update_state(target, [command], "0.1.390").startswith(
         "源码已切换，等待重启回报"
+    )
+
+
+def test_current_version_requires_exact_capability_probe_before_acceptance():
+    target = SourceVersion(
+        "d" * 40, "0.1.410", "2026-09-25", 13, (), 1,
+        ("probe", "source_update"),
+    )
+    current = machine(3, "0.1.410")
+
+    assert verification_needed(current, [], target)
+    assert update_state(
+        current, [], target.version, target.revision,
+        target.command_protocol, target.command_capabilities,
+    ) == "版本已回报，等待功能检测"
+
+    probe = {
+        "action": "probe", "target_machine_id": current["machine_id"],
+        "status": "succeeded", "created_at": "2026-09-25T10:00:00Z",
+        "result": {
+            "app_version": target.version,
+            "source_revision": target.revision,
+            "command_protocol": 1,
+            "capabilities": ["probe", "source_update"],
+        },
+    }
+    assert update_state(
+        current, [probe], target.version, target.revision,
+        target.command_protocol, target.command_capabilities,
+    ) == "功能已确认"
+    assert not verification_needed(current, [probe], target)
+
+
+def test_matching_version_rejects_wrong_revision_or_missing_capability():
+    current = machine(3, "0.1.410")
+    base = {
+        "action": "probe", "target_machine_id": current["machine_id"],
+        "status": "succeeded", "created_at": "2026-09-25T10:00:00Z",
+        "result": {
+            "app_version": "0.1.410", "source_revision": "e" * 40,
+            "command_protocol": 1, "capabilities": ["probe"],
+        },
+    }
+    assert "提交号不一致" in update_state(
+        current, [base], "0.1.410", "d" * 40, 1, ("probe",),
+    )
+    base["result"]["source_revision"] = "d" * 40
+    assert "source_update" in update_state(
+        current, [base], "0.1.410", "d" * 40, 1,
+        ("probe", "source_update"),
     )
 
 
