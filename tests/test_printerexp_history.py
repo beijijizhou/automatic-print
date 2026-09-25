@@ -100,3 +100,5 @@ def test_falls_back_to_task_file_when_logs_have_no_time_events(tmp_path):
     assert result["records"][0]["started_at"] == ""
     assert result["records"][0]["time_unavailable"] is True
     assert result["diagnostics"]["task_file_fallback"] is True
+    assert result["diagnostics"]["task_file"]["declared_records"] == 1
+    assert result["diagnostics"]["task_file"]["related_files"] == ["recordTask.tf"]
