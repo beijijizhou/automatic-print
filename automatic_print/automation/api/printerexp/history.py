@@ -24,38 +24,54 @@ def read_print_history(installation=None, *, limit=500, days=2, today=None):
     last_day = today or date.today()
     first_day = last_day - timedelta(days=range_days - 1)
     sources = _task_sources(root / "Data" / "recordTask.tf")
-    records = _completed_jobs(root, first_day, last_day, sources)
+    records, diagnostics = _completed_jobs(root, first_day, last_day, sources)
     count = max(1, min(int(limit), 500))
     return {
         "records": list(reversed(records))[:count],
         "total_records": len(records),
         "range_days": range_days,
+        "diagnostics": diagnostics,
     }
 
 
 def _completed_jobs(root, first_day, last_day, sources):
     records, active = [], None
+    diagnostics = {
+        "installation": str(root),
+        "log_directory_exists": (root / "Log" / "main").is_dir(),
+        "log_files_checked": [],
+        "start_events": 0,
+        "completion_events": 0,
+    }
     day = first_day
     while day <= last_day:
         path = root / "Log" / "main" / f"Log[{day:%Y_%m_%d}].txt"
         if path.is_file():
-            active = _read_log(path, day, active, records, sources)
+            diagnostics["log_files_checked"].append(path.name)
+            active, starts, completions = _read_log(
+                path, day, active, records, sources,
+            )
+            diagnostics["start_events"] += starts
+            diagnostics["completion_events"] += completions
         day += timedelta(days=1)
     for sequence, record in enumerate(records, 1):
         record["sequence"] = sequence
-    return records
+    return records, diagnostics
 
 
 def _read_log(path, day, active, records, sources):
+    starts = completions = 0
     with path.open("r", encoding="utf-16", errors="replace") as stream:
         for line in stream:
             started = START_RE.match(line)
             if started:
+                starts += 1
                 name = started.group(2).strip()
                 active = (name, _timestamp(day, started.group(1)))
                 continue
             if COMPLETED_MARKER not in line or active is None:
                 continue
+            completions += 1
             finished = TIME_RE.match(line)
             name, started_at = active
             active = None
@@ -71,7 +87,7 @@ def _read_log(path, day, active, records, sources):
                 "finished_at": finished_at.isoformat(timespec="seconds"),
                 "duration_seconds": max(0, int((finished_at - started_at).total_seconds())),
             })
-    return active
+    return active, starts, completions
 
 
 def _timestamp(day, value):

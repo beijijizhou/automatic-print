@@ -39,6 +39,11 @@ def test_reads_completed_prn_jobs_from_printexp_logs(tmp_path):
     result = read_print_history(tmp_path, limit=1, days=2, today=date(2026, 9, 25))
 
     assert result["total_records"] == 2
+    assert result["diagnostics"]["log_files_checked"] == [
+        "Log[2026_09_24].txt", "Log[2026_09_25].txt",
+    ]
+    assert result["diagnostics"]["start_events"] == 2
+    assert result["diagnostics"]["completion_events"] == 2
     assert result["records"] == [{
         "sequence": 2,
         "task_name": "second.prn",
