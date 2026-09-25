@@ -186,6 +186,13 @@ def test_declining_update_does_not_apply_or_leave_pending_state(tmp_path, monkey
     assert applied == []
     assert window.pending_source_update is None
     assert window.completed_source_check is None
+    assert not any(
+        item['key'] == 'app-update'
+        for item in window.activity_hub.snapshot()['activities']
+    )
+    assert window.global_activity_center.grab().save(
+        str(tmp_path/'production-tasks-only.png')
+    )
     window.close()
 
 

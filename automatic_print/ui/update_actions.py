@@ -42,13 +42,7 @@ class UpdateActionsMixin:
     @Slot(str)
     def show_update_progress(self, text):
         self.update_message = text
-        hub = getattr(self, "activity_hub", None)
-        if hub is not None and self._show_update_activity():
-            hub.update("app-update", title="软件更新", message=text, new_step=True)
         self.refresh_update_status()
-
-    def _show_update_activity(self):
-        return not self.update_is_silent or self.source_update_applying
 
     def refresh_update_status(self):
         elapsed = f' · 已用时 {int(monotonic()-self.update_started)} 秒' if self.update_started else ''
@@ -63,11 +57,6 @@ class UpdateActionsMixin:
 
     def start_update_worker(self, worker):
         self.update_started = monotonic()
-        if self._show_update_activity():
-            self.activity_hub.begin(
-                "app-update", "软件更新",
-                "正在更新源码…" if self.source_update_applying else "正在检查更新…",
-            )
         self.update_bar.show()
         self.update_clock.start()
         self.show_update_progress('正在更新源码…' if self.source_update_applying else '正在检查更新…')
@@ -157,8 +146,6 @@ class UpdateActionsMixin:
         self.pending_source_update = None
         self.completed_source_check = None
         self.show_update_progress(f'更新未完成：{message}\n下次启动会自动重试；不会覆盖本地修改。')
-        if self._show_update_activity():
-            self.activity_hub.finish("app-update", self.update_message, state="failed")
         if not self.update_is_silent or self.source_update_applying:
             QMessageBox.warning(self, '更新未完成', message)
 
@@ -168,12 +155,6 @@ class UpdateActionsMixin:
         self.update_started = None
         self.update_bar.hide()
         self.refresh_update_status()
-        record = next(
-            (item for item in self.activity_hub.snapshot()["activities"]
-             if item["key"] == "app-update"), None,
-        )
-        if record is not None and record["state"] == "running":
-            self.activity_hub.finish("app-update", self.update_message)
         defer_finished_thread_cleanup(self, 'update_thread', 'update_worker')
         QTimer.singleShot(30, self.update_cleanup_finished)
 
