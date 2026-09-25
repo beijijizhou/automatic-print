@@ -18,7 +18,10 @@ APP = QApplication.instance() or QApplication([])
 
 def load_versions(panel):
     panel._versions_loaded([
-        SourceVersion("b" * 40, __version__, "2026-09-24", __release_iteration__),
+        SourceVersion(
+            "b" * 40, __version__, "2026-09-25", __release_iteration__,
+            ("新增中文版本说明。",),
+        ),
         SourceVersion("a" * 40, "0.1.393", "2026-09-24", 14),
     ])
 
@@ -73,6 +76,7 @@ def test_update_panel_shows_all_eleven_version_receipts():
     assert panel.table.item(1, 3).text() == "更新中 · 正在安装依赖"
     assert panel.table.item(2, 3).text() == "未接入"
     assert "已匹配 1/11" in panel.summary.text()
+    assert "新增中文版本说明" in panel.release_notes.text()
     assert panel.has_active_updates()
 
 

@@ -106,7 +106,7 @@ class UpdateActionsMixin:
             elif not self.update_is_silent and self.source_update_busy():
                 self.show_update_progress('发现新代码；请等待排版/保存完成，或停止后台预览，再点击检查更新。')
             else:
-                self.show_update_progress(f'发现源码更新：{update.display_version} · {update.commits} 个新提交')
+                self.show_update_progress(_source_update_message(update))
             return
         if version_tuple(update.version) > version_tuple(__version__):
             answer = QMessageBox.question(self, '发现新版本',
@@ -123,7 +123,7 @@ class UpdateActionsMixin:
                 '源码已更新；当前任务完成后自动安全重启…' if source_code_changed()
                 else f'源码已是最新 · {update.display_version}')
             return
-        self.show_update_progress(f'发现源码更新：{update.display_version} · {update.commits} 个新提交')
+        self.show_update_progress(_source_update_message(update))
         if self.update_is_silent:
             return
         if self.source_update_busy():
@@ -131,7 +131,8 @@ class UpdateActionsMixin:
             return
         answer = QMessageBox.question(self, '发现源码更新',
             f'新版本：{update.display_version}\n当前版本：{__version_display__}\n\n'
-            '直接更新代码和运行依赖，完成后安全重启；无需安装包。\n是否立即更新？',
+            + (_notes_text(update.release_notes) + '\n\n' if update.release_notes else '')
+            + '直接更新代码和运行依赖，完成后安全重启；无需安装包。\n是否立即更新？',
             QMessageBox.Yes | QMessageBox.No)
         if answer == QMessageBox.Yes:
             self.pending_source_update = update
@@ -193,3 +194,12 @@ class UpdateActionsMixin:
         if update is not None:
             self.confirm_source_check(update)
         self.apply_source_update()
+
+
+def _notes_text(notes):
+    return "本次新功能：\n" + "\n".join(f"• {item}" for item in notes)
+
+
+def _source_update_message(update):
+    summary = f'发现源码更新：{update.display_version} · {update.commits} 个新提交'
+    return summary + ('\n' + _notes_text(update.release_notes) if update.release_notes else '')

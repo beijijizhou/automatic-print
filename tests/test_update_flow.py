@@ -134,7 +134,10 @@ def window_for_test(tmp_path, monkeypatch):
     window.show()
     monkeypatch.setattr(update_actions, 'source_install', lambda: True)
     monkeypatch.setattr(QMessageBox, 'warning', lambda *args: pytest_fail())
-    info = SourceUpdateInfo('old', 'new', '0.1.999', '2026-09-14', 2)
+    info = SourceUpdateInfo(
+        'old', 'new', '0.1.999', '2026-09-14', 2,
+        release_notes=('新增分布式打印历史。',),
+    )
     monkeypatch.setattr(SourceUpdater, 'check', lambda self: info)
     return window, info
 
@@ -211,6 +214,7 @@ def test_silent_check_only_displays_available_code(tmp_path, monkeypatch):
     window.check_for_updates(True)
     wait_until(lambda: window.update_thread is None)
     assert '2026-09-14' in window.update_status_label.text()
+    assert '新增分布式打印历史' in window.update_status_label.text()
     assert window.pending_source_update is None
     window.close()
 

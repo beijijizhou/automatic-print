@@ -33,7 +33,10 @@ def repositories(tmp_path, monkeypatch):
 
 
 def publish(seed):
-    (seed/'automatic_print/__init__.py').write_text('__version__ = "0.1.394"\n__release_date__ = "2026-09-24"\n__release_iteration__ = 15\n')
+    (seed/'automatic_print/__init__.py').write_text(
+        '__version__ = "0.1.394"\n__release_date__ = "2026-09-24"\n'
+        '__release_iteration__ = 15\n__release_notes__ = ("新增打印历史。",)\n'
+    )
     git(seed, 'add', '.'); git(seed, 'commit', '-m', 'update'); git(seed, 'push', 'origin', 'main')
 
 
@@ -47,6 +50,7 @@ def test_check_and_apply_fast_forward_without_installer(repositories, monkeypatc
     assert info.needs_update and info.commits == 1
     assert info.display_version == '0.1.394 · 2026-09-24 · 第15次更新'
     assert info.version == '0.1.394' and info.release_iteration == 15
+    assert info.release_notes == ('新增打印历史。',)
     original, commands = updater.run, []
     def run(args, **kwargs):
         commands.append(args)
@@ -112,6 +116,7 @@ def test_available_versions_are_published_and_recoverable(repositories):
     versions = updater.available_versions()
 
     assert [item.version for item in versions] == ['0.1.394', '0.1.393']
+    assert versions[0].release_notes == ('新增打印历史。',)
     assert all(len(item.revision) == 40 for item in versions)
 
 

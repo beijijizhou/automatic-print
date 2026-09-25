@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+import ast
 from pathlib import Path
 import os
 import re
@@ -28,6 +29,7 @@ class SourceUpdateInfo:
     repair: bool = False
     release_iteration: int = 0
     rollback: bool = False
+    release_notes: tuple[str, ...] = ()
 
     @property
     def needs_update(self):
@@ -44,6 +46,7 @@ class SourceVersion:
     version: str
     release_date: str
     release_iteration: int = 0
+    release_notes: tuple[str, ...] = ()
 
     @property
     def display_version(self):
@@ -71,13 +74,13 @@ class SourceUpdater:
         try:
             result = subprocess.run(args, cwd=self.root, env=environment, timeout=timeout,
                                     stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
-                                    encoding='utf-8', errors='replace',
                                     creationflags=subprocess.CREATE_NO_WINDOW if os.name == 'nt' else 0)
         except subprocess.TimeoutExpired:
             raise ValueError('更新操作超时，请检查网络后重试。') from None
+        output = _decode_output(result.stdout)
         if result.returncode:
-            raise ValueError('更新操作失败：'+result.stdout[-1200:])
-        return result.stdout.strip()
+            raise ValueError('更新操作失败：'+output[-1200:])
+        return output.strip()
 
     def git_run(self, *args):
         return self.run([self.git, *args])
@@ -116,6 +119,7 @@ class SourceUpdater:
             current, selected, metadata.version, metadata.release_date,
             max(forward, backward), (self.root/LOCK_NAME).exists(),
             metadata.release_iteration, rollback=bool(backward),
+            release_notes=metadata.release_notes,
         )
 
     def available_versions(self, limit=20):
@@ -164,8 +168,35 @@ def _source_version(revision, content, updater):
     return SourceVersion(
         revision, version[1] if version else '待确认',
         date[1] if date else updater.git_run('show', '-s', '--format=%cs', revision),
-        int(iteration[1]) if iteration else 0,
+        int(iteration[1]) if iteration else 0, _release_notes(content),
     )
+
+
+def _release_notes(content):
+    try:
+        module = ast.parse(content)
+        for node in module.body:
+            if not isinstance(node, ast.Assign):
+                continue
+            if any(isinstance(target, ast.Name) and target.id == "__release_notes__"
+                   for target in node.targets):
+                value = ast.literal_eval(node.value)
+                if isinstance(value, (list, tuple)):
+                    return tuple(str(item).strip() for item in value if str(item).strip())
+    except (SyntaxError, ValueError):
+        pass
+    return ()
+
+
+def _decode_output(value):
+    if isinstance(value, str):
+        return value
+    for encoding in ('utf-8', 'gb18030'):
+        try:
+            return bytes(value or b'').decode(encoding)
+        except UnicodeDecodeError:
+            continue
+    return bytes(value or b'').decode('utf-8', errors='replace')
 
 
 def _version_key(value):
