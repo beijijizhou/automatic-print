@@ -260,6 +260,26 @@ def test_submit_printer_action_is_explicit_and_has_no_layout_payload(monkeypatch
     assert captured["payload"] == {}
 
 
+def test_submit_application_launch_reuses_signed_wake_channel(monkeypatch):
+    captured = {}
+    monkeypatch.setattr(commands, "machine_id", lambda: "local-id")
+    monkeypatch.setattr(commands, "machine_name", lambda: "M11")
+    monkeypatch.setattr(commands, "notify_machine", lambda *_args, **_kwargs: True)
+    monkeypatch.setattr(
+        commands, "_call",
+        lambda payload, **_options: captured.update(payload) or {
+            "command": {"id": "launch-1"}
+        },
+    )
+
+    result = commands.submit_application_launch("remote-id")
+
+    assert result["id"] == "launch-1"
+    assert captured["action"] == "send_control"
+    assert captured["command_action"] == "launch_app"
+    assert captured["payload"] == {}
+
+
 def test_printerexp_snapshot_reads_real_progress_and_task(tmp_path):
     data = tmp_path / "Data"
     data.mkdir()

@@ -12,6 +12,7 @@ const COMMAND_STATES = new Set(["running", "succeeded", "failed"]);
 const COMMAND_PLATFORMS = new Set(["Haloo", "莆田", "隆丰", "S2B"]);
 const COMMAND_ACTIONS = new Set([
   "download_layout", "start_print", "pause_print", "clean_resume", "probe", "source_update",
+  "launch_app",
 ]);
 const PRINTER_TO_MACHINE_STATE: Record<string, string> = {
   idle: "idle", ready: "idle", printing: "running", paused: "running",
@@ -171,7 +172,7 @@ async function sendControl(db: ReturnType<typeof createClient>, input: Record<st
   const target = machineId(input.target_machine_id);
   const requester = machineId(input.machine_id);
   const action = String(input.command_action || "");
-  if (!new Set(["start_print", "pause_print", "clean_resume", "probe"]).has(action)) {
+  if (!new Set(["start_print", "pause_print", "clean_resume", "probe", "launch_app"]).has(action)) {
     throw new ClientError("Unsupported control action", 400);
   }
   const { data: machine, error: machineError } = await db.from("machine_status_current")
@@ -179,16 +180,17 @@ async function sendControl(db: ReturnType<typeof createClient>, input: Record<st
     .eq("machine_id", target).maybeSingle();
   if (machineError) throw machineError;
   if (!machine) throw new ClientError("Target machine not found", 404);
-  if (action !== "probe" && !isAvailable(machine)) {
+  const printerControl = new Set(["start_print", "pause_print", "clean_resume"]).has(action);
+  if (printerControl && !isAvailable(machine)) {
     throw new ClientError("Target machine is unavailable", 409);
   }
-  if (action !== "probe" && machine.source_online === false) {
+  if (printerControl && machine.source_online === false) {
     throw new ClientError("Target PrintExp is offline", 409);
   }
   const requestedPayload = input.payload && typeof input.payload === "object"
     ? input.payload as Record<string, unknown> : {};
   const expectedBatch = String(requestedPayload.expected_batch_name || "").trim();
-  const printerState = action === "probe" ? "" : validatePrinterControlState(machine, action);
+  const printerState = printerControl ? validatePrinterControlState(machine, action) : "";
   const probePayload = action === "probe" && requestedPayload.request === "printer_history"
     ? {
         request: "printer_history",
@@ -213,12 +215,18 @@ async function sendControl(db: ReturnType<typeof createClient>, input: Record<st
     }
   }
   const now = new Date().toISOString();
-  if (action !== "probe") {
+  if (printerControl) {
     const { error: cancelError } = await db.from("machine_commands").update({
       status: "cancelled", phase: "由更新的实时控制指令替代",
       finished_at: now, updated_at: now,
     }).eq("target_machine_id", target).eq("status", "queued")
       .in("action", ["start_print", "pause_print", "clean_resume"]);
+    if (cancelError) throw cancelError;
+  } else if (action === "launch_app") {
+    const { error: cancelError } = await db.from("machine_commands").update({
+      status: "cancelled", phase: "由更新的软件唤起指令替代",
+      finished_at: now, updated_at: now,
+    }).eq("target_machine_id", target).eq("status", "queued").eq("action", "launch_app");
     if (cancelError) throw cancelError;
   }
   const expiry = optionalInteger(input.expires_minutes, 1, 5) ?? 2;
@@ -227,7 +235,7 @@ async function sendControl(db: ReturnType<typeof createClient>, input: Record<st
     requested_by_machine_id: requester,
     requested_by_name: text(input.machine_name, "machine_name", 100),
     action, payload: action === "start_print" ? { expected_batch_name: expectedBatch } : probePayload,
-    phase: "实时控制信号已发送",
+    phase: action === "launch_app" ? "远程软件唤起信号已发送" : "实时控制信号已发送",
     expires_at: new Date(Date.now() + expiry * 60_000).toISOString(),
   }).select().single();
   if (error) throw error;

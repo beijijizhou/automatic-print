@@ -48,6 +48,20 @@ def run_command(command_id):
             )
             schedule_monitor_restart()
             return 0
+        if action == "launch_app":
+            from ....runtime.application_launch import launch_application
+            progress("正在启动 AutomaticPrint 主界面", force=True)
+            result = launch_application()
+            phase = (
+                "AutomaticPrint 主界面已经运行"
+                if result.get("already_running") else
+                "AutomaticPrint 主界面已启动"
+            )
+            update_command(
+                command_id, "succeeded", phase=phase,
+                progress_percent=100, result=result,
+            )
+            return 0
         lifecycle = CommandLifecycle(
             command_id, action, payload, publish=update_command,
         )
@@ -80,6 +94,7 @@ def run_command(command_id):
             phase = (
                 "目标机实时检测失败" if action == "probe" else
                 "源码更新失败" if action == "source_update" else
+                "AutomaticPrint 主界面启动失败" if action == "launch_app" else
                 "打印机控制失败" if action != "download_layout" else
                 "远程下载排版失败"
             )

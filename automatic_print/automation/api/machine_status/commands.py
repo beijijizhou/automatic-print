@@ -63,6 +63,22 @@ def submit_printer_action(
     return _notify_target(command, target_machine_id)
 
 
+def submit_application_launch(target_machine_id, *, expires_minutes=2, timeout=8):
+    command = _call(
+        {
+            "action": "send_control",
+            "command_action": "launch_app",
+            "machine_id": machine_id(),
+            "machine_name": machine_name(),
+            "target_machine_id": str(target_machine_id),
+            "expires_minutes": int(expires_minutes),
+            "payload": {},
+        },
+        timeout=timeout,
+    )["command"]
+    return _notify_target(command, target_machine_id)
+
+
 def submit_probe(target_machine_id, *, expires_minutes=1, timeout=8):
     command = _call(
         {

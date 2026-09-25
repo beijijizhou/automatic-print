@@ -19,6 +19,7 @@
 - 应用入口：`automatic_print/__main__.py`、`automatic_print/app.py`。
 - 可见版本身份由`automatic_print/updates/versioning.py`统一格式化为“语义版本 · 发布日期 · 当日更新次数”；主窗口、本地源码更新和Release更新不得只显示其中一部分。
 - 当前版本的新功能由`automatic_print.__release_notes__`提供中文说明；源码检查从目标提交读取该字段，检查更新状态、确认弹窗和11机版本管理页统一展示，不要求员工阅读提交信息。
+- 机器状态页“控制与任务”提供受限的软件唤起按钮；常驻监控通过UDP优先、Realtime回退领取短期`launch_app`指令，只能启动固定AutomaticPrint入口，主界面使用Windows单实例锁防止重复打开。
 - 主窗口：`automatic_print/ui/main_window.py`只负责应用级状态、控制器装配和窗口生命周期；
   界面上可见的工作台首页、任务状态和打印参数分别映射到`automatic_print/ui/workbench/home.py`、
   `activity.py`和`settings.py`，不再把控件树堆在主窗口入口。

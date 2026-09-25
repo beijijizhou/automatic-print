@@ -200,3 +200,18 @@ def test_backend_allows_and_claims_source_update_commands():
     assert 'action === "enqueue_update"' in function
     assert 'action: "source_update"' in function
     assert "'download_layout', 'source_update'" in migration
+
+
+def test_backend_allows_short_lived_application_launch_without_printer_state():
+    from pathlib import Path
+    root = Path(__file__).parents[1]
+    function = (root / "supabase/functions/machine-status/index.ts").read_text("utf-8")
+    migration = (
+        root / "supabase/migrations/202609250001_launch_application_control.sql"
+    ).read_text("utf-8")
+
+    assert '"launch_app"' in function
+    assert "if (printerControl && !isAvailable(machine))" in function
+    assert "action === \"launch_app\"" in function
+    assert "'launch_app'" in migration
+    assert "claim_machine_control" in migration

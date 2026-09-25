@@ -15,8 +15,9 @@ def test_board_keeps_eleven_slots_and_renders_live_machine():
     page = MachineStatusPage(fetch=lambda: [])
     page.apply_dashboard(
         {"machines": [
-            {
-                "machine_name": "M4",
+                {
+                    "machine_id": "machine-4",
+                    "machine_name": "M4",
                 "department": "DTF",
                 "state": "running",
                 "batch_name": "BATCH-88.prn",
@@ -55,14 +56,20 @@ def test_board_keeps_eleven_slots_and_renders_live_machine():
     assert "8 个喷头全部、强度中" in page.control_panel.status.text()
     assert page.control_panel.target.currentText() == "M4"
     assert page.history_panel.target.currentText() == "M4"
+    assert page.software_launch_panel.target.currentText() == "M4"
+    assert page.software_launch_panel.button.isEnabled()
 
 
 def test_board_distinguishes_no_feedback_and_printerexp_offline():
     page = MachineStatusPage(fetch=lambda: [])
     page.apply_dashboard(
         {"machines": [
-            {"machine_name": "M1", "state": "stopped", "agent_online": False},
             {
+                "machine_id": "machine-1", "machine_name": "M1",
+                "state": "stopped", "agent_online": False,
+            },
+            {
+                "machine_id": "machine-2",
                 "machine_name": "M2",
                 "state": "stopped",
                 "agent_online": True,
@@ -74,6 +81,8 @@ def test_board_distinguishes_no_feedback_and_printerexp_offline():
     assert page.table.item(0, 2).text() == "无反馈，不可用"
     assert page.table.item(1, 2).text() == "PrintExp 离线"
     assert page.command_panel.table.rowCount() == 0
+    assert page.software_launch_panel.target.count() == 2
+    assert page.software_launch_panel.button.isEnabled()
 
 
 def test_board_ignores_legacy_names_and_blocks_duplicate_machine_number():

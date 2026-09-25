@@ -89,7 +89,7 @@ class PrintExpMonitor:
                 dispatcher.tick()
             except Exception as error:
                 self.logger.warning("Unable to poll %s: %s", label, error)
-            busy = busy or dispatcher.process is not None
+            busy = busy or getattr(dispatcher, "process", None) is not None
         if force and busy:
             self.dispatch_event.set()
 

@@ -67,6 +67,27 @@ def test_command_progress_rate_limits_repeated_updates():
     assert sent[0][1]["phase"] == "第一步"
 
 
+def test_runner_launches_only_the_fixed_application_and_reports_receipt(monkeypatch):
+    updates = []
+    monkeypatch.setattr(runner, "CommandProgress", lambda _command_id: lambda *_args, **_kwargs: None)
+    monkeypatch.setattr(runner, "get_command", lambda _command_id: {
+        "action": "launch_app", "payload": {},
+    })
+    monkeypatch.setattr(
+        "automatic_print.runtime.application_launch.launch_application",
+        lambda: {"launched": True, "already_running": False},
+    )
+    monkeypatch.setattr(
+        runner, "update_command",
+        lambda *args, **kwargs: updates.append((args, kwargs)),
+    )
+
+    assert runner.run_command("launch-1") == 0
+    assert updates[-1][0] == ("launch-1", "succeeded")
+    assert updates[-1][1]["phase"] == "AutomaticPrint 主界面已启动"
+    assert updates[-1][1]["result"]["launched"] is True
+
+
 def test_remote_settings_keep_target_machine_number():
     preferences = SimpleNamespace(value=lambda key, default, value_type: "M8")
     settings = _layout_settings({"dpi": 200, "machine_number": "M1", "unknown": 3}, preferences)
