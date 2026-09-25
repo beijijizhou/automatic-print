@@ -25,6 +25,7 @@ from .printer_control_ui import PrinterControlPanel
 from .machine_status_format import feedback_text, machine_slots, remaining_text, status_text
 from .machine_availability import MachineAvailabilityControl
 from .machine_status_layout import build_machine_status_layout
+from .machine_signal_test import install_machine_signal_control
 
 
 EXPECTED_MACHINES = 11
@@ -59,7 +60,7 @@ class MachineStatusLoader(QObject):
 
 
 class MachineStatusPage(QWidget):
-    def __init__(self, parent=None, fetch=load_dashboard):
+    def __init__(self, parent=None, fetch=load_dashboard, signal_tester=None):
         super().__init__(parent)
         self._active = False
         self.loader = MachineStatusLoader(fetch, self)
@@ -71,8 +72,7 @@ class MachineStatusPage(QWidget):
 
         title = QLabel("PrintExp 打印机状态")
         title.setProperty("heading", True)
-        description = QLabel("显示各电脑上 PrintExp 的真实任务、打印百分比和预计剩余时间。"
-                             "机器启动和状态变化时反馈；不发送周期心跳。")
+        description = QLabel("显示各电脑上 PrintExp 的真实任务、打印百分比和预计剩余时间。机器启动和状态变化时反馈；不发送周期心跳。")
         description.setWordWrap(True)
         self.summary = QLabel("已接入 0 / 11 · 在线 0 · 打印中 0")
         self.summary.setStyleSheet("font-size:16px;font-weight:700;color:#0f172a;")
@@ -89,6 +89,7 @@ class MachineStatusPage(QWidget):
         overview_layout = QVBoxLayout(overview)
         overview_layout.addLayout(header)
         overview_layout.addWidget(self.message)
+        self.signal_control = install_machine_signal_control(self, header, overview_layout, signal_tester)
 
         self.table = QTableWidget(EXPECTED_MACHINES, 9)
         self.table.setHorizontalHeaderLabels(
@@ -144,6 +145,7 @@ class MachineStatusPage(QWidget):
             dashboard = {"machines": dashboard, "commands": []}
         machines = dashboard.get("machines") or []
         commands = dashboard.get("commands") or []
+        self.signal_control.set_machines(machines)
         self.apply_machines(machines, commands)
         self.control_panel.set_data(machines)
         self.command_panel.set_data(machines, commands)
@@ -208,9 +210,7 @@ class MachineStatusPage(QWidget):
         self.table.setCellWidget(row, 4, progress)
 
     def _fill_pending(self, row):
-        values = (
-            f"M{row + 1}", "—", "待接入", "—", "", "—", "—", "—", "—",
-        )
+        values = (f"M{row + 1}", "—", "待接入", "—", "", "—", "—", "—", "—")
         for column, value in enumerate(values):
             self.table.setItem(row, column, QTableWidgetItem(value))
         self.table.removeCellWidget(row, 4)
