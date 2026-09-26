@@ -85,6 +85,11 @@ def _rotated(paths, settings, prepared=None):
         # the rotation zone, same-colour/same-size singles must be free to find
         # the best fixed-lane companions.
         cutter_majority_two_zone=False,
+        # Width recovery also serves free layout. Its safe fallback is one
+        # full-width lane and must not enter dual cutter-lane planning merely
+        # because cutter values remain persisted in local settings.
+        cutter_mode=('single' if settings.cutter_mode == 'free'
+                     else settings.cutter_mode),
     )
     plan = plan_cutter_layout(
         paths, rotated_settings, None,

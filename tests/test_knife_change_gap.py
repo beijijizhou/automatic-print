@@ -98,6 +98,19 @@ def test_single_column_dual_result_reports_batch_end_stop_distance():
     assert check['knife_change_gaps'][-1]['actual_px'] == 600
 
 
+def test_free_layout_ignores_persisted_cutter_gap_and_markers():
+    path = Path('1.png')
+    planned = [(path, placement(1, 0, 240, (100,), '旧切膜区'))]
+    settings = LayoutSettings(
+        dpi=25.4, cutter_mode='free', cutter_knife_change_gap_mm=600,
+        cutter_left_marker_external=True,
+    )
+
+    assert validate_cut_corridor(
+        planned, settings, 580, canvas_height=100,
+    ) is None
+
+
 def test_both_knife_change_directions_and_batch_end_are_protected():
     paths = [Path(f'{index}.png') for index in range(1, 4)]
     planned = [
