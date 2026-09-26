@@ -22,7 +22,7 @@ QPushButton:disabled { background: #f1f5f9; color: #94a3b8; border-color: #e2e8f
 
 WORKBENCH_STYLE = '''
 QMainWindow, QDialog { background: #f4f7fb; }
-QWidget { color: #1e293b; font-size: 13px; }
+QWidget { color: #1e293b; font-size: 10pt; }
 QScrollArea, QTabWidget::pane { border: none; background: transparent; }
 QGroupBox { background: white; border: 1px solid #dce4ef; border-radius: 9px;
     margin-top: 15px; padding: 14px 10px 10px; font-weight: 600; }

@@ -5,6 +5,7 @@ from PySide6.QtWidgets import (
     QHBoxLayout,
     QLabel,
     QPushButton,
+    QSizePolicy,
     QTabWidget,
     QVBoxLayout,
     QWidget,
@@ -57,6 +58,9 @@ def build_home(window) -> None:
         window, window.automation_home
     )
     window.workspace_tabs = QTabWidget()
+    workspace_policy = window.workspace_tabs.sizePolicy()
+    workspace_policy.setVerticalPolicy(QSizePolicy.Ignored)
+    window.workspace_tabs.setSizePolicy(workspace_policy)
     window.department_root_tab_index = window.workspace_tabs.addTab(
         department_workspace, "部门工作区"
     )
