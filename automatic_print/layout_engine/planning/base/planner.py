@@ -104,7 +104,9 @@ def _plan_layout(paths, settings, progress, analysis, analysis_ready):
         raise ValueError("外边距过大，画布没有可打印区域。")
     items, labels = read_items(paths, settings, progress)
     if progress:
-        progress('计算排版', 0, len(paths), '开始整批顺序排版计算')
+        detail = ('比较原方向、局部旋转与整批旋转'
+                  if settings.allow_rotation else '按原方向计算整批顺序排版')
+        progress('计算排版', 0, len(paths), detail)
     units = build_units(items, spacing)
     double_count = sum(
         len(choices[0].members) == 2 for choices in units
@@ -125,6 +127,16 @@ def _plan_layout(paths, settings, progress, analysis, analysis_ready):
         optimizer_options(units), usable_width, spacing
     )
     planned = place_rows(units, rows, margin, spacing)
+    if progress:
+        rotated_count = sum(bool(placement.rotation_degrees)
+                            for _path, placement in planned)
+        if rotated_count == len(planned):
+            detail = f'已采用整批旋转 · {rotated_count} 张'
+        elif rotated_count:
+            detail = f'已采用局部旋转 · {rotated_count}/{len(planned)} 张'
+        else:
+            detail = '已采用原方向排版'
+        progress('排版方案已确定', len(paths), len(paths), detail)
     canvas_height = (
         max(
             placement.row_y_px + placement.footprint_height_px
