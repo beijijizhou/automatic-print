@@ -34,7 +34,8 @@ def header_safe_coordinates(
         from automatic_print.layout_engine.labeling.platform.short_edge_space import short_edge_space
         reserved = ((px, py, pw, ph),) if pw and ph else ()
         position = short_edge_space(path, region, image_size[0], height,
-                                    lw, lh, degrees, reserved=reserved)
+                                    lw, lh, degrees, reserved=reserved,
+                                    horizontal_align=settings.cutter_label_rotated_align)
         if position is None:
             label = (0, 0, 0, 0)
         else:
@@ -86,14 +87,15 @@ def header_safe_coordinates(
         else:
             label_x, label_y = position
     else:
-        label_x = header_space(
-            path, region, image_size[0], height, lw, lh, 0, degrees,
-            reserved=reserved, inward_from_card=True,
+        from automatic_print.layout_engine.labeling.platform.platform_space import aligned_header_label_space
+        position = aligned_header_label_space(
+            path, region, image_size[0], height, lw, lh, degrees,
+            settings.cutter_label_vertical_align, reserved=reserved,
         )
-        if label_x is None:
+        if position is None:
             label_x = label_y = lw = lh = 0
         else:
-            label_y = top
+            label_x, label_y = position
     from automatic_print.layout_engine.cutting.geometry.rotated_marks import marker_top
     block_y = marker_top(region, height) if bh else 0
     return (

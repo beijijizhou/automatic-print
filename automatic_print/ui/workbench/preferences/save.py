@@ -36,6 +36,8 @@ def save_layout_preferences(window, *, notify=True) -> None:
         "layout/machine_number": label.machine.currentData(),
         "label/follow_qr": label.follow_qr.isChecked(),
         "label/position": label.position.currentData(),
+        "label/cutter_vertical_align": label.cutter_vertical.currentData(),
+        "label/cutter_rotated_align": label.cutter_rotated.currentData(),
         "label/font_size_mm": label.font_size.value(),
         "label/fit_height": label.fit_height.isChecked(),
         "label/detect_region": label.detect_region.isChecked(),

@@ -8,7 +8,7 @@ from .transparent_search import clear_rectangles
 
 @measured('旋转膜标签短边空位搜索')
 def short_edge_space(path, card, width, height, badge_width, badge_height,
-                     degrees, reserved=()):
+                     degrees, reserved=(), horizontal_align="left"):
     """Search inward from the card's short end, never outside source pixels."""
     if badge_width <= 0 or badge_height <= 0:
         return 0, 0
@@ -16,7 +16,13 @@ def short_edge_space(path, card, width, height, badge_width, badge_height,
     right = floor(card.right*width)-badge_width
     if left > right:
         return None
-    xs = tuple(dict.fromkeys((left, (left+right)//2, right)))
+    positions = {
+        "left": left,
+        "center": (left+right)//2,
+        "right": right,
+    }
+    preferred = positions.get(horizontal_align, left)
+    xs = tuple(dict.fromkeys((preferred, left, positions["center"], right)))
     above = (card.top+card.bottom)/2 >= .5
     edge = floor(card.top*height)-badge_height-4 if above else ceil(card.bottom*height)+4
     limit = -1 if above else height-badge_height+1

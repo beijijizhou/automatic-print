@@ -12,8 +12,8 @@ from automatic_print.layout_engine.measurement.measurement_session import identi
 from automatic_print.layout_engine.domain.models import Placement
 
 SCHEMA = 1
-LAYOUT_ALGORITHM_REVISION = 12
-DEVELOPER_LAYOUT_ALGORITHM_REVISION = 21
+LAYOUT_ALGORITHM_REVISION = 13
+DEVELOPER_LAYOUT_ALGORITHM_REVISION = 22
 SHARED_KNIFE_LAYOUT_ALGORITHM_REVISION = 8
 ORDER_SIDE_LAYOUT_ALGORITHM_REVISION = 4
 TTL_SECONDS = 24 * 60 * 60

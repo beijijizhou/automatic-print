@@ -68,7 +68,7 @@ def _build_parameter_controls(window) -> QFormLayout:
 
     window.label_settings = LabelSettingsDialog(window)
     window.number_images = window.label_settings.enabled
-    label_button = QPushButton("打开标签与文字设置…")
+    label_button = QPushButton("打开标签文字与位置设计器…")
     label_button.clicked.connect(window.label_settings.exec)
     window.color_block_settings = ColorBlockSettingsDialog(window)
     color_button = QPushButton("打开色块设置…")

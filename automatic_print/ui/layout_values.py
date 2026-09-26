@@ -97,6 +97,8 @@ def settings_from_window(window) -> LayoutSettings:
         label_position='top_left' if not cutting and label.position.currentData()=='block_below' else label.position.currentData(),
         label_offset_x_mm=label.offset_x.value(),
         label_offset_y_mm=label.offset_y.value(),
+        cutter_label_vertical_align=label.cutter_vertical.currentData(),
+        cutter_label_rotated_align=label.cutter_rotated.currentData(),
         label_date_format=label.date_format.text().strip() or "%Y-%m-%d",
         label_follow_qr=label.follow_qr.isChecked(),
         color_block_enabled=cutting and block.enabled.isChecked(),

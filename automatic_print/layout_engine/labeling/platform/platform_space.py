@@ -12,8 +12,8 @@ from automatic_print.layout_engine.measurement.measurement_timing import measure
 @measured('平台透明空位搜索')
 def header_space(
         path, qr, width, height, badge_width, badge_height, gap, degrees,
-        reserved=(), inward_from_card=False):
-    top = round(qr.top*height)
+        reserved=(), inward_from_card=False, top_px=None):
+    top = round(qr.top*height) if top_px is None else top_px
     right = ceil(qr.right*width)+gap
     left = floor(qr.left*width)-gap-badge_width
     left_candidates = tuple(left-step for step in range(0, max(8, badge_height), 2))
@@ -56,7 +56,33 @@ def header_space(
         if found is not None:
             return found
         return find(_free_band_candidates(source, qr, width, height,
-                                          badge_width, badge_height, degrees))
+                                          badge_width, badge_height, degrees,
+                                          top_px=top))
+    return None
+
+
+def aligned_header_label_space(
+        path, qr, width, height, badge_width, badge_height, degrees,
+        vertical_align="top", reserved=()):
+    """Place cutter text at the requested safe height inside the card band."""
+    top = round(qr.top*height)
+    bottom = round(qr.bottom*height)-badge_height
+    if bottom < top:
+        return None
+    positions = {
+        "top": top,
+        "center": (top+bottom)//2,
+        "bottom": bottom,
+    }
+    preferred = positions.get(vertical_align, top)
+    ys = tuple(dict.fromkeys((preferred, top, positions["center"], bottom)))
+    for y in ys:
+        x = header_space(
+            path, qr, width, height, badge_width, badge_height, 0, degrees,
+            reserved=reserved, inward_from_card=True, top_px=y,
+        )
+        if x is not None:
+            return x, y
     return None
 
 
@@ -68,9 +94,10 @@ def _overlaps_reserved(rect, reserved):
     )
 
 
-def _free_band_candidates(source, qr, width, height, badge_width, badge_height, degrees):
+def _free_band_candidates(source, qr, width, height, badge_width, badge_height,
+                          degrees, top_px=None):
     """Search the complete header, including space beyond a long label card."""
-    top = round(qr.top*height)
+    top = round(qr.top*height) if top_px is None else top_px
     band = MembraneRegion(0, top/height, 1, (top+badge_height)/height).rotated((-degrees+180)%360-180)
     box = (floor(band.left*source.width), floor(band.top*source.height),
            ceil(band.right*source.width), ceil(band.bottom*source.height))

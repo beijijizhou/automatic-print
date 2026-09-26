@@ -84,6 +84,8 @@ class LayoutSettings:
     label_position: str = "bottom"
     label_offset_x_mm: float = 0
     label_offset_y_mm: float = 0
+    cutter_label_vertical_align: str = "top"
+    cutter_label_rotated_align: str = "left"
     label_date_format: str = "%Y-%m-%d"
     label_follow_qr: bool = True
     allow_rotation: bool = True
