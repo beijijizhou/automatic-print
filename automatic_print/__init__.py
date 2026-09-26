@@ -2,9 +2,9 @@
 
 from .updates.versioning import release_display
 
-__version__ = "0.1.419"
+__version__ = "0.1.420"
 __release_date__ = "2026-09-26"
-__release_iteration__ = 6
+__release_iteration__ = 7
 __command_protocol__ = 1
 __command_capabilities__ = (
     "probe", "printer_history", "source_update", "launch_app",
@@ -22,5 +22,6 @@ __release_notes__ = (
     "标签设置中的机器号只影响打印标签，不再修改后台机器身份。",
     "并排等比缩小不再作用于旋转候选和最终旋转图片，旋转时保持原尺寸。",
     "主界面顶部固定显示版本号与检查更新按钮，并纳入 Windows 发布门禁。",
+    "打印机状态页新增 Realtime 全机信号测试，绕过 UDP 验证跨网络通信和实际版本。",
 )
 __version_display__ = release_display(__version__, __release_date__, __release_iteration__)
