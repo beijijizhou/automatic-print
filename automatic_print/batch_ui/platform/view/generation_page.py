@@ -34,14 +34,6 @@ def build_accepted_page(owner) -> QWidget:
 def build_batch_generation_page(owner, platform_name: str) -> QWidget:
     page = QWidget()
     layout = QVBoxLayout(page)
-    owner.open_playwright_button = QPushButton(
-        f"打开 {platform_name} Playwright 浏览器"
-    )
-    owner.open_playwright_button.setToolTip(
-        f"立即启动或显示 {platform_name} 自动化 Chrome；登录后再读取批次预览。"
-    )
-    owner.open_playwright_button.clicked.connect(owner.open_playwright_browser)
-    layout.addWidget(owner.open_playwright_button)
     sections = QTabWidget()
     received = QWidget()
     received_layout = QVBoxLayout(received)

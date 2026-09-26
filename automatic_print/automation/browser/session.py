@@ -58,6 +58,12 @@ def open_platform_browser(platform_name, check_cancel, progress):
     }
 
 
+def open_managed_browser(check_cancel, progress):
+    """Show the shared browser without coupling the action to one platform."""
+    current = show_debug_browser("chrome://newtab", check_cancel, progress)
+    return {"type": "browser_opened", "platform": "", "url": current}
+
+
 def open_authenticated_page(
     browser,
     target_url: str,

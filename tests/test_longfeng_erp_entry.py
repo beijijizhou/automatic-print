@@ -100,8 +100,11 @@ def test_platform_download_uses_single_selector_and_preview_only(tmp_path):
     assert longfeng.generation_sections.tabText(1) == "生产中批次策略"
     assert longfeng.generation_sections.widget(1) is longfeng.completed_page
     assert longfeng.route_preview_table.horizontalHeaderItem(3).text() == "件数"
-    assert longfeng.open_playwright_button.text() == "打开 隆丰 Playwright 浏览器"
-    assert "登录后" in longfeng.open_playwright_button.toolTip()
+    assert longfeng.open_playwright_button.text() == (
+        "打开 Playwright 浏览器（提前登录）"
+    )
+    assert "唯一" in longfeng.open_playwright_button.toolTip()
+    assert "自行打开" in longfeng.open_playwright_button.toolTip()
     assert longfeng.route_preview_button.text() == "读取工艺路线"
     assert longfeng.default_multi_preview_button.text() == "读取默认路线多项多件"
     assert longfeng.default_multi_generate_button.text() == "直接生成批次"
