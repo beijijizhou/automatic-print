@@ -11,8 +11,8 @@ def header_safe_coordinates(
     if settings.cutter_mode == 'free' or not label[2] or not label[3]:
         return block, label, platform
     from automatic_print.layout_engine.cutting.geometry.cut_guide_geometry import detect_guide_band
-    region = detect_guide_band(path)
-    if region is None:
+    source_region = detect_guide_band(path)
+    if source_region is None:
         # The cutter mark remains usable without a detected card.  Added text
         # has no pixel-verified safe home, so omit it instead of blocking the
         # entire batch or guessing over the artwork.
@@ -22,7 +22,7 @@ def header_safe_coordinates(
         block = bx, by, bw, bh
         return block, (0, 0, 0, 0), (0, 0, 0, 0)
     _width, height = image_size
-    region = region.rotated(degrees)
+    region = source_region.rotated(degrees)
     top, bottom = round(region.top*height), round(region.bottom*height)
     _bx, _by, bw, bh = block
     _lx, _ly, lw, lh = label
@@ -30,6 +30,21 @@ def header_safe_coordinates(
     if settings.platform_reuse_qr:
         # This mode merges platform text into the separate production label.
         px = py = pw = ph = 0
+    from automatic_print.layout_engine.labeling.platform.qr_row_space import qr_row_space
+    qr_position = qr_row_space(
+        path, source_region, image_size[0], height, lw, lh, degrees,
+        reserved=((px, py, pw, ph),) if pw and ph else (),
+    )
+    if qr_position is not None:
+        from automatic_print.layout_engine.cutting.geometry.rotated_marks import marker_top
+        block_y = marker_top(region, height) if bh else 0
+        if settings.cutter_left_marker_external and bw:
+            block_x = -bw if settings.preserve_header_gap else (
+                -bw-max(1, mm_to_px(settings.color_block_gap_mm, settings.dpi))
+            )
+        else:
+            block_x = _bx if not settings.preserve_header_gap else (-bw if bw else 0)
+        return (block_x, block_y, bw, bh), (*qr_position, lw, lh), (px, py, pw, ph)
     if rotated_short_edge and not settings.preserve_header_gap:
         from automatic_print.layout_engine.labeling.platform.short_edge_space import short_edge_space
         reserved = ((px, py, pw, ph),) if pw and ph else ()

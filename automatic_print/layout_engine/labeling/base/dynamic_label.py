@@ -5,6 +5,20 @@ from automatic_print.layout_engine.domain.models import mm_to_px
 from automatic_print.layout_engine.measurement.measurement_timing import measured
 
 
+def _rotate_badge(badge, degrees):
+    from PIL import Image
+    transpose = {
+        90: Image.Transpose.ROTATE_90,
+        -90: Image.Transpose.ROTATE_270,
+        180: Image.Transpose.ROTATE_180,
+    }.get(degrees)
+    if transpose is None:
+        return badge
+    rotated = badge.transpose(transpose)
+    badge.close()
+    return rotated
+
+
 @measured('普通标签文字测量')
 def source_label_badge(text, settings, path, degrees=0):
     if settings.cutter_mode != "free":
@@ -17,24 +31,25 @@ def source_label_badge(text, settings, path, degrees=0):
                 size = print_dimensions(path, settings.dpi)
                 available_mm = size.height_mm if degrees % 180 else size.width_mm
                 maximum = max(maximum, mm_to_px(available_mm, settings.dpi))
-            return label_badge(text, settings.dpi, settings.number_font_size_mm, maximum)
+            return _rotate_badge(
+                label_badge(text, settings.dpi, settings.number_font_size_mm, maximum),
+                degrees,
+            )
         size = print_dimensions(path, settings.dpi)
         width = mm_to_px(size.width_mm, settings.dpi)
         height = mm_to_px(size.height_mm, settings.dpi)
-        if degrees % 180:
-            width, height = height, width
-        region = region.rotated(degrees)
         maximum = max(1, round((region.right-region.left)*width))
-        available_height = max(1, round(
-            (region.top if (region.top+region.bottom)/2 >= .5 else 1-region.bottom)*height
-            if degrees % 180 else (region.bottom-region.top)*height
-        ))
+        from automatic_print.layout_engine.labeling.platform.qr_region import detect_qr_region
+        qr = detect_qr_region(path)
+        if qr is not None:
+            blank = max(qr.left-region.left, region.right-qr.right)
+            maximum = max(1, round(blank*width)-max(1, round((qr.right-qr.left)*width*.04)))
         badge = label_badge(text, settings.dpi, settings.number_font_size_mm, maximum)
         # Keep measurement available to the final pixel-space placement pass.
         # If the complete badge does not fit, that pass drops only this added
         # text and records a recoverable image anomaly; it must not stop the
         # batch before cutter geometry can be produced.
-        return badge
+        return _rotate_badge(badge, degrees)
     if not settings.label_detect_region:
         return settings_label_badge(text, settings)
     region = detect_membrane_region(path)

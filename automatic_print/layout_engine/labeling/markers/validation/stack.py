@@ -17,6 +17,14 @@ def in_short_edge_space(region, width, height, rect):
 
 
 def validate_stack(path, p, settings):
+    if (settings.cutter_mode != 'free' and p.number_width_px and p.number_height_px):
+        from automatic_print.layout_engine.labeling.platform.qr_row_space import is_qr_row_space
+        if is_qr_row_space(
+            path, p.width_px, p.height_px, getattr(p, 'rotation_degrees', 0),
+            (p.number_x_px-p.x_px, p.number_y_px-p.y_px,
+             p.number_width_px, p.number_height_px),
+        ):
+            return
     if (settings.cutter_mode != 'free' and p.number_width_px and p.number_height_px
             and not getattr(p, 'rotation_degrees', 0) % 180):
         from automatic_print.layout_engine.cutting.geometry.cut_guide_geometry import detect_guide_band

@@ -144,9 +144,9 @@
   单件批次以完整尺码后缀比较多排区与旋转区分界；已有末尾旋转区时，可把交界前的完整尺码组整体并入旋转区，但同尺码绝不跨区。旋转区的竖图保持横向旋转，超出当前动态安全宽度时再等比缩小；整批旋转被个别超宽图阻断时，
   `layout_engine/planning/zones/gap_fallback.py` 用虚拟尺寸覆盖重跑完整订单局部比较，双面同倍率且整批仍最多只有并排区和旋转区两个区域。
 - 标签与刀码：`layout_engine/labeling/base/labels.py`、`layout_engine/labeling/base/dynamic_label.py`、`layout_engine/labeling/text/templates.py`、`layout_engine/labeling/markers/marker_stack.py`、`layout_engine/labeling/markers/validation/stack.py`、`layout_engine/labeling/markers/left_marker.py`、
-  `layout_engine/labeling/platform/platform_label.py`、`layout_engine/labeling/base/header_region.py`、`layout_engine/labeling/platform/transparent_search.py`。生产标签的机器号、批次正倒序、平台名及原图订单尺码共用同一模板和占位；膜标签／二维码卡片内部不新增文字。未旋转时按膜标签侧别搜索朝图片内部的透明空白（左卡右放、右卡左放），文字始终留在原图宽度内且不增加排版占位。旋转90度时不论透明带选项或回退状态，`layout_engine/labeling/platform/short_edge_space.py`均只搜索卡片短边上方或下方的整块透明位，位置仍在原图占位内；不足时不得改放刀码旁。新增文字没有经过最终像素验证的安全空位时，仅跳过该图对应文字、保留刀码和原图、记录可复制异常并继续，不阻断整批；渲染器只绘制最终坐标仍有有效尺寸的文字。最终刀位或原图坐标越界等不可恢复安全冲突不得猜值绕过，文字不能进入膜标签与图案之间，也不能扩出原图宽度。
-- 开发者排版隔离：换刀与批次结束600毫米停止距离只有开发者模式显式传入正数时才进入规划、候选比较和独立开发者缓存版本；普通模式不调用该逻辑，使用算法缓存版本10，缓存键也不包含开发者紧凑排版与停止距离字段。
-- `ui/label_position_designer.py`提供无刀码、刀码未旋转和刀码旋转90度三种可视化位置设置；未旋转切膜标签可选膜标签高度带内靠上、居中或靠下，旋转标签可选短边安全区靠左、居中或靠右。选择保存到排版参数，真实图片仍按透明像素安全检查并在同一区域内降级。
+  `layout_engine/labeling/platform/platform_label.py`、`layout_engine/labeling/base/header_region.py`、`layout_engine/labeling/platform/qr_region.py`、`layout_engine/labeling/platform/qr_row_space.py`、`layout_engine/labeling/platform/transparent_search.py`。生产标签的机器号、批次正倒序、平台名及原图订单尺码共用同一模板和占位；切膜模式先识别真实二维码，优先使用二维码同行左右两侧经像素确认的空白卡面，并让文字位置和方向随图片旋转。同行空间不足时，未旋转回退到膜标签高度带内的卡外透明空白，旋转90度由`layout_engine/labeling/platform/short_edge_space.py`搜索卡片短边上方或下方的整块透明位；位置仍在原图占位内且不得改放刀码旁。新增文字没有经过最终像素验证的安全空位时，仅跳过该图对应文字、保留刀码和原图、记录可复制异常并继续，不阻断整批；渲染器只绘制最终坐标仍有有效尺寸的文字。最终刀位或原图坐标越界等不可恢复安全冲突不得猜值绕过，文字不能覆盖二维码、卡片已有内容或图案，也不能扩出原图宽度。
+- 开发者排版隔离：换刀与批次结束600毫米停止距离只有开发者模式显式传入正数时才进入规划、候选比较和独立开发者缓存版本；普通模式不调用该逻辑，使用算法缓存版本14，缓存键也不包含开发者紧凑排版与停止距离字段。
+- `ui/label_position_designer.py`展示无刀码、刀码未旋转和刀码旋转90度三种位置；切膜标签优先自动使用二维码同行空白，未旋转的上中下及旋转后的左中右设置作为卡外安全区回退对齐。选择保存到排版参数，真实图片仍逐图检查二维码边界和来源像素。
 - 标签字体加载与线程内有界缓存由`layout_engine/labeling/text/fonts.py`唯一拥有；生产标签优先采用有真实汉字字形的字体，避免把平台名绘成方框。`layout_engine/labeling/base/labels.py`只负责标签内容、
   换行和徽标渲染。单图排版对象`LayoutItem`与`Placement`统一归`layout_engine/domain/models.py`。
 - 渲染与编码：`layout_engine/rendering/engines/pillow_renderer.py`、`layout_engine/rendering/engines/vips_renderer.py`、`layout_engine/rendering/png/`、
@@ -278,7 +278,7 @@
 - 冷启动时图片尺寸和DPI按用户线程上限并行预读，再一次批量查询单图测量缓存；只影响整批摆放的开发者算法开关不进入单图标签/刀码缓存键，切换开发者模式或升级该排版策略不会无故重解码原图。
 - 跟随原图DPI时，批次DPI确认复用同一套有界尺寸预读并按用户线程上限并行访问源文件；结果保持原文件顺序，并向主界面报告真实完成数，避免网络批次逐张串行等待后再重复读取尺寸。
 - 并行单图测量开始前尺寸已完成预读；主界面从第一张大图解压开始即显示“测量标签与刀码”及透明区域安全检查，不把首批大图像素解压误报为仍在读取轻量尺寸。
-- 膜标签卡片只用于定位短边和高度，不把内部透明/白色区域当作新增文字的可写位置；平台与尺码并入独立生产标签，排版缓存键对旧卡内文字方案单独失效，最终内嵌标记校验拒绝仍携带独立平台卡片尺寸的旧计划。卡内空位搜索及只验证该旧方案的测试已移除。
+- 膜标签卡片继续用于定位短边和高度；`platform/qr_region.py`在卡片范围内识别真实二维码，`platform/qr_row_space.py`只允许使用二维码同行左右两侧逐像素确认为透明或浅色空白纸张的矩形。平台与尺码并入同一生产标签；旋转时文字像素和位置随原图旋转，最终内嵌标记校验重新核验二维码边界及原图空白像素。同行空间不足时保留既有卡外透明安全区回退。
 - Haloo、S2B、莆田和隆丰启用虚拟补距时，每张源图在同一个内存快照中完成补距、尺寸/DPI、标签卡片、刀码透明区及原向/旋转候选测量；刀位计算和膜规格比较只复用测量结果，预览阶段以“每张源图完整解码一次”的自动测试锁定。
   各平台下载页默认勾选下载完成后打开对应平台文件夹，用户可在下载前关闭该行为。
 - Haloo本地排版入口对普通用户可见，“莆田”仅在开发者模式加入平台选择；`ui/print_settings_navigation.py`集中应用膜标签补距默认值：隆丰关闭，其他有名称的平台开启40毫米，之后仍可手动调整。

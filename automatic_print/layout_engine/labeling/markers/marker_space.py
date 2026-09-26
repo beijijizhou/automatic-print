@@ -104,7 +104,14 @@ def validate_embedded_marks(planned, settings=None):
                           ('平台',p.platform_x_px,p.platform_y_px,p.platform_width_px,p.platform_height_px)):
                 if kind == '平台' and not settings.preserve_header_gap:
                     continue
-                if p.rotation_degrees % 180:
+                from automatic_print.layout_engine.labeling.platform.qr_row_space import is_qr_row_space
+                qr_row = kind == '标签' and is_qr_row_space(
+                    path, p.width_px, p.height_px, p.rotation_degrees,
+                    (x-p.x_px, y-p.y_px, w, h),
+                )
+                if qr_row:
+                    valid = True
+                elif p.rotation_degrees % 180:
                     from .marker_stack import in_short_edge_space
                     valid = in_short_edge_space(header, p.width_px, p.height_px,
                         (x-p.x_px, y-p.y_px, w, h))
@@ -139,7 +146,13 @@ def validate_embedded_marks(planned, settings=None):
                     and (preserve_header or settings.platform_below_marker)
                     and p.number_x_px+p.number_width_px <= p.x_px
                 )
-                if (p.number_width_px and not preserve_header
+                from automatic_print.layout_engine.labeling.platform.qr_row_space import is_qr_row_space
+                qr_row = is_qr_row_space(
+                    path, p.width_px, p.height_px, p.rotation_degrees,
+                    (p.number_x_px-p.x_px, p.number_y_px-p.y_px,
+                     p.number_width_px, p.number_height_px),
+                )
+                if (p.number_width_px and not qr_row and not preserve_header
                         and not (settings and settings.cutter_mode != 'free'
                                  and p.rotation_degrees % 180)
                         and not outside_label and (
@@ -159,5 +172,10 @@ def validate_embedded_marks(planned, settings=None):
                 clear = transparent_rect(
                     path, p.width_px, p.height_px, p.rotation_degrees, relative,
                 )
+                if not clear and kind == '标签':
+                    from automatic_print.layout_engine.labeling.platform.qr_row_space import is_qr_row_space
+                    clear = is_qr_row_space(
+                        path, p.width_px, p.height_px, p.rotation_degrees, relative,
+                    )
                 if not clear:
                     raise ValueError(f'{path.name}：内置刀码或文字会覆盖原图，禁止输出。')

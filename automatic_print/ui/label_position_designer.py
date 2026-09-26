@@ -51,39 +51,54 @@ class LabelPositionDiagram(QWidget):
         if case == 0:
             self._free_position(label, image, self.values()['free'])
         elif case == 1:
-            card = QRectF(image.left()+8, image.top()+8, 48, 54)
-            self._card(painter, card)
-            label.moveLeft(card.right()+7)
-            align = self.values()['vertical']
-            y = {'top': card.top(), 'center': card.center().y()-label.height()/2,
-                 'bottom': card.bottom()-label.height()}.get(align, card.top())
-            label.moveTop(y)
+            card = QRectF(image.left()+8, image.top()+8, image.width()-16, 54)
+            qr = QRectF(card.left()+6, card.top()+7, 40, 40)
+            self._card(painter, card, qr)
+            label.setWidth(min(label.width(), card.right()-qr.right()-14))
+            label.moveLeft(qr.right()+7)
+            label.moveTop(qr.center().y()-label.height()/2)
         else:
-            card = QRectF(image.left()+22, image.bottom()-58, image.width()-44, 48)
-            self._card(painter, card)
-            align = self.values()['rotated']
-            x = {'left': card.left(), 'center': card.center().x()-label.width()/2,
-                 'right': card.right()-label.width()}.get(align, card.left())
-            label.moveLeft(x)
-            label.moveBottom(card.top()-7)
+            card = QRectF(image.left()+10, image.top()+8, 48, image.height()-16)
+            qr = QRectF(card.left()+6, card.bottom()-46, 36, 36)
+            self._card(painter, card, qr)
+            label.setSize(QRectF(0, 0, 25, min(72, qr.top()-card.top()-12)).size())
+            label.moveLeft(card.center().x()-label.width()/2)
+            label.moveBottom(qr.top()-6)
         painter.setPen(QPen(QColor('#7e22ce'), 2))
         painter.setBrush(QColor('#f3e8ff'))
         painter.drawRoundedRect(label, 4, 4)
         painter.setPen(QColor('#581c87'))
         painter.setFont(QFont('', 8))
-        painter.drawText(label, Qt.AlignmentFlag.AlignCenter, '标签文字')
+        if case == 2:
+            painter.save()
+            painter.translate(label.center())
+            painter.rotate(-90)
+            painter.drawText(
+                QRectF(-label.height()/2, -label.width()/2,
+                       label.height(), label.width()),
+                Qt.AlignmentFlag.AlignCenter, '标签文字',
+            )
+            painter.restore()
+        else:
+            painter.drawText(label, Qt.AlignmentFlag.AlignCenter, '标签文字')
         painter.setPen(QColor('#64748b'))
         painter.drawText(QRectF(panel.left()+8, panel.bottom()-42, panel.width()-16, 28),
                          Qt.AlignmentFlag.AlignCenter,
-                         '最终输出仍逐图检查透明区域')
+                         '逐图核验二维码与空白像素')
 
     @staticmethod
-    def _card(painter, rect):
+    def _card(painter, rect, qr):
         painter.setPen(QPen(QColor('#f97316'), 2))
         painter.setBrush(QColor('#ffedd5'))
         painter.drawRect(rect)
-        painter.setPen(QColor('#9a3412'))
-        painter.drawText(rect, Qt.AlignmentFlag.AlignCenter, '膜标签')
+        painter.setPen(QPen(QColor('#111827'), 2))
+        painter.setBrush(QColor('white'))
+        painter.drawRect(qr)
+        painter.setBrush(QColor('#111827'))
+        size = qr.width()/5
+        for column, row in ((0, 0), (3, 0), (0, 3), (2, 2), (4, 4)):
+            painter.drawRect(QRectF(qr.left()+column*size, qr.top()+row*size,
+                                    size, size))
 
     @staticmethod
     def _free_position(label, image, position):
@@ -115,13 +130,13 @@ class LabelPositionDesigner(QDialog):
         self.vertical = _mirror(vertical)
         self.rotated = _mirror(rotated)
         note = QLabel(
-            '分别设置三种生产方向。刀码模式只在膜标签卡片外的透明安全区内采用所选对齐；'
-            '某张图的位置不安全时，会在同一安全区内寻找可用位置。')
+            '刀码模式会先把文字放在二维码同行的已核验空白卡面，并随图片一起旋转。'
+            '同行空间不足时，以下未旋转和旋转选项决定卡片外安全区的回退对齐。')
         note.setWordWrap(True)
         form = QFormLayout()
         form.addRow('无刀码标签位置', self.free)
-        form.addRow('刀码未旋转 · 上下对齐', self.vertical)
-        form.addRow('刀码旋转90° · 左右对齐', self.rotated)
+        form.addRow('刀码未旋转 · 回退上下对齐', self.vertical)
+        form.addRow('刀码旋转90° · 回退左右对齐', self.rotated)
         preview = LabelPositionDiagram(lambda: {
             'free': self.free.currentData(),
             'vertical': self.vertical.currentData(),

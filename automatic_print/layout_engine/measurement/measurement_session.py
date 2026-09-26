@@ -14,7 +14,8 @@ class Measurements:
     def __init__(self):
         self.created_at = datetime.now().astimezone()
         self.items, self.dimensions, self.rectangles = {}, {}, {}
-        self.bands, self.qr_locations, self.cutter_batches = {}, {}, {}
+        self.bands, self.qr_locations, self.qr_regions, self.cutter_batches = {}, {}, {}, {}
+        self.qr_row_rectangles = {}
         self.identities, self.identity_lock = {}, RLock()
         self.persistent = None
         self.persistent_lock = RLock()

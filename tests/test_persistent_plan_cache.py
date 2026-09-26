@@ -117,9 +117,9 @@ def test_developer_knife_gap_has_separate_cache_revision_and_production_key(tmp_
         developer_key = plan_cache.cache_key([path], config(cutter_knife_change_gap_mm=600), now)
 
     production, developer = captured
-    assert production['algorithm'] == plan_cache.LAYOUT_ALGORITHM_REVISION == 13
+    assert production['algorithm'] == plan_cache.LAYOUT_ALGORITHM_REVISION == 14
     assert 'cutter_knife_change_gap_mm' not in production['settings']
-    assert developer['algorithm'] == plan_cache.DEVELOPER_LAYOUT_ALGORITHM_REVISION == 22
+    assert developer['algorithm'] == plan_cache.DEVELOPER_LAYOUT_ALGORITHM_REVISION == 23
     assert developer['settings']['cutter_knife_change_gap_mm'] == 600
     assert production_key != developer_key
 
@@ -220,6 +220,9 @@ def test_cached_production_still_verifies_whole_batch_and_real_source_pixels(tmp
                     original = np.asarray(source.rotate(p['rotation_degrees'], expand=True))
                 actual = np.asarray(output.crop((p['x_px'], p['y_px'], p['x_px']+p['width_px'], p['y_px']+p['height_px'])))
                 opaque = original[:, :, 3] == 255
+                lx, ly = p['number_x_px']-p['x_px'], p['number_y_px']-p['y_px']
+                opaque[max(0, ly):min(p['height_px'], ly+p['number_height_px']),
+                       max(0, lx):min(p['width_px'], lx+p['number_width_px'])] = False
                 assert np.array_equal(actual[opaque], original[opaque])
 
 
