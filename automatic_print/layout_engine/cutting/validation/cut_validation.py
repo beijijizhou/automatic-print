@@ -33,6 +33,10 @@ def mark_pixel_verified(check):
 
 def validate_cut_corridor(planned, settings, canvas_width, left_marker_px=0,
                           canvas_height=None):
+    # Free layout has no cutter lanes, knife changes, or cutter-marker
+    # corridors. Persisted cutter settings must never block a no-marker run.
+    if settings.cutter_mode == "free":
+        return None
     from automatic_print.layout_engine.cutting.geometry.knife_change_gap import inspect_knife_change_gaps
     knife_change_gaps = inspect_knife_change_gaps(planned, settings, canvas_height)
     if any(row['actual_px'] < row['required_px'] for row in knife_change_gaps):

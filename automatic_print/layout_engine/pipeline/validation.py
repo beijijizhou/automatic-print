@@ -20,10 +20,10 @@ def validate_plan(paths, planned, settings, width, height, preview_only):
                 paths, planned, mm_to_px(settings.cutter_knife_mm, settings.dpi))
         else:
             order_check = validate_order_placements(paths, planned)
-        cut_check = validate_cut_corridor(
-            planned, settings, width, canvas_height=height,
-        )
         if settings.cutter_mode != 'free':
+            cut_check = validate_cut_corridor(
+                planned, settings, width, canvas_height=height,
+            )
             validate_embedded_marks(planned, settings)
     except ValueError as error:
         if not preview_only:

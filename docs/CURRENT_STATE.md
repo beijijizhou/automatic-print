@@ -167,6 +167,7 @@
   不再保存后重新解压超长 TIFF；普通模式始终回到 PNG。RIIN单列/自动多列切膜即使读取到开发者旧TIFF设置，也由`layout_engine/output/output_sizes.py`继续任务并降级为PNG；TIFF仅保留给自由排版性能测试。
 - 输出安全：`layout_engine/cutting/validation/order_validation.py`、`layout_engine/cutting/validation/cut_validation.py`、
   `layout_engine/cutting/validation/marked_pixel_validation.py`、`layout_engine/cutting/geometry/printed_guides.py`、`layout_engine/output/output_file_info.py`。
+  订单与坐标检查适用于所有模式；刀位、刀码、换刀停止距离和真实像素切割通道只在单排或自动多列切膜模式执行，正常排版（无刀码）不读取残留切膜参数。
   `layout_engine/cutting/geometry/knife_change_gap.py`在开发者模式参数启用时，对实际刀位变化边界移动后续整行，
   并在最后一枚左侧识别刀码之后补足批次结束距离；双排转旋转、旋转转双排和批次结束均至少保留
   设定距离（当前生产安全默认采用600毫米）；区域变化以相邻两枚左侧识别刀码起点计距，批次结束以最后一枚刀码起点到文件结束计距，最终刀位检查和输出报告复核同一距离事实。
