@@ -5,9 +5,10 @@ from threading import Lock, Thread
 from PySide6.QtCore import QObject, Signal
 
 from ..automation.api.machine_status.commands import submit_probe, submit_source_update
+from .fleet_update_verification import (
+    ACTIVE, automatic_verification_needed, verification_needed, verification_state,
+)
 from ..updates.source import SourceUpdater
-
-ACTIVE = {"queued", "claimed", "running"}
 
 
 class FleetUpdateSubmitter(QObject):
@@ -43,9 +44,9 @@ class FleetUpdateSubmitter(QObject):
 class FleetCapabilityVerifier(QObject):
     completed = Signal(object)
 
-    def __init__(self, parent=None, submit=submit_probe):
+    def __init__(self, parent=None, submit=None):
         super().__init__(parent)
-        self.submit = submit
+        self.submit = submit or _submit_realtime_probe
         self.lock = Lock()
         self.requested = set()
         self.target_revision = ""
@@ -57,7 +58,7 @@ class FleetCapabilityVerifier(QObject):
             self.requested.clear()
         candidates = [
             machine for machine in machines
-            if verification_needed(machine, commands, target)
+            if automatic_verification_needed(machine, commands, target)
             and str(machine.get("machine_id") or "") not in self.requested
         ]
         if not candidates or not self.lock.acquire(blocking=False):
@@ -74,6 +75,7 @@ class FleetCapabilityVerifier(QObject):
                 try:
                     sent.append(self.submit(machine["machine_id"]))
                 except Exception as error:
+                    self.requested.discard(str(machine.get("machine_id") or ""))
                     failures.append({
                         "machine": machine.get("machine_name") or "未知机器",
                         "error": str(error),
@@ -135,7 +137,7 @@ def update_state(
     if current == str(target_version):
         if not int(target_protocol or 0):
             return "已是目标版本"
-        return _verification_state(
+        return verification_state(
             machine, commands, target_version, target_revision,
             target_protocol, target_capabilities,
         )
@@ -160,44 +162,5 @@ def update_state(
     return f"{label} · {detail}" if detail else label
 
 
-def verification_needed(machine, commands, target):
-    if not target or not int(getattr(target, "command_protocol", 0) or 0):
-        return False
-    if str(machine.get("app_version") or "") != str(target.version):
-        return False
-    return _verification_state(
-        machine, commands, target.version, target.revision,
-        target.command_protocol, target.command_capabilities,
-    ) == "版本已回报，等待功能检测"
-
-
-def _verification_state(
-    machine, commands, target_version, target_revision,
-    target_protocol, target_capabilities,
-):
-    machine_id = str(machine.get("machine_id") or "")
-    probes = [
-        item for item in commands
-        if item.get("action") == "probe"
-        and str(item.get("target_machine_id") or "") == machine_id
-    ]
-    probes.sort(key=lambda item: str(item.get("created_at") or ""), reverse=True)
-    target_revision = str(target_revision or "").lower()
-    for command in probes:
-        status = str(command.get("status") or "")
-        result = command.get("result") or {}
-        if status in ACTIVE:
-            return "版本已回报，正在验证功能"
-        if str(result.get("app_version") or "") != str(target_version):
-            continue
-        revision = str(result.get("source_revision") or "").lower()
-        if target_revision and revision != target_revision:
-            return "版本号一致，但提交号不一致"
-        if int(result.get("command_protocol") or 0) < int(target_protocol or 0):
-            return "版本号一致，但指令协议未加载"
-        actual = set(result.get("capabilities") or [])
-        missing = sorted(set(target_capabilities or ()) - actual)
-        if missing:
-            return "版本号一致，但缺少功能：" + "、".join(missing)
-        return "功能已确认"
-    return "版本已回报，等待功能检测"
+def _submit_realtime_probe(machine_id):
+    return submit_probe(machine_id, expires_minutes=2, realtime_only=True)

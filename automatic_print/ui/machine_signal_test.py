@@ -11,6 +11,7 @@ from PySide6.QtWidgets import QLabel, QPushButton
 from automatic_print import __version__
 
 from ..automation.api.machine_status.commands import get_command, submit_probe
+from .fleet_update_action import start_latest_update
 from .machine_status_format import machine_slots
 
 
@@ -180,7 +181,7 @@ def install_machine_signal_control(page, tester=None):
     page.signal_button = QPushButton("Realtime 全机信号测试")
     page.signal_button.setToolTip("绕过局域网 UDP，只使用 Supabase Realtime Broadcast 测试 M1–M11。")
     page.signal_update_button = QPushButton("发布最新版本更新指令")
-    page.signal_update_button.clicked.connect(lambda: _start_latest_update(page))
+    page.signal_update_button.clicked.connect(lambda: start_latest_update(page))
     page.signal_result = QLabel("按按钮可绕过 UDP，通过 Realtime 检测全部已登记机器并核对版本。")
     page.signal_result.setWordWrap(True)
     page.signal_result.setTextInteractionFlags(Qt.TextSelectableByMouse)
@@ -188,14 +189,3 @@ def install_machine_signal_control(page, tester=None):
     return MachineSignalControl(
         page.signal_button, page.signal_result, page, tester=tester,
     )
-
-
-def _start_latest_update(page):
-    page.sections.setCurrentWidget(page.update_section)
-    panel = page.update_panel
-    if panel.loader.lock.locked() or not panel.versions.count():
-        panel.summary.setText("正在读取最新版本，请稍后再次点击发布更新指令。")
-        return
-    panel.versions.setCurrentIndex(0)
-    panel._select(True)
-    panel.start_all()

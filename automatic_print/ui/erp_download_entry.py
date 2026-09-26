@@ -128,8 +128,7 @@ def install_production_platform_tab(
                 and page.platform_selector.currentData() == "亿点万象":
             page.select_platform(None)
         visible = (
-            uv_selected
-            or window.developer_mode_checkbox.isChecked()
+            getattr(window, "department_key", "dtf") in {"dtf", "uv"}
             or bool(ydwx and ydwx.thread is not None)
         )
         if not visible and tabs.currentWidget() is page:

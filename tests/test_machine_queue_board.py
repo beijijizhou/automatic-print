@@ -25,11 +25,11 @@ def test_status_board_aligns_active_and_next_task_with_machine():
     ]})
 
     assert page.table.columnCount() == 9
-    assert page.table.item(7, 3).text() == "current-40件.prn"
-    assert "609180000010" in page.table.item(7, 7).text()
-    assert "18件" in page.table.item(7, 7).text()
-    assert page.table.item(7, 7).text().startswith("正在下载生产图 · 37%")
-    assert page.table.item(7, 7).toolTip() == page.table.item(7, 7).text()
+    assert page.table.item(7, 2).text() == "current-40件.prn"
+    assert "609180000010" in page.table.item(7, 8).text()
+    assert "18件" in page.table.item(7, 8).text()
+    assert "正在下载生产图 · 37%" in page.table.item(7, 8).text()
+    assert page.table.item(7, 8).toolTip() == page.table.item(7, 8).text()
     assert "609180000011" in page.table.item(7, 8).text()
     assert "30件" in page.table.item(7, 8).text()
     assert page.update_timer.isActive()
