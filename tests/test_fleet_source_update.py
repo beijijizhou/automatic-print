@@ -11,7 +11,10 @@ from automatic_print.updates.source import SourceVersion
 from automatic_print.automation.api.machine_commands import runner, source_update
 from automatic_print.automation.api.machine_status import commands
 from automatic_print.ui.fleet_update import FleetUpdatePanel, update_state
-from automatic_print.ui.fleet_update_support import verification_needed
+from automatic_print.ui import fleet_update_support
+from automatic_print.ui.fleet_update_support import (
+    FleetCapabilityVerifier, automatic_verification_needed, verification_needed,
+)
 
 
 APP = QApplication.instance() or QApplication([])
@@ -136,6 +139,61 @@ def test_current_version_requires_exact_capability_probe_before_acceptance():
         target.command_protocol, target.command_capabilities,
     ) == "功能已确认"
     assert not verification_needed(current, [probe], target)
+
+
+def test_completed_update_automatically_requests_realtime_probe_for_local_m11(monkeypatch):
+    current = {**machine(11, "0.1.429"), "is_local": True}
+    update = {
+        "id": "update-m11", "action": "source_update",
+        "target_machine_id": current["machine_id"], "status": "succeeded",
+        "created_at": "2026-09-26T10:00:00Z",
+        "payload": {"target_version": "0.1.429"},
+    }
+    submitted = []
+    verifier = FleetCapabilityVerifier(submit=lambda machine_id: submitted.append(machine_id) or {})
+    monkeypatch.setattr(
+        "automatic_print.ui.fleet_update_support.Thread",
+        lambda **options: SimpleNamespace(
+            start=lambda: options["target"](*options.get("args", ())),
+        ),
+    )
+
+    assert automatic_verification_needed(current, [update], target=None)
+    assert verifier.start_needed([current], [update], target=None)
+    assert submitted == [current["machine_id"]]
+
+
+def test_completed_update_does_not_repeat_probe_after_matching_receipt():
+    current = machine(3, "0.1.429")
+    update = {
+        "action": "source_update", "target_machine_id": current["machine_id"],
+        "status": "succeeded", "created_at": "2026-09-26T10:00:00Z",
+        "payload": {"target_version": "0.1.429"},
+    }
+    probe = {
+        "action": "probe", "target_machine_id": current["machine_id"],
+        "status": "succeeded", "created_at": "2026-09-26T10:00:05Z",
+        "result": {"app_version": "0.1.429"},
+    }
+
+    assert not automatic_verification_needed(current, [update, probe], target=None)
+
+
+def test_automatic_feature_probe_uses_realtime_without_udp(monkeypatch):
+    captured = {}
+    monkeypatch.setattr(
+        fleet_update_support, "submit_probe",
+        lambda machine_id, **options: captured.update(
+            machine_id=machine_id, **options,
+        ) or {},
+    )
+
+    fleet_update_support._submit_realtime_probe("machine-11")
+
+    assert captured == {
+        "machine_id": "machine-11", "expires_minutes": 2,
+        "realtime_only": True,
+    }
 
 
 def test_matching_version_rejects_wrong_revision_or_missing_capability():

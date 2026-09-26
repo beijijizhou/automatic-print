@@ -2,9 +2,9 @@
 
 from .updates.versioning import release_display
 
-__version__ = "0.1.430"
+__version__ = "0.1.431"
 __release_date__ = "2026-09-26"
-__release_iteration__ = 17
+__release_iteration__ = 18
 __command_protocol__ = 1
 __command_capabilities__ = (
     "probe", "printer_history", "source_update", "launch_app",
@@ -12,6 +12,7 @@ __command_capabilities__ = (
 )
 __release_notes__ = (
     "打印机总览实时显示后台任务当前步骤、批次和进度，任务执行期间自动刷新。",
+    "源码更新回报版本后自动通过Realtime核对提交、协议和功能，不再要求手动测试与刷新。",
     "完整测试逐项显示测试文件、名称、通过或失败状态及慢测试摘要，不再只输出圆点。",
     "无刀码排版不再执行刀位、刀码和换刀停止距离检查，超宽图片使用全幅旋转恢复。",
     "主界面只常显版本、检查更新和开发者模式，其余工具集中到唯一开发者功能区。",
