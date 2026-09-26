@@ -96,7 +96,7 @@ def test_business_subpackages_do_not_accumulate_parallel_implementations():
         if directory == source / 'ui':
             continue
         implementations = [path for path in directory.glob('*.py')
-                           if path.name != '__init__.py']
+                           if path.name not in {'__init__.py', '__main__.py'}]
         if len(implementations) > 5:
             oversized[directory.relative_to(source).as_posix()] = len(implementations)
         for path in implementations:

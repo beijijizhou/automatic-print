@@ -69,7 +69,7 @@ def test_empty_preview_is_compact_until_a_batch_is_selected(tmp_path):
     APP.processEvents()
     assert panel.preview_empty.isHidden()
     assert panel.preview_tabs.isVisibleTo(window)
-    assert panel.preview_group.maximumHeight() > 10_000
+    assert panel.preview_group.maximumHeight() == 560
 
     window.folder.clear()
     APP.processEvents()

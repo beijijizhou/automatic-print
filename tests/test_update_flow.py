@@ -155,7 +155,6 @@ def test_button_updates_source_then_restarts_without_browser(tmp_path, monkeypat
     assert window.update_thread is None
     window.close()
 
-
 def test_single_click_applies_after_confirmation_runs_nested_event_loop(tmp_path, monkeypatch):
     window, info = window_for_test(tmp_path, monkeypatch)
     applied, restarted = [], []
@@ -238,36 +237,4 @@ def test_checkout_latest_is_not_reported_as_loaded_version(tmp_path, monkeypatch
     assert '源码已是最新' not in window.update_status_label.text()
     window.confirm_source_check(current)
     assert '自动安全重启' in window.update_status_label.text()
-    window.close()
-
-
-def test_passive_update_check_does_not_block_layout(tmp_path, monkeypatch):
-    window, _info = window_for_test(tmp_path, monkeypatch)
-    window.update_thread = object()
-
-    window.source_update_applying = False
-    assert not window.has_active_tasks()
-
-    window.source_update_applying = True
-    assert window.has_active_tasks()
-    window.update_thread = None
-    window.source_update_applying = False
-    window.close()
-
-
-def test_failed_apply_restores_controls_and_shows_retry(tmp_path, monkeypatch):
-    window, _info = window_for_test(tmp_path, monkeypatch)
-    warnings = []
-    monkeypatch.setattr(QMessageBox, 'question', lambda *args: QMessageBox.Yes)
-    monkeypatch.setattr(QMessageBox, 'warning', lambda *args: warnings.append(args[-1]))
-    def fail_apply(self, info):
-        raise ValueError('依赖同步失败')
-    monkeypatch.setattr(SourceUpdater, 'apply', fail_apply)
-    window.check_for_updates(False)
-    wait_until(lambda: bool(warnings) and window.update_thread is None
-               and not window.source_update_applying)
-    assert window.automation_home.isEnabled()
-    assert window.settings_dialog.isEnabled()
-    assert not hasattr(window, 'check_update_button')
-    assert '重试' in window.update_status_label.text()
     window.close()

@@ -41,7 +41,7 @@ class LabelFocusPreview(QGroupBox):
         self.scroll.setAlignment(Qt.AlignCenter)
         self.scroll.setWidget(self.picture)
         self.scroll.setWidgetResizable(False)
-        self.scroll.setMinimumHeight(560)
+        self.scroll.setMinimumHeight(360)
         self.scroll.setStyleSheet("QScrollArea { border: 3px solid #a21caf; }")
         controls = QHBoxLayout()
         controls.addWidget(QLabel("查看情况"))

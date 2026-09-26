@@ -1,5 +1,5 @@
 from automatic_print.ui.machine_signal_test import (
-    probe_machine, signal_result_text, test_machine_signals as run_signal_test,
+    probe_machine, run_machine_signal_test, signal_result_text,
 )
 
 
@@ -38,7 +38,7 @@ def test_fleet_signal_test_continues_when_one_machine_does_not_respond():
             "state": "responded", "version": item["app_version"],
         }
 
-    report = run_signal_test([machine(3), machine(1, "0.1.410")], probe=fake_probe)
+    report = run_machine_signal_test([machine(3), machine(1, "0.1.410")], probe=fake_probe)
     report["current_version"] = "0.1.411"
     text = signal_result_text(report)
 

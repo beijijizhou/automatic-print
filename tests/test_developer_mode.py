@@ -56,9 +56,10 @@ def test_default_shows_production_layout_but_hides_diagnostic_tools(tmp_path, mo
     panel.details_dialog.open_bulk_analysis()
     assert not hasattr(panel.details_dialog, 'history_page')
     assert not hasattr(panel.details_dialog, 'bulk_dialog')
-    assert panel.summary.isVisible() and panel.preview_tabs.isVisible()
+    assert panel.summary.isVisible() and not panel.preview_tabs.isVisible()
     assert owner.developer_mode_checkbox.isVisible()
     assert owner.developer_features_button.isVisible()
+    assert not owner.full_test_button.isVisible() and not owner.full_test_result.isVisible()
     owner.developer_features_button.click()
     APP.processEvents()
     feature_dialog = owner.developer_features_dialog
@@ -70,8 +71,7 @@ def test_default_shows_production_layout_but_hides_diagnostic_tools(tmp_path, mo
         for row in range(feature_dialog.tree.topLevelItem(group).childCount())
     ]
     assert features == [
-        '排版历史', '批量分析文件夹', '标签位置安全短测',
-        'DTF随机10批冷启动测试', '算法诊断',
+        '完整测试', '排版历史', '批量分析文件夹', '标签位置安全短测', 'DTF随机10批冷启动测试', '算法诊断',
         '整单归侧双排（仅本次任务）',
         '切膜刀码开关', '平台＋尺码标签开关', '批次顺序标注',
         'S2B 批次信息查询', '批次下载与自动化打印', '隆丰 ERP 下载', 'S2B 生产图下载',
@@ -115,6 +115,7 @@ def test_two_zone_layout_stays_visible_and_active_outside_developer_mode(tmp_pat
     owner = window(tmp_path/'two-zone.ini')
     control = owner.cutter_settings.two_zone
     owner.developer_mode_checkbox.setChecked(True)
+    assert owner.full_test_button.isVisible() and owner.full_test_result.isVisible()
     assert not hasattr(owner, 'riin_diagnostic_button')
     assert not owner.cutter_settings.force_small_pair.isHidden()
     assert not owner.cutter_settings.knife_change_gap.isHidden()

@@ -55,7 +55,7 @@ def probe_machine(
         return {**base, "state": "error", "detail": str(error)}
 
 
-def test_machine_signals(machines, *, probe=probe_machine, progress=None):
+def run_machine_signal_test(machines, *, probe=probe_machine, progress=None):
     targets = [
         machine for machine in machine_slots(machines, 11)
         if machine is not None and not machine.get("identity_conflict")
@@ -112,7 +112,7 @@ class MachineSignalTester(QObject):
     progress = Signal(str)
     completed = Signal(object)
 
-    def __init__(self, parent=None, *, run=test_machine_signals):
+    def __init__(self, parent=None, *, run=run_machine_signal_test):
         super().__init__(parent)
         self.run = run
         self._lock = Lock()

@@ -92,7 +92,7 @@ class PreviewViewport(QWidget):
         dialog.layout().removeWidget(self)
         self.origin.insertWidget(self.origin_index, self)
         self.scroll.setMinimumHeight(420)
-        self.scroll.setMaximumHeight(720)
+        self.scroll.setMaximumHeight(460)
         self.expand.setText('最大化查看')
         self.show()
         self.update_geometry()

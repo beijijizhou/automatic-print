@@ -28,12 +28,14 @@ def test_zoom_expansion_reuses_real_snapshot_and_restores(tmp_path):
     OWNERS.append(window)
     window.startup_update_timer.stop()
     panel = window.automation_home.label_quick_panel
+    window.resize(1300, 1000)
+    window.show()
+    APP.processEvents()
+    panel.show_preview_content(True)
     panel.preview_tabs.setCurrentIndex(2)
     preview = panel.preview
     preview.overview = True
     install_snapshot(preview, planned, labels, settings)
-    window.resize(1300, 1000)
-    window.show()
     APP.processEvents()
     controls = panel.preview_viewport
     scale = controls.scale()

@@ -40,7 +40,7 @@ def test_focus_preview_prefers_current_real_batch_image(tmp_path):
 
     assert preview.selector.currentIndex() == 2
     assert not preview.picture.pixmap().isNull()
-    assert preview.scroll.minimumHeight() >= 560
+    assert preview.scroll.minimumHeight() >= 360
     assert "当前批次真实生产图" in preview.note.text()
     assert "真实坐标显示" in preview.note.text()
     assert results[2]["label_text"] in preview.readout.text()
@@ -74,6 +74,7 @@ def test_focus_preview_uses_bundled_real_haloo_image_as_current_batch(tmp_path):
     examples = panel.marker_examples
     real_image = asset_path("haloo-preview-sample.png")
     window.show()
+    panel.show_preview_content(True)
     panel.preview_tabs.setCurrentWidget(examples)
     examples.use_batch({"planned": [(real_image, None)]})
     wait_for(lambda: any(row["production"] for row in examples.results)

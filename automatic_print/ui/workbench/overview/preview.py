@@ -42,7 +42,7 @@ def build_preview(panel, window, label, block):
     panel.preview_scroll.setWidgetResizable(True)
     panel.preview_scroll.setWidget(panel.preview)
     panel.preview_scroll.setMinimumHeight(420)
-    panel.preview_scroll.setMaximumHeight(720)
+    panel.preview_scroll.setMaximumHeight(460)
     panel.preview_viewport = PreviewViewport(panel.preview, panel.preview_scroll)
     preview_layout = QVBoxLayout(group)
     panel.preview_empty = QLabel(
@@ -89,7 +89,7 @@ def build_preview(panel, window, label, block):
     preview_layout.addWidget(overview)
     def show_preview_content(visible=True):
         visible = bool(visible)
-        group.setMaximumHeight(16_777_215 if visible else 96)
+        group.setMaximumHeight(560 if visible else 96)
         panel.preview_empty.setVisible(not visible)
         panel.batch_distribution.setVisible(visible)
         panel.preview_tabs.setVisible(visible)

@@ -93,9 +93,10 @@ def test_main_page_shows_filename_text_then_actual_layout(tmp_path):
     APP.processEvents()
     panel = window.automation_home.label_quick_panel
     assert panel.preview_tabs.currentIndex() == 0
-    assert panel.text_preview.isReadOnly() and panel.text_preview.isVisible()
+    assert panel.text_preview.isReadOnly() and not panel.text_preview.isVisible()
     assert panel.text_preview.lineWrapMode() == QPlainTextEdit.NoWrap
     panel.preview.analysis_ready.emit(sample_report())
+    assert panel.text_preview.isVisible()
     assert 'ORDER123-3件-S、M×2' in panel.text_preview.toPlainText()
     panel.preview.plan_loaded.emit(sample_payload())
     assert '常规区' in panel.text_preview.toPlainText()
