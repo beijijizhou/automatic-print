@@ -15,10 +15,13 @@ from .machine_status_format import machine_slots
 
 
 TERMINAL_FAILURES = {"failed", "cancelled", "expired"}
+PROBE_DEADLINE_SECONDS = 90
+PROBE_EXPIRES_MINUTES = 3
 
 
 def probe_machine(
-    machine, *, submit=None, fetch=get_command, deadline_seconds=12,
+    machine, *, submit=None, fetch=get_command,
+    deadline_seconds=PROBE_DEADLINE_SECONDS,
     poll_seconds=0.5, clock=monotonic, wait=sleep,
 ):
     name = str(machine.get("machine_name") or "未知")
@@ -29,7 +32,10 @@ def probe_machine(
     try:
         command = (
             submit(target) if submit is not None
-            else submit_probe(target, realtime_only=True)
+            else submit_probe(
+                target, expires_minutes=PROBE_EXPIRES_MINUTES,
+                realtime_only=True,
+            )
         )
         command_id = str(command.get("id") or "")
         if not command_id:
@@ -54,7 +60,8 @@ def probe_machine(
                 detail = current.get("error_message") or current.get("phase") or status
                 return {**base, "state": "error", "detail": str(detail)}
             wait(float(poll_seconds))
-        return {**base, "state": "timeout", "detail": "12 秒内未回应"}
+        seconds = int(float(deadline_seconds))
+        return {**base, "state": "timeout", "detail": f"{seconds} 秒内未回应"}
     except Exception as error:
         return {**base, "state": "error", "detail": str(error)}
 
@@ -156,7 +163,10 @@ class MachineSignalControl(QObject):
             return
         if self.tester.start(self.machines):
             self.button.setEnabled(False)
-            self.result.setText("正在绕过 UDP，通过 Supabase Realtime 测试全部已登记机器…")
+            self.result.setText(
+                "正在绕过 UDP，通过 Supabase Realtime 测试全部已登记机器；"
+                "重启后的机器正在连接，最长等待 90 秒…"
+            )
 
     def show_result(self, report):
         self.button.setEnabled(True)

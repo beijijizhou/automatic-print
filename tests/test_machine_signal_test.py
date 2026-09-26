@@ -63,7 +63,23 @@ def test_button_probe_defaults_to_realtime_only(monkeypatch):
     )
 
     assert result["state"] == "responded"
-    assert submitted == {"target": "id-2", "realtime_only": True}
+    assert submitted == {
+        "target": "id-2", "expires_minutes": 3, "realtime_only": True,
+    }
+
+
+def test_probe_timeout_uses_configured_deadline():
+    ticks = iter((0, 0, 5))
+
+    result = probe_machine(
+        machine(2), submit=lambda _target: {"id": "probe-2"},
+        fetch=lambda _command: {"status": "queued"},
+        deadline_seconds=5, poll_seconds=0,
+        clock=lambda: next(ticks), wait=lambda _seconds: None,
+    )
+
+    assert result["state"] == "timeout"
+    assert result["detail"] == "5 秒内未回应"
 
 
 def test_fleet_signal_test_continues_when_one_machine_does_not_respond():
