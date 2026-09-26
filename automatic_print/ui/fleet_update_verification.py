@@ -3,6 +3,22 @@
 ACTIVE = {"queued", "claimed", "running"}
 
 
+def machine_needs_update(machine, commands, target):
+    if not (target and target.revision and machine and machine.get("machine_id")
+            and not machine.get("identity_conflict")):
+        return False
+    if (str(machine.get("app_version") or "") == target.version
+            and not int(target.command_protocol or 0)):
+        return False
+    state = verification_state(
+        machine, commands, target.version, target.revision,
+        target.command_protocol, target.command_capabilities,
+    )
+    return (str(machine.get("app_version") or "") != target.version
+            or state == "版本已回报，等待功能检测"
+            or state.startswith("版本号一致，但"))
+
+
 def verification_needed(machine, commands, target):
     if not target or not int(getattr(target, "command_protocol", 0) or 0):
         return False

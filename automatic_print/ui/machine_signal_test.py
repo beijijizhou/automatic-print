@@ -11,6 +11,7 @@ from PySide6.QtWidgets import QLabel, QPushButton
 from automatic_print import __version__
 
 from ..automation.api.machine_status.commands import get_command, submit_probe
+from .fleet_update_action import start_latest_update
 from .machine_status_format import machine_slots
 
 
@@ -180,7 +181,7 @@ def install_machine_signal_control(page, tester=None):
     page.signal_button = QPushButton("Realtime 全机信号测试")
     page.signal_button.setToolTip("绕过局域网 UDP，只使用 Supabase Realtime Broadcast 测试 M1–M11。")
     page.signal_update_button = QPushButton("发布最新版本更新指令")
-    page.signal_update_button.clicked.connect(lambda: _start_latest_update(page))
+    page.signal_update_button.clicked.connect(lambda: start_latest_update(page))
     page.signal_result = QLabel("按按钮可绕过 UDP，通过 Realtime 检测全部已登记机器并核对版本。")
     page.signal_result.setWordWrap(True)
     page.signal_result.setTextInteractionFlags(Qt.TextSelectableByMouse)
@@ -188,32 +189,3 @@ def install_machine_signal_control(page, tester=None):
     return MachineSignalControl(
         page.signal_button, page.signal_result, page, tester=tester,
     )
-
-
-def _start_latest_update(page):
-    page.signal_result.setText("正在准备最新版本更新指令…")
-    page.sections.setCurrentWidget(page.update_section)
-    panel = page.update_panel
-    if panel.loader.lock.locked() or not panel.versions.count():
-        message = "正在读取最新版本，请稍后再次点击发布更新指令。"
-        panel.summary.setText(message)
-        page.signal_result.setText(message)
-        return
-    panel.versions.setCurrentIndex(0)
-    panel._select(True)
-    targets = panel._selected_targets()
-    if not targets:
-        message = "当前已登记电脑都不需要切换到最新版本。"
-        panel.summary.setText(message)
-        page.signal_result.setText(message)
-        return
-    page.signal_result.setText(
-        f"已选择 {len(targets)} 台待更新电脑，正在等待人工确认…"
-    )
-    if panel.start_all():
-        page.signal_update_button.setEnabled(False)
-        page.signal_result.setText(
-            f"已确认，正在向 {len(targets)} 台电脑发布最新版本更新指令…"
-        )
-    else:
-        page.signal_result.setText(panel.summary.text())

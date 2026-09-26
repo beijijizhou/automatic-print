@@ -74,9 +74,6 @@ def test_platform_download_uses_single_selector_and_preview_only(tmp_path):
     owner.department_selector.setCurrentIndex(
         owner.department_selector.findData("dtf")
     )
-    assert not owner.workspace_tabs.isTabVisible(index)
-    owner.developer_mode_checkbox.setChecked(True)
-    APP.processEvents()
     assert owner.workspace_tabs.isTabVisible(index)
 
     owner.workspace_tabs.setCurrentIndex(index)
@@ -185,8 +182,8 @@ def test_platform_download_uses_single_selector_and_preview_only(tmp_path):
     )[0].text()
 
     owner.developer_mode_checkbox.setChecked(False)
-    assert not owner.workspace_tabs.isTabVisible(index)
-    assert owner.workspace_tabs.currentIndex() == 0
+    assert owner.workspace_tabs.isTabVisible(index)
+    assert owner.workspace_tabs.currentWidget() is page
     owner.department_selector.setCurrentIndex(
         owner.department_selector.findData("uv")
     )

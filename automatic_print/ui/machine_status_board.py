@@ -24,6 +24,7 @@ from .machine_fleet_table import (
 from .machine_availability import MachineAvailabilityControl
 from .machine_status_layout import build_machine_status_layout
 from .fleet_update import FleetUpdatePanel
+from .fleet_update_action import fail_pending_latest_update, resume_pending_latest_update
 from .machine_signal_test import install_machine_signal_control
 from .machine_registration import MachineRegistrationPanel
 from .printer_history import PrinterHistoryPanel
@@ -118,6 +119,12 @@ class MachineStatusPage(QWidget):
         self.software_launch_panel.command_submitted.connect(self.refresh)
         self.update_panel = FleetUpdatePanel(self, auto_load=False)
         self.update_panel.set_compact(True)
+        self.update_panel.loader.completed.connect(
+            lambda _versions: resume_pending_latest_update(self)
+        )
+        self.update_panel.loader.failed.connect(
+            lambda error: fail_pending_latest_update(self, error)
+        )
         self.update_panel.versions.currentIndexChanged.connect(
             self._refresh_fleet_table
         )

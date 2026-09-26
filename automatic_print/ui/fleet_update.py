@@ -10,18 +10,18 @@ from .. import (
     __command_capabilities__, __command_protocol__, __release_date__,
     __release_iteration__, __release_notes__, __version__,
 )
-from ..updates.source import SourceVersion, source_install
+from ..updates.source import SourceVersion
 from .fleet_update_support import (
-    ACTIVE, FleetCapabilityVerifier, FleetUpdateSubmitter, FleetVersionLoader,
-    update_state, version_key,
+    FleetCapabilityVerifier, FleetUpdateSubmitter, FleetVersionLoader, update_state,
 )
+from .fleet_update_selection import FleetUpdateSelectionMixin
 from .fleet_update_view import release_notes_text, switch_confirmation_text, target_state
 from .machine_status_format import machine_display_name, machine_slots
 
 __all__ = ["FleetUpdatePanel", "update_state"]
 
 
-class FleetUpdatePanel(QGroupBox):
+class FleetUpdatePanel(FleetUpdateSelectionMixin, QGroupBox):
     commands_submitted = Signal()
 
     def __init__(self, parent=None, *, auto_load=True):
@@ -155,46 +155,6 @@ class FleetUpdatePanel(QGroupBox):
         self.summary.setText(f"目标 {target_version} · 已匹配 {matched}/11 · 已登记 {registered}/11")
         self._update_button()
         self.verifier.start_needed([item for item in self.slots if item], self.commands, target)
-
-    def _eligible(self, machine):
-        target = self.target()
-        return bool(target and target.revision and machine and machine.get("machine_id")
-                    and not machine.get("identity_conflict")
-                    and str(machine.get("app_version") or "") != target.version)
-
-    def _selection_changed(self, item):
-        if self.refreshing or item.column() != 0:
-            return
-        machine = self.slots[item.row()]
-        if self._eligible(machine):
-            self.selected[str(machine["machine_id"])] = item.checkState() == Qt.Checked
-        self._update_button()
-
-    def _select(self, checked):
-        for machine in self.slots:
-            if self._eligible(machine):
-                self.selected[str(machine["machine_id"])] = checked
-        self.set_data(self.machines, self.commands)
-
-    def _selected_targets(self):
-        return [machine for machine in self.slots if self._eligible(machine)
-                and self.selected.get(str(machine["machine_id"]), False)]
-
-    def _update_button(self):
-        targets, target = self._selected_targets(), self.target()
-        rollbacks = target and any(version_key(item.get("app_version")) > version_key(target.version)
-                                   for item in targets)
-        scope = "全部待切换软件" if self.compact else "已选电脑"
-        self.button.setText(f"{'回滚' if rollbacks else '切换'}{scope}（{len(targets)}）")
-        ready = targets and source_install() and target and target.revision
-        self.button.setEnabled(bool(ready) and not self.submitter.lock.locked() and
-                               not self.has_active_updates())
-
-    def has_active_updates(self):
-        return self.verifier.lock.locked() or any(
-            item.get("action") in {"source_update", "probe"}
-            and item.get("status") in ACTIVE for item in self.commands
-        )
 
     def start_all(self):
         target, targets = self.target(), self._selected_targets()
