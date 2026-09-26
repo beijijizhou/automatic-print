@@ -38,6 +38,8 @@ Deno.serve(async (request) => {
     const action = String(input?.action || "");
     if (action === "report") return json(await report(db, input));
     if (action === "list") return json(await list(db));
+    if (action === "get_registration") return json(await getRegistration(db, input));
+    if (action === "register_machine") return json(await registerMachine(db, input));
     if (action === "get") return json(await get(db, machineId(input.machine_id)));
     if (action === "set_availability") return json(await setAvailability(db, input));
     if (action === "enqueue_command") return json(await enqueueCommand(db, input));
@@ -59,6 +61,10 @@ Deno.serve(async (request) => {
 
 async function report(db: ReturnType<typeof createClient>, input: Record<string, unknown>) {
   const id = machineId(input.machine_id);
+  const { data: registration, error: registrationError } = await db
+    .from("machine_registry").select("machine_name").eq("machine_id", id).maybeSingle();
+  if (registrationError) throw registrationError;
+  if (!registration) throw new ClientError("机器尚未注册，请先在打印机状态页注册本机", 409);
   const state = text(input.state, "state", 20);
   if (!STATES.has(state)) throw new ClientError("Invalid state", 400);
   const department = text(input.department || "DTF", "department", 3).toUpperCase();
@@ -74,7 +80,7 @@ async function report(db: ReturnType<typeof createClient>, input: Record<string,
   const now = new Date();
   const row = {
     machine_id: id,
-    machine_name: text(input.machine_name, "machine_name", 100),
+    machine_name: registration.machine_name,
     department,
     state,
     phase: String(input.phase || "").slice(0, 160),
@@ -104,6 +110,41 @@ async function report(db: ReturnType<typeof createClient>, input: Record<string,
     .select().single();
   if (error) throw error;
   return { machine: decorate(data) };
+}
+
+async function getRegistration(db: ReturnType<typeof createClient>, input: Record<string, unknown>) {
+  const id = machineId(input.machine_id);
+  const { data: current, error: currentError } = await db.from("machine_registry")
+    .select("machine_name, machine_id, registered_at, updated_at")
+    .eq("machine_id", id).maybeSingle();
+  if (currentError) throw currentError;
+  const { data: registrations, error } = await db.from("machine_registry")
+    .select("machine_name, machine_id, registered_at, updated_at")
+    .order("machine_name", { ascending: true });
+  if (error) throw error;
+  return { registration: current, registrations: registrations || [] };
+}
+
+async function registerMachine(db: ReturnType<typeof createClient>, input: Record<string, unknown>) {
+  const id = machineId(input.machine_id);
+  const name = machineSlot(input.machine_name);
+  const replace = optionalBoolean(input.replace, false);
+  const { data: occupant, error: occupantError } = await db.from("machine_registry")
+    .select("machine_name, machine_id, updated_at").eq("machine_name", name).maybeSingle();
+  if (occupantError) throw occupantError;
+  if (occupant && occupant.machine_id !== id && !replace) {
+    throw new ClientError(`${name} 已由另一台电脑注册，需要人工确认换绑`, 409);
+  }
+  const { data, error } = await db.rpc("register_machine_slot", {
+    p_machine_id: id, p_machine_name: name, p_replace: replace,
+  });
+  if (error) {
+    if (String(error.message || "").includes("人工确认换绑")) {
+      throw new ClientError(error.message, 409);
+    }
+    throw error;
+  }
+  return data;
 }
 
 async function list(db: ReturnType<typeof createClient>) {
@@ -506,6 +547,11 @@ function machineId(value: unknown) {
     throw new ClientError("Invalid machine_id", 400);
   }
   return id;
+}
+function machineSlot(value: unknown) {
+  const name = String(value || "").trim().toUpperCase();
+  if (!/^M([1-9]|1[01])$/.test(name)) throw new ClientError("机器号必须是 M1-M11", 400);
+  return name;
 }
 function uuid(value: unknown, name: string) {
   const id = String(value || "").toLowerCase();

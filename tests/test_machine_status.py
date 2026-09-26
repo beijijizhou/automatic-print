@@ -49,6 +49,30 @@ def test_report_uses_stable_identity_and_restricted_header(monkeypatch):
     assert captured["timeout"] == 3
 
 
+def test_registration_uses_local_uuid_and_caches_server_result(monkeypatch):
+    captured = {}
+    cached = []
+    monkeypatch.setattr(client, "machine_id", lambda: "d9428888-122b-4c26-a127-3eafad1f5270")
+    monkeypatch.setattr(client, "bind_machine_slot", cached.append)
+    monkeypatch.setattr(
+        client, "_call",
+        lambda payload, **options: captured.update(payload) or {
+            "registration": {"machine_name": "M6", "machine_id": payload["machine_id"]},
+        },
+    )
+
+    result = client.register_machine("m6", replace=True)
+
+    assert captured == {
+        "action": "register_machine",
+        "machine_id": "d9428888-122b-4c26-a127-3eafad1f5270",
+        "machine_name": "M6",
+        "replace": True,
+    }
+    assert result["registration"]["machine_name"] == "M6"
+    assert cached == ["M6"]
+
+
 def test_reporter_sends_without_blocking_caller():
     delivered = Event()
     snapshots = []
@@ -95,6 +119,10 @@ def test_backend_contract_keeps_unknown_eta_nullable():
         __import__("pathlib").Path(__file__).parents[1]
         / "supabase/migrations/202609240002_machine_preflight_probe.sql"
     ).read_text(encoding="utf-8")
+    registry_migration = (
+        __import__("pathlib").Path(__file__).parents[1]
+        / "supabase/migrations/202609260001_machine_registry.sql"
+    ).read_text(encoding="utf-8")
 
     assert "remaining_seconds integer" in migration
     assert "progress_percent smallint" in migration
@@ -121,6 +149,14 @@ def test_backend_contract_keeps_unknown_eta_nullable():
     assert '.delete()' in function
     assert "requested_by_machine_id.eq" in function
     assert "action in ('start_print', 'pause_print', 'clean_resume', 'probe')" in probe_migration
+    assert "create table if not exists public.machine_registry" in registry_migration
+    assert "machine_id uuid not null unique" in registry_migration
+    assert "pg_advisory_xact_lock" in registry_migration
+    assert "register_machine_slot" in registry_migration
+    assert 'action === "get_registration"' in function
+    assert 'action === "register_machine"' in function
+    assert '.from("machine_registry").select("machine_name")' in function
+    assert "机器尚未注册" in function
 
 
 def test_submit_command_sends_target_batches_and_settings(monkeypatch):

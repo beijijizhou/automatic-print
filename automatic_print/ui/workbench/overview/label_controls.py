@@ -2,7 +2,6 @@
 
 from PySide6.QtWidgets import QCheckBox, QComboBox, QDoubleSpinBox, QLineEdit, QPushButton
 
-from ....automation.api.machine_status.identity import bind_machine_slot
 from ....layout_engine.labeling.base.labels import compact_label_text
 from ...quick_fields import quick_fields
 
@@ -151,9 +150,9 @@ def _cutter_marker_toggle(window):
 
 
 def _persist_machine_selection(window, value):
+    """Save label output only; machine identity is registered on the status page."""
     window.preferences.setValue("layout/machine_number", value)
     window.preferences.sync()
-    bind_machine_slot(value)
 
 
 def _mirror_combo(source):
