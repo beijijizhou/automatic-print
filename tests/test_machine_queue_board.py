@@ -19,7 +19,8 @@ def test_status_board_aligns_active_and_next_task_with_machine():
         "heartbeat_age_seconds": 2,
     }
     page.apply_dashboard({"machines": [machine], "commands": [
-        _command("running", "609180000010", 18, "2026-09-23T01:00:00Z"),
+        _command("running", "609180000010", 18, "2026-09-23T01:00:00Z",
+                 phase="正在下载生产图 · 37%"),
         _command("queued", "609180000011", 30, "2026-09-23T02:00:00Z"),
     ]})
 
@@ -27,14 +28,17 @@ def test_status_board_aligns_active_and_next_task_with_machine():
     assert page.table.item(7, 3).text() == "current-40件.prn"
     assert "609180000010" in page.table.item(7, 7).text()
     assert "18件" in page.table.item(7, 7).text()
+    assert page.table.item(7, 7).text().startswith("正在下载生产图 · 37%")
+    assert page.table.item(7, 7).toolTip() == page.table.item(7, 7).text()
     assert "609180000011" in page.table.item(7, 8).text()
     assert "30件" in page.table.item(7, 8).text()
+    assert page.update_timer.isActive()
 
 
-def _command(status, batch, pieces, created_at):
+def _command(status, batch, pieces, created_at, phase=""):
     return {
         "target_machine_id": "m8-id", "action": "download_layout",
-        "status": status, "created_at": created_at,
+        "status": status, "created_at": created_at, "phase": phase,
         "payload": {
             "platform": "隆丰", "batch_numbers": [batch],
             "batch_details": [{

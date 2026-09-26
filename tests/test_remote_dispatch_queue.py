@@ -40,7 +40,8 @@ def test_machine_workload_aligns_current_active_and_next_queue():
     }
     commands = [
         _command("queued", "609180000003", 20, "2026-09-23T02:00:00Z"),
-        _command("running", "609180000002", 18, "2026-09-23T01:00:00Z"),
+        _command("running", "609180000002", 18, "2026-09-23T01:00:00Z",
+                 phase="正在生成最终排版 PNG", progress=42),
     ]
 
     view = machine_workload(machine, commands)
@@ -48,6 +49,7 @@ def test_machine_workload_aligns_current_active_and_next_queue():
     assert view["machine"] == "M8"
     assert "609180000001-48件.prn · 48件 · 35% · 剩余10分钟" == view["current_print"]
     assert "609180000002" in view["active_task"] and "18件" in view["active_task"]
+    assert view["active_task"].startswith("正在生成最终排版 PNG · 42%")
     assert "609180000003" in view["next_task"] and "20件" in view["next_task"]
     assert "接下来" in compact_machine_text(machine, commands)
 
@@ -82,10 +84,11 @@ def test_machine_picker_marks_the_local_target():
     assert dialog.target.currentText().startswith("M11（本机）")
 
 
-def _command(status, batch, pieces, created_at):
+def _command(status, batch, pieces, created_at, phase="", progress=None):
     return {
         "target_machine_id": "m8-id", "action": "download_layout",
         "status": status, "created_at": created_at,
+        "phase": phase, "progress_percent": progress,
         "payload": {
             "platform": "S2B", "batch_numbers": [batch],
             "batch_details": [{

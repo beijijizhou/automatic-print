@@ -46,7 +46,7 @@ def machine_workload(machine, commands):
         key=lambda item: str(item.get("created_at") or ""),
     )
     current_print = _current_print_text(machine)
-    active_text = _command_text(active[0]) if active else "无"
+    active_text = _active_command_text(active[0]) if active else "无"
     next_text = _command_text(queued[0]) if queued else "无"
     return {
         "machine": machine_display_name(machine),
@@ -103,6 +103,14 @@ def _command_text(command):
     if len(batches) > 2:
         batch_text += f"等{len(batches)}批"
     return f"{platform} · {batch_text or '批次未知'} · {counts}"
+
+
+def _active_command_text(command):
+    """Put the live production step first so narrow machine tables show it."""
+    phase = str(command.get("phase") or "已领取，正在启动后台任务").strip()
+    progress = command.get("progress_percent")
+    progress_text = f" · {int(progress)}%" if progress is not None else ""
+    return f"{phase}{progress_text} · {_command_text(command)}"
 
 
 def _counts_text(details, fallback_batches):
