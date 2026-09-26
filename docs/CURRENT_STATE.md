@@ -138,7 +138,7 @@
   混色订单不参与单色区域边界比较，避免错误清空已经成立的多数并排区。
   主界面开发者功能的“测试与诊断”菜单提供默认关闭、每次任务启动后自动复位的“整单归侧双排”唯一勾选项，可用于各生产平台的双列固定刀位排版；隆丰共刀页不再重复显示开关，启动共刀任务时直接读取主界面状态。未勾选时原排版策略不变。勾选后由`layout_engine/planning/columns/order_lane_trial.py`分配完整订单，`layout_engine/planning/columns/order_side/zone.py`同步左右排版行，并把宽度不符、右侧刀码缺左侧同行基准或颜色分区后移的完整订单交给旋转区；`cutting/validation/order_side_validation.py`分别复核左右订单、双面、颜色、尺码与两区域边界，最终文件仍须通过实际像素刀位检查。共刀下载流程按刀位和区域分别归档常规／旋转；订单身份不可靠时新策略不猜测，安全回退的完整结果只归旋转待人工核查。
 - 主界面默认开启的并排等比缩小、可勾选尺码（默认S–XL）及可编辑310毫米原宽上限由 `layout_engine/planning/zones/pair_width.py` 唯一计算；通过单图尺寸覆盖交给既有
-  测量、刀位、预览和渲染链路，不生成或修改源图片副本。
+  测量、刀位、预览和渲染链路，不生成或修改源图片副本。旋转候选由同一模块移除这类虚拟缩小后再测量，最终进入旋转区的图片不报告并排缩小；人工旋转图片从一开始就不应用该尺寸覆盖。
 - 旋转与超宽恢复：`layout_engine/planning/rotation/rotation_compare.py`、`layout_engine/planning/rotation/whole_rotation.py`、`layout_engine/planning/rotation/tail_rotation.py`、
   `layout_engine/planning/rotation/single_rotation.py`、`layout_engine/planning/zones/width_fit.py`、`layout_engine/planning/zones/gap_fallback.py`。
   单件批次以完整尺码后缀比较多排区与旋转区分界；已有末尾旋转区时，可把交界前的完整尺码组整体并入旋转区，但同尺码绝不跨区。旋转区的竖图保持横向旋转，超出当前动态安全宽度时再等比缩小；整批旋转被个别超宽图阻断时，

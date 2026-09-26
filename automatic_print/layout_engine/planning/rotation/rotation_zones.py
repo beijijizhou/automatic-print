@@ -24,6 +24,8 @@ def _normal(paths, settings, prepared=None, preserve_sequence=False):
 
 def rotation_items(paths, settings, progress=None, prepared=None):
     from automatic_print.layout_engine.cutting.geometry.cut_guide_geometry import detect_guide_band
+    from automatic_print.layout_engine.planning.zones.pair_width import without_pair_width_scaling
+    settings = without_pair_width_scaling(settings)
     original_paths = paths
     sequence = settings.sequence_numbers or tuple((resolved_name(p), i)
                                                 for i, p in enumerate(paths, 1))
