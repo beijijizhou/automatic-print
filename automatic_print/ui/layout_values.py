@@ -74,7 +74,9 @@ def settings_from_window(window) -> LayoutSettings:
         cutter_left_marker_lift_mm=window.cutter_settings.left_marker_lift.value(),
         cutter_knife_change_gap_mm=(window.cutter_settings.knife_change_gap.value()
                                     if cutting else 0),
-        allow_rotation=window.allow_rotation.isChecked() and not window.cutter_settings.quick_mode.isChecked(),
+        # Cutter quick mode only skips cutter-specific rotation searches. Free
+        # layout evaluates normal, mixed and whole-batch rotation in one solve.
+        allow_rotation=(not cutting and window.allow_rotation.isChecked()),
         rotation_direction=window.rotation_direction.currentData(),
         number_images=window.number_images.isChecked(),
         number_gap_mm=label.gap.value(),

@@ -10,7 +10,7 @@ class CutterSettingsPanel(QWidget):
     def __init__(self, preferences, width, rotation, direction, parent=None, block=None):
         super().__init__(parent)
         self.preferences = preferences
-        self.quick_mode = QCheckBox('上线快速模式（不做全批旋转搜索，读取与排版一次完成）')
+        self.quick_mode = QCheckBox('切膜快速模式（不做切膜全批旋转搜索，读取与排版一次完成）')
         self.quick_mode.setChecked(preferences.value('cutter/quick_mode', True, bool))
         self.block = block
         self.width_control, self.rotation, self.direction = width, rotation, direction
@@ -159,10 +159,8 @@ class CutterSettingsPanel(QWidget):
         if self.quick_mode.isChecked():
             self.rotation_zone.setChecked(False)
         self.knife.setEnabled(mode == "dual" and not self.auto_knife.isChecked())
-        self.rotation.setEnabled(mode == "free" and not self.quick_mode.isChecked())
-        self.direction.setEnabled(mode == "free" and not self.quick_mode.isChecked())
-        if mode != "free" or self.quick_mode.isChecked():
-            self.rotation.setChecked(False)
+        self.rotation.setEnabled(mode == "free")
+        self.direction.setEnabled(mode == "free")
         if self.block is not None:
             for control in (self.block.enabled, self.block.position, self.block.offset_y):
                 control.setEnabled(False)

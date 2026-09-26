@@ -25,6 +25,16 @@ def test_quick_default_overrides_old_rotation_and_persists(tmp_path):
     assert not window._layout_settings().cutter_rotation_zone
     assert not window._layout_settings().allow_rotation
     assert window._layout_settings().cutter_auto_knife
+    free = window.cutter_settings.mode.findData('free')
+    window.cutter_settings.mode.setCurrentIndex(free)
+    window.allow_rotation.setChecked(True)
+    assert window.allow_rotation.isEnabled()
+    assert window.rotation_direction.isEnabled()
+    assert window._layout_settings().allow_rotation
+    dual = window.cutter_settings.mode.findData('dual')
+    window.cutter_settings.mode.setCurrentIndex(dual)
+    assert window.allow_rotation.isChecked()
+    assert not window._layout_settings().allow_rotation
     window.cutter_settings.quick_mode.setChecked(False)
     window.cutter_settings.rotation_zone.setChecked(True)
     assert window._layout_settings().cutter_rotation_zone
