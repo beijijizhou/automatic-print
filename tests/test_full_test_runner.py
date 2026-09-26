@@ -1,7 +1,8 @@
 from pathlib import Path
+from time import perf_counter
 
 from automatic_print.ui.full_test_runner import full_test_phases
-from automatic_print.ui.full_test_results import phase_summary, real_batch_file_summary
+from automatic_print.ui.full_test_results import latest_test_name, phase_summary, real_batch_file_summary
 from test_developer_mode import APP, window
 
 
@@ -14,7 +15,9 @@ def test_full_test_phases_cover_suite_and_real_batches_without_prn(tmp_path):
         "完整自动测试", "真实批次跨平台回归",
     ]
     assert phases[0]["program"] == "python-test"
-    assert phases[0]["arguments"][:3] == ("-m", "pytest", "-q")
+    assert phases[0]["arguments"][:3] == ("-m", "pytest", "-vv")
+    assert "--tb=short" in phases[0]["arguments"]
+    assert "--durations=20" in phases[0]["arguments"]
     real = " ".join(phases[1]["arguments"])
     assert "run-real-batch-suite.ps1" in real
     assert "PRN" not in real.upper()
@@ -36,6 +39,20 @@ def test_full_test_button_and_result_live_in_developer_menu(tmp_path):
     owner.close()
 
 
+def test_full_test_status_names_the_latest_completed_item(tmp_path):
+    owner = window(tmp_path / "status.ini")
+    controller = owner.full_test_controller
+    controller.phase_index = 0
+    controller.current_name = "完整自动测试"
+    controller.current_detail = "tests/test_output.py::test_png_integrity · 通过"
+    controller.started_at = perf_counter()
+    controller._tick()
+    assert "最近项目：tests/test_output.py::test_png_integrity · 通过" in (
+        controller.dialog.status.text()
+    )
+    owner.close()
+
+
 def test_full_test_summary_shows_automated_and_real_counts():
     assert phase_summary("automated", "1216 passed, 2 skipped") == "自动 1216项"
     assert phase_summary("automated", "7 failed, 1216 passed, 1 error") == (
@@ -43,6 +60,16 @@ def test_full_test_summary_shows_automated_and_real_counts():
     )
     assert phase_summary("real_batches", '{"total": 11, "passed": 11}') == (
         "真实批次 11/11"
+    )
+
+
+def test_verbose_pytest_item_is_readable_in_live_status():
+    output = (
+        "tests/test_layout.py::test_small_batch PASSED [ 10%]\n"
+        "tests/test_output.py::test_png_integrity FAILED [ 20%]\n"
+    )
+    assert latest_test_name(output) == (
+        "tests/test_output.py::test_png_integrity · 失败"
     )
 
 

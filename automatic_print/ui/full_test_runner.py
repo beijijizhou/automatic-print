@@ -6,9 +6,10 @@ from pathlib import Path
 from time import perf_counter
 
 from PySide6.QtCore import QObject, QProcess, QProcessEnvironment, QTimer
-from PySide6.QtWidgets import QDialog, QLabel, QPlainTextEdit, QPushButton, QVBoxLayout
+from PySide6.QtWidgets import QLabel, QPushButton
 
-from .full_test_results import phase_summary, real_batch_file_summary
+from .full_test_dialog import FullTestLogDialog
+from .full_test_results import latest_test_name, phase_summary, real_batch_file_summary
 
 
 def full_test_phases(project_root=None, python_executable=None, result_root=None):
@@ -22,7 +23,10 @@ def full_test_phases(project_root=None, python_executable=None, result_root=None
         {
             "key": "automated", "name": "完整自动测试",
             "program": python,
-            "arguments": ("-m", "pytest", "-q", "-p", "no:cacheprovider"),
+            "arguments": (
+                "-m", "pytest", "-vv", "--tb=short", "-ra", "--durations=20",
+                "-p", "no:cacheprovider",
+            ),
         },
         {
             "key": "real_batches", "name": "真实批次跨平台回归",
@@ -37,32 +41,6 @@ def full_test_phases(project_root=None, python_executable=None, result_root=None
             ),
         },
     )
-
-
-class FullTestLogDialog(QDialog):
-    def __init__(self, parent=None):
-        super().__init__(parent)
-        self.setWindowTitle("开发者 · 完整测试结果")
-        self.resize(880, 560)
-        note = QLabel("依次运行完整自动测试和本机真实生产样本回归。真实回归覆盖 Haloo、隆丰、"
-                      "莆田和 S2B，只生成测试 PNG 与核验报告，不生成、装载或发送 PRN。")
-        note.setWordWrap(True)
-        self.status = QLabel("尚未运行")
-        self.status.setWordWrap(True)
-        self.log = QPlainTextEdit()
-        self.log.setReadOnly(True)
-        layout = QVBoxLayout(self)
-        layout.addWidget(note)
-        layout.addWidget(self.status)
-        layout.addWidget(self.log, 1)
-
-    def closeEvent(self, event):
-        controller = getattr(self.parent(), "full_test_controller", None)
-        if controller and controller.is_running():
-            self.hide()
-            event.ignore()
-            return
-        super().closeEvent(event)
 
 
 class FullTestController(QObject):
@@ -80,6 +58,7 @@ class FullTestController(QObject):
         self.phase_output = ""
         self.started_at = None
         self.current_name = ""
+        self.current_detail = ""
         self.clock = QTimer(self)
         self.clock.setInterval(500)
         self.clock.timeout.connect(self._tick)
@@ -115,6 +94,7 @@ class FullTestController(QObject):
             return
         phase = self.phases[self.phase_index]
         self.current_name = phase["name"]
+        self.current_detail = ""
         self.phase_output = ""
         self.result.setText(f"完整测试：{self.current_name}…")
         self.dialog.status.setText(
@@ -126,6 +106,7 @@ class FullTestController(QObject):
         process.setProcessChannelMode(QProcess.MergedChannels)
         environment = QProcessEnvironment.systemEnvironment()
         environment.insert("PYTHON_EXE", sys.executable)
+        environment.insert("PYTHONUNBUFFERED", "1")
         process.setProcessEnvironment(environment)
         process.readyReadStandardOutput.connect(self._read_output)
         process.finished.connect(self._phase_finished)
@@ -142,6 +123,9 @@ class FullTestController(QObject):
             self.phase_output += text
             self.dialog.log.insertPlainText(text)
             self.dialog.log.ensureCursorVisible()
+            current = latest_test_name(self.phase_output)
+            if current:
+                self.current_detail = current
 
     def _phase_finished(self, exit_code, _status):
         self._read_output()
@@ -164,9 +148,10 @@ class FullTestController(QObject):
     def _tick(self):
         if self.started_at is not None:
             elapsed = perf_counter() - self.started_at
+            detail = f"\n最近项目：{self.current_detail}" if self.current_detail else ""
             self.dialog.status.setText(
                 f"第 {self.phase_index + 1} / {len(self.phases)} 步："
-                f"{self.current_name} · {elapsed:.0f} 秒"
+                f"{self.current_name} · {elapsed:.0f} 秒{detail}"
             )
 
     def _complete(self):
