@@ -146,6 +146,7 @@
 - 标签与刀码：`layout_engine/labeling/base/labels.py`、`layout_engine/labeling/base/dynamic_label.py`、`layout_engine/labeling/text/templates.py`、`layout_engine/labeling/markers/marker_stack.py`、`layout_engine/labeling/markers/validation/stack.py`、`layout_engine/labeling/markers/left_marker.py`、
   `layout_engine/labeling/platform/platform_label.py`、`layout_engine/labeling/base/header_region.py`、`layout_engine/labeling/platform/transparent_search.py`。生产标签的机器号、批次正倒序、平台名及原图订单尺码共用同一模板和占位；膜标签／二维码卡片内部不新增文字。未旋转时按膜标签侧别搜索朝图片内部的透明空白（左卡右放、右卡左放），文字始终留在原图宽度内且不增加排版占位。旋转90度时不论透明带选项或回退状态，`layout_engine/labeling/platform/short_edge_space.py`均只搜索卡片短边上方或下方的整块透明位，位置仍在原图占位内；不足时不得改放刀码旁。新增文字没有经过最终像素验证的安全空位时，仅跳过该图对应文字、保留刀码和原图、记录可复制异常并继续，不阻断整批；渲染器只绘制最终坐标仍有有效尺寸的文字。最终刀位或原图坐标越界等不可恢复安全冲突不得猜值绕过，文字不能进入膜标签与图案之间，也不能扩出原图宽度。
 - 开发者排版隔离：换刀与批次结束600毫米停止距离只有开发者模式显式传入正数时才进入规划、候选比较和独立开发者缓存版本；普通模式不调用该逻辑，使用算法缓存版本10，缓存键也不包含开发者紧凑排版与停止距离字段。
+- `ui/label_position_designer.py`提供无刀码、刀码未旋转和刀码旋转90度三种可视化位置设置；未旋转切膜标签可选膜标签高度带内靠上、居中或靠下，旋转标签可选短边安全区靠左、居中或靠右。选择保存到排版参数，真实图片仍按透明像素安全检查并在同一区域内降级。
 - 标签字体加载与线程内有界缓存由`layout_engine/labeling/text/fonts.py`唯一拥有；生产标签优先采用有真实汉字字形的字体，避免把平台名绘成方框。`layout_engine/labeling/base/labels.py`只负责标签内容、
   换行和徽标渲染。单图排版对象`LayoutItem`与`Placement`统一归`layout_engine/domain/models.py`。
 - 渲染与编码：`layout_engine/rendering/engines/pillow_renderer.py`、`layout_engine/rendering/engines/vips_renderer.py`、`layout_engine/rendering/png/`、

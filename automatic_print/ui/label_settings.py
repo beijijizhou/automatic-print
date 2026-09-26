@@ -7,6 +7,7 @@ from PySide6.QtWidgets import (
     QFormLayout,
     QLabel,
     QLineEdit,
+    QPushButton,
     QVBoxLayout,
     QWidget,
 )
@@ -79,6 +80,14 @@ class LabelSettingsDialog(QDialog):
             ("右下角（图片外）", "bottom_right"),
         ):
             self.position.addItem(text, value)
+        self.cutter_vertical = QComboBox()
+        for text, value in (("靠上", "top"), ("居中", "center"), ("靠下", "bottom")):
+            self.cutter_vertical.addItem(text, value)
+        self.cutter_rotated = QComboBox()
+        for text, value in (("靠左", "left"), ("居中", "center"), ("靠右", "right")):
+            self.cutter_rotated.addItem(text, value)
+        self.position_designer_button = QPushButton("打开标签文字位置设计器…")
+        self.position_designer_button.clicked.connect(self._open_position_designer)
         self.font_size = double_spinbox(7.5 * 25.4 / 72, 0.5, 50)
         self.detect_region = QCheckBox("识别原图膜标签，文字区域与其等高并限制宽度")
         self.detect_region.setChecked(True)
@@ -106,6 +115,7 @@ class LabelSettingsDialog(QDialog):
             ("标签文字", self.text_template),
             ("", help_label),
             ("标签位置", self.position),
+            ("位置设计", self.position_designer_button),
             ("文字大小（毫米）", self.font_size),
             ("高度适配", self.fit_height),
             ("动态识别", self.detect_region),
@@ -145,12 +155,16 @@ class LabelSettingsDialog(QDialog):
             'machine_enabled': True,
             'platform_name': self.platform.currentText() if self.platform_enabled.isChecked() else '',
             'platform_font_height_mm': self.platform_font_height.value(),
+            'cutter_vertical_align': self.cutter_vertical.currentData(),
+            'cutter_rotated_align': self.cutter_rotated.currentData(),
         }
     def _connect_preview(self) -> None:
         self.enabled.toggled.connect(self.preview.update)
         self.follow_qr.toggled.connect(self.preview.update)
         self.text_template.textChanged.connect(self.preview.update)
         self.position.currentIndexChanged.connect(self.preview.update)
+        self.cutter_vertical.currentIndexChanged.connect(self.preview.update)
+        self.cutter_rotated.currentIndexChanged.connect(self.preview.update)
         self.machine.currentIndexChanged.connect(self.preview.update)
         self.sequence.toggled.connect(self.preview.update)
         self.source_order.toggled.connect(self.preview.update)
@@ -168,6 +182,8 @@ class LabelSettingsDialog(QDialog):
             self.fit_height.toggled, self.reference_height.valueChanged,
             self.enabled.toggled, self.follow_qr.toggled,
             self.text_template.textChanged, self.position.currentIndexChanged,
+            self.cutter_vertical.currentIndexChanged,
+            self.cutter_rotated.currentIndexChanged,
             self.date_format.textChanged,
             self.machine.currentIndexChanged,
         ] + [box.valueChanged for box in (
@@ -189,3 +205,12 @@ class LabelSettingsDialog(QDialog):
         self.follow_qr.setEnabled(not below)
         if below:
             self.follow_qr.setChecked(False)
+
+    def _open_position_designer(self):
+        from .label_position_designer import LabelPositionDesigner
+        if not hasattr(self, 'position_designer'):
+            self.position_designer = LabelPositionDesigner(
+                self.position, self.cutter_vertical, self.cutter_rotated, self)
+        self.position_designer.show()
+        self.position_designer.raise_()
+        self.position_designer.activateWindow()

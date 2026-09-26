@@ -90,6 +90,10 @@ def _load_label(window) -> None:
     label.text_template.setText(re.sub(r"_{2,}", "", template))
     _restore_combo(label.position, window.preferences.value(
         "label/position", "block_below", str))
+    _restore_combo(label.cutter_vertical, window.preferences.value(
+        "label/cutter_vertical_align", "top", str))
+    _restore_combo(label.cutter_rotated, window.preferences.value(
+        "label/cutter_rotated_align", "left", str))
     label._sync_position()
     for widget, key, default in (
         (label.font_size, "label/font_size_mm", 7.5 * 25.4 / 72),
