@@ -6,16 +6,7 @@ import time
 import uuid
 
 from .elevation import launch_elevated
-
-
-def available_prn_path(folder, stem=None):
-    root = Path(folder).resolve()
-    candidate = root / f"{stem or root.name}.prn"
-    index = 2
-    while candidate.exists():
-        candidate = root / f"{stem or root.name}-{index}.prn"
-        index += 1
-    return candidate
+from .naming import available_prn_path, prn_stem
 
 
 def generated_pngs(folder, result):
@@ -142,7 +133,9 @@ def generate_batch_prns(processed, progress, stop_requested=lambda: False):
             try:
                 folder = output_root / relative
                 files = generated_pngs(folder, {'files': names})
-                output = available_prn_path(folder, batch)
+                output = available_prn_path(
+                    folder, prn_stem(processed, batch, result, names)
+                )
                 progress(f"[{index}/{len(batches)}] {batch} · 第{segment}/{len(groups)}组：正在交给RIIN生成PRN")
                 automation = generate_prn(
                     files, output,
