@@ -110,14 +110,11 @@ def sync_dtf_tool_visibility(window):
     for control in (
         window.automation_home.settings_button,
         window.dtf_accounts_button,
-        window.developer_features_button,
         window.developer_mode_checkbox,
     ):
         control.setEnabled(dtf_controls)
-        control.setVisible(dtf_controls)
-    window.automation_home.batch_tools.setVisible(developer)
-    window.full_test_button.setVisible(developer)
-    window.full_test_result.setVisible(developer)
+    window.developer_mode_checkbox.setVisible(dtf_controls)
+    window.developer_tools_panel.setVisible(developer)
 
 
 def _placeholder(department):

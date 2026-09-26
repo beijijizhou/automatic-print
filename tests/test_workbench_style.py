@@ -33,15 +33,21 @@ def test_workbench_action_hierarchy_and_icons(tmp_path):
     window.check_for_updates = lambda silent: update_calls.append(silent)
     window.check_update_button.click()
     assert update_calls == [False]
-    menu_y = window.automation_home.settings_button.mapTo(
-        window, window.automation_home.settings_button.rect().topLeft()).y()
     production_y = window.global_cutter_mode.mapTo(
         window, window.global_cutter_mode.rect().topLeft()).y()
-    assert menu_y < production_y
+    assert not window.developer_tools_panel.isVisible()
     assert window.version_label.mapTo(
         window, window.version_label.rect().topLeft()).y() < production_y
     assert window.check_update_button.mapTo(
         window, window.check_update_button.rect().topLeft()).y() < production_y
+    window.developer_mode_checkbox.setChecked(True)
+    APP.processEvents()
+    assert window.developer_tools_panel.isVisible()
+    production_y = window.global_cutter_mode.mapTo(
+        window, window.global_cutter_mode.rect().topLeft()).y()
+    assert window.automation_home.settings_button.mapTo(
+        window, window.automation_home.settings_button.rect().topLeft()
+    ).y() < production_y
     assert not window.settings_dialog.isVisible()
     assert window.grab().save(str(tmp_path/'automatic-print-ui.png'))
     window.close()

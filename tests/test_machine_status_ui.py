@@ -59,6 +59,10 @@ def test_board_keeps_eleven_slots_and_renders_live_machine():
     assert page.sections.currentWidget() is page.status_section
     assert page.sections.indexOf(page.update_section) == 2
     assert page.sections.tabText(2) == "版本管理"
+    assert page.update_section.isAncestorOf(page.signal_button)
+    assert page.update_section.isAncestorOf(page.signal_update_button)
+    assert page.update_section.isAncestorOf(page.signal_result)
+    assert not page.status_section.isAncestorOf(page.signal_update_button)
     assert page.sections.indexOf(page.history_section) == 3
     assert page.sections.tabText(3) == "打印历史"
     assert page.table.minimumHeight() == 420

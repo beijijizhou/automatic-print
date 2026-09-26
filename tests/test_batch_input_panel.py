@@ -38,6 +38,8 @@ def test_department_navigation_defaults_to_independent_uv_workspace(tmp_path):
     assert owner.department_key == 'dtf'
     assert owner.department_workspace.currentWidget() is owner.automation_home
     assert owner.automation_home.settings_button.isEnabled()
+    assert not owner.automation_home.settings_button.isVisible()
+    owner.developer_mode_checkbox.setChecked(True)
     assert owner.automation_home.settings_button.isVisible()
     assert owner.preferences.value('department/current') == 'dtf'
 

@@ -133,9 +133,6 @@ def build_batch_tools(panel):
     navigation.setObjectName('pinnedWorkbenchNavigation')
     row = QHBoxLayout(navigation)
     row.setContentsMargins(0, 0, 0, 2)
-    row.addStretch()
-    panel.developer_tools_label = QLabel('开发者功能：')
-    row.addWidget(panel.developer_tools_label)
     for button in (panel.history_button, panel.test_tools_button):
         row.addWidget(button)
     navigation.setStyleSheet(

@@ -1,6 +1,8 @@
 """Readable two-surface layout for fleet state and low-frequency controls."""
 
-from PySide6.QtWidgets import QTabWidget, QVBoxLayout, QWidget
+from PySide6.QtWidgets import (
+    QGroupBox, QHBoxLayout, QTabWidget, QVBoxLayout, QWidget,
+)
 
 
 def build_machine_status_layout(page, title, description, overview):
@@ -24,6 +26,14 @@ def build_machine_status_layout(page, title, description, overview):
     update_page = QWidget()
     update_layout = QVBoxLayout(update_page)
     update_layout.setContentsMargins(0, 8, 0, 0)
+    signal_group = QGroupBox("全机版本与信号检测")
+    signal_layout = QVBoxLayout(signal_group)
+    signal_header = QHBoxLayout()
+    signal_header.addWidget(page.signal_result, 1)
+    signal_header.addWidget(page.signal_button)
+    signal_header.addWidget(page.signal_update_button)
+    signal_layout.addLayout(signal_header)
+    update_layout.addWidget(signal_group)
     update_layout.addWidget(page.update_panel)
     update_layout.addStretch()
 
