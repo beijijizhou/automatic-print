@@ -30,6 +30,7 @@ from .machine_availability import MachineAvailabilityControl
 from .machine_status_layout import build_machine_status_layout
 from .fleet_update import FleetUpdatePanel
 from .machine_signal_test import install_machine_signal_control
+from .machine_registration import MachineRegistrationPanel
 from .printer_history import PrinterHistoryPanel
 from .software_launch import SoftwareLaunchPanel
 
@@ -138,12 +139,32 @@ class MachineStatusPage(QWidget):
         self.update_panel = FleetUpdatePanel(self)
         self.update_panel.commands_submitted.connect(self._track_updates)
         self.history_panel = PrinterHistoryPanel(self)
+        self.registration_panel = MachineRegistrationPanel(self)
+        self.registration_panel.registered.connect(self._apply_registered_machine)
 
         build_machine_status_layout(self, title, description, overview)
+
+    def _apply_registered_machine(self, name):
+        window = self.window()
+        for combo in (
+            getattr(getattr(window, "label_settings", None), "machine", None),
+            getattr(getattr(getattr(window, "automation_home", None),
+                            "label_quick_panel", None), "machine", None),
+        ):
+            if combo is not None:
+                index = combo.findData(name)
+                if index >= 0:
+                    combo.setCurrentIndex(index)
+        preferences = getattr(window, "preferences", None)
+        if preferences is not None:
+            preferences.setValue("layout/machine_number", name)
+            preferences.sync()
+        self.refresh()
 
     def set_active(self, active):
         self._active = bool(active)
         if self._active:
+            self.registration_panel.refresh()
             self.refresh()
 
     def refresh(self):

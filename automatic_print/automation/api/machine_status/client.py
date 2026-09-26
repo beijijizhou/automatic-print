@@ -9,7 +9,7 @@ from automatic_print import __version__
 from automatic_print.automation.api.gateway_credentials import shared_client_key
 from automatic_print.automation.api.supabase_public import PUBLIC_ANON_JWT
 
-from .identity import machine_id, machine_name
+from .identity import bind_machine_slot, machine_id, machine_name
 
 
 DEFAULT_ENDPOINT = (
@@ -29,13 +29,40 @@ def report_machine(status, *, endpoint=None, access_key=None, timeout=8):
         "machine_name": machine_name(),
         "app_version": __version__,
     }
-    return _call(payload, endpoint=endpoint, access_key=access_key, timeout=timeout)
+    result = _call(payload, endpoint=endpoint, access_key=access_key, timeout=timeout)
+    authoritative_name = (result.get("machine") or {}).get("machine_name")
+    if authoritative_name:
+        bind_machine_slot(authoritative_name)
+    return result
 
 
 def list_machines(*, endpoint=None, access_key=None, timeout=8):
     return _call(
         {"action": "list"}, endpoint=endpoint, access_key=access_key, timeout=timeout
     )["machines"]
+
+
+def get_machine_registration(*, endpoint=None, access_key=None, timeout=8):
+    return _call(
+        {"action": "get_registration", "machine_id": machine_id()},
+        endpoint=endpoint, access_key=access_key, timeout=timeout,
+    )
+
+
+def register_machine(machine_name, *, replace=False, endpoint=None, access_key=None, timeout=8):
+    result = _call(
+        {
+            "action": "register_machine",
+            "machine_id": machine_id(),
+            "machine_name": str(machine_name).strip().upper(),
+            "replace": bool(replace),
+        },
+        endpoint=endpoint, access_key=access_key, timeout=timeout,
+    )
+    registration = result.get("registration") or {}
+    if registration.get("machine_name"):
+        bind_machine_slot(registration["machine_name"])
+    return result
 
 
 def set_machine_availability(machine, availability, *, endpoint=None, access_key=None, timeout=8):

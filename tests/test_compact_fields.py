@@ -54,9 +54,9 @@ def test_one_row_highlight_and_default_comparison_migration(tmp_path):
     fresh.close()
 
 
-def test_machine_identity_only_changes_after_explicit_combo_activation(tmp_path, monkeypatch):
-    saved = []
-    monkeypatch.setattr(label_controls, "bind_machine_slot", saved.append)
+def test_label_machine_selection_does_not_change_registered_identity(tmp_path, monkeypatch):
+    monkeypatch.setenv("LOCALAPPDATA", str(tmp_path / "profile"))
+    identity.bind_machine_slot("M11")
     prefs = QSettings(str(tmp_path / "machine.ini"), QSettings.IniFormat)
     prefs.setValue("layout/machine_number", "M11")
     window = MainWindow(prefs)
@@ -64,12 +64,10 @@ def test_machine_identity_only_changes_after_explicit_combo_activation(tmp_path,
     window.startup_update_timer.stop()
     panel = window.automation_home.label_quick_panel
 
-    assert saved == []
     index = panel.machine.findData("M2")
     panel.machine.setCurrentIndex(index)
-    assert saved == []
     panel.machine.activated.emit(index)
-    assert saved == ["M2"]
+    assert identity.machine_name() == "M11"
     window.close()
 
 

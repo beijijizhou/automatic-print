@@ -8,6 +8,7 @@ def build_machine_status_layout(page, title, description, overview):
     status_page = QWidget()
     status_layout = QVBoxLayout(status_page)
     status_layout.setContentsMargins(0, 8, 0, 0)
+    status_layout.addWidget(page.registration_panel)
     status_layout.addWidget(overview)
     status_layout.addWidget(page.table, 1)
 
