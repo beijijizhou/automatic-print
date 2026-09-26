@@ -30,6 +30,19 @@ def _last_number(text, pattern):
     return int(values[-1]) if values else None
 
 
+def latest_test_name(output):
+    """Return the newest verbose pytest node and result for live UI status."""
+    matches = re.findall(
+        r"(?m)^([^\r\n]+?::[^\s\r\n]+)\s+(PASSED|FAILED|SKIPPED|ERROR)(?:\s|$)",
+        str(output or ""),
+    )
+    if not matches:
+        return ""
+    node, state = matches[-1]
+    labels = {"PASSED": "通过", "FAILED": "失败", "SKIPPED": "跳过", "ERROR": "错误"}
+    return f"{node} · {labels[state]}"
+
+
 def real_batch_file_summary(path, fallback="结果见日志"):
     try:
         data = json.loads(Path(path).read_text(encoding="utf-8-sig"))

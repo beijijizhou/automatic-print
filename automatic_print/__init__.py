@@ -2,15 +2,16 @@
 
 from .updates.versioning import release_display
 
-__version__ = "0.1.428"
+__version__ = "0.1.429"
 __release_date__ = "2026-09-26"
-__release_iteration__ = 15
+__release_iteration__ = 16
 __command_protocol__ = 1
 __command_capabilities__ = (
     "probe", "printer_history", "source_update", "launch_app",
     "download_layout", "start_print", "pause_print", "clean_resume",
 )
 __release_notes__ = (
+    "完整测试逐项显示测试文件、名称、通过或失败状态及慢测试摘要，不再只输出圆点。",
     "无刀码排版不再执行刀位、刀码和换刀停止距离检查，超宽图片使用全幅旋转恢复。",
     "主界面只常显版本、检查更新和开发者模式，其余工具集中到唯一开发者功能区。",
     "全机信号检测与发布最新版本更新指令统一移入打印机状态的版本管理页。",

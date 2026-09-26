@@ -26,7 +26,8 @@ def test_windows_quality_gate_runs_targeted_checks_only():
     assert 'windows-latest' in workflow
     assert 'Run targeted merge checks' in workflow
     assert 'tests/test_shared_knife_workflow.py' in workflow
-    assert 'run: python -m pytest -q\n' not in workflow
+    assert 'python -m pytest -vv --tb=short -ra --durations=20' in workflow
+    assert 'python -m pytest -q' not in workflow
 
 
 def test_local_acceptance_is_pinned_and_keeps_batch_failures_independent():

@@ -17,7 +17,7 @@ RIIN 或其他 RIP 软件的 PNG。
 在 PowerShell 运行：
 
 ```powershell
-powershell -ExecutionPolicy Bypass -Command "irm 'https://raw.githubusercontent.com/beijijizhou/automatic-print/main/windows/bootstrap-test-computer.ps1?v=0.1.428' | iex"
+powershell -ExecutionPolicy Bypass -Command "irm 'https://raw.githubusercontent.com/beijijizhou/automatic-print/main/windows/bootstrap-test-computer.ps1?v=0.1.429' | iex"
 ```
 
 该入口用于指定测试电脑拉取已经通过本次相关检查并推送到 `main` 的源码。正式生产电脑使用 GitHub
@@ -88,7 +88,7 @@ RIIN要求管理员权限时，在已登录的Windows桌面运行以下命令，
 本地推送前运行本次调用链的针对性测试；如用户明确要求完整测试，再运行：
 
 ```bash
-.venv/bin/python -m pytest -q
+.venv/bin/python -m pytest -vv --tb=short -ra --durations=20
 ```
 
 已运行的针对性测试失败时禁止推送。准备正式 Windows Release 时，还需要更新版本、
