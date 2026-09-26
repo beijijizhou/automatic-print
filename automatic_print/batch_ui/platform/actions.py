@@ -7,6 +7,7 @@ from PySide6.QtWidgets import (
 )
 
 from ...automation.browser.batches import BatchRecord
+from ...automation.batches.naming import selected_batch_metadata
 from .cache import load_batch_cache, save_batch_cache
 from ..task.worker import AutomationWorker
 
@@ -150,16 +151,13 @@ class BatchActionsMixin:
         self.preferences.setValue(
             "automation/output_location", self.output.text().strip()
         )
-        batch_types = {
-            record.batch_number: record.batch_type
-            for record in self.records
-            if record.batch_number in selected
-        }
+        batch_types, batch_labels = selected_batch_metadata(self.records, selected)
         shared_mode = auto_print in ('shared_knife', 'shared_knife_order_side')
         options = {
             "output": Path(self.output.text().strip()),
             "batch_numbers": selected,
             "batch_types": batch_types,
+            "batch_labels": batch_labels,
             "auto_print": auto_print,
         }
         if auto_print or not self.download_only:
@@ -187,6 +185,7 @@ class BatchActionsMixin:
                 self, "请选择多个批次", "合并排版请至少选择两个批次。"
             )
             return
+        batch_types, batch_labels = selected_batch_metadata(self.records, selected)
         self._start_worker(
             AutomationWorker(
                 "process",
@@ -195,10 +194,8 @@ class BatchActionsMixin:
                 batch_numbers=selected,
                 settings=self._current_layout_settings(),
                 sample_limit=5 if self.test_mode.isChecked() else None,
-                batch_types={
-                    record.batch_number: record.batch_type
-                    for record in self.records
-                },
+                batch_types=batch_types,
+                batch_labels=batch_labels,
                 merge_batches=self.merge_batches.isChecked(),
                 preview_only=self.download_preview_only.isChecked(),
             )

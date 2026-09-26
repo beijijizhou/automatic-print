@@ -15,6 +15,24 @@ SOURCE_PREFIX = re.compile(
 )
 
 
+def selected_batch_metadata(records, batch_numbers):
+    """Return production type and user label for the selected batch numbers."""
+    selected = set(map(str, batch_numbers))
+    types, labels = {}, {}
+    for record in records:
+        number = str(_record_value(record, "batch_number"))
+        if number not in selected:
+            continue
+        types[number] = str(_record_value(record, "batch_type") or "")
+        if label := str(_record_value(record, "batch_label") or "").strip():
+            labels[number] = label
+    return types, labels
+
+
+def _record_value(record, key):
+    return record.get(key) if isinstance(record, dict) else getattr(record, key, "")
+
+
 def save_batch_type(folder: Path, batch_type: str) -> None:
     if batch_type not in {"单项单件", *MULTI_PIECE_TYPES}:
         return

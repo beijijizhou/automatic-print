@@ -60,7 +60,7 @@ def test_automated_print_action_uses_selected_batches_and_current_settings(
     workbench.table.setCellWidget(0, 0, selected)
     workbench.table.setItem(0, 1, QTableWidgetItem("609180613013"))
     workbench.records = [SimpleNamespace(
-        batch_number="609180613013", batch_type="单件单件"
+        batch_number="609180613013", batch_type="单件单件", batch_label="秋季白色 S-XL"
     )]
     workers = []
     monkeypatch.setattr(workbench, "_start_worker", workers.append)
@@ -71,6 +71,7 @@ def test_automated_print_action_uses_selected_batches_and_current_settings(
     assert worker.action == "download"
     assert worker.platform_name == "Haloo"
     assert worker.batch_numbers == ["609180613013"]
+    assert worker.batch_labels == {"609180613013": "秋季白色 S-XL"}
     assert worker.auto_print is True
     assert worker.settings.platform_name == "Haloo"
     assert worker.preview_only is False
@@ -161,12 +162,13 @@ def test_s2b_prefixed_archive_root_uses_real_batch_for_layout(
 
     result = processing.process_local_batches(
         tmp_path, "S2B", ["3CF7S82YMH9F"], {}, object(), None, False,
-        lambda _message: None,
+        lambda _message: None, batch_labels={"3CF7S82YMH9F": "白色 S-XL"},
     )
 
     assert result["batches"] == [
         ("3CF7S82YMH9F", {"filename": "final.png"})
     ]
+    assert result["batch_labels"] == {"3CF7S82YMH9F": "白色 S-XL"}
     assert calls[0][1:] == (
         tmp_path / "S2B" / "PROCESSED" / "3CF7S82YMH9F",
         "3CF7S82YMH9F",
@@ -306,11 +308,12 @@ def test_prn_name_uses_platform_batch_and_each_split_group_piece_count(tmp_path,
         "platform": "S2B", "output_folder": str(output),
         "batches": [("22UJ9KT4VCZA", result)],
         "batch_routes": {"22UJ9KT4VCZA": route},
+        "batch_labels": {"22UJ9KT4VCZA": "秋季白色 S-XL"},
     }, lambda _message: None)
 
     assert not errors and not skipped and len(completed) == 2
     assert [path.name for path in sent] == [
-        "S2B_22UJ9KT4VCZA_1件.prn", "S2B_22UJ9KT4VCZA_2件.prn",
+        "S2B_秋季白色 S-XL_1件.prn", "S2B_秋季白色 S-XL_2件.prn",
     ]
 
 

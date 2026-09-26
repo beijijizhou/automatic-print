@@ -20,12 +20,14 @@ APP = QApplication.instance() or QApplication([])
 def test_selected_batches_keep_platform_piece_counts():
     records = [
         SimpleNamespace(batch_number="100000000001", item_count=12, piece_count=30),
-        SimpleNamespace(batch_number="100000000002", item_count=8, piece_count=16),
+        SimpleNamespace(batch_number="100000000002", item_count=8, piece_count=16,
+                        batch_label="白色 S-XL"),
     ]
     details = selected_batch_details(records, ["100000000002"])
 
     assert details == [{
         "batch_number": "100000000002", "item_count": 8, "piece_count": 16,
+        "batch_label": "白色 S-XL",
     }]
     assert selection_text(details, ["100000000002"]) == "1批 · 8项目 · 16件"
 

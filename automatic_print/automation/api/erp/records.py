@@ -14,6 +14,7 @@ class BatchRecord:
     batch_type: str
     created_at: str
     production_images_ready: bool
+    batch_label: str = ""
 
     @property
     def generated_at(self) -> str:

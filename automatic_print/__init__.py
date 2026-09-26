@@ -2,9 +2,9 @@
 
 from .updates.versioning import release_display
 
-__version__ = "0.1.423"
+__version__ = "0.1.424"
 __release_date__ = "2026-09-26"
-__release_iteration__ = 10
+__release_iteration__ = 11
 __command_protocol__ = 1
 __command_capabilities__ = (
     "probe", "printer_history", "source_update", "launch_app",
@@ -26,5 +26,6 @@ __release_notes__ = (
     "打印机状态页新增 Realtime 全机信号测试，绕过 UDP 验证跨网络通信和实际版本。",
     "新增标签文字位置设计器，并让刀码未旋转与旋转标签使用用户选择的安全对齐。",
     "自动化生成的PRN文件名增加平台、批次号和该文件实际件数。",
+    "S2B自动化PRN优先使用人工批次标注，未标注时才使用平台批次号。",
 )
 __version_display__ = release_display(__version__, __release_date__, __release_iteration__)

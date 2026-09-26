@@ -138,6 +138,7 @@ def test_remote_command_runs_download_layout_and_prn_in_order(tmp_path, monkeypa
     batch = "609180613013"
     record = SimpleNamespace(
         batch_number=batch, production_images_ready=True, batch_type="S2B生产批次",
+        batch_label="白色 S-XL",
     )
     preferences = SimpleNamespace(value=lambda key, default, value_type: (
         str(tmp_path) if key == "automation/output_location" else default
@@ -159,10 +160,12 @@ def test_remote_command_runs_download_layout_and_prn_in_order(tmp_path, monkeypa
         "batches": [(batch, {"filename": "final.png"})],
         "output_folder": str(tmp_path / "S2B" / "PROCESSED"),
     }
-    monkeypatch.setattr(
-        runner, "process_local_batches",
-        lambda *_args, **_kwargs: events.append("layout") or processed,
-    )
+    layout_options = {}
+    def process(*_args, **kwargs):
+        layout_options.update(kwargs)
+        events.append("layout")
+        return processed
+    monkeypatch.setattr(runner, "process_local_batches", process)
     monkeypatch.setattr(
         "automatic_print.automation.api.riin.jobs.generate_batch_prns",
         lambda *_args: events.append("prn") or ([{"batch": batch, "output": "job.prn"}], [], []),
@@ -179,6 +182,7 @@ def test_remote_command_runs_download_layout_and_prn_in_order(tmp_path, monkeypa
     )
 
     assert events == ["records", "download", "types", "layout", "prn"]
+    assert layout_options["batch_labels"] == {batch: "白色 S-XL"}
     assert result["prn_files"] == ["job.prn"]
     assert result["physical_print_started"] is False
 

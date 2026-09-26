@@ -43,6 +43,7 @@ class AutomationWorker(QObject):
         range_start: str = "",
         range_end: str = "",
         batch_types: dict[str, str] | None = None,
+        batch_labels: dict[str, str] | None = None,
         merge_batches: bool = False,
         preview_only: bool = False,
         auto_print: bool = False,
@@ -61,6 +62,7 @@ class AutomationWorker(QObject):
         self.range_start = range_start
         self.range_end = range_end
         self.batch_types = batch_types or {}
+        self.batch_labels = batch_labels or {}
         self.merge_batches = merge_batches
         self.preview_only = preview_only
         self.auto_print = auto_print
@@ -251,6 +253,7 @@ class AutomationWorker(QObject):
             preview_only=self.preview_only,
             shared_knife=self.auto_print in ('shared_knife', 'shared_knife_order_side'),
             order_side=self.auto_print == 'shared_knife_order_side',
+            batch_labels=self.batch_labels,
         )
 
     def _save_batch_types(self) -> None:

@@ -37,7 +37,7 @@ def parse_production_rows(payload: dict) -> list[S2BProductionBatch]:
             batch_number=batch_number,
             item_count=item_count,
             piece_count=piece_count,
-            name=str(row.get("name") or "S2B生产批次"),
+            name=str(row.get("name") or "").strip(),
             created_at=str(row.get("created_at") or row.get("created_date") or ""),
             personnel_label=str(row.get("personnel_label") or "").strip(),
         ))
