@@ -191,11 +191,29 @@ def install_machine_signal_control(page, tester=None):
 
 
 def _start_latest_update(page):
+    page.signal_result.setText("正在准备最新版本更新指令…")
     page.sections.setCurrentWidget(page.update_section)
     panel = page.update_panel
     if panel.loader.lock.locked() or not panel.versions.count():
-        panel.summary.setText("正在读取最新版本，请稍后再次点击发布更新指令。")
+        message = "正在读取最新版本，请稍后再次点击发布更新指令。"
+        panel.summary.setText(message)
+        page.signal_result.setText(message)
         return
     panel.versions.setCurrentIndex(0)
     panel._select(True)
-    panel.start_all()
+    targets = panel._selected_targets()
+    if not targets:
+        message = "当前已登记电脑都不需要切换到最新版本。"
+        panel.summary.setText(message)
+        page.signal_result.setText(message)
+        return
+    page.signal_result.setText(
+        f"已选择 {len(targets)} 台待更新电脑，正在等待人工确认…"
+    )
+    if panel.start_all():
+        page.signal_update_button.setEnabled(False)
+        page.signal_result.setText(
+            f"已确认，正在向 {len(targets)} 台电脑发布最新版本更新指令…"
+        )
+    else:
+        page.signal_result.setText(panel.summary.text())

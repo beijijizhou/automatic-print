@@ -24,8 +24,9 @@ __all__ = ["FleetUpdatePanel", "update_state"]
 class FleetUpdatePanel(QGroupBox):
     commands_submitted = Signal()
 
-    def __init__(self, parent=None):
+    def __init__(self, parent=None, *, auto_load=True):
         super().__init__("11 台电脑版本管理", parent)
+        self.compact = False
         self.machines, self.commands, self.slots, self.selected = [], [], [], {}
         self.refreshing = False
         self.submitter = FleetUpdateSubmitter(self)
@@ -76,7 +77,18 @@ class FleetUpdatePanel(QGroupBox):
         layout.addLayout(header)
         layout.addWidget(self.table)
         self.set_data([], [])
-        QTimer.singleShot(0, self.load_versions)
+        if auto_load:
+            QTimer.singleShot(0, self.load_versions)
+
+    def set_compact(self, compact=True):
+        """Use the shared machine table instead of rendering a second 11-row table."""
+        self.compact = bool(compact)
+        self.setTitle("AutomaticPrint 软件版本（开发者模式）" if compact
+                      else "11 台电脑版本管理")
+        self.table.setVisible(not compact)
+        self.select_all_button.setVisible(not compact)
+        self.clear_button.setVisible(not compact)
+        self._update_button()
 
     def target(self):
         return self.versions.currentData()
@@ -172,7 +184,8 @@ class FleetUpdatePanel(QGroupBox):
         targets, target = self._selected_targets(), self.target()
         rollbacks = target and any(version_key(item.get("app_version")) > version_key(target.version)
                                    for item in targets)
-        self.button.setText(f"{'回滚' if rollbacks else '切换'}已选电脑（{len(targets)}）")
+        scope = "全部待切换软件" if self.compact else "已选电脑"
+        self.button.setText(f"{'回滚' if rollbacks else '切换'}{scope}（{len(targets)}）")
         ready = targets and source_install() and target and target.revision
         self.button.setEnabled(bool(ready) and not self.submitter.lock.locked() and
                                not self.has_active_updates())
@@ -187,16 +200,20 @@ class FleetUpdatePanel(QGroupBox):
         target, targets = self.target(), self._selected_targets()
         if not target or not target.revision:
             self.summary.setText("请先刷新并选择 origin/main 中的目标版本。")
-            return
+            return False
         if not targets:
-            self.summary.setText("请先勾选需要切换版本的电脑。")
-            return
+            self.summary.setText("当前没有需要切换到该版本的电脑。")
+            return False
         text = switch_confirmation_text(target, targets)
         if QMessageBox.question(self, "确认切换版本", text) != QMessageBox.Yes:
-            return
+            self.summary.setText("已取消发布更新指令，没有修改任何电脑。")
+            return False
         if self.submitter.start(targets, target.revision, target.version):
             self.button.setEnabled(False)
             self.summary.setText(f"正在向 {len(targets)} 台电脑下发版本切换指令…")
+            return True
+        self.summary.setText("更新指令正在下发，请等待本次操作完成。")
+        return False
 
     def _completed(self, result):
         sent, failures = result["sent"], result["failures"]

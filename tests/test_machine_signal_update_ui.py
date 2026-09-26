@@ -15,7 +15,8 @@ def test_signal_area_can_publish_latest_update_for_all_pending_machines():
     selected = []
     page.update_panel._select = selected.append
     started = []
-    page.update_panel.start_all = lambda: started.append(True)
+    page.update_panel._selected_targets = lambda: [{"machine_name": "M2"}]
+    page.update_panel.start_all = lambda: started.append(True) or True
 
     page.signal_update_button.click()
 
@@ -23,3 +24,28 @@ def test_signal_area_can_publish_latest_update_for_all_pending_machines():
     assert page.sections.currentWidget() is page.update_section
     assert selected == [True]
     assert started == [True]
+    assert not page.signal_update_button.isEnabled()
+    assert "正在向 1 台电脑发布" in page.signal_result.text()
+
+
+def test_signal_area_reports_when_every_machine_is_current():
+    page = MachineStatusPage(fetch=lambda: [])
+    page.update_panel._select = lambda _checked: None
+    page.update_panel._selected_targets = lambda: []
+
+    page.signal_update_button.click()
+
+    assert page.signal_update_button.isEnabled()
+    assert page.signal_result.text() == "当前已登记电脑都不需要切换到最新版本。"
+    assert page.update_panel.summary.text() == page.signal_result.text()
+
+
+def test_completed_update_feedback_returns_to_signal_area():
+    page = MachineStatusPage(fetch=lambda: [])
+    page.update_panel.summary.setText("已下发 3 台 · 失败 0 台；正在等待目标机回执。")
+    page.signal_update_button.setEnabled(False)
+
+    page.update_panel.commands_submitted.emit()
+
+    assert page.signal_update_button.isEnabled()
+    assert page.signal_result.text() == page.update_panel.summary.text()

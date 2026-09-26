@@ -48,23 +48,22 @@ def test_board_keeps_eleven_slots_and_renders_live_machine():
     assert page.table.rowCount() == 11
     assert page.summary.text() == "已接入 1 / 11 · 可用 1 · 打印中 1"
     assert page.table.item(0, 0).text() == "M1"
-    assert page.table.item(0, 2).text() == "待接入"
+    assert page.table.item(0, 1).text() == "待接入"
     assert page.table.item(3, 0).text() == "M4"
-    assert page.table.item(3, 2).text() == "打印中"
-    assert page.table.item(3, 3).text() == "BATCH-88.prn"
-    assert page.table.item(3, 5).text() == "1小时2分钟"
-    assert page.table.item(3, 6).text() == "7秒前"
-    assert isinstance(page.table.cellWidget(3, 4), QProgressBar)
-    assert page.table.cellWidget(3, 4).value() == 42
+    assert page.table.item(3, 1).text() == "打印中"
+    assert page.table.item(3, 2).text() == "BATCH-88.prn"
+    assert page.table.item(3, 4).text() == "1小时2分钟"
+    assert page.table.item(3, 5).text() == "7秒前"
+    assert page.table.item(3, 6).text() == "在线"
+    assert isinstance(page.table.cellWidget(3, 3), QProgressBar)
+    assert page.table.cellWidget(3, 3).value() == 42
     assert page.sections.currentWidget() is page.status_section
-    assert page.sections.indexOf(page.update_section) == 2
-    assert page.sections.tabText(2) == "版本管理"
-    assert page.update_section.isAncestorOf(page.signal_button)
-    assert page.update_section.isAncestorOf(page.signal_update_button)
-    assert page.update_section.isAncestorOf(page.signal_result)
-    assert not page.status_section.isAncestorOf(page.signal_update_button)
-    assert page.sections.indexOf(page.history_section) == 3
-    assert page.sections.tabText(3) == "打印历史"
+    assert page.update_section is page.status_section
+    assert page.status_section.isAncestorOf(page.signal_button)
+    assert page.status_section.isAncestorOf(page.signal_update_button)
+    assert page.status_section.isAncestorOf(page.signal_result)
+    assert page.sections.indexOf(page.history_section) == 2
+    assert page.sections.tabText(2) == "打印历史"
     assert page.table.minimumHeight() == 420
     assert page.command_panel.submit_button.isEnabled()
     assert not page.control_panel.start_button.isEnabled()
@@ -96,8 +95,8 @@ def test_board_distinguishes_no_feedback_and_printerexp_offline():
         ], "commands": []}
     )
 
-    assert page.table.item(0, 2).text() == "无反馈，不可用"
-    assert page.table.item(1, 2).text() == "PrintExp 离线"
+    assert page.table.item(0, 1).text() == "无反馈，不可用"
+    assert page.table.item(1, 1).text() == "PrintExp 离线"
     assert page.command_panel.table.rowCount() == 0
     assert page.software_launch_panel.target.count() == 2
     assert page.software_launch_panel.button.isEnabled()
@@ -127,9 +126,9 @@ def test_board_ignores_legacy_names_and_blocks_duplicate_machine_number():
         "已接入 1 / 11 · 可用 0 · 打印中 0 · 机器号冲突 1"
     )
     assert page.table.item(0, 0).text() == "M1"
-    assert page.table.item(0, 2).text() == "待接入"
+    assert page.table.item(0, 1).text() == "待接入"
     assert page.table.item(3, 0).text() == "M4"
-    assert page.table.item(3, 2).text() == "机器号冲突"
+    assert page.table.item(3, 1).text() == "机器号冲突"
     assert not page.control_panel.pause_button.isEnabled()
     assert not page.control_panel.start_button.isEnabled()
     assert not page.command_panel.submit_button.isEnabled()
@@ -147,7 +146,7 @@ def test_board_only_enables_start_for_exact_ready_batch():
         "heartbeat_age_seconds": 1,
     }], "commands": []})
 
-    assert page.table.item(3, 2).text() == "待打印"
+    assert page.table.item(3, 1).text() == "待打印"
     assert page.control_panel.start_button.isEnabled()
     assert not page.control_panel.pause_button.isEnabled()
     assert not page.control_panel.clean_button.isEnabled()
@@ -176,7 +175,7 @@ def test_board_blocks_start_when_loaded_task_name_is_unverified():
         "heartbeat_age_seconds": 1,
     }], "commands": []})
 
-    assert page.table.item(3, 2).text() == "待打印（待复核）"
+    assert page.table.item(3, 1).text() == "待打印（待复核）"
     assert not page.control_panel.start_button.isEnabled()
 
 
@@ -203,8 +202,8 @@ def test_board_exposes_shared_manual_availability_setting():
         "availability_override": "unavailable", "feedback_age_seconds": 99,
     }], "commands": []})
 
-    assert page.table.item(3, 2).text() == "无反馈，不可用"
-    assert page.table.horizontalHeaderItem(6).text() == "最后反馈"
+    assert page.table.item(3, 1).text() == "无反馈，不可用"
+    assert page.table.horizontalHeaderItem(5).text() == "机器｜状态时间"
     assert page.availability_control.target.currentText() == "M4"
     assert page.availability_control.availability.currentData() == "unavailable"
 
@@ -252,3 +251,22 @@ def test_board_exposes_one_click_machine_signal_test():
     })
     assert page.signal_button.isEnabled()
     assert "已响应 1 / 1" in page.signal_result.text()
+
+
+def test_automatic_print_columns_and_controls_are_developer_only():
+    page = MachineStatusPage(fetch=lambda: [])
+    page.update_panel.loader.start = lambda: False
+
+    assert all(page.table.isColumnHidden(column) for column in (6, 7, 8))
+    assert not page.update_panel.isVisibleTo(page)
+    assert not page.signal_update_button.isVisibleTo(page)
+    assert not page.software_launch_panel.isVisibleTo(page)
+
+    page.set_developer_mode(True)
+
+    assert all(not page.table.isColumnHidden(column) for column in (6, 7, 8))
+    assert not page.update_panel.isHidden()
+    assert not page.signal_update_button.isHidden()
+    assert not page.software_launch_panel.isHidden()
+    assert page.table.horizontalHeaderItem(1).text() == "机器｜PrintExp"
+    assert page.table.horizontalHeaderItem(6).text() == "软件｜AutomaticPrint"

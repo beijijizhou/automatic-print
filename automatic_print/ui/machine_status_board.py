@@ -4,27 +4,22 @@ from threading import Lock, Thread
 
 from PySide6.QtCore import QObject, QTimer, Qt, Signal
 from PySide6.QtWidgets import (
-    QAbstractItemView,
     QGroupBox,
     QHBoxLayout,
-    QHeaderView,
     QLabel,
-    QProgressBar,
     QPushButton,
-    QTableWidget,
-    QTableWidgetItem,
     QVBoxLayout,
     QWidget,
 )
 
 from ..automation.api.machine_status import list_commands, list_machines
 from ..automation.api.machine_status.identity import machine_id
-from ..batch_ui.platform.remote.queue import machine_workload
 from .machine_command_ui import RemoteCommandPanel
 from .printer_control_ui import PrinterControlPanel
-from .machine_status_format import (
-    feedback_text, machine_display_name, machine_slots, mark_local_machine,
-    remaining_text, status_text,
+from .machine_status_format import machine_slots, mark_local_machine
+from .machine_fleet_table import (
+    create_machine_fleet_table, populate_machine_fleet_table,
+    set_software_columns_visible,
 )
 from .machine_availability import MachineAvailabilityControl
 from .machine_status_layout import build_machine_status_layout
@@ -87,10 +82,12 @@ class MachineStatusPage(QWidget):
         self.update_timer = QTimer(self)
         self.update_timer.setInterval(5_000)
         self.update_timer.timeout.connect(self.refresh)
-        title = QLabel("PrintExp 打印机状态")
+        title = QLabel("机器与软件管理")
         title.setProperty("heading", True)
-        description = QLabel("显示最近一次机器回执；发送任务前会现场查询指定机器的"
-                             "PrintExp 状态，不发送周期心跳。")
+        description = QLabel(
+            "每行左侧显示 PrintExp 机器事实；开发者模式下，右侧同时显示 "
+            "AutomaticPrint 软件、版本和远程任务状态。"
+        )
         description.setWordWrap(True)
         self.summary = QLabel("已接入 0 / 11 · 在线 0 · 打印中 0")
         self.summary.setStyleSheet("font-size:16px;font-weight:700;color:#0f172a;")
@@ -103,29 +100,13 @@ class MachineStatusPage(QWidget):
         header.addWidget(self.summary)
         header.addStretch()
         header.addWidget(self.refresh_button)
-        overview = QGroupBox("11 台打印机总览")
+        overview = QGroupBox("11 台机器总览")
         overview_layout = QVBoxLayout(overview)
         overview_layout.addLayout(header)
         overview_layout.addWidget(self.message)
         self.signal_control = install_machine_signal_control(self, signal_tester)
 
-        self.table = QTableWidget(EXPECTED_MACHINES, 9)
-        self.table.setHorizontalHeaderLabels(
-            (
-                "打印机", "部门", "状态", "当前批次", "进度", "剩余时间",
-                "最后反馈", "后台处理步骤", "下一任务",
-            )
-        )
-        self.table.setEditTriggers(QAbstractItemView.NoEditTriggers)
-        self.table.setSelectionBehavior(QAbstractItemView.SelectRows)
-        self.table.verticalHeader().setVisible(False)
-        self.table.verticalHeader().setDefaultSectionSize(38)
-        self.table.setMinimumHeight(420)
-        header_view = self.table.horizontalHeader()
-        header_view.setSectionResizeMode(QHeaderView.ResizeToContents)
-        header_view.setSectionResizeMode(3, QHeaderView.Stretch)
-        header_view.setSectionResizeMode(7, QHeaderView.Stretch)
-        header_view.setSectionResizeMode(8, QHeaderView.Stretch)
+        self.table = create_machine_fleet_table(self, rows=EXPECTED_MACHINES)
         self.apply_machines([])
         self.command_panel = RemoteCommandPanel(parent or self.window(), self)
         self.command_panel.command_submitted.connect(self.refresh)
@@ -135,13 +116,21 @@ class MachineStatusPage(QWidget):
         self.availability_control.changed.connect(self.refresh)
         self.software_launch_panel = SoftwareLaunchPanel(self)
         self.software_launch_panel.command_submitted.connect(self.refresh)
-        self.update_panel = FleetUpdatePanel(self)
+        self.update_panel = FleetUpdatePanel(self, auto_load=False)
+        self.update_panel.set_compact(True)
+        self.update_panel.versions.currentIndexChanged.connect(
+            self._refresh_fleet_table
+        )
         self.update_panel.commands_submitted.connect(self._track_updates)
+        self.update_panel.commands_submitted.connect(self._show_update_feedback)
         self.history_panel = PrinterHistoryPanel(self)
         self.registration_panel = MachineRegistrationPanel(self)
         self.registration_panel.registered.connect(self._apply_registered_machine)
 
         build_machine_status_layout(self, title, description, overview)
+        self.set_developer_mode(
+            bool(getattr(self.window(), "developer_mode_enabled", False))
+        )
 
     def _apply_registered_machine(self, name):
         window = self.window()
@@ -177,12 +166,12 @@ class MachineStatusPage(QWidget):
         machines = dashboard.get("machines") or []
         commands = dashboard.get("commands") or []
         self.signal_control.set_machines(machines)
+        self.update_panel.set_data(machines, commands)
         self.apply_machines(machines, commands)
         self.control_panel.set_data(machines)
         self.command_panel.set_data(machines, commands)
         self.availability_control.set_data(machines)
         self.software_launch_panel.set_data(machines)
-        self.update_panel.set_data(machines, commands)
         self.history_panel.set_data(machines)
         has_active_commands = any(
             command.get("status") in {"claimed", "running"}
@@ -197,11 +186,28 @@ class MachineStatusPage(QWidget):
         self.update_timer.start()
         self.refresh()
 
+    def _show_update_feedback(self):
+        self.signal_update_button.setEnabled(True)
+        self.signal_result.setText(self.update_panel.summary.text())
+
+    def set_developer_mode(self, enabled):
+        enabled = bool(enabled)
+        set_software_columns_visible(self.table, enabled)
+        self.signal_group.setVisible(enabled)
+        self.signal_button.setVisible(enabled)
+        self.signal_update_button.setVisible(enabled)
+        self.signal_result.setVisible(enabled)
+        self.update_panel.setVisible(enabled)
+        self.software_launch_panel.setVisible(enabled)
+        target = self.update_panel.target()
+        if enabled and not str(getattr(target, "revision", "") or ""):
+            self.update_panel.load_versions()
+
     def apply_machines(self, machines, commands=None):
         machines = [item for item in machines if isinstance(item, dict)]
         commands = [item for item in (commands or []) if isinstance(item, dict)]
+        self._machines, self._commands = machines, commands
         slots = machine_slots(machines, EXPECTED_MACHINES)
-        self.table.setRowCount(EXPECTED_MACHINES)
         connected = [item for item in slots if item is not None]
         conflicts = sum(bool(item.get("identity_conflict")) for item in connected)
         online = sum(bool(item.get("available", item.get("online")))
@@ -216,63 +222,35 @@ class MachineStatusPage(QWidget):
             f" · 打印中 {running}{conflict_text}"
         )
         self.message.setText(
-            "仅显示排版设置中的 M1–M11；同号电脑会标记冲突并禁止远程控制。"
+            "左侧为 PrintExp 机器状态；AutomaticPrint 软件信息仅在开发者模式显示。"
         )
         self.refresh_button.setEnabled(True)
-        for row, machine in enumerate(slots):
-            if machine is not None:
-                self._fill_machine(row, machine, commands)
-            else:
-                self._fill_pending(row)
+        populate_machine_fleet_table(
+            self.table, machines, commands,
+            target=(self.update_panel.target()
+                    if hasattr(self, "update_panel") else None),
+            rows=EXPECTED_MACHINES,
+        )
+
+    def _refresh_fleet_table(self, _index=None):
+        if hasattr(self, "_machines"):
+            populate_machine_fleet_table(
+                self.table, self._machines, self._commands,
+                target=self.update_panel.target(), rows=EXPECTED_MACHINES,
+            )
 
     def show_error(self, message):
         self.refresh_button.setEnabled(True)
         self.message.setText(f"读取失败：{message}；已保留上一次显示结果，可手动重试。")
 
-    def _fill_machine(self, row, machine, commands):
-        workload = machine_workload(machine, commands)
-        values = (
-            machine_display_name(machine),
-            machine.get("department") or "—",
-            status_text(machine),
-            machine.get("batch_name") or machine.get("batch_id") or "—",
-            "",
-            remaining_text(machine.get("remaining_seconds"), machine.get("state")),
-            feedback_text(machine.get("feedback_age_seconds", machine.get("heartbeat_age_seconds"))),
-            workload["active_task"],
-            workload["next_task"],
-        )
-        for column, value in enumerate(values):
-            item = QTableWidgetItem(str(value))
-            if column == 7:
-                item.setToolTip(str(value))
-            self.table.setItem(row, column, item)
-        progress = QProgressBar()
-        value = machine.get("progress_percent")
-        if value is None:
-            progress.setRange(0, 0)
-            progress.setFormat("未知")
-        else:
-            progress.setRange(0, 100)
-            progress.setValue(max(0, min(100, int(value))))
-            progress.setFormat("%p%")
-        self.table.setCellWidget(row, 4, progress)
-
-    def _fill_pending(self, row):
-        values = (
-            f"M{row + 1}", "—", "待接入", "—", "", "—", "—", "—", "—",
-        )
-        for column, value in enumerate(values):
-            self.table.setItem(row, column, QTableWidgetItem(value))
-        self.table.removeCellWidget(row, 4)
-
-
 def install_machine_status_tab(window, tabs):
     page = MachineStatusPage(window)
-    index = tabs.addTab(page, "打印机状态")
-    tabs.setTabToolTip(index, "查看 11 台 PrintExp 打印机的在线、批次、进度与剩余时间。")
+    index = tabs.addTab(page, "机器与软件")
+    tabs.setTabToolTip(index, "逐行查看 11 台 PrintExp 机器及 AutomaticPrint 软件状态。")
     window.machine_status_page = page
     window.machine_status_tab_index = index
     tabs.currentChanged.connect(lambda current: page.set_active(current == index))
+    window.developer_mode_checkbox.toggled.connect(page.set_developer_mode)
+    page.set_developer_mode(window.developer_mode_checkbox.isChecked())
     page.set_active(tabs.currentIndex() == index)
     return page
