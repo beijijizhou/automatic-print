@@ -18,20 +18,31 @@ OWNERS = []
 
 
 def test_version_is_date_and_fixed_daily_iteration(tmp_path):
-    assert __version_display__ == '0.1.418 · 2026-09-26 · 第05次更新'
+    assert __version_display__ == '0.1.419 · 2026-09-26 · 第06次更新'
     prefs = QSettings(str(tmp_path/'version.ini'), QSettings.IniFormat)
     for _ in range(2):
         window = MainWindow(prefs)
         OWNERS.append(window)
         window.startup_update_timer.stop()
+        window.show()
+        APP.processEvents()
         assert window.version_label.text() == '版本 '+__version_display__
         assert __version__ in window.version_label.text()
         assert __version__ in window.version_label.toolTip()
+        assert window.check_update_button.isVisible()
+        assert window.check_update_button.isEnabled()
+        assert window.check_update_button.text() == '检查更新'
+        assert window.check_update_button.mapTo(
+            window, window.check_update_button.rect().topLeft()
+        ).y() < window.global_cutter_mode.mapTo(
+            window, window.global_cutter_mode.rect().topLeft()
+        ).y()
         window.close()
     assert release_display('0.1.1', '2026-09-14', 1) == '0.1.1 · 2026-09-14 · 第01次更新'
     assert any('后台监控未能自动重新启动' in item for item in __release_notes__)
     assert any('恢复“检查更新”按钮' in item for item in __release_notes__)
     assert any('数据库唯一绑定' in item for item in __release_notes__)
+    assert any('Windows 发布门禁' in item for item in __release_notes__)
 
 
 def test_loading_isolated_preferences_does_not_replace_machine_identity(
