@@ -176,7 +176,7 @@ class MachineSignalControl(QObject):
         self.result.setText(signal_result_text(report))
 
 
-def install_machine_signal_control(page, header, overview_layout, tester=None):
+def install_machine_signal_control(page, tester=None):
     page.signal_button = QPushButton("Realtime 全机信号测试")
     page.signal_button.setToolTip("绕过局域网 UDP，只使用 Supabase Realtime Broadcast 测试 M1–M11。")
     page.signal_update_button = QPushButton("发布最新版本更新指令")
@@ -185,9 +185,6 @@ def install_machine_signal_control(page, header, overview_layout, tester=None):
     page.signal_result.setWordWrap(True)
     page.signal_result.setTextInteractionFlags(Qt.TextSelectableByMouse)
     page.signal_result.setStyleSheet("padding:10px;border:1px solid #cbd5e1;background:#f8fafc;")
-    header.addWidget(page.signal_button)
-    header.addWidget(page.signal_update_button)
-    overview_layout.addWidget(page.signal_result)
     return MachineSignalControl(
         page.signal_button, page.signal_result, page, tester=tester,
     )

@@ -107,9 +107,7 @@ class MachineStatusPage(QWidget):
         overview_layout = QVBoxLayout(overview)
         overview_layout.addLayout(header)
         overview_layout.addWidget(self.message)
-        self.signal_control = install_machine_signal_control(
-            self, header, overview_layout, signal_tester
-        )
+        self.signal_control = install_machine_signal_control(self, signal_tester)
 
         self.table = QTableWidget(EXPECTED_MACHINES, 9)
         self.table.setHorizontalHeaderLabels(

@@ -27,11 +27,12 @@ def test_default_shows_production_layout_but_hides_diagnostic_tools(tmp_path, mo
     monkeypatch.setattr(history, 'load_runs', lambda *_a: (_ for _ in ()).throw(AssertionError('history read')))
     owner = window(tmp_path/'prefs.ini')
     panel = owner.automation_home.label_quick_panel
-    assert owner.dtf_tools_bar.isAncestorOf(owner.automation_home.settings_button)
-    assert owner.dtf_tools_bar.isAncestorOf(owner.dtf_accounts_button)
+    assert owner.developer_tools_panel.isAncestorOf(owner.automation_home.settings_button)
+    assert owner.developer_tools_panel.isAncestorOf(owner.dtf_accounts_button)
     assert owner.dtf_tools_bar.isAncestorOf(owner.developer_mode_checkbox)
-    assert owner.dtf_tools_bar.isAncestorOf(owner.automation_home.batch_tools)
+    assert owner.developer_tools_panel.isAncestorOf(owner.automation_home.batch_tools)
     assert not owner.developer_mode_checkbox.isChecked()
+    assert not owner.developer_tools_panel.isVisible()
     assert not owner.label_settings.form.isRowVisible(owner.label_settings.source_order)
     owner.label_settings.source_order.setChecked(True)
     assert not owner._layout_settings().label_source_order_enabled
@@ -55,38 +56,19 @@ def test_default_shows_production_layout_but_hides_diagnostic_tools(tmp_path, mo
     assert owner._layout_settings().force_small_pair_width
     assert not panel.history_button.isVisible() and not panel.test_tools_button.isVisible()
     assert not panel.source_order.isVisible() and not panel.reference_films_label.isVisible()
-    navigation_before = owner.automation_home.batch_tools.mapTo(owner, owner.rect().topLeft())
     panel.details_dialog.open_history()
     panel.details_dialog.open_bulk_analysis()
     assert not hasattr(panel.details_dialog, 'history_page')
     assert not hasattr(panel.details_dialog, 'bulk_dialog')
     assert panel.summary.isVisible() and not panel.preview_tabs.isVisible()
     assert owner.developer_mode_checkbox.isVisible()
-    assert owner.developer_features_button.isVisible()
     assert not owner.full_test_button.isVisible() and not owner.full_test_result.isVisible()
-    owner.developer_features_button.click()
-    APP.processEvents()
-    feature_dialog = owner.developer_features_dialog
-    assert feature_dialog.isVisible()
-    assert '未开启' in feature_dialog.status.text()
-    features = [
-        feature_dialog.tree.topLevelItem(group).child(row).text(0)
-        for group in range(feature_dialog.tree.topLevelItemCount())
-        for row in range(feature_dialog.tree.topLevelItem(group).childCount())
-    ]
-    assert features == [
-        '完整测试', '排版历史', '批量分析文件夹', '标签位置安全短测', 'DTF随机10批冷启动测试', '算法诊断',
-        '整单归侧双排（仅本次任务）',
-        '切膜刀码开关', '平台＋尺码标签开关', '批次顺序标注',
-        'S2B 批次信息查询', '批次下载与自动化打印', '隆丰 ERP 下载', 'S2B 生产图下载',
-        '莆田平台', '并行分块 TIFF',
-    ]
-    assert feature_dialog.grab().save(str(tmp_path/'developer-feature-list.png'))
-    feature_dialog.close()
+    assert not hasattr(owner, 'developer_features_button')
+    assert not hasattr(owner, 'developer_features_dialog')
     assert not hasattr(owner, 'riin_diagnostic_button')
     assert not hasattr(owner, 'riin_diagnostic_dialog')
     settings_button = owner.automation_home.settings_button
-    assert settings_button.parentWidget() is owner.dtf_tools_bar
+    assert settings_button.parentWidget() is owner.developer_tools_panel
     from PySide6.QtWidgets import QPushButton
     pauses = [b for b in owner.findChildren(QPushButton) if b.text() == '暂停批次']
     assert pauses == [owner.stop_generation_button]
@@ -102,7 +84,13 @@ def test_default_shows_production_layout_but_hides_diagnostic_tools(tmp_path, mo
     owner.thread=owner.worker=None
     owner.stop_generation_button.setEnabled(False)
     assert not owner.stop_generation_button.isEnabled()
+    owner.developer_mode_checkbox.setChecked(True)
+    APP.processEvents()
+    assert owner.developer_tools_panel.isVisible()
     before = settings_button.mapTo(owner, settings_button.rect().topLeft())
+    navigation_before = owner.automation_home.batch_tools.mapTo(
+        owner, owner.rect().topLeft()
+    )
     owner.automation_home.workbench_scroll.verticalScrollBar().setValue(999999)
     APP.processEvents()
     assert settings_button.mapTo(owner, settings_button.rect().topLeft()) == before

@@ -31,7 +31,7 @@ def test_full_test_button_and_result_live_in_developer_menu(tmp_path):
 
     assert owner.full_test_button.isVisible()
     assert owner.full_test_result.isVisible()
-    assert owner.full_test_button.parentWidget() is owner.centralWidget()
+    assert owner.developer_tools_panel.isAncestorOf(owner.full_test_button)
     assert owner.grab().save(str(tmp_path / "full-test-developer-menu.png"))
     owner.close()
 

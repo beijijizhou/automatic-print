@@ -2,15 +2,17 @@
 
 from .updates.versioning import release_display
 
-__version__ = "0.1.426"
+__version__ = "0.1.427"
 __release_date__ = "2026-09-26"
-__release_iteration__ = 13
+__release_iteration__ = 14
 __command_protocol__ = 1
 __command_capabilities__ = (
     "probe", "printer_history", "source_update", "launch_app",
     "download_layout", "start_print", "pause_print", "clean_resume",
 )
 __release_notes__ = (
+    "主界面只常显版本、检查更新和开发者模式，其余工具集中到唯一开发者功能区。",
+    "全机信号检测与发布最新版本更新指令统一移入打印机状态的版本管理页。",
     "远程批次任务支持S2B的12位字母数字批次号，不再误报批次号无效。",
     "Realtime全机测试为重启后的机器等待最多90秒，并提供一键发布最新版本更新指令。",
     "Playwright浏览器改为每台电脑唯一实例，并提供统一的提前登录入口。",
