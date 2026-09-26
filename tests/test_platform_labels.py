@@ -141,7 +141,7 @@ def test_platform_badge_includes_source_size_and_stays_within_qr_height(tmp_path
 
 
 @pytest.mark.parametrize('degrees', [0, 90])
-def test_platform_and_size_use_separate_label_on_card_short_side(
+def test_platform_and_size_use_qr_row_blank_space(
         tmp_path, degrees):
     path = separate_label_source(tmp_path/'ORDER-1-T-Black-3XL-NO1-1.png')
     options, labels = read_items([path], settings(
@@ -152,18 +152,16 @@ def test_platform_and_size_use_separate_label_on_card_short_side(
     assert '隆丰 · 3XL' in labels[item.index]
     assert item.platform_width == 0
     assert item.label_width > 0 and item.label_height > 0
-    card = detect_guide_band(path).rotated(degrees)
     x, y = item.label_rx-item.image_rx, item.label_ry-item.image_ry
-    if degrees:
-        assert y+item.label_height <= round(card.top*item.height) or y >= round(card.bottom*item.height)
-    else:
-        assert x >= round(card.right*item.width)
+    from automatic_print.layout_engine.labeling.platform.qr_row_space import is_qr_row_space
+    assert is_qr_row_space(path, item.width, item.height, degrees,
+                           (x, y, item.label_width, item.label_height))
     assert 0 <= x and x+item.label_width <= item.width
 
 
 @pytest.mark.parametrize('engine', ['pillow', 'libvips'])
 @pytest.mark.parametrize('degrees', [0, 90])
-def test_platform_and_size_render_outside_unchanged_card_for_each_engine(
+def test_platform_and_size_render_in_blank_card_without_changing_qr(
         tmp_path, engine, degrees):
     path = separate_label_source(tmp_path/'ORDER-1-T-Black-3XL-NO1-1.png', 'OUTPUT')
     plans = []
@@ -178,11 +176,12 @@ def test_platform_and_size_render_outside_unchanged_card_for_each_engine(
         item.number_width_px, item.number_height_px)
     assert placement['platform_width_px'] == 0
     assert placement['number_width_px'] > 0
-    region = detect_guide_band(path).rotated(degrees)
-    left = int(region.left*placement['width_px'])+2
-    top = int(region.top*placement['height_px'])+2
-    right = int(region.right*placement['width_px'])-2
-    bottom = int(region.bottom*placement['height_px'])-2
+    from automatic_print.layout_engine.labeling.platform.qr_region import detect_qr_region
+    qr = detect_qr_region(path).rotated(degrees)
+    left = int(qr.left*placement['width_px'])
+    top = int(qr.top*placement['height_px'])
+    right = int(qr.right*placement['width_px']+1)
+    bottom = int(qr.bottom*placement['height_px']+1)
     with Image.open(tmp_path/engine/result['filename']) as output:
         with Image.open(path) as source:
             rotated = source.convert('RGBA').rotate(degrees, expand=True)

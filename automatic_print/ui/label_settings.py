@@ -41,7 +41,7 @@ class LabelSettingsDialog(QDialog):
         self.platform_font_height.setSpecialValueText('自动：膜标签等高')
         self.platform_font_height.setToolTip('平台字独立大小，默认高度 6 毫米；0 为自动等高。不会改变标签或序号字号。')
         self.follow_qr = QCheckBox(
-            "优先搜索顶部膜标签区域，并让文字与标签水平对齐，不识别二维码"
+            "识别膜标签与真实二维码，优先把文字放到二维码同行空白"
         )
         self.follow_qr.setChecked(True)
         self.machine = QComboBox()
@@ -61,9 +61,9 @@ class LabelSettingsDialog(QDialog):
         help_label.setWordWrap(True)
         help_label.setTextInteractionFlags(Qt.TextSelectableByMouse)
         qr_help = QLabel(
-            "平台、尺码、机器号和批次信息写在原图膜标签卡片外的同一张生产标签中；"
-            "未旋转时位于卡片朝图片内部的一侧，旋转后位于卡片短边的透明空白。"
-            "卡片内部不加字，空白不足时跳过该图新增文字并显示异常。"
+            "平台、尺码、机器号和批次信息写在同一张生产标签中；程序先识别真实二维码，"
+            "使用二维码同一行内经像素确认的空白卡面。图片旋转时文字位置和方向一起旋转；"
+            "同行空白不足时，才按位置设计器设置搜索卡片外安全区。"
         )
         qr_help.setWordWrap(True)
         qr_help.setTextInteractionFlags(Qt.TextSelectableByMouse)
@@ -94,7 +94,7 @@ class LabelSettingsDialog(QDialog):
         self.fit_height = QCheckBox("限制整段文字高度（字号不超过手动设置）")
         self.fit_height.setChecked(True)
         self.reference_height = double_spinbox(10, 2, 100)
-        self.reference_height.setToolTip("填写原图膜标签的实际高度；程序优先搜索顶部标签卡片，不验证二维码。")
+        self.reference_height.setToolTip("填写原图膜标签的实际高度；程序会同时核验标签卡片和真实二维码。")
         self.gap = double_spinbox(5, 0, 100)
         self.offset_x = double_spinbox(0, -100, 100)
         self.offset_y = double_spinbox(0, -100, 100)

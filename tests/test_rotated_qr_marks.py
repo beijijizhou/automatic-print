@@ -75,17 +75,29 @@ def test_rotated_whole_batch_qr_label_and_fixed_marker(tmp_path, engine, parts, 
                 assert p['color_block_y_px'] == p['y_px']+expected_y
                 if bottom_qr:
                     assert (p['x_px'] > 0) == (int(p['source'].split('-')[0][1:]) == 5)
-                from automatic_print.layout_engine.labeling.markers.marker_stack import in_short_edge_space
-                assert in_short_edge_space(band, p['width_px'], p['height_px'],
-                    (p['number_x_px']-p['x_px'], p['number_y_px']-p['y_px'],
-                     p['number_width_px'], p['number_height_px']))
+                from automatic_print.layout_engine.labeling.platform.qr_row_space import is_qr_row_space
+                label_rect = (p['number_x_px']-p['x_px'], p['number_y_px']-p['y_px'],
+                              p['number_width_px'], p['number_height_px'])
+                if not is_qr_row_space(path, p['width_px'], p['height_px'], 90,
+                                       label_rect):
+                    from automatic_print.layout_engine.labeling.markers.marker_stack import in_short_edge_space
+                    assert in_short_edge_space(
+                        band, p['width_px'], p['height_px'], label_rect,
+                    )
                 assert output.getpixel((0, p['color_block_y_px'])) == (255, 0, 0, 255)
                 with Image.open(path) as source:
                     original = np.asarray(source.rotate(90, expand=True))
                 cropped = np.asarray(output.crop((p['x_px'], p['y_px'],
                     p['x_px']+p['width_px'], p['y_px']+p['height_px'])))
-                ink = original[:, :, 3] > 0
-                assert np.array_equal(original[ink], cropped[ink])
+                from automatic_print.layout_engine.labeling.platform.qr_region import detect_qr_region
+                qr_region = detect_qr_region(path).rotated(90)
+                qr_box = (int(qr_region.left*p['width_px']), int(qr_region.top*p['height_px']),
+                          int(np.ceil(qr_region.right*p['width_px'])),
+                          int(np.ceil(qr_region.bottom*p['height_px'])))
+                assert np.array_equal(
+                    original[qr_box[1]:qr_box[3], qr_box[0]:qr_box[2]],
+                    cropped[qr_box[1]:qr_box[3], qr_box[0]:qr_box[2]],
+                )
     choices, _ = read_items(paths, settings, None)
     item = choices[0][0]
     shifted = rotation_marker_item(item, replace(settings, rotation_marker_shift_mm=2))
@@ -114,6 +126,13 @@ def test_rotated_whole_batch_qr_label_and_fixed_marker(tmp_path, engine, parts, 
                     original = np.asarray(source.rotate(90, expand=True))
                 crop = np.asarray(output.crop((p['x_px'], p['y_px'],
                     p['x_px']+p['width_px'], p['y_px']+p['height_px'])))
-                ink = original[:, :, 3] > 0
-                assert np.array_equal(original[ink], crop[ink])
+                from automatic_print.layout_engine.labeling.platform.qr_region import detect_qr_region
+                qr_region = detect_qr_region(tmp_path/p['source']).rotated(90)
+                qr_box = (int(qr_region.left*p['width_px']), int(qr_region.top*p['height_px']),
+                          int(np.ceil(qr_region.right*p['width_px'])),
+                          int(np.ceil(qr_region.bottom*p['height_px'])))
+                assert np.array_equal(
+                    original[qr_box[1]:qr_box[3], qr_box[0]:qr_box[2]],
+                    crop[qr_box[1]:qr_box[3], qr_box[0]:qr_box[2]],
+                )
         assert {p['color_block_x_px'] for p in zone['placements']} == marker_xs

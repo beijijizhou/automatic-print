@@ -24,6 +24,18 @@ def transparent_label_source(path):
     return path
 
 
+def test_qr_row_blank_pixel_check_maps_layout_size_to_source_pixels(tmp_path):
+    path = transparent_label_source(tmp_path/'scaled-M-NO1-1.png')
+    with Image.open(path) as opened:
+        source = opened.copy()
+    source.paste('black', (10, 14, 30, 35))
+    source.save(path, dpi=(50.8, 50.8))
+    source.close()
+    from automatic_print.layout_engine.labeling.platform.qr_row_space import is_qr_row_space
+    assert not is_qr_row_space(path, 135, 125, 0, (5, 7, 10, 10))
+    assert is_qr_row_space(path, 135, 125, 0, (20, 7, 10, 10))
+
+
 def test_position_designer_updates_all_modes_and_persists(tmp_path):
     preferences = QSettings(str(tmp_path/'position-designer.ini'), QSettings.IniFormat)
     window = MainWindow(preferences)
@@ -57,22 +69,19 @@ def test_position_designer_updates_all_modes_and_persists(tmp_path):
     restored.close()
 
 
-@pytest.mark.parametrize('align, expected', [
-    ('top', lambda top, bottom, height: top),
-    ('center', lambda top, bottom, height: (top+bottom-height)//2),
-    ('bottom', lambda top, bottom, height: bottom-height),
-])
-def test_cutter_designer_controls_unrotated_label_height(tmp_path, align, expected):
+@pytest.mark.parametrize('align', ['top', 'center', 'bottom'])
+def test_qr_row_space_precedes_unrotated_fallback_alignment(tmp_path, align):
     path = separate_label_source(tmp_path/f'unrotated-{align}-M-NO1-1.png')
     options, _labels = read_items([path], settings(
         cutter_mode='single', platform_reuse_qr=True, preserve_header_gap=True,
         cutter_label_vertical_align=align,
     ), None)
     item = options[0][0]
-    card = detect_guide_band(path)
-    top = round(card.top*item.height)
-    bottom = round(card.bottom*item.height)
-    assert item.label_ry-item.image_ry == expected(top, bottom, item.label_height)
+    from automatic_print.layout_engine.labeling.platform.qr_row_space import is_qr_row_space
+    assert is_qr_row_space(path, item.width, item.height, item.rotation_degrees, (
+        item.label_rx-item.image_rx, item.label_ry-item.image_ry,
+        item.label_width, item.label_height,
+    ))
 
 
 @pytest.mark.parametrize('align', ['left', 'center', 'right'])
@@ -121,5 +130,19 @@ def test_designed_cutter_position_is_rendered_without_changing_source_pixels(
             placement.number_y_px+placement.number_height_px,
         ))
         assert label.getchannel('A').getbbox() is not None
-    opaque = expected[:, :, 3] > 0
-    assert np.array_equal(actual[opaque], expected[opaque])
+    from automatic_print.layout_engine.labeling.platform.qr_region import detect_qr_region
+    from automatic_print.layout_engine.labeling.platform.qr_row_space import is_qr_row_space
+    assert is_qr_row_space(path, placement.width_px, placement.height_px, degrees, (
+        placement.number_x_px-placement.x_px,
+        placement.number_y_px-placement.y_px,
+        placement.number_width_px, placement.number_height_px,
+    ))
+    qr = detect_qr_region(path).rotated(degrees)
+    qr_box = (
+        floor(qr.left*placement.width_px), floor(qr.top*placement.height_px),
+        ceil(qr.right*placement.width_px), ceil(qr.bottom*placement.height_px),
+    )
+    assert np.array_equal(
+        actual[qr_box[1]:qr_box[3], qr_box[0]:qr_box[2]],
+        expected[qr_box[1]:qr_box[3], qr_box[0]:qr_box[2]],
+    )

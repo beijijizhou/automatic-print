@@ -51,6 +51,9 @@ def test_mixed_full_batch_embeds_without_covering_any_original_ink(tmp_path, eng
                 cropped = np.asarray(output.crop((p['x_px'], p['y_px'],
                     p['x_px']+p['width_px'], p['y_px']+p['height_px'])))
                 ink = original[:, :, 3] > 0
+                lx, ly = p['number_x_px']-p['x_px'], p['number_y_px']-p['y_px']
+                ink[max(0, ly):min(p['height_px'], ly+p['number_height_px']),
+                    max(0, lx):min(p['width_px'], lx+p['number_width_px'])] = False
                 assert np.array_equal(original[ink], cropped[ink])
                 embedded = int(p['source'].split('-')[0][1:]) < 12
                 assert (p['color_block_x_px'] == p['x_px']) == embedded
@@ -99,17 +102,20 @@ def test_added_text_stays_inside_membrane_label_height_and_never_below_it(tmp_pa
     assert placement.color_block_x_px+placement.color_block_width_px == placement.x_px
     assert '尺码 M' in label
     assert 'M1' in label and '609162025022' in label
-    assert placement.number_x_px+placement.number_width_px <= (
-        placement.x_px+floor(band.left*placement.width_px)
-    )
-    with pytest.raises(ValueError, match='图片内部一侧'):
+    from automatic_print.layout_engine.labeling.platform.qr_row_space import is_qr_row_space
+    assert is_qr_row_space(path, placement.width_px, placement.height_px, 0, (
+        placement.number_x_px-placement.x_px,
+        placement.number_y_px-placement.y_px,
+        placement.number_width_px, placement.number_height_px,
+    ))
+    with pytest.raises(ValueError, match='安全空白|覆盖原图|内部一侧'):
         validate_embedded_marks([
             (path, replace(placement, number_y_px=bottom+1))
         ], config)
 
 
 @pytest.mark.parametrize('degrees', [0, 90, -90])
-def test_narrow_header_uses_verified_gutter_between_mark_and_source(tmp_path, degrees):
+def test_narrow_header_uses_qr_row_or_verified_card_fallback(tmp_path, degrees):
     path = make_batch(tmp_path)[-1]
     config = LayoutSettings(
         dpi=25.4, media_width_mm=580, cutter_mode='single',
@@ -124,14 +130,18 @@ def test_narrow_header_uses_verified_gutter_between_mark_and_source(tmp_path, de
     assert placement['color_block_x_px']+placement['color_block_width_px'] <= placement['number_x_px']
     from automatic_print.layout_engine.domain.models import Placement
     planned = Placement(**placement)
+    from automatic_print.layout_engine.labeling.platform.qr_row_space import is_qr_row_space
+    label_rect = (planned.number_x_px-planned.x_px, planned.number_y_px-planned.y_px,
+                  planned.number_width_px, planned.number_height_px)
+    qr_row = is_qr_row_space(path, planned.width_px, planned.height_px,
+                             degrees, label_rect)
     if degrees:
         from automatic_print.layout_engine.labeling.markers.marker_stack import in_short_edge_space
         band = detect_guide_band(path).rotated(degrees)
         assert not result['analysis'].get('header_space_recovery')
         if planned.number_width_px:
-            assert in_short_edge_space(band, planned.width_px, planned.height_px,
-                (planned.number_x_px-planned.x_px, planned.number_y_px-planned.y_px,
-                 planned.number_width_px, planned.number_height_px))
+            assert qr_row or in_short_edge_space(
+                band, planned.width_px, planned.height_px, label_rect)
             assert planned.number_y_px >= planned.y_px
             assert planned.number_y_px+planned.number_height_px <= planned.y_px+planned.height_px
         else:
@@ -139,10 +149,16 @@ def test_narrow_header_uses_verified_gutter_between_mark_and_source(tmp_path, de
                        for row in result['analysis']['image_anomalies'])
     else:
         band = detect_guide_band(path)
-        assert placement['number_x_px'] >= placement['x_px']+ceil(band.right*placement['width_px'])
-        with pytest.raises(ValueError, match='图片内部一侧'):
+        assert qr_row or placement['number_x_px'] >= (
+            placement['x_px']+ceil(band.right*placement['width_px']))
+        from automatic_print.layout_engine.labeling.platform.qr_region import detect_qr_region
+        qr = detect_qr_region(path)
+        with pytest.raises(ValueError, match='安全|覆盖|内部一侧'):
             validate_embedded_marks([(
-                path, replace(planned, number_x_px=planned.x_px),
+                path, replace(
+                    planned,
+                    number_x_px=planned.x_px+floor(qr.left*planned.width_px),
+                ),
             )], replace(config, preserve_header_gap=False))
     if placement['number_width_px']:
         with Image.open(tmp_path/'out'/result['filename']) as output:
