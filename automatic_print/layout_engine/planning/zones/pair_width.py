@@ -1,11 +1,15 @@
 """Shared virtual width cap for selected sizes and strict fixed-knife batches."""
 from dataclasses import replace
+from pathlib import Path
 
 from automatic_print.layout_engine.intake.metadata.images import print_dimensions
 from automatic_print.layout_engine.measurement.measurement_session import resolved_name
 from automatic_print.layout_engine.domain.models import mm_to_px
 from automatic_print.layout_engine.intake.metadata.source_metadata import source_size
 from automatic_print.layout_engine.orders.order_groups import pair_identity
+
+
+PAIR_WIDTH_TITLES = ('所选尺码并排宽度上限：', '共刀并排等比缩小：')
 
 
 def apply_pair_width_cap(paths, settings, progress=None):
@@ -23,7 +27,13 @@ def apply_pair_width_cap(paths, settings, progress=None):
     notices = list(settings.width_adjustments)
     dimensions_by_path = {}
     factors = {}
+    manual_rotations = {
+        resolved_name(Path(name))
+        for name, degrees in settings.manual_rotations if degrees % 360
+    }
     for path in paths:
+        if resolved_name(path) in manual_rotations:
+            continue
         if source_size(path) not in eligible_sizes:
             continue
         dimensions = print_dimensions(path, settings.dpi)
@@ -73,6 +83,65 @@ def apply_pair_width_cap(paths, settings, progress=None):
             progress(title, index, len(paths), path.name+' · '+text)
     return replace(settings, dimension_overrides=tuple(overrides.items()),
                    width_adjustments=tuple(notices))
+
+
+def without_pair_width_scaling(settings):
+    """Return original dimensions for rotation candidates only."""
+    scaled = {
+        resolved_name(Path(source_path))
+        for _name, text, source_path in settings.width_adjustments
+        if text.startswith(PAIR_WIDTH_TITLES)
+    }
+    if not scaled:
+        return settings
+    return replace(
+        settings,
+        dimension_overrides=tuple(
+            (name, dimensions)
+            for name, dimensions in settings.dimension_overrides
+            if name not in scaled
+        ),
+        width_adjustments=tuple(
+            adjustment
+            for adjustment in settings.width_adjustments
+            if not adjustment[1].startswith(PAIR_WIDTH_TITLES)
+        ),
+    )
+
+
+def remove_rotated_pair_width_adjustments(settings, planned):
+    """Do not report a pair-width reduction for final rotated placements."""
+    rotated = {
+        resolved_name(path)
+        for path, placement in planned
+        if placement.rotation_degrees % 360
+    }
+    if not rotated:
+        return settings
+    rejected = {
+        resolved_name(Path(source_path))
+        for _name, text, source_path in settings.width_adjustments
+        if text.startswith(PAIR_WIDTH_TITLES)
+        and resolved_name(Path(source_path)) in rotated
+    }
+    if not rejected:
+        return settings
+    return replace(
+        settings,
+        dimension_overrides=tuple(
+            (name, dimensions)
+            for name, dimensions in settings.dimension_overrides
+            if name not in rejected
+        ),
+        width_adjustments=tuple(
+            adjustment
+            for adjustment in settings.width_adjustments
+            if not (
+                adjustment[1].startswith(PAIR_WIDTH_TITLES)
+                and resolved_name(Path(adjustment[2])) in rejected
+            )
+        ),
+    )
 
 
 def _safe_artwork_width(paths, settings):

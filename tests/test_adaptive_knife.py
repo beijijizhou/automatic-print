@@ -222,3 +222,35 @@ def test_developer_width_cap_forces_s_to_l_pairs_without_enlarging(tmp_path):
     with Image.open(output) as rendered:
         assert rendered.size == (result['width_px'], result['height_px'])
     output.unlink()
+
+
+def test_two_rotated_xl_candidates_keep_original_size_instead_of_pair_scaling(tmp_path):
+    from dataclasses import replace
+    from automatic_print.layout_engine.measurement.measurement_session import resolved_name
+    from automatic_print.layout_engine.planning.rotation.rotation_zones import rotation_items
+    from automatic_print.layout_engine.planning.zones.pair_width import apply_pair_width_cap
+
+    paths = []
+    for index, color in ((9, 'Black'), (10, 'White')):
+        path = tmp_path/f'B{index}-1-T-{color}-XL-NO1-1.png'
+        Image.new('RGBA', (280, 100), 'red').save(path, dpi=(25.4, 25.4))
+        paths.append(path)
+    settings = LayoutSettings(
+        dpi=25.4, media_width_mm=580, margin_mm=0, spacing_mm=8,
+        cutter_mode='dual', cutter_auto_knife=True,
+        cutter_rotation_zone=True, cutter_majority_two_zone=True,
+        force_small_pair_width=True, cutter_left_marker_external=True,
+        number_images=False,
+    )
+
+    adjusted = apply_pair_width_cap(paths, settings)
+    assert len(adjusted.width_adjustments) == 2
+    items, _labels = rotation_items(paths, adjusted)
+    assert set(items) == set(paths)
+    assert {(item.width, item.height) for item in items.values()} == {(100, 280)}
+
+    manual = replace(settings, manual_rotations=tuple(
+        (resolved_name(path), 90) for path in paths
+    ))
+    manual = apply_pair_width_cap(paths, manual)
+    assert not manual.width_adjustments

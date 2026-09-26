@@ -56,6 +56,9 @@ def _measured_plan(paths, settings, progress, analysis_ready):
             if knife_changes:
                 analysis['knife_change_gap'] = knife_changes
     planned, labels, width, height, baseline = result
+    from automatic_print.layout_engine.planning.zones.pair_width import remove_rotated_pair_width_adjustments
+    settings = remove_rotated_pair_width_adjustments(settings, planned)
+    analysis['width_adjustments'] = settings.width_adjustments
     if settings.batch_end_block:
         width = mm_to_px(settings.media_width_mm,settings.dpi)
     extra = marked_height(planned, settings, width, height)-height

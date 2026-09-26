@@ -2,9 +2,9 @@
 
 from .updates.versioning import release_display
 
-__version__ = "0.1.417"
+__version__ = "0.1.418"
 __release_date__ = "2026-09-26"
-__release_iteration__ = 4
+__release_iteration__ = 5
 __command_protocol__ = 1
 __command_capabilities__ = (
     "probe", "printer_history", "source_update", "launch_app",
@@ -20,5 +20,6 @@ __release_notes__ = (
     "新增本机注册：M1–M11 由数据库唯一绑定，旧程序不能再写回错误机器号。",
     "机器号已被占用时必须人工确认换绑，换绑后自动清除旧电脑的重复状态。",
     "标签设置中的机器号只影响打印标签，不再修改后台机器身份。",
+    "并排等比缩小不再作用于旋转候选和最终旋转图片，旋转时保持原尺寸。",
 )
 __version_display__ = release_display(__version__, __release_date__, __release_iteration__)
