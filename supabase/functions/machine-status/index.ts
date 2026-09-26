@@ -10,7 +10,10 @@ const DEPARTMENTS = new Set(["DTF", "UV", "3D"]);
 const FEEDBACK_TIMEOUT_SECONDS = 20;
 const COMMAND_STATES = new Set(["running", "succeeded", "failed"]);
 const COMMAND_PLATFORMS = new Set(["Haloo", "莆田", "隆丰", "S2B"]);
-const COMMAND_ACTIONS = new Set(["download_layout", "start_print", "pause_print", "clean_resume", "probe"]);
+const COMMAND_ACTIONS = new Set([
+  "download_layout", "start_print", "pause_print", "clean_resume", "probe", "source_update",
+  "launch_app",
+]);
 const PRINTER_TO_MACHINE_STATE: Record<string, string> = {
   idle: "idle", ready: "idle", printing: "running", paused: "running",
   cleaning: "running", unknown: "failed",
@@ -38,12 +41,14 @@ Deno.serve(async (request) => {
     if (action === "get") return json(await get(db, machineId(input.machine_id)));
     if (action === "set_availability") return json(await setAvailability(db, input));
     if (action === "enqueue_command") return json(await enqueueCommand(db, input));
+    if (action === "enqueue_update") return json(await enqueueUpdate(db, input));
     if (action === "send_control") return json(await sendControl(db, input));
     if (action === "list_commands") return json(await listCommands(db));
     if (action === "claim_command") return json(await claimCommand(db, input));
     if (action === "claim_control") return json(await claimControl(db, input));
     if (action === "get_command") return json(await getCommand(db, input));
     if (action === "update_command") return json(await updateCommand(db, input));
+    if (action === "consume_command_result") return json(await consumeCommandResult(db, input));
     if (action === "cancel_command") return json(await cancelCommand(db, input));
     throw new ClientError("Unsupported action", 400);
   } catch (error) {
@@ -167,7 +172,7 @@ async function sendControl(db: ReturnType<typeof createClient>, input: Record<st
   const target = machineId(input.target_machine_id);
   const requester = machineId(input.machine_id);
   const action = String(input.command_action || "");
-  if (!new Set(["start_print", "pause_print", "clean_resume", "probe"]).has(action)) {
+  if (!new Set(["start_print", "pause_print", "clean_resume", "probe", "launch_app"]).has(action)) {
     throw new ClientError("Unsupported control action", 400);
   }
   const { data: machine, error: machineError } = await db.from("machine_status_current")
@@ -175,16 +180,24 @@ async function sendControl(db: ReturnType<typeof createClient>, input: Record<st
     .eq("machine_id", target).maybeSingle();
   if (machineError) throw machineError;
   if (!machine) throw new ClientError("Target machine not found", 404);
-  if (action !== "probe" && !isAvailable(machine)) {
+  const printerControl = new Set(["start_print", "pause_print", "clean_resume"]).has(action);
+  if (printerControl && !isAvailable(machine)) {
     throw new ClientError("Target machine is unavailable", 409);
   }
-  if (action !== "probe" && machine.source_online === false) {
+  if (printerControl && machine.source_online === false) {
     throw new ClientError("Target PrintExp is offline", 409);
   }
   const requestedPayload = input.payload && typeof input.payload === "object"
     ? input.payload as Record<string, unknown> : {};
   const expectedBatch = String(requestedPayload.expected_batch_name || "").trim();
-  const printerState = action === "probe" ? "" : validatePrinterControlState(machine, action);
+  const printerState = printerControl ? validatePrinterControlState(machine, action) : "";
+  const probePayload = action === "probe" && requestedPayload.request === "printer_history"
+    ? {
+        request: "printer_history",
+        limit: optionalInteger(requestedPayload.limit, 1, 500) ?? 500,
+        days: optionalInteger(requestedPayload.days, 1, 31) ?? 2,
+      }
+    : {};
   if (action === "start_print") {
     const machineProgress = machine.progress_percent == null
       ? Number.NaN : Number(machine.progress_percent);
@@ -202,19 +215,27 @@ async function sendControl(db: ReturnType<typeof createClient>, input: Record<st
     }
   }
   const now = new Date().toISOString();
-  const { error: cancelError } = await db.from("machine_commands").update({
-    status: "cancelled", phase: "由更新的实时控制指令替代",
-    finished_at: now, updated_at: now,
-  }).eq("target_machine_id", target).eq("status", "queued")
-    .in("action", action === "probe" ? ["probe"] : ["start_print", "pause_print", "clean_resume"]);
-  if (cancelError) throw cancelError;
+  if (printerControl) {
+    const { error: cancelError } = await db.from("machine_commands").update({
+      status: "cancelled", phase: "由更新的实时控制指令替代",
+      finished_at: now, updated_at: now,
+    }).eq("target_machine_id", target).eq("status", "queued")
+      .in("action", ["start_print", "pause_print", "clean_resume"]);
+    if (cancelError) throw cancelError;
+  } else if (action === "launch_app") {
+    const { error: cancelError } = await db.from("machine_commands").update({
+      status: "cancelled", phase: "由更新的软件唤起指令替代",
+      finished_at: now, updated_at: now,
+    }).eq("target_machine_id", target).eq("status", "queued").eq("action", "launch_app");
+    if (cancelError) throw cancelError;
+  }
   const expiry = optionalInteger(input.expires_minutes, 1, 5) ?? 2;
   const { data, error } = await db.from("machine_commands").insert({
     target_machine_id: target,
     requested_by_machine_id: requester,
     requested_by_name: text(input.machine_name, "machine_name", 100),
-    action, payload: action === "start_print" ? { expected_batch_name: expectedBatch } : {},
-    phase: "实时控制信号已发送",
+    action, payload: action === "start_print" ? { expected_batch_name: expectedBatch } : probePayload,
+    phase: action === "launch_app" ? "远程软件唤起信号已发送" : "实时控制信号已发送",
     expires_at: new Date(Date.now() + expiry * 60_000).toISOString(),
   }).select().single();
   if (error) throw error;
@@ -242,6 +263,39 @@ async function claimCommand(db: ReturnType<typeof createClient>, input: Record<s
   if (error) throw error;
   if (data) await markFeedback(db, id);
   return { command: data || null };
+}
+
+async function enqueueUpdate(db: ReturnType<typeof createClient>, input: Record<string, unknown>) {
+  const target = machineId(input.target_machine_id);
+  const requester = machineId(input.machine_id);
+  const requested = object(input.payload);
+  const revision = String(requested.target_revision || "").trim().toLowerCase();
+  if (!/^[0-9a-f]{40}$/.test(revision)) {
+    throw new ClientError("Invalid source revision", 400);
+  }
+  const version = text(requested.target_version, "target_version", 40);
+  const { data: machine, error: machineError } = await db.from("machine_status_current")
+    .select("machine_id").eq("machine_id", target).maybeSingle();
+  if (machineError) throw machineError;
+  if (!machine) throw new ClientError("Target machine not found", 404);
+  const now = new Date().toISOString();
+  const { error: cancelError } = await db.from("machine_commands").update({
+    status: "cancelled", phase: "由更新的源码版本替代",
+    finished_at: now, updated_at: now,
+  }).eq("target_machine_id", target).eq("action", "source_update").eq("status", "queued");
+  if (cancelError) throw cancelError;
+  const expiry = optionalInteger(input.expires_minutes, 5, 1440) ?? 1440;
+  const { data, error } = await db.from("machine_commands").insert({
+    target_machine_id: target,
+    requested_by_machine_id: requester,
+    requested_by_name: text(input.machine_name, "machine_name", 100),
+    action: "source_update",
+    payload: { target_revision: revision, target_version: version },
+    phase: "等待目标机领取源码更新",
+    expires_at: new Date(Date.now() + expiry * 60_000).toISOString(),
+  }).select().single();
+  if (error) throw error;
+  return { command: data };
 }
 
 function validateReportedPrinterState(state: string, batchInfo: Record<string, unknown>) {
@@ -373,6 +427,23 @@ function decorate(row: Record<string, unknown>) {
     feedback_age_seconds: Math.round(age),
     heartbeat_age_seconds: Math.round(age),
   };
+}
+
+async function consumeCommandResult(db: ReturnType<typeof createClient>, input: Record<string, unknown>) {
+  const requester = machineId(input.machine_id);
+  const id = uuid(input.command_id, "command_id");
+  const { data, error } = await db.from("machine_commands").select("status, result")
+    .eq("id", id).eq("requested_by_machine_id", requester).maybeSingle();
+  if (error) throw error;
+  if (!data) throw new ClientError("Command not found", 404);
+  if (!new Set(["succeeded", "failed"]).has(String(data.status))) {
+    throw new ClientError("Command result is not ready", 409);
+  }
+  const result = object(data.result);
+  const { error: deleteError } = await db.from("machine_commands").delete()
+    .eq("id", id).eq("requested_by_machine_id", requester);
+  if (deleteError) throw deleteError;
+  return { result };
 }
 
 function isAvailable(row: Record<string, unknown>) {

@@ -5,11 +5,14 @@ import os
 from logging.handlers import RotatingFileHandler
 from pathlib import Path
 from threading import Event
+from time import monotonic
 
 from ..machine_status import claim_control, report_machine
+from ..machine_status.identity import machine_id
 from ..machine_commands import CommandDispatcher
-from ....runtime.monitoring.control import AutomationWakeListener, automation_enabled
-from .controls import NativePrintExpControls
+from ..machine_commands.lifecycle import recover_pending_receipts, reconcile_printer_status
+from ....runtime.monitoring.cloud_wake import HybridWakeListener
+from .control import NativePrintExpControls
 from .discovery import find_installation, process_running, running_installations
 from .status.loaded_task import read_loaded_task
 from .state import read_snapshot
@@ -25,13 +28,16 @@ class PrintExpMonitor:
         send=report_machine,
         command_dispatcher=None,
         control_dispatcher=None,
-        automation_allowed=automation_enabled,
+        automation_allowed=None,
         wake_listener=None,
     ):
         self.poll_seconds = float(poll_seconds)
         self.send = send
         self.automation_allowed = automation_allowed
-        self.wake_listener = wake_listener or AutomationWakeListener()
+        self.dispatch_event = Event()
+        self.wake_listener = wake_listener or HybridWakeListener(
+            dispatch=self.request_dispatch, target_machine_id=machine_id(),
+        )
         self.stop_event = Event()
         self.projector = StatusProjector()
         self.installation = None
@@ -44,21 +50,13 @@ class PrintExpMonitor:
 
     def run(self):
         self.wake_listener.start()
+        self._claim_startup_command()
         next_status = 0.0
         try:
             while not self.stop_event.is_set():
-                if not self.automation_allowed():
-                    self.last_signature = None
-                    self.stop_event.wait(0.25)
-                    continue
-                try:
-                    self.control_dispatcher.tick()
-                except Exception as error:
-                    self.logger.warning("Unable to poll realtime printer controls: %s", error)
-                try:
-                    self.command_dispatcher.tick()
-                except Exception as error:
-                    self.logger.warning("Unable to poll remote commands: %s", error)
+                if self.dispatch_event.is_set():
+                    self.dispatch_event.clear()
+                    self._tick_dispatchers(force=True)
                 now = monotonic()
                 if now >= next_status:
                     self.run_once()
@@ -67,15 +65,45 @@ class PrintExpMonitor:
         finally:
             self.wake_listener.stop()
 
+    def request_dispatch(self, _payload=None):
+        self.dispatch_event.set()
+
+    def _claim_startup_command(self):
+        """One startup read recovers a fleet update missed while powered off."""
+        try:
+            recover_pending_receipts()
+            self.command_dispatcher.next_poll = 0.0
+            self.command_dispatcher.tick()
+        except Exception as error:
+            self.logger.warning("Unable to recover startup command: %s", error)
+
+    def _tick_dispatchers(self, *, force=False):
+        busy = False
+        for label, dispatcher in (
+            ("realtime printer controls", self.control_dispatcher),
+            ("remote commands", self.command_dispatcher),
+        ):
+            if force:
+                dispatcher.next_poll = 0.0
+            try:
+                dispatcher.tick()
+            except Exception as error:
+                self.logger.warning("Unable to poll %s: %s", label, error)
+            busy = busy or getattr(dispatcher, "process", None) is not None
+        if force and busy:
+            self.dispatch_event.set()
+
     def run_once(self):
         status = self.collect_status()
-        if not self.automation_allowed():
-            self.last_signature = None
-            return status
         signature = _signature(status)
         changed = signature != self.last_signature
         if not changed:
             return status
+        try:
+            reconcile_printer_status(status)
+            recover_pending_receipts()
+        except Exception as error:
+            self.logger.warning("Unable to reconcile local command journal: %s", error)
         try:
             self.send(status)
         except Exception as error:

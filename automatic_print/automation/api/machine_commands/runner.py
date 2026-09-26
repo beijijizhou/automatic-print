@@ -2,7 +2,6 @@
 
 from dataclasses import fields, replace
 from pathlib import Path
-from time import monotonic
 
 from PySide6.QtCore import QSettings
 
@@ -13,103 +12,123 @@ from ...browser.batches import (
     download_selected_batches, load_batch_records, load_batch_records_between,
 )
 from ..machine_status.commands import get_command, update_command
-
-
-class CommandProgress:
-    def __init__(self, command_id, send=update_command, interval=2):
-        self.command_id = command_id
-        self.send = send
-        self.interval = float(interval)
-        self.last_sent = 0.0
-        self.last_message = ""
-
-    def __call__(self, message, *, force=False):
-        message = str(message).strip()[:300]
-        now = monotonic()
-        if not force and (message == self.last_message or now - self.last_sent < self.interval):
-            return
-        self.send(self.command_id, "running", phase=message)
-        self.last_sent, self.last_message = now, message
+from .lifecycle import CommandLifecycle, CommandProgress
 
 
 def run_command(command_id):
     progress = CommandProgress(command_id)
     action = "download_layout"
+    lifecycle = None
     try:
         command = get_command(command_id)
         action = str(command.get("action") or "download_layout")
+        payload = command.get("payload") or {}
         if action == "probe":
-            result = inspect_machine()
-            update_command(
-                command_id, "succeeded", phase="目标机实时检测通过",
-                progress_percent=100, result=result,
-            )
-            return 0
-        if action in {"start_print", "pause_print", "clean_resume"}:
-            result = execute_printer_action(action, progress, command.get("payload") or {})
-            phase = {
-                "start_print": "PrintExp 已开始打印",
-                "pause_print": "PrintExp 已暂停",
-                "clean_resume": "清洗完成，已继续打印",
-            }[action]
+            if payload.get("request") == "printer_history":
+                from ..printerexp.history import read_print_history
+                result = read_print_history(
+                    limit=payload.get("limit", 500), days=payload.get("days", 2),
+                )
+                phase = "PrintExp 打印历史读取完成"
+            else:
+                result = inspect_machine()
+                phase = "目标机实时检测通过"
             update_command(
                 command_id, "succeeded", phase=phase,
                 progress_percent=100, result=result,
             )
             return 0
+        if action == "source_update":
+            from .source_update import execute_source_update, schedule_monitor_restart
+            result = execute_source_update(command.get("payload") or {}, progress)
+            update_command(
+                command_id, "succeeded",
+                phase=f"源码{'回滚' if result.get('rollback') else '更新'}完成，等待程序安全重启",
+                progress_percent=100, result=result,
+            )
+            schedule_monitor_restart()
+            return 0
+        if action == "launch_app":
+            from ....runtime.application_launch import launch_application
+            progress("正在启动 AutomaticPrint 主界面", force=True)
+            result = launch_application()
+            phase = (
+                "AutomaticPrint 主界面已经运行"
+                if result.get("already_running") else
+                "AutomaticPrint 主界面已启动"
+            )
+            update_command(
+                command_id, "succeeded", phase=phase,
+                progress_percent=100, result=result,
+            )
+            return 0
+        lifecycle = CommandLifecycle(
+            command_id, action, payload, publish=update_command,
+        )
+        replayed = lifecycle.begin()
+        if replayed is not None:
+            return replayed
+        if action in {"start_print", "pause_print", "clean_resume"}:
+            result = execute_printer_action(action, progress, payload)
+            phase = {
+                "start_print": "PrintExp 已开始打印",
+                "pause_print": "PrintExp 已暂停",
+                "clean_resume": "清洗完成，已继续打印",
+            }[action]
+            lifecycle.succeed(phase, result)
+            return 0
         progress("正在准备远程下载排版任务", force=True)
-        result = execute_download_layout(command.get("payload") or {}, progress)
+        result = execute_download_layout(payload, progress)
         errors = [
             str(item.get("error") if isinstance(item, dict) else item).strip()
             for item in result.get("prn_errors") or []
             if str(item.get("error") if isinstance(item, dict) else item).strip()
         ]
         if errors:
-            update_command(
-                command_id, "failed", phase="PRN生成或装载失败",
-                result=result, error_message="；".join(errors)[:2000],
-            )
+            lifecycle.fail("PRN生成或装载失败", "；".join(errors)[:2000], result)
             return 1
-        update_command(
-            command_id, "succeeded", phase="远程下载排版完成",
-            progress_percent=100, result=result,
-        )
+        lifecycle.succeed("远程下载排版完成", result)
         return 0
     except Exception as error:
         try:
             phase = (
                 "目标机实时检测失败" if action == "probe" else
+                "源码更新失败" if action == "source_update" else
+                "AutomaticPrint 主界面启动失败" if action == "launch_app" else
                 "打印机控制失败" if action != "download_layout" else
                 "远程下载排版失败"
             )
-            update_command(
-                command_id, "failed", phase=phase,
-                error_message=str(error)[:2000],
-            )
+            if lifecycle is not None:
+                lifecycle.fail(phase, str(error)[:2000])
+            else:
+                update_command(
+                    command_id, "failed", phase=phase,
+                    error_message=str(error)[:2000],
+                )
         except Exception:
             pass
         return 1
 
 
 def inspect_machine():
-    from automatic_print import __version__
-    from ....runtime.monitoring.control import automation_enabled
+    from .capabilities import runtime_manifest
+    from ..machine_status import report_machine
     from ..machine_status.identity import machine_id, machine_name
     from ..printerexp.monitor import PrintExpMonitor
 
     status = PrintExpMonitor(send=lambda _status: None).collect_status()
+    report_machine(status)
     return {
+        **runtime_manifest(),
         "machine_id": machine_id(),
         "machine_name": machine_name(),
-        "app_version": __version__,
-        "automation_enabled": automation_enabled(),
         "source_online": status.get("source_online") is True,
         "status": status,
     }
 
 
 def execute_printer_action(action, progress, payload=None):
-    from ..printerexp.controls import clean_then_resume, pause_print, start_print
+    from ..printerexp.control import clean_then_resume, pause_print, start_print
 
     if action == "start_print":
         return start_print(

@@ -6,3 +6,4 @@ tifffile>=2026.8,<2027
 imagecodecs>=2026.8,<2027
 playwright>=1.50,<2
 pywinauto>=0.6.9,<0.7; sys_platform == "win32"
+realtime>=2.31,<3

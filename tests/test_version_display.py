@@ -6,7 +6,7 @@ from io import BytesIO
 from PySide6.QtCore import QSettings
 from PySide6.QtWidgets import QApplication
 
-from automatic_print import __version__, __version_display__
+from automatic_print import __release_notes__, __version__, __version_display__
 from automatic_print.automation.api.machine_status import identity
 from automatic_print.updates.versioning import release_display
 from automatic_print.updates import release as updater
@@ -18,7 +18,7 @@ OWNERS = []
 
 
 def test_version_is_date_and_fixed_daily_iteration(tmp_path):
-    assert __version_display__ == '0.1.413 · 2026-09-25 · 第16次更新'
+    assert __version_display__ == '0.1.414 · 2026-09-26 · 第01次更新'
     prefs = QSettings(str(tmp_path/'version.ini'), QSettings.IniFormat)
     for _ in range(2):
         window = MainWindow(prefs)
@@ -29,6 +29,7 @@ def test_version_is_date_and_fixed_daily_iteration(tmp_path):
         assert __version__ in window.version_label.toolTip()
         window.close()
     assert release_display('0.1.1', '2026-09-14', 1) == '0.1.1 · 2026-09-14 · 第01次更新'
+    assert any('后台监控未能自动重新启动' in item for item in __release_notes__)
 
 
 def test_loading_isolated_preferences_does_not_replace_machine_identity(

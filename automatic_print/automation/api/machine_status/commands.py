@@ -1,5 +1,7 @@
 """Remote download/layout command requests over the restricted Edge Function."""
 
+from ....runtime.monitoring.control import notify_machine
+from ....runtime.monitoring.cloud_wake import notify_machine_via_cloud
 from .client import _call
 from .identity import machine_id, machine_name
 
@@ -15,7 +17,7 @@ def submit_command(
     expires_minutes=30,
     timeout=8,
 ):
-    return _call(
+    command = _call(
         {
             "action": "enqueue_command",
             "machine_id": machine_id(),
@@ -32,6 +34,7 @@ def submit_command(
         },
         timeout=timeout,
     )["command"]
+    return _notify_target(command, target_machine_id)
 
 
 def submit_printer_action(
@@ -45,7 +48,7 @@ def submit_printer_action(
         if not expected_batch_name:
             raise ValueError("开始打印前必须指定批次文件名。")
         payload["expected_batch_name"] = expected_batch_name
-    return _call(
+    command = _call(
         {
             "action": "send_control",
             "command_action": action,
@@ -57,10 +60,27 @@ def submit_printer_action(
         },
         timeout=timeout,
     )["command"]
+    return _notify_target(command, target_machine_id)
+
+
+def submit_application_launch(target_machine_id, *, expires_minutes=2, timeout=8):
+    command = _call(
+        {
+            "action": "send_control",
+            "command_action": "launch_app",
+            "machine_id": machine_id(),
+            "machine_name": machine_name(),
+            "target_machine_id": str(target_machine_id),
+            "expires_minutes": int(expires_minutes),
+            "payload": {},
+        },
+        timeout=timeout,
+    )["command"]
+    return _notify_target(command, target_machine_id)
 
 
 def submit_probe(target_machine_id, *, expires_minutes=1, timeout=8):
-    return _call(
+    command = _call(
         {
             "action": "send_control",
             "command_action": "probe",
@@ -72,6 +92,67 @@ def submit_probe(target_machine_id, *, expires_minutes=1, timeout=8):
         },
         timeout=timeout,
     )["command"]
+    return _notify_target(command, target_machine_id)
+
+
+def submit_history_request(target_machine_id, *, limit=500, days=2, expires_minutes=1, timeout=8):
+    command = _call(
+        {
+            "action": "send_control",
+            "command_action": "probe",
+            "machine_id": machine_id(),
+            "machine_name": machine_name(),
+            "target_machine_id": str(target_machine_id),
+            "expires_minutes": int(expires_minutes),
+            "payload": {
+                "request": "printer_history",
+                "limit": max(1, min(int(limit), 500)),
+                "days": max(1, min(int(days), 31)),
+            },
+        },
+        timeout=timeout,
+    )["command"]
+    return _notify_target(command, target_machine_id)
+
+
+def submit_source_update(
+    target_machine_id, target_revision, target_version, *, expires_minutes=1440, timeout=8,
+):
+    command = _call(
+        {
+            "action": "enqueue_update",
+            "machine_id": machine_id(),
+            "machine_name": machine_name(),
+            "target_machine_id": str(target_machine_id),
+            "expires_minutes": int(expires_minutes),
+            "payload": {
+                "target_revision": str(target_revision),
+                "target_version": str(target_version),
+            },
+        },
+        timeout=timeout,
+    )["command"]
+    return _notify_target(command, target_machine_id)
+
+
+def _notify_target(command, target_machine_id):
+    command_id = str(command.get("id") or "")
+    try:
+        try:
+            acknowledged = notify_machine(target_machine_id, command_id=command_id)
+        except OSError:
+            acknowledged = False
+        if acknowledged:
+            return command
+        notify_machine_via_cloud(target_machine_id, command_id=command_id)
+    except OSError as error:
+        if command_id:
+            try:
+                cancel_command(command_id)
+            except Exception:
+                pass
+        raise RuntimeError(f"无法通知目标机领取任务：{error}") from error
+    return command
 
 
 def list_commands(*, timeout=8):
@@ -131,3 +212,14 @@ def cancel_command(command_id, *, timeout=8):
         {"action": "cancel_command", "command_id": str(command_id)},
         timeout=timeout,
     )["command"]
+
+
+def consume_command_result(command_id, *, timeout=8):
+    return _call(
+        {
+            "action": "consume_command_result",
+            "machine_id": machine_id(),
+            "command_id": str(command_id),
+        },
+        timeout=timeout,
+    )["result"]

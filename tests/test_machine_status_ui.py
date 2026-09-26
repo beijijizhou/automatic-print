@@ -6,6 +6,7 @@ from PySide6.QtCore import QObject, Signal
 from PySide6.QtWidgets import QApplication, QProgressBar
 
 from automatic_print.ui.machine_status_board import MachineStatusPage
+from automatic_print.ui.machine_status_format import mark_local_machine
 
 
 APP = QApplication.instance() or QApplication([])
@@ -28,8 +29,9 @@ def test_board_keeps_eleven_slots_and_renders_live_machine():
     page = MachineStatusPage(fetch=lambda: [])
     page.apply_dashboard(
         {"machines": [
-            {
-                "machine_name": "M4",
+                {
+                    "machine_id": "machine-4",
+                    "machine_name": "M4",
                 "department": "DTF",
                 "state": "running",
                 "batch_name": "BATCH-88.prn",
@@ -55,6 +57,10 @@ def test_board_keeps_eleven_slots_and_renders_live_machine():
     assert isinstance(page.table.cellWidget(3, 4), QProgressBar)
     assert page.table.cellWidget(3, 4).value() == 42
     assert page.sections.currentWidget() is page.status_section
+    assert page.sections.indexOf(page.update_section) == 2
+    assert page.sections.tabText(2) == "版本管理"
+    assert page.sections.indexOf(page.history_section) == 3
+    assert page.sections.tabText(3) == "打印历史"
     assert page.table.minimumHeight() == 420
     assert page.command_panel.submit_button.isEnabled()
     assert not page.control_panel.start_button.isEnabled()
@@ -63,14 +69,21 @@ def test_board_keeps_eleven_slots_and_renders_live_machine():
     assert "会先暂停打印" in page.control_panel.status.text()
     assert "8 个喷头全部、强度中" in page.control_panel.status.text()
     assert page.control_panel.target.currentText() == "M4"
+    assert page.history_panel.target.currentText() == "M4"
+    assert page.software_launch_panel.target.currentText() == "M4"
+    assert page.software_launch_panel.button.isEnabled()
 
 
 def test_board_distinguishes_no_feedback_and_printerexp_offline():
     page = MachineStatusPage(fetch=lambda: [])
     page.apply_dashboard(
         {"machines": [
-            {"machine_name": "M1", "state": "stopped", "agent_online": False},
             {
+                "machine_id": "machine-1", "machine_name": "M1",
+                "state": "stopped", "agent_online": False,
+            },
+            {
+                "machine_id": "machine-2",
                 "machine_name": "M2",
                 "state": "stopped",
                 "agent_online": True,
@@ -82,6 +95,8 @@ def test_board_distinguishes_no_feedback_and_printerexp_offline():
     assert page.table.item(0, 2).text() == "无反馈，不可用"
     assert page.table.item(1, 2).text() == "PrintExp 离线"
     assert page.command_panel.table.rowCount() == 0
+    assert page.software_launch_panel.target.count() == 2
+    assert page.software_launch_panel.button.isEnabled()
 
 
 def test_board_ignores_legacy_names_and_blocks_duplicate_machine_number():
@@ -134,17 +149,16 @@ def test_board_only_enables_start_for_exact_ready_batch():
     assert not page.control_panel.clean_button.isEnabled()
 
 
-def test_board_stops_supabase_refresh_when_automation_is_closed():
-    page = MachineStatusPage(fetch=lambda: {"machines": [], "commands": []})
-    page.automation_toggle.enabled = True
+def test_board_refreshes_once_when_opened_without_an_automation_toggle():
+    calls = []
+    page = MachineStatusPage(fetch=lambda: calls.append("refresh") or {
+        "machines": [], "commands": [],
+    })
+
     page.set_active(True)
-    assert page.timer.isActive()
-    assert page.timer.interval() == 60_000
 
-    page._automation_changed(False)
-
-    assert not page.timer.isActive()
-    assert "不再访问 Supabase" in page.message.text()
+    assert not hasattr(page, "automation_toggle")
+    assert not hasattr(page, "timer")
 
 
 def test_board_blocks_start_when_loaded_task_name_is_unverified():
@@ -189,6 +203,27 @@ def test_board_exposes_shared_manual_availability_setting():
     assert page.table.horizontalHeaderItem(6).text() == "最后反馈"
     assert page.availability_control.target.currentText() == "M4"
     assert page.availability_control.availability.currentData() == "unavailable"
+
+
+def test_board_marks_the_current_machine_everywhere_by_machine_id():
+    machines = mark_local_machine([
+        {
+            "machine_id": "remote-id", "machine_name": "M1", "state": "idle",
+            "available": True, "source_online": True,
+        },
+        {
+            "machine_id": "local-id", "machine_name": "M11", "state": "idle",
+            "available": True, "source_online": True,
+        },
+    ], "local-id")
+    page = MachineStatusPage(fetch=lambda: [])
+
+    page.apply_dashboard({"machines": machines, "commands": []})
+
+    assert page.table.item(0, 0).text() == "M1"
+    assert page.table.item(10, 0).text() == "M11（本机）"
+    assert page.control_panel.target.findText("M11（本机）") >= 0
+    assert page.availability_control.target.findText("M11（本机）") >= 0
 
 
 def test_board_exposes_one_click_machine_signal_test():

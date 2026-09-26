@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+import ast
 from pathlib import Path
 import os
 import re
@@ -27,10 +28,29 @@ class SourceUpdateInfo:
     commits: int
     repair: bool = False
     release_iteration: int = 0
+    rollback: bool = False
+    release_notes: tuple[str, ...] = ()
+    command_protocol: int = 0
+    command_capabilities: tuple[str, ...] = ()
 
     @property
     def needs_update(self):
         return self.current != self.target or self.repair
+
+    @property
+    def display_version(self):
+        return release_display(self.version, self.release_date, self.release_iteration)
+
+
+@dataclass(frozen=True)
+class SourceVersion:
+    revision: str
+    version: str
+    release_date: str
+    release_iteration: int = 0
+    release_notes: tuple[str, ...] = ()
+    command_protocol: int = 0
+    command_capabilities: tuple[str, ...] = ()
 
     @property
     def display_version(self):
@@ -58,18 +78,18 @@ class SourceUpdater:
         try:
             result = subprocess.run(args, cwd=self.root, env=environment, timeout=timeout,
                                     stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
-                                    encoding='utf-8', errors='replace',
                                     creationflags=subprocess.CREATE_NO_WINDOW if os.name == 'nt' else 0)
         except subprocess.TimeoutExpired:
             raise ValueError('更新操作超时，请检查网络后重试。') from None
+        output = _decode_output(result.stdout)
         if result.returncode:
-            raise ValueError('更新操作失败：'+result.stdout[-1200:])
-        return result.stdout.strip()
+            raise ValueError('更新操作失败：'+output[-1200:])
+        return output.strip()
 
     def git_run(self, *args):
         return self.run([self.git, *args])
 
-    def validate(self):
+    def validate(self, *, require_clean=True):
         if not source_install(self.root):
             raise ValueError('当前不是源码安装，无法直接拉取代码。')
         if Path(self.git_run('rev-parse', '--show-toplevel')).resolve() != self.root.resolve():
@@ -78,26 +98,55 @@ class SourceUpdater:
             raise ValueError('更新来源不是本项目官方仓库，更新已停止。')
         if self.git_run('branch', '--show-current') != 'main':
             raise ValueError('当前不在主分支，更新已停止以保护本地开发代码。')
-        if self.git_run('status', '--porcelain', '--untracked-files=no'):
+        if require_clean and self.git_run('status', '--porcelain', '--untracked-files=no'):
             raise ValueError('发现本地代码修改（已跟踪文件），更新已停止，不会覆盖。')
 
-    def check(self):
+    def check(self, target=None):
         self.progress('正在检查安装目录及本地代码…')
         self.validate()
         self.progress('正在连接代码仓库，检查最新提交…')
         self.git_run('fetch', 'origin', 'main')
         current = self.git_run('rev-parse', 'HEAD')
-        target = self.git_run('rev-parse', 'refs/remotes/origin/main')
-        self.git_run('merge-base', '--is-ancestor', current, target)
-        content = self.git_run('show', f'{target}:automatic_print/__init__.py')
-        version = re.search(r'__version__\s*=\s*[\'"]([^\'"]+)', content)
-        date = re.search(r'__release_date__\s*=\s*[\'"]([^\'"]+)', content)
-        iteration = re.search(r'__release_iteration__\s*=\s*(\d+)', content)
-        return SourceUpdateInfo(current, target, version[1] if version else '待确认',
-                                date[1] if date else self.git_run('show', '-s', '--format=%cs', target),
-                                int(self.git_run('rev-list', '--count', f'{current}..{target}')),
-                                (self.root/LOCK_NAME).exists(),
-                                int(iteration[1]) if iteration else 0)
+        latest = self.git_run('rev-parse', 'refs/remotes/origin/main')
+        selected = str(target or latest).strip().lower()
+        if not re.fullmatch(r'[0-9a-f]{40}', selected):
+            raise ValueError('目标源码提交号格式不正确。')
+        self.git_run('merge-base', '--is-ancestor', selected, latest)
+        self.git_run('merge-base', '--is-ancestor', current, latest)
+        content = self.git_run('show', f'{selected}:automatic_print/__init__.py')
+        metadata = _source_version(selected, content, self)
+        forward = int(self.git_run('rev-list', '--count', f'{current}..{selected}'))
+        backward = int(self.git_run('rev-list', '--count', f'{selected}..{current}'))
+        if forward and backward:
+            raise ValueError('当前版本与目标版本不在同一条main历史上。')
+        return SourceUpdateInfo(
+            current, selected, metadata.version, metadata.release_date,
+            max(forward, backward), (self.root/LOCK_NAME).exists(),
+            metadata.release_iteration, rollback=bool(backward),
+            release_notes=metadata.release_notes,
+            command_protocol=metadata.command_protocol,
+            command_capabilities=metadata.command_capabilities,
+        )
+
+    def available_versions(self, limit=20):
+        # The controller only reads immutable metadata from origin/main here.
+        # Its own tracked edits must not prevent managing another machine; the
+        # target still performs the strict clean-worktree check before apply.
+        self.validate(require_clean=False)
+        self.progress('正在连接代码仓库，读取可回滚版本…')
+        self.git_run('fetch', 'origin', 'main')
+        latest = self.git_run('rev-parse', 'refs/remotes/origin/main')
+        revisions = self.git_run(
+            'log', f'--max-count={int(limit)}', '--format=%H', latest,
+            '--', 'automatic_print/__init__.py',
+        ).splitlines()
+        versions = []
+        for revision in revisions:
+            content = self.git_run('show', f'{revision}:automatic_print/__init__.py')
+            version = _source_version(revision, content, self)
+            if _version_key(version.version) >= (0, 1, 393):
+                versions.append(version)
+        return versions
 
     def apply(self, info):
         self.progress('正在复核本地代码及待更新版本…')
@@ -107,11 +156,65 @@ class SourceUpdater:
         lock = self.root/LOCK_NAME
         lock.touch()
         # Leave the reload guard on failure: do not restart into incomplete dependencies.
-        self.progress('正在拉取并应用已确认的新代码…')
-        self.git_run('merge', '--ff-only', info.target)
+        if info.rollback:
+            self.progress('正在安全回滚到已确认的历史版本…')
+            self.git_run('reset', '--keep', info.target)
+        else:
+            self.progress('正在拉取并应用已确认的新代码…')
+            self.git_run('merge', '--ff-only', info.target)
         self.progress('正在检查和更新运行依赖，请稍候…')
         self.run([sys.executable, '-m', 'pip', 'install', '--disable-pip-version-check',
                   '-r', str(self.root/'requirements.txt')], timeout=600)
         self.progress('代码和依赖更新完成，正在准备安全重启…')
         lock.unlink(missing_ok=True)
         return info
+
+
+def _source_version(revision, content, updater):
+    version = re.search(r'__version__\s*=\s*[\'"]([^\'"]+)', content)
+    date = re.search(r'__release_date__\s*=\s*[\'"]([^\'"]+)', content)
+    iteration = re.search(r'__release_iteration__\s*=\s*(\d+)', content)
+    protocol = re.search(r'__command_protocol__\s*=\s*(\d+)', content)
+    return SourceVersion(
+        revision, version[1] if version else '待确认',
+        date[1] if date else updater.git_run('show', '-s', '--format=%cs', revision),
+        int(iteration[1]) if iteration else 0, _release_notes(content),
+        int(protocol[1]) if protocol else 0,
+        _literal_string_tuple(content, "__command_capabilities__"),
+    )
+
+
+def _release_notes(content):
+    return _literal_string_tuple(content, "__release_notes__")
+
+
+def _literal_string_tuple(content, variable):
+    try:
+        module = ast.parse(content)
+        for node in module.body:
+            if not isinstance(node, ast.Assign):
+                continue
+            if any(isinstance(target, ast.Name) and target.id == variable
+                   for target in node.targets):
+                value = ast.literal_eval(node.value)
+                if isinstance(value, (list, tuple)):
+                    return tuple(str(item).strip() for item in value if str(item).strip())
+    except (SyntaxError, ValueError):
+        pass
+    return ()
+
+
+def _decode_output(value):
+    if isinstance(value, str):
+        return value
+    for encoding in ('utf-8', 'gb18030'):
+        try:
+            return bytes(value or b'').decode(encoding)
+        except UnicodeDecodeError:
+            continue
+    return bytes(value or b'').decode('utf-8', errors='replace')
+
+
+def _version_key(value):
+    match = re.fullmatch(r'(\d+)\.(\d+)\.(\d+)', str(value))
+    return tuple(map(int, match.groups())) if match else (0, 0, 0)

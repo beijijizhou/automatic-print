@@ -3,11 +3,14 @@ from PySide6.QtGui import QPixmap
 from PySide6.QtWidgets import QApplication, QSplashScreen
 
 from .runtime.branding import configure_windows_identity, configure_application, application_icon
+from .runtime.application_launch import claim_application_instance
 
 __all__ = ["run"]
 
 
 def run() -> int:
+    if not claim_application_instance():
+        return 0
     configure_windows_identity()
     application = QApplication.instance()
     if application is None:

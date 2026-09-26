@@ -1,103 +1,9 @@
 from __future__ import annotations
 
-import json
-import os
-import platform
-import subprocess
 import time
-from pathlib import Path
 from urllib.parse import urlsplit
-from urllib.error import URLError
-from urllib.request import urlopen
 
-
-DEBUG_PORT = 9222
-CDP_URL = f"http://127.0.0.1:{DEBUG_PORT}"
-
-
-def _chrome_candidates() -> tuple[Path, ...]:
-    system = platform.system()
-    if system == "Windows":
-        roots = [
-            os.environ.get("PROGRAMFILES"),
-            os.environ.get("PROGRAMFILES(X86)"),
-            os.environ.get("LOCALAPPDATA"),
-        ]
-        return tuple(
-            Path(root) / "Google/Chrome/Application/chrome.exe"
-            for root in roots
-            if root
-        )
-    if system == "Darwin":
-        return (
-            Path("/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"),
-        )
-    return (
-        Path("/usr/bin/google-chrome"),
-        Path("/usr/bin/google-chrome-stable"),
-        Path("/usr/bin/chromium"),
-    )
-
-
-def _profile_dir() -> Path:
-    if platform.system() == "Windows" and os.environ.get("LOCALAPPDATA"):
-        root = Path(os.environ["LOCALAPPDATA"])
-    elif platform.system() == "Darwin":
-        root = Path.home() / "Library/Application Support"
-    else:
-        root = Path.home() / ".local/share"
-    return root / "AutomaticPrint/browser-profile"
-
-
-def find_chrome() -> Path:
-    for candidate in _chrome_candidates():
-        if candidate.exists():
-            return candidate
-    raise FileNotFoundError("未找到 Google Chrome，请先安装 Chrome。")
-
-
-def chrome_is_connectable() -> bool:
-    try:
-        with urlopen(f"{CDP_URL}/json/list", timeout=1) as response:
-            targets = json.load(response)
-        return any(target.get("type") == "page" for target in targets)
-    except (json.JSONDecodeError, OSError, URLError, TimeoutError):
-        return False
-
-
-def ensure_debug_chrome(start_url: str, check_cancel=None, progress=None) -> None:
-    check = check_cancel or (lambda: None)
-    report = progress or (lambda _message: None)
-    check()
-    report("正在检查 Chrome 自动化连接…")
-    if chrome_is_connectable():
-        report("Chrome 自动化连接可用。")
-        return
-    report("未检测到自动化浏览器，正在启动 Chrome…")
-    profile = _profile_dir()
-    profile.mkdir(parents=True, exist_ok=True)
-    subprocess.Popen(
-        [
-            str(find_chrome()),
-            f"--remote-debugging-port={DEBUG_PORT}",
-            "--remote-debugging-address=127.0.0.1",
-            f"--user-data-dir={profile}",
-            "--no-first-run",
-            "--no-default-browser-check",
-            start_url,
-        ],
-        stdin=subprocess.DEVNULL,
-        stdout=subprocess.DEVNULL,
-        stderr=subprocess.DEVNULL,
-        start_new_session=True,
-    )
-    for _ in range(150):
-        check()
-        if chrome_is_connectable():
-            report("Chrome 已启动，自动化端口可以连接。")
-            return
-        time.sleep(0.1)
-    raise TimeoutError("Chrome 启动超时。")
+from .chrome import CDP_URL, ensure_debug_chrome
 
 
 def connect_debug_chrome(
@@ -112,6 +18,44 @@ def connect_debug_chrome(
     check()
     report("Chrome 自动化会话连接完成。")
     return browser
+
+
+def show_debug_browser(start_url: str, check_cancel=None, progress=None) -> str:
+    """Open or foreground one Playwright Chrome tab without waiting for login."""
+    from playwright.sync_api import sync_playwright
+
+    check = check_cancel or (lambda: None)
+    report = progress or (lambda _message: None)
+    with sync_playwright() as playwright:
+        browser = connect_debug_chrome(playwright, start_url, check, report)
+        check()
+        host = urlsplit(start_url).netloc
+        pages = [
+            page for context in browser.contexts for page in context.pages
+            if host in page.url
+        ]
+        if pages:
+            page = pages[-1]
+            report(f"正在显示已打开的 {host} 页面…")
+        else:
+            context = browser.contexts[0]
+            page = context.new_page()
+            report(f"正在打开 {host}…")
+            page.goto(start_url, wait_until="domcontentloaded", timeout=30_000)
+        page.bring_to_front()
+        report("Playwright 浏览器已显示；可先完成登录，再点击读取预览。")
+        return page.url
+
+
+def open_platform_browser(platform_name, check_cancel, progress):
+    """Show the configured ERP production page and report the final URL."""
+    from ..providers.registry import get_erp_platform
+
+    url = get_erp_platform(platform_name).production_items_url
+    current = show_debug_browser(url, check_cancel, progress)
+    return {
+        "type": "browser_opened", "platform": platform_name, "url": current,
+    }
 
 
 def open_authenticated_page(
@@ -171,6 +115,9 @@ def open_authenticated_page(
         check()
         page.goto(target_url, wait_until="domcontentloaded", timeout=30_000)
         check()
+
+    page.bring_to_front()
+    report("Playwright 自动化浏览器已显示为当前平台浏览器。")
 
     return _wait_for_authenticated_target(
         page, target_url, ready_selector, ready_state,

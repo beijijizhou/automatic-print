@@ -68,6 +68,18 @@ def test_machine_picker_updates_full_workload_for_selected_machine():
     assert "接下来：S2B · 609180000004 · 1批 · 2项目 · 24件" in dialog.detail.text()
 
 
+def test_machine_picker_marks_the_local_target():
+    machine = {
+        "machine_id": "m11-id", "machine_name": "M11", "state": "idle",
+        "is_local": True,
+    }
+
+    dialog = RemoteMachineDialog([machine], [], "1批 · 10件")
+
+    assert compact_machine_text(machine, []).startswith("M11（本机）")
+    assert dialog.target.currentText().startswith("M11（本机）")
+
+
 def _command(status, batch, pieces, created_at):
     return {
         "target_machine_id": "m8-id", "action": "download_layout",

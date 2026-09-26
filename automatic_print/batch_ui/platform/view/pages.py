@@ -114,18 +114,8 @@ def build_production_page(owner, output_row: QHBoxLayout) -> QWidget:
         "按当前打印参数生成最终PNG，再逐批交给RIIN生成PRN并加入PrinterExp；"
         "不会启动物理打印。"
     )
-    owner.remote_dispatch_button = QPushButton("发送到指定机器生成 PRN")
-    owner.remote_dispatch_button.clicked.connect(owner.dispatch_selected_to_machine)
-    owner.remote_dispatch_button.setToolTip(
-        "把当前勾选批次和当前排版参数发送给指定在线机器；目标机负责下载、"
-        "排版、生成PRN并加载PrintExp，不会启动物理打印。"
-    )
-    owner.remote_dispatch_status = QLabel(
-        "可将当前勾选批次发送到指定在线机器，从下载连续执行到 PRN。"
-    )
-    owner.remote_dispatch_status.setWordWrap(True)
-    from ..remote.dispatch import RemoteBatchDispatcher
-    owner.remote_batch_dispatcher = RemoteBatchDispatcher(owner)
+    from ..remote.controls import build_remote_controls
+    build_remote_controls(owner)
     owner.open_download_folder = QCheckBox("下载完成后打开文件夹")
     owner.open_download_folder.setChecked(True)
     owner.process_button = QPushButton("重新排版已下载批次")
@@ -134,7 +124,11 @@ def build_production_page(owner, output_row: QHBoxLayout) -> QWidget:
     action_buttons = [owner.refresh_button]
     if not getattr(owner, "download_only", False):
         action_buttons.extend((owner.select_button, owner.download_button))
-    action_buttons.extend((owner.automated_print_button, owner.remote_dispatch_button))
+    action_buttons.extend((
+        owner.automated_print_button,
+        owner.remote_dispatch_button,
+        owner.remote_broadcast_button,
+    ))
     if not getattr(owner, "download_only", False):
         action_buttons.append(owner.process_button)
     for button in action_buttons:

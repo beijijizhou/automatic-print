@@ -39,6 +39,7 @@ def test_default_multi_preview_worker_finishes_in_generation_tab(tmp_path, monke
     owner = MainWindow(QSettings(str(tmp_path / "prefs.ini"), QSettings.IniFormat))
     owner.startup_update_timer.stop()
     owner.developer_mode_checkbox.setChecked(True)
+    owner.production_platform_download_page.select_platform("隆丰")
     page = owner.production_platform_download_page.workbenches["隆丰"]
     page.main_tabs.setCurrentIndex(1)
     plan = DefaultMultiPlan(
@@ -62,7 +63,7 @@ def test_default_multi_preview_worker_finishes_in_generation_tab(tmp_path, monke
     owner.close()
 
 
-def test_platform_download_is_multi_select_and_preview_only(tmp_path):
+def test_platform_download_uses_single_selector_and_preview_only(tmp_path):
     owner = MainWindow(QSettings(str(tmp_path / "prefs.ini"), QSettings.IniFormat))
     owner.startup_update_timer.stop()
     owner.show()
@@ -82,9 +83,13 @@ def test_platform_download_is_multi_select_and_preview_only(tmp_path):
     APP.processEvents()
     page = owner.production_platform_download_page
     assert owner.workspace_tabs.currentWidget() is page
-    assert page.platform_checks["隆丰"].isChecked()
-    assert not page.platform_checks["莆田"].isChecked()
-    assert not page.platform_checks["S2B"].isChecked()
+    assert page.platform_selector.currentData() is None
+    assert page.platform_selector.currentText() == "请选择生产平台…"
+    assert page.empty.isVisibleTo(page)
+    assert page.platform_tabs.count() == 0
+    page.select_platform("隆丰")
+    APP.processEvents()
+    assert page.platform_selector.currentData() == "隆丰"
     assert page.platform_tabs.count() == 1
     longfeng = page.workbenches["隆丰"]
     assert longfeng.platform.currentData() == "隆丰"
@@ -95,6 +100,8 @@ def test_platform_download_is_multi_select_and_preview_only(tmp_path):
     assert longfeng.generation_sections.tabText(1) == "生产中批次策略"
     assert longfeng.generation_sections.widget(1) is longfeng.completed_page
     assert longfeng.route_preview_table.horizontalHeaderItem(3).text() == "件数"
+    assert longfeng.open_playwright_button.text() == "打开 隆丰 Playwright 浏览器"
+    assert "登录后" in longfeng.open_playwright_button.toolTip()
     assert longfeng.route_preview_button.text() == "读取工艺路线"
     assert longfeng.default_multi_preview_button.text() == "读取默认路线多项多件"
     assert longfeng.default_multi_generate_button.text() == "直接生成批次"
@@ -155,16 +162,15 @@ def test_platform_download_is_multi_select_and_preview_only(tmp_path):
     assert longfeng.range_end.currentText() == "609180001002"
     assert longfeng.table.item(0, 5).text() == "2026-09-18 09:30:00"
 
-    page.platform_checks["莆田"].setChecked(True)
+    page.select_platform("莆田")
     APP.processEvents()
-    assert page.platform_tabs.count() == 2
+    assert page.platform_tabs.count() == 1
+    assert page.platform_selector.currentData() == "莆田"
+    assert page.platform_tabs.tabText(0) == "莆田"
     assert page.workbenches["莆田"].platform.currentData() == "莆田"
     assert page.workbenches["莆田"].main_tabs.tabText(1) == "批次生成"
-    page.platform_checks["隆丰"].setChecked(False)
-    assert page.platform_tabs.count() == 1
-    assert page.platform_tabs.tabText(0) == "莆田"
 
-    page.platform_checks["S2B"].setChecked(True)
+    page.select_platform("S2B")
     APP.processEvents()
     s2b = page.workbenches["S2B"]
     assert s2b.platform.currentData() == "S2B"
@@ -190,7 +196,7 @@ def test_haloo_workbench_preserves_visible_gap_settings(tmp_path):
     owner.startup_update_timer.stop()
     owner.developer_mode_checkbox.setChecked(True)
     page = owner.production_platform_download_page
-    page.platform_checks["Haloo"].setChecked(True)
+    page.select_platform("Haloo")
     APP.processEvents()
 
     # A stale main-window selection must not leak into Haloo local processing.

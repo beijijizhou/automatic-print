@@ -18,6 +18,11 @@ def machine_name_file():
     return identity_file().with_name("machine-name")
 
 
+def machine_slot_file():
+    """V2 identity store unknown to legacy settings and background processes."""
+    return identity_file().with_name("machine-slot-v2")
+
+
 def machine_id():
     target = identity_file()
     try:
@@ -43,10 +48,17 @@ def machine_id():
 
 
 def machine_name():
-    saved = saved_machine_number()
-    configured = os.environ.get("AUTOMATIC_PRINT_MACHINE_NAME", "").strip().upper()
-    configured = configured if re.fullmatch(r"M(?:[1-9]|1[01])", configured) else ""
-    return saved or configured or "未设置机器号"
+    return bound_machine_number() or "未设置机器号"
+
+
+def bound_machine_number():
+    try:
+        value = machine_slot_file().read_text(encoding="utf-8").strip().upper()
+        if re.fullmatch(r"M(?:[1-9]|1[01])", value):
+            return value
+    except (OSError, UnicodeError):
+        pass
+    return ""
 
 
 def saved_machine_number():
@@ -72,12 +84,16 @@ def saved_machine_number():
     return value if re.fullmatch(r"M(?:[1-9]|1[01])", value) else ""
 
 
-def persist_machine_number(value):
-    """Persist the machine slot where scheduled tasks and the UI both see it."""
+def bind_machine_slot(value):
+    """Bind this agent only after an explicit user machine-slot selection."""
     normalized = str(value or "").strip().upper()
     if not re.fullmatch(r"M(?:[1-9]|1[01])", normalized):
         raise ValueError("机器号必须是 M1-M11。")
-    target = machine_name_file()
+    _write_machine_number(machine_slot_file(), normalized)
+    return normalized
+
+
+def _write_machine_number(target, normalized):
     temporary = None
     try:
         target.parent.mkdir(parents=True, exist_ok=True)
@@ -95,4 +111,3 @@ def persist_machine_number(value):
                 Path(temporary).unlink(missing_ok=True)
             except OSError:
                 pass
-    return normalized

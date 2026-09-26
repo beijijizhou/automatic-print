@@ -10,6 +10,7 @@ def test_submit_start_print_carries_the_exact_expected_batch(monkeypatch):
     captured = {}
     monkeypatch.setattr(commands, "machine_id", lambda: "d9428888-122b-4c26-a127-3eafad1f5270")
     monkeypatch.setattr(commands, "machine_name", lambda: "M4")
+    monkeypatch.setattr(commands, "notify_machine", lambda *args, **kwargs: True)
     monkeypatch.setattr(commands, "_call", lambda payload, **_options: captured.update(payload) or {
         "command": {"id": "control-start"}
     })

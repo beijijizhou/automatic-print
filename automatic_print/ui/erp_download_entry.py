@@ -1,7 +1,8 @@
 """Shared workspace for generated production batches."""
 
+from PySide6.QtCore import Qt
 from PySide6.QtWidgets import (
-    QCheckBox,
+    QComboBox,
     QGroupBox,
     QHBoxLayout,
     QLabel,
@@ -21,27 +22,35 @@ class ProductionPlatformDownloadPage(QWidget):
         self.host_window = window
         self.workbenches: dict[str, QWidget] = {}
         self.platform_tabs = QTabWidget()
-        self.empty = QLabel("请至少选择一个需要读取的生产平台。")
-        self.empty.setStyleSheet("padding:24px;color:#667085;")
-        self.platform_checks: dict[str, QCheckBox] = {}
+        self.platform_tabs.tabBar().hide()
+        self.empty = QLabel(
+            "尚未选择生产平台\n\n请从上方下拉菜单选择一个平台，"
+            "再读取和下载该平台的生产批次。"
+        )
+        self.empty.setWordWrap(True)
+        self.empty.setStyleSheet(
+            "padding:48px;border:1px dashed #98a2b3;border-radius:8px;"
+            "background:#f8fafc;color:#475467;font-size:16px;"
+        )
+        self.empty.setAlignment(Qt.AlignCenter)
+        self.empty.setMinimumHeight(180)
+        self.platform_selector = QComboBox()
+        self.platform_selector.setMinimumWidth(260)
+        self.platform_selector.addItem("请选择生产平台…", None)
 
-        choices = QGroupBox("生产平台（可多选）")
+        choices = QGroupBox("生产平台")
         choice_row = QHBoxLayout(choices)
+        choice_row.addWidget(QLabel("当前平台"))
+        choice_row.addWidget(self.platform_selector)
         for name in PLATFORM_ORDER:
             if name not in ERP_PLATFORMS and name not in ("S2B", "亿点万象"):
                 continue
-            checkbox = QCheckBox(name)
-            checkbox.toggled.connect(
-                lambda checked, platform=name: self._toggle_platform(
-                    platform, checked
-                )
-            )
-            self.platform_checks[name] = checkbox
-            choice_row.addWidget(checkbox)
+            self.platform_selector.addItem(name, name)
         choice_row.addStretch()
+        self.platform_selector.currentIndexChanged.connect(self._platform_changed)
 
         intro = QLabel(
-            "每个平台独立保存登录、批次列表、下载进度和日志。"
+            "一次只操作一个生产平台；切换后仍保留各平台已读取的列表和日志。"
             "下载已生成批次后，蜂鸟平台可由用户选择继续本地排版、"
             "PRN生成和PrinterExp加载；亿点万象下载与UV排版分开进行。"
             "自动流程不会启动物理打印。"
@@ -53,7 +62,6 @@ class ProductionPlatformDownloadPage(QWidget):
         layout.addWidget(self.empty)
         layout.addWidget(self.platform_tabs, 1)
         self.platform_tabs.hide()
-        self.platform_checks["隆丰"].setChecked(True)
 
     @property
     def thread(self):
@@ -66,9 +74,22 @@ class ProductionPlatformDownloadPage(QWidget):
             None,
         )
 
-    def _toggle_platform(self, name: str, checked: bool) -> None:
+    def select_platform(self, name: str | None) -> None:
+        index = self.platform_selector.findData(name)
+        if index < 0:
+            raise ValueError(f"未知生产平台：{name}")
+        self.platform_selector.setCurrentIndex(index)
+
+    def _platform_changed(self, _index: int) -> None:
+        name = self.platform_selector.currentData()
+        while self.platform_tabs.count():
+            self.platform_tabs.removeTab(0)
+        if not name:
+            self.empty.show()
+            self.platform_tabs.hide()
+            return
         workbench = self.workbenches.get(name)
-        if checked and workbench is None:
+        if workbench is None:
             if name == "亿点万象":
                 from .ydwx_download import YdwxDownloadPage
                 workbench = YdwxDownloadPage(self.host_window)
@@ -83,17 +104,9 @@ class ProductionPlatformDownloadPage(QWidget):
                     download_only=True,
                 )
             self.workbenches[name] = workbench
-        if checked:
-            if self.platform_tabs.indexOf(workbench) < 0:
-                self.platform_tabs.addTab(workbench, name)
-            self.platform_tabs.setCurrentWidget(workbench)
-        elif workbench is not None:
-            index = self.platform_tabs.indexOf(workbench)
-            if index >= 0:
-                self.platform_tabs.removeTab(index)
-        has_platform = self.platform_tabs.count() > 0
-        self.empty.setVisible(not has_platform)
-        self.platform_tabs.setVisible(has_platform)
+        self.platform_tabs.addTab(workbench, name)
+        self.empty.hide()
+        self.platform_tabs.show()
 
 
 def install_production_platform_tab(
@@ -109,8 +122,11 @@ def install_production_platform_tab(
     def sync_visibility(*_args):
         uv_selected = getattr(window, "department_key", "dtf") == "uv"
         ydwx = page.workbenches.get("亿点万象")
-        if uv_selected or ydwx is None or ydwx.thread is None:
-            page.platform_checks["亿点万象"].setChecked(uv_selected)
+        if uv_selected:
+            page.select_platform("亿点万象")
+        elif (ydwx is None or ydwx.thread is None) \
+                and page.platform_selector.currentData() == "亿点万象":
+            page.select_platform(None)
         visible = (
             uv_selected
             or window.developer_mode_checkbox.isChecked()

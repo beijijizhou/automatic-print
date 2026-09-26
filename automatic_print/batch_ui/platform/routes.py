@@ -10,6 +10,11 @@ from .view.route_view import preview_row, show_orders
 
 
 class RouteActionsMixin:
+    def open_playwright_browser(self) -> None:
+        self._start_worker(AutomationWorker(
+            "open_browser", self.platform.currentData(),
+        ))
+
     def show_route_controls(self, platform_name: str) -> None:
         visible = platform_name == "隆丰"
         for widget in (

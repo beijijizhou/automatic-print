@@ -2,7 +2,7 @@
 
 from PySide6.QtWidgets import QCheckBox, QComboBox, QDoubleSpinBox, QLineEdit, QPushButton
 
-from ....automation.api.machine_status.identity import persist_machine_number
+from ....automation.api.machine_status.identity import bind_machine_slot
 from ....layout_engine.labeling.base.labels import compact_label_text
 from ...quick_fields import quick_fields
 
@@ -153,7 +153,7 @@ def _cutter_marker_toggle(window):
 def _persist_machine_selection(window, value):
     window.preferences.setValue("layout/machine_number", value)
     window.preferences.sync()
-    persist_machine_number(value)
+    bind_machine_slot(value)
 
 
 def _mirror_combo(source):

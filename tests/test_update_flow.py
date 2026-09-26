@@ -134,7 +134,10 @@ def window_for_test(tmp_path, monkeypatch):
     window.show()
     monkeypatch.setattr(update_actions, 'source_install', lambda: True)
     monkeypatch.setattr(QMessageBox, 'warning', lambda *args: pytest_fail())
-    info = SourceUpdateInfo('old', 'new', '0.1.999', '2026-09-14', 2)
+    info = SourceUpdateInfo(
+        'old', 'new', '0.1.999', '2026-09-14', 2,
+        release_notes=('新增分布式打印历史。',),
+    )
     monkeypatch.setattr(SourceUpdater, 'check', lambda self: info)
     return window, info
 

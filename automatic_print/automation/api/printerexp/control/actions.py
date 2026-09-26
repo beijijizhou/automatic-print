@@ -48,6 +48,7 @@ def start_print(
     verb = "继续" if resumed else "开始"
     _report(progress, f"PrintExp 已{verb}打印 {expected_batch_name}")
     return {"state": "printing", "batch_name": expected_batch_name,
+            "printexp_task_id": str(snapshot.task_id or ""),
             "physical_print_started": True, "resumed": resumed}
 
 

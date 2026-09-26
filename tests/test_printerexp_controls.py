@@ -1,6 +1,6 @@
 import pytest
 
-from automatic_print.automation.api.printerexp.controls import (
+from automatic_print.automation.api.printerexp.control import (
     ALL_HEADS, MEDIUM_CLEAN, NativePrintExpControls, clean_then_resume, pause_print,
     start_print,
 )
@@ -188,6 +188,7 @@ def test_start_print_rechecks_zero_progress_and_exact_loaded_batch():
     result = start_print("tangle.prn", controls, snapshot=snapshot)
 
     assert result["physical_print_started"] is True
+    assert result["printexp_task_id"] == "job"
     assert result["resumed"] is False
     assert result["batch_name"] == "tangle.prn"
     assert controls.print_clicks == 1

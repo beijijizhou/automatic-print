@@ -18,21 +18,30 @@ from PySide6.QtWidgets import (
 )
 
 from ..automation.api.machine_status import list_commands, list_machines
+from ..automation.api.machine_status.identity import machine_id
 from ..batch_ui.platform.remote.queue import machine_workload
 from .machine_command_ui import RemoteCommandPanel
-from .automation_toggle import AutomationToggle
 from .printer_control_ui import PrinterControlPanel
-from .machine_status_format import feedback_text, machine_slots, remaining_text, status_text
+from .machine_status_format import (
+    feedback_text, machine_display_name, machine_slots, mark_local_machine,
+    remaining_text, status_text,
+)
 from .machine_availability import MachineAvailabilityControl
 from .machine_status_layout import build_machine_status_layout
+from .fleet_update import FleetUpdatePanel
 from .machine_signal_test import install_machine_signal_control
+from .printer_history import PrinterHistoryPanel
+from .software_launch import SoftwareLaunchPanel
 
 
 EXPECTED_MACHINES = 11
 
 
 def load_dashboard():
-    return {"machines": list_machines(), "commands": list_commands()}
+    return {
+        "machines": mark_local_machine(list_machines(), machine_id()),
+        "commands": list_commands(),
+    }
 
 
 class MachineStatusLoader(QObject):
@@ -52,9 +61,17 @@ class MachineStatusLoader(QObject):
 
     def _run(self):
         try:
-            self.loaded.emit(self.fetch())
+            dashboard = self.fetch()
         except Exception as error:
-            self.failed.emit(str(error))
+            try:
+                self.failed.emit(str(error))
+            except RuntimeError:
+                pass  # The page was closed while the background read finished.
+        else:
+            try:
+                self.loaded.emit(dashboard)
+            except RuntimeError:
+                pass  # The page was closed while the background read finished.
         finally:
             self._lock.release()
 
@@ -66,13 +83,13 @@ class MachineStatusPage(QWidget):
         self.loader = MachineStatusLoader(fetch, self)
         self.loader.loaded.connect(self.apply_dashboard)
         self.loader.failed.connect(self.show_error)
-        self.timer = QTimer(self)
-        self.timer.setInterval(60_000)
-        self.timer.timeout.connect(self.refresh)
-
+        self.update_timer = QTimer(self)
+        self.update_timer.setInterval(5_000)
+        self.update_timer.timeout.connect(self.refresh)
         title = QLabel("PrintExp 打印机状态")
         title.setProperty("heading", True)
-        description = QLabel("显示各电脑上 PrintExp 的真实任务、打印百分比和预计剩余时间。机器启动和状态变化时反馈；不发送周期心跳。")
+        description = QLabel("显示最近一次机器回执；发送任务前会现场查询指定机器的"
+                             "PrintExp 状态，不发送周期心跳。")
         description.setWordWrap(True)
         self.summary = QLabel("已接入 0 / 11 · 在线 0 · 打印中 0")
         self.summary.setStyleSheet("font-size:16px;font-weight:700;color:#0f172a;")
@@ -89,7 +106,9 @@ class MachineStatusPage(QWidget):
         overview_layout = QVBoxLayout(overview)
         overview_layout.addLayout(header)
         overview_layout.addWidget(self.message)
-        self.signal_control = install_machine_signal_control(self, header, overview_layout, signal_tester)
+        self.signal_control = install_machine_signal_control(
+            self, header, overview_layout, signal_tester
+        )
 
         self.table = QTableWidget(EXPECTED_MACHINES, 9)
         self.table.setHorizontalHeaderLabels(
@@ -112,28 +131,20 @@ class MachineStatusPage(QWidget):
         self.command_panel.command_submitted.connect(self.refresh)
         self.control_panel = PrinterControlPanel(self)
         self.control_panel.command_submitted.connect(self.refresh)
-        self.automation_toggle = AutomationToggle(self)
-        self.automation_toggle.changed.connect(self._automation_changed)
         self.availability_control = MachineAvailabilityControl(self)
         self.availability_control.changed.connect(self.refresh)
+        self.software_launch_panel = SoftwareLaunchPanel(self)
+        self.software_launch_panel.command_submitted.connect(self.refresh)
+        self.update_panel = FleetUpdatePanel(self)
+        self.update_panel.commands_submitted.connect(self._track_updates)
+        self.history_panel = PrinterHistoryPanel(self)
 
         build_machine_status_layout(self, title, description, overview)
 
     def set_active(self, active):
         self._active = bool(active)
-        if self._active and self.automation_toggle.enabled:
-            self.timer.start()
+        if self._active:
             self.refresh()
-        else:
-            self.timer.stop()
-
-    def _automation_changed(self, enabled):
-        if enabled and self._active:
-            self.timer.start()
-            self.refresh()
-        elif not enabled:
-            self.timer.stop()
-            self.message.setText("自动化已关闭：不再访问 Supabase；使用上方按钮可局域网唤起。")
 
     def refresh(self):
         if self.loader.refresh():
@@ -150,6 +161,17 @@ class MachineStatusPage(QWidget):
         self.control_panel.set_data(machines)
         self.command_panel.set_data(machines, commands)
         self.availability_control.set_data(machines)
+        self.software_launch_panel.set_data(machines)
+        self.update_panel.set_data(machines, commands)
+        self.history_panel.set_data(machines)
+        if self.update_panel.has_active_updates():
+            self.update_timer.start()
+        else:
+            self.update_timer.stop()
+
+    def _track_updates(self):
+        self.update_timer.start()
+        self.refresh()
 
     def apply_machines(self, machines, commands=None):
         machines = [item for item in machines if isinstance(item, dict)]
@@ -186,7 +208,7 @@ class MachineStatusPage(QWidget):
     def _fill_machine(self, row, machine, commands):
         workload = machine_workload(machine, commands)
         values = (
-            f"M{row + 1}",
+            machine_display_name(machine),
             machine.get("department") or "—",
             status_text(machine),
             machine.get("batch_name") or machine.get("batch_id") or "—",
@@ -210,7 +232,9 @@ class MachineStatusPage(QWidget):
         self.table.setCellWidget(row, 4, progress)
 
     def _fill_pending(self, row):
-        values = (f"M{row + 1}", "—", "待接入", "—", "", "—", "—", "—", "—")
+        values = (
+            f"M{row + 1}", "—", "待接入", "—", "", "—", "—", "—", "—",
+        )
         for column, value in enumerate(values):
             self.table.setItem(row, column, QTableWidgetItem(value))
         self.table.removeCellWidget(row, 4)

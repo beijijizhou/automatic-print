@@ -41,6 +41,7 @@ class ThreadActionsMixin:
             "list_range": worker.batches_loaded,
             "status": worker.status_loaded,
             "status_and_list": worker.batches_loaded,
+            "open_browser": worker.completed,
             "preview_rules": worker.plan_loaded,
             "preview_route": worker.plan_loaded,
             "generate_route": worker.completed,
@@ -94,6 +95,14 @@ class ThreadActionsMixin:
         finish_activity(
             self, getattr(self, "_task_step_text", "处理完成") or "处理完成",
         )
+        if result.get('type') == 'browser_opened':
+            text = (
+                f"{result['platform']} Playwright 浏览器已打开。"
+                "登录后可直接点击读取预览。"
+            )
+            self.loading_label.setText(text)
+            self.log.appendPlainText(text)
+            return
         if result.get('type') == 'completed_erp_generated':
             self.completed_page.show_generation_result(result)
             return
@@ -124,6 +133,7 @@ class ThreadActionsMixin:
             self.download_button,
             getattr(self, "automated_print_button", None),
             getattr(self, "remote_dispatch_button", None),
+            getattr(self, "remote_broadcast_button", None),
             getattr(self, "order_side_checkbox", None),
             getattr(self, "open_download_folder", None),
             self.process_button,
@@ -133,6 +143,7 @@ class ThreadActionsMixin:
             getattr(self, "preview_rules_button", None),
             getattr(self, "default_multi_preview_button", None),
             getattr(self, "route_preview_button", None),
+            getattr(self, "open_playwright_button", None),
             getattr(self, "route_selector", None),
             getattr(self, "local_refresh_button", None),
             getattr(self, "local_select_button", None),

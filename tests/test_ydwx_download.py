@@ -193,7 +193,7 @@ def test_uv_download_page_lists_ydwx_without_dtf_layout_controls(tmp_path):
 
     owner = window(tmp_path / "ydwx.ini", department=None)
     page = owner.production_platform_download_page
-    assert page.platform_checks["亿点万象"].isChecked()
+    assert page.platform_selector.currentData() == "亿点万象"
     ydwx = page.workbenches["亿点万象"]
     assert not hasattr(ydwx, "token")
     assert ydwx.download.isEnabled() is False
@@ -203,5 +203,5 @@ def test_uv_download_page_lists_ydwx_without_dtf_layout_controls(tmp_path):
     assert ydwx.table.item(0, 6).text() == "2030铁"
     assert "48 张" in ydwx.table.item(0, 7).text()
     owner.department_selector.setCurrentIndex(owner.department_selector.findData("dtf"))
-    assert not page.platform_checks["亿点万象"].isChecked()
+    assert page.platform_selector.currentData() is None
     owner.close()

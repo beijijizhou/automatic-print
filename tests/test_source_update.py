@@ -22,7 +22,7 @@ def repositories(tmp_path, monkeypatch):
     # that protect a real checkout's main branch.
     git(seed, 'config', 'core.hooksPath', '')
     (seed/'automatic_print').mkdir()
-    (seed/'automatic_print/__init__.py').write_text('__version__ = "0.1.1"\n__release_date__ = "2026-09-13"\n')
+    (seed/'automatic_print/__init__.py').write_text('__version__ = "0.1.393"\n__release_date__ = "2026-09-23"\n__release_iteration__ = 14\n')
     (seed/'requirements.txt').write_text('')
     (seed/'.gitignore').write_text('.update-in-progress\n')
     git(seed, 'add', '.'); git(seed, 'commit', '-m', 'initial')
@@ -33,7 +33,10 @@ def repositories(tmp_path, monkeypatch):
 
 
 def publish(seed):
-    (seed/'automatic_print/__init__.py').write_text('__version__ = "0.1.2"\n__release_date__ = "2026-09-14"\n__release_iteration__ = 2\n')
+    (seed/'automatic_print/__init__.py').write_text(
+        '__version__ = "0.1.394"\n__release_date__ = "2026-09-24"\n'
+        '__release_iteration__ = 15\n__release_notes__ = ("新增打印历史。",)\n'
+    )
     git(seed, 'add', '.'); git(seed, 'commit', '-m', 'update'); git(seed, 'push', 'origin', 'main')
 
 
@@ -45,8 +48,9 @@ def test_check_and_apply_fast_forward_without_installer(repositories, monkeypatc
     publish(seed)
     info = updater.check()
     assert info.needs_update and info.commits == 1
-    assert info.display_version == '0.1.2 · 2026-09-14 · 第02次更新'
-    assert info.version == '0.1.2' and info.release_iteration == 2
+    assert info.display_version == '0.1.394 · 2026-09-24 · 第15次更新'
+    assert info.version == '0.1.394' and info.release_iteration == 15
+    assert info.release_notes == ('新增打印历史。',)
     original, commands = updater.run, []
     def run(args, **kwargs):
         commands.append(args)
@@ -60,6 +64,86 @@ def test_check_and_apply_fast_forward_without_installer(repositories, monkeypatc
     assert not (client/source.LOCK_NAME).exists()
     assert any('pip' in args for args in commands)
     assert any('依赖' in stage for stage in stages)
+
+
+def test_check_can_pin_an_older_commit_already_on_remote_main(repositories):
+    seed, client = repositories
+    original = git(client, 'rev-parse', 'HEAD')
+    publish(seed)
+
+    info = source.SourceUpdater(client).check(original)
+
+    assert info.target == original
+    assert info.version == '0.1.393'
+    assert not info.needs_update
+
+
+def test_safe_rollback_preserves_untracked_files_and_can_upgrade_again(repositories, monkeypatch):
+    seed, client = repositories
+    old_revision = git(client, 'rev-parse', 'HEAD')
+    publish(seed)
+    updater = source.SourceUpdater(client)
+    original_run = updater.run
+    monkeypatch.setattr(
+        updater, 'run',
+        lambda args, **kwargs: '' if args[:3] == [sys.executable, '-m', 'pip']
+        else original_run(args, **kwargs),
+    )
+    latest = updater.check()
+    updater.apply(latest)
+    untracked = client/'local-production-note.txt'
+    untracked.write_text('keep me')
+
+    rollback = updater.check(old_revision)
+    assert rollback.rollback and rollback.commits == 1
+    updater.apply(rollback)
+
+    assert git(client, 'branch', '--show-current') == 'main'
+    assert git(client, 'rev-parse', 'HEAD') == old_revision
+    assert untracked.read_text() == 'keep me'
+    upgrade = updater.check()
+    assert upgrade.needs_update and not upgrade.rollback
+    updater.apply(upgrade)
+    assert git(client, 'rev-parse', 'HEAD') == latest.target
+
+
+def test_available_versions_are_published_and_recoverable(repositories):
+    seed, client = repositories
+    publish(seed)
+    updater = source.SourceUpdater(client)
+    updater.git_run('fetch', 'origin', 'main')
+
+    versions = updater.available_versions()
+
+    assert [item.version for item in versions] == ['0.1.394', '0.1.393']
+    assert versions[0].release_notes == ('新增打印历史。',)
+    assert all(len(item.revision) == 40 for item in versions)
+
+
+def test_available_versions_allow_controller_tracked_changes(repositories):
+    seed, client = repositories
+    publish(seed)
+    (client/'requirements.txt').write_text('controller-only local edit')
+
+    versions = source.SourceUpdater(client).available_versions()
+
+    assert [item.version for item in versions] == ['0.1.394', '0.1.393']
+    with pytest.raises(ValueError, match='本地代码修改'):
+        source.SourceUpdater(client).check()
+
+
+def test_source_metadata_includes_command_protocol_and_capabilities(repositories):
+    _seed, client = repositories
+    content = (
+        '__version__ = "0.1.410"\n__release_date__ = "2026-09-25"\n'
+        '__release_iteration__ = 13\n__command_protocol__ = 2\n'
+        '__command_capabilities__ = ("probe", "future_action")\n'
+    )
+
+    metadata = source._source_version("a" * 40, content, source.SourceUpdater(client))
+
+    assert metadata.command_protocol == 2
+    assert metadata.command_capabilities == ("probe", "future_action")
 
 
 def test_local_changes_and_wrong_branch_are_protected(repositories):

@@ -23,7 +23,7 @@ from PySide6.QtWidgets import (
 )
 
 from ..automation.api.machine_status.commands import submit_command
-from .machine_status_format import actionable_machines
+from .machine_status_format import actionable_machines, machine_display_name
 
 
 class CommandSubmitter(QObject):
@@ -57,10 +57,7 @@ class MachineCommandDialog(QDialog):
         self.resize(560, 360)
         self.target = QComboBox()
         for machine in machines:
-            self.target.addItem(
-                str(machine.get("machine_name") or machine.get("machine_id")),
-                str(machine.get("machine_id")),
-            )
+            self.target.addItem(machine_display_name(machine), str(machine.get("machine_id")))
         self.platform = QComboBox()
         self.platform.addItems(("Haloo", "隆丰", "莆田", "S2B"))
         self.batches = QPlainTextEdit()
@@ -125,7 +122,10 @@ class RemoteCommandPanel(QGroupBox):
         self.machines = actionable_machines(machines)
         self.submit_button.setEnabled(bool(self.machines))
         self.table.setRowCount(min(10, len(commands)))
-        names = {str(item.get("machine_id")): item.get("machine_name") for item in machines}
+        names = {
+            str(item.get("machine_id")): machine_display_name(item)
+            for item in machines
+        }
         for row, command in enumerate(commands[:10]):
             payload = command.get("payload") or {}
             batches = payload.get("batch_numbers") or []
@@ -192,6 +192,8 @@ def _command_status(status):
 
 
 def _command_summary(action, payload, batches):
+    if action == "launch_app":
+        return "打开 AutomaticPrint"
     if action == "start_print": return f"开始打印 · {payload.get('expected_batch_name') or '—'}"
     if action == "pause_print":
         return "暂停打印"

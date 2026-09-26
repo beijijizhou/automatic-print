@@ -42,6 +42,21 @@ def test_monitor_accepts_independent_control_dispatcher():
     assert monitor.control_dispatcher is control
 
 
+def test_monitor_keeps_dispatch_pending_while_worker_is_busy():
+    process = SimpleNamespace(poll=lambda: None)
+    download = SimpleNamespace(tick=lambda: None, process=None, next_poll=0)
+    control = SimpleNamespace(tick=lambda: None, process=process, next_poll=0)
+    monitor = PrintExpMonitor(
+        send=lambda _status: None,
+        command_dispatcher=download,
+        control_dispatcher=control,
+    )
+
+    monitor._tick_dispatchers(force=True)
+
+    assert monitor.dispatch_event.is_set()
+
+
 def test_command_progress_rate_limits_repeated_updates():
     sent = []
     progress = CommandProgress("command-1", send=lambda *a, **k: sent.append((a, k)), interval=999)
@@ -50,6 +65,38 @@ def test_command_progress_rate_limits_repeated_updates():
 
     assert len(sent) == 1
     assert sent[0][1]["phase"] == "第一步"
+
+
+def test_runner_launches_only_the_fixed_application_and_reports_receipt(monkeypatch):
+    updates = []
+    monkeypatch.setattr(runner, "CommandProgress", lambda _command_id: lambda *_args, **_kwargs: None)
+    monkeypatch.setattr(runner, "get_command", lambda _command_id: {
+        "action": "launch_app", "payload": {},
+    })
+    monkeypatch.setattr(
+        "automatic_print.runtime.application_launch.launch_application",
+        lambda: {"launched": True, "already_running": False},
+    )
+    monkeypatch.setattr(
+        runner, "update_command",
+        lambda *args, **kwargs: updates.append((args, kwargs)),
+    )
+
+    assert runner.run_command("launch-1") == 0
+    assert updates[-1][0] == ("launch-1", "succeeded")
+    assert updates[-1][1]["phase"] == "AutomaticPrint 主界面已启动"
+    assert updates[-1][1]["result"]["launched"] is True
+
+
+def test_remote_settings_keep_target_machine_number(tmp_path):
+    from PySide6.QtCore import QSettings
+
+    preferences = QSettings(str(tmp_path / "target-number.ini"), QSettings.IniFormat)
+    preferences.setValue("layout/machine_number", "M8")
+    settings = _layout_settings({"dpi": 200, "machine_number": "M1", "unknown": 3}, preferences)
+
+    assert settings.dpi == 200
+    assert settings.machine_number == "M8"
 
 
 def test_remote_settings_use_target_machine_layout_snapshot(tmp_path):
@@ -161,7 +208,7 @@ def test_runner_answers_probe_with_fresh_machine_facts(monkeypatch):
     })
     monkeypatch.setattr(runner, "inspect_machine", lambda: {
         "machine_id": "machine-1", "machine_name": "M1",
-        "app_version": "0.1.384", "automation_enabled": True,
+        "app_version": "0.1.386",
         "source_online": True, "status": {"state": "idle"},
     })
     monkeypatch.setattr(
@@ -172,6 +219,24 @@ def test_runner_answers_probe_with_fresh_machine_facts(monkeypatch):
     assert updates[-1][0][1] == "succeeded"
     assert updates[-1][1]["phase"] == "目标机实时检测通过"
     assert updates[-1][1]["result"]["machine_name"] == "M1"
+
+
+def test_runner_reads_printexp_history_only_when_requested(monkeypatch):
+    updates = []
+    monkeypatch.setattr(runner, "get_command", lambda _command_id: {
+        "action": "probe", "payload": {"request": "printer_history", "limit": 20},
+    })
+    monkeypatch.setattr(
+        "automatic_print.automation.api.printerexp.history.read_print_history",
+        lambda limit, days: {"records": [{"task_name": "job.prn"}], "total_records": 1},
+    )
+    monkeypatch.setattr(
+        runner, "update_command", lambda *args, **kwargs: updates.append((args, kwargs)),
+    )
+
+    assert runner.run_command("history-1") == 0
+    assert updates[-1][1]["phase"] == "PrintExp 打印历史读取完成"
+    assert updates[-1][1]["result"]["records"][0]["task_name"] == "job.prn"
 
 
 def test_runner_routes_start_with_expected_batch(monkeypatch):
@@ -211,5 +276,5 @@ def test_runner_marks_prn_error_as_failed_and_preserves_result(monkeypatch):
     assert runner.run_command("command-failed") == 1
     assert updates[-1][0][1] == "failed"
     assert updates[-1][1]["phase"] == "PRN生成或装载失败"
-    assert updates[-1][1]["result"] is result
+    assert updates[-1][1]["result"] == result
     assert "PrintExp 装载失败" in updates[-1][1]["error_message"]

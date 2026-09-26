@@ -3,7 +3,6 @@ from threading import Event
 
 from automatic_print.automation.api.machine_status import client
 from automatic_print.automation.api.machine_status import commands
-from automatic_print.automation.api.machine_status import identity
 from automatic_print.automation.api.machine_status.reporter import MachineStatusReporter
 from automatic_print.automation.api.printerexp.monitor import StatusProjector
 from automatic_print.automation.api.printerexp.state import read_snapshot
@@ -118,6 +117,8 @@ def test_backend_contract_keeps_unknown_eta_nullable():
     assert "claim_machine_control" in urgent_control_migration
     assert "action = 'download_layout'" in urgent_control_migration
     assert '"probe"' in function
+    assert 'action === "consume_command_result"' in function
+    assert '.delete()' in function
     assert "requested_by_machine_id.eq" in function
     assert "action in ('start_print', 'pause_print', 'clean_resume', 'probe')" in probe_migration
 
@@ -126,6 +127,7 @@ def test_submit_command_sends_target_batches_and_settings(monkeypatch):
     captured = {}
     monkeypatch.setattr(commands, "machine_id", lambda: "d9428888-122b-4c26-a127-3eafad1f5270")
     monkeypatch.setattr(commands, "machine_name", lambda: "CONTROL-01")
+    monkeypatch.setattr(commands, "notify_machine", lambda *args, **kwargs: True)
 
     def call(payload, **options):
         captured.update(payload)
@@ -152,6 +154,11 @@ def test_submit_probe_uses_short_lived_control_channel(monkeypatch):
     captured = {}
     monkeypatch.setattr(commands, "machine_id", lambda: "d9428888-122b-4c26-a127-3eafad1f5270")
     monkeypatch.setattr(commands, "machine_name", lambda: "M11")
+    notified = {}
+    monkeypatch.setattr(
+        commands, "notify_machine",
+        lambda target, **options: notified.update(target=target, **options) or True,
+    )
     monkeypatch.setattr(
         commands, "_call",
         lambda payload, **_options: captured.update(payload) or {"command": {"id": "probe-1"}},
@@ -163,12 +170,82 @@ def test_submit_probe_uses_short_lived_control_channel(monkeypatch):
     assert captured["action"] == "send_control"
     assert captured["command_action"] == "probe"
     assert captured["expires_minutes"] == 1
+    assert notified == {
+        "target": "b9428888-122b-4c26-a127-3eafad1f5271",
+        "command_id": "probe-1",
+    }
+
+
+def test_submit_history_request_uses_probe_envelope(monkeypatch):
+    captured = {}
+    monkeypatch.setattr(commands, "machine_id", lambda: "local-id")
+    monkeypatch.setattr(commands, "machine_name", lambda: "M11")
+    monkeypatch.setattr(commands, "notify_machine", lambda *_args, **_kwargs: True)
+    monkeypatch.setattr(
+        commands, "_call",
+        lambda payload, **_options: captured.update(payload) or {"command": {"id": "history-1"}},
+    )
+
+    result = commands.submit_history_request("remote-id", limit=500, days=2)
+
+    assert result["id"] == "history-1"
+    assert captured["command_action"] == "probe"
+    assert captured["payload"] == {
+        "request": "printer_history", "limit": 500, "days": 2,
+    }
+
+
+def test_consume_history_result_targets_requesting_machine(monkeypatch):
+    captured = {}
+    monkeypatch.setattr(commands, "machine_id", lambda: "local-id")
+    monkeypatch.setattr(
+        commands, "_call",
+        lambda payload, **_options: captured.update(payload) or {"result": {"records": []}},
+    )
+
+    assert commands.consume_command_result("history-1") == {"records": []}
+    assert captured == {
+        "action": "consume_command_result",
+        "machine_id": "local-id",
+        "command_id": "history-1",
+    }
+
+
+def test_cloud_wake_is_only_used_after_lan_ack_timeout(monkeypatch):
+    cloud = []
+    monkeypatch.setattr(commands, "notify_machine", lambda *_args, **_options: False)
+    monkeypatch.setattr(
+        commands, "notify_machine_via_cloud",
+        lambda target, **options: cloud.append((target, options)) or True,
+    )
+
+    result = commands._notify_target(
+        {"id": "command-2"}, "b9428888-122b-4c26-a127-3eafad1f5271",
+    )
+
+    assert result == {"id": "command-2"}
+    assert cloud == [("b9428888-122b-4c26-a127-3eafad1f5271", {
+        "command_id": "command-2",
+    })]
+
+
+def test_lan_ack_avoids_cloud_wake(monkeypatch):
+    monkeypatch.setattr(commands, "notify_machine", lambda *_args, **_options: True)
+    monkeypatch.setattr(
+        commands, "notify_machine_via_cloud",
+        lambda *_args, **_options: (_ for _ in ()).throw(AssertionError("cloud used")),
+    )
+
+    assert commands._notify_target({"id": "command-3"}, "machine") == {
+        "id": "command-3",
+    }
 
 
 def test_submit_printer_action_is_explicit_and_has_no_layout_payload(monkeypatch):
     captured = {}
     monkeypatch.setattr(commands, "machine_id", lambda: "d9428888-122b-4c26-a127-3eafad1f5270")
     monkeypatch.setattr(commands, "machine_name", lambda: "M4")
+    monkeypatch.setattr(commands, "notify_machine", lambda *args, **kwargs: True)
     monkeypatch.setattr(commands, "_call", lambda payload, **_options: captured.update(payload) or {
         "command": {"id": "control-1"}
     })
@@ -180,6 +257,26 @@ def test_submit_printer_action_is_explicit_and_has_no_layout_payload(monkeypatch
     assert result["id"] == "control-1"
     assert captured["action"] == "send_control"
     assert captured["command_action"] == "clean_resume"
+    assert captured["payload"] == {}
+
+
+def test_submit_application_launch_reuses_signed_wake_channel(monkeypatch):
+    captured = {}
+    monkeypatch.setattr(commands, "machine_id", lambda: "local-id")
+    monkeypatch.setattr(commands, "machine_name", lambda: "M11")
+    monkeypatch.setattr(commands, "notify_machine", lambda *_args, **_kwargs: True)
+    monkeypatch.setattr(
+        commands, "_call",
+        lambda payload, **_options: captured.update(payload) or {
+            "command": {"id": "launch-1"}
+        },
+    )
+
+    result = commands.submit_application_launch("remote-id")
+
+    assert result["id"] == "launch-1"
+    assert captured["action"] == "send_control"
+    assert captured["command_action"] == "launch_app"
     assert captured["payload"] == {}
 
 
@@ -235,28 +332,3 @@ def test_printerexp_projection_uses_fractional_progress_for_eta():
 
     assert status["progress_percent"] == 21
     assert status["remaining_seconds"] == 4764
-
-
-def test_machine_name_prefers_saved_machine_number(monkeypatch):
-    monkeypatch.setenv("AUTOMATIC_PRINT_MACHINE_NAME", "DTF7")
-    monkeypatch.setattr(identity, "saved_machine_number", lambda: "M7")
-
-    assert identity.machine_name() == "M7"
-
-
-def test_persisted_machine_number_is_shared_outside_registry(tmp_path, monkeypatch):
-    target = tmp_path / "machine-name"
-    monkeypatch.setattr(identity, "machine_name_file", lambda: target)
-
-    assert identity.persist_machine_number("m11") == "M11"
-    assert target.read_text(encoding="utf-8") == "M11"
-    assert identity.saved_machine_number() == "M11"
-
-
-def test_machine_name_only_accepts_m1_to_m11_fallback(monkeypatch):
-    monkeypatch.setattr(identity, "saved_machine_number", lambda: "")
-    monkeypatch.setenv("AUTOMATIC_PRINT_MACHINE_NAME", "m9")
-    assert identity.machine_name() == "M9"
-
-    monkeypatch.setenv("AUTOMATIC_PRINT_MACHINE_NAME", "Printer3")
-    assert identity.machine_name() == "未设置机器号"

@@ -2,7 +2,7 @@ from unittest.mock import MagicMock, patch
 
 from automatic_print.automation.batches.local import discover_local_batches
 from automatic_print.batch_ui.local.processing import _batch_folders
-from automatic_print.automation.browser.session import open_authenticated_page
+from automatic_print.automation.browser.session import open_authenticated_page, show_debug_browser
 
 
 def test_nested_archive_batch_is_processed_once(tmp_path):
@@ -54,6 +54,9 @@ def test_delayed_login_redirect_is_consumed_in_one_open_call():
             self.waits = 0
             self.goto_calls = []
 
+        def bring_to_front(self):
+            pass
+
         def locator(self, _selector):
             return Locator()
 
@@ -83,3 +86,38 @@ def test_delayed_login_redirect_is_consumed_in_one_open_call():
     assert page.goto_calls == [target]
     assert sum('完成登录' in message for message in messages) == 1
     assert any('登录成功' in message for message in messages)
+
+
+def test_authenticated_platform_page_is_brought_to_front():
+    target = 'https://longfeng.merchant.hihumbird.com/factory/items'
+    page = MagicMock(url=target)
+    page.locator.return_value.first.count.return_value = 1
+    page.locator.return_value.first.is_visible.return_value = True
+    browser = MagicMock(contexts=[MagicMock(pages=[page])])
+
+    result = open_authenticated_page(browser, target, '.search-container')
+
+    assert result is page
+    page.bring_to_front.assert_called_once_with()
+
+
+def test_show_debug_browser_foregrounds_existing_login_page():
+    target = ('https://longfeng.merchant.hihumbird.com/factory/'
+              'fnsz-sale/produceManage/produceItemsManage')
+    page = MagicMock(url='https://longfeng.merchant.hihumbird.com/factory/login')
+    browser = MagicMock(contexts=[MagicMock(pages=[page])])
+    playwright = object()
+    context = MagicMock()
+    context.__enter__.return_value = playwright
+    messages = []
+
+    with patch('playwright.sync_api.sync_playwright', return_value=context), \
+         patch('automatic_print.automation.browser.session.connect_debug_chrome',
+               return_value=browser) as connect:
+        result = show_debug_browser(target, progress=messages.append)
+
+    connect.assert_called_once()
+    page.bring_to_front.assert_called_once_with()
+    page.goto.assert_not_called()
+    assert result.endswith('/factory/login')
+    assert any('已显示' in message for message in messages)
