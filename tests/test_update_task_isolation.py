@@ -31,6 +31,8 @@ def test_failed_apply_restores_controls_and_shows_retry(tmp_path, monkeypatch):
                and not window.source_update_applying)
     assert window.automation_home.isEnabled()
     assert window.settings_dialog.isEnabled()
-    assert not hasattr(window, 'check_update_button')
+    assert window.check_update_button.isVisible()
+    assert window.check_update_button.isEnabled()
+    assert window.check_update_button.text() == '检查更新'
     assert not hasattr(window, 'update_status_label')
     window.close()
