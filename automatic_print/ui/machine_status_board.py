@@ -113,7 +113,7 @@ class MachineStatusPage(QWidget):
         self.table.setHorizontalHeaderLabels(
             (
                 "打印机", "部门", "状态", "当前批次", "进度", "剩余时间",
-                "最后反馈", "后台处理中", "下一任务",
+                "最后反馈", "后台处理步骤", "下一任务",
             )
         )
         self.table.setEditTriggers(QAbstractItemView.NoEditTriggers)
@@ -124,6 +124,7 @@ class MachineStatusPage(QWidget):
         header_view = self.table.horizontalHeader()
         header_view.setSectionResizeMode(QHeaderView.ResizeToContents)
         header_view.setSectionResizeMode(3, QHeaderView.Stretch)
+        header_view.setSectionResizeMode(7, QHeaderView.Stretch)
         header_view.setSectionResizeMode(8, QHeaderView.Stretch)
         self.apply_machines([])
         self.command_panel = RemoteCommandPanel(parent or self.window(), self)
@@ -183,7 +184,11 @@ class MachineStatusPage(QWidget):
         self.software_launch_panel.set_data(machines)
         self.update_panel.set_data(machines, commands)
         self.history_panel.set_data(machines)
-        if self.update_panel.has_active_updates():
+        has_active_commands = any(
+            command.get("status") in {"claimed", "running"}
+            for command in commands
+        )
+        if self.update_panel.has_active_updates() or has_active_commands:
             self.update_timer.start()
         else:
             self.update_timer.stop()
@@ -238,7 +243,10 @@ class MachineStatusPage(QWidget):
             workload["next_task"],
         )
         for column, value in enumerate(values):
-            self.table.setItem(row, column, QTableWidgetItem(str(value)))
+            item = QTableWidgetItem(str(value))
+            if column == 7:
+                item.setToolTip(str(value))
+            self.table.setItem(row, column, item)
         progress = QProgressBar()
         value = machine.get("progress_percent")
         if value is None:
