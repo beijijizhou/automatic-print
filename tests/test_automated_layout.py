@@ -203,16 +203,17 @@ def test_batch_prns_continue_after_one_riin_failure(tmp_path, monkeypatch):
         (folder / "final.png").write_bytes(b"png")
 
     def generate(files, target, _progress):
-        if target.stem == "one":
+        if target.stem == "Haloo_one_3件":
             raise RuntimeError("first failed")
         return {"state": "completed", "output": str(target), "bytes": 1234}
 
     monkeypatch.setattr(jobs, "generate_prn", generate)
     processed = {
+        "platform": "Haloo",
         "output_folder": str(output),
         "batches": [
-            ("one", {"filename": "final.png"}),
-            ("two", {"filename": "final.png"}),
+            ("one", {"filename": "final.png", "analysis": {"piece_count": 3}}),
+            ("two", {"filename": "final.png", "analysis": {"piece_count": 4}}),
         ],
     }
 
@@ -223,7 +224,7 @@ def test_batch_prns_continue_after_one_riin_failure(tmp_path, monkeypatch):
     assert [item["batch"] for item in completed] == ["two"]
     assert errors == [{"batch": "one", "error": "first failed"}]
     assert skipped == []
-    assert completed[0]["output"].endswith("two.prn")
+    assert completed[0]["output"].endswith("Haloo_two_4件.prn")
 
 
 def test_stop_skips_remaining_groups_after_current_riin_task(tmp_path, monkeypatch):
@@ -262,6 +263,55 @@ def test_available_prn_path_never_overwrites_existing_file(tmp_path):
 
     (tmp_path / "batch.prn").write_bytes(b"existing")
     assert available_prn_path(tmp_path, "batch") == tmp_path / "batch-2.prn"
+
+
+def test_prn_name_uses_platform_batch_and_each_split_group_piece_count(tmp_path, monkeypatch):
+    from automatic_print.automation.api.riin import jobs
+
+    output = tmp_path / "PROCESSED"
+    for folder_name in ("常规/run", "旋转/run"):
+        folder = output / folder_name
+        folder.mkdir(parents=True)
+    parts = []
+    orders = []
+    for filename, folder_name, sources, items in (
+        ("normal.png", "常规/run", (
+            "A-1-T-Black-M-NO1-1.png", "A-1-T-Black-M-NO1-2.png",
+        ), (("A-1-T-Black-M-NO1-1.png", "A-1-T-Black-M-NO1-2.png"),)),
+        ("rotated.png", "旋转/run", (
+            "B-1-T-Black-L-NO1-1.png", "B-1-T-Black-L-NO2-1.png",
+        ), (("B-1-T-Black-L-NO1-1.png",), ("B-1-T-Black-L-NO2-1.png",))),
+    ):
+        (output / folder_name / filename).write_bytes(b"png")
+        parts.append({
+            "filename": filename,
+            "placements": [{"source": source} for source in sources],
+        })
+        orders.append({"items": [
+            {"images": [{"name": source} for source in item]} for item in items
+        ]})
+    result = {
+        "filename": "normal.png", "files": ["normal.png", "rotated.png"],
+        "parts": parts, "analysis": {"piece_count": 3, "orders": orders},
+    }
+    route = {"parts": [
+        {"filename": "normal.png", "folder": "常规/run", "knife_signature": [300]},
+        {"filename": "rotated.png", "folder": "旋转/run", "knife_signature": [420]},
+    ]}
+    sent = []
+    monkeypatch.setattr(jobs, "generate_prn", lambda files, target, progress:
+                        sent.append(target) or {"state": "completed", "output": str(target)})
+
+    completed, errors, skipped = jobs.generate_batch_prns({
+        "platform": "S2B", "output_folder": str(output),
+        "batches": [("22UJ9KT4VCZA", result)],
+        "batch_routes": {"22UJ9KT4VCZA": route},
+    }, lambda _message: None)
+
+    assert not errors and not skipped and len(completed) == 2
+    assert [path.name for path in sent] == [
+        "S2B_22UJ9KT4VCZA_1件.prn", "S2B_22UJ9KT4VCZA_2件.prn",
+    ]
 
 
 def test_early_prn_result_is_labeled_as_still_writing(tmp_path, monkeypatch):
