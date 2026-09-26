@@ -157,6 +157,8 @@ def test_backend_contract_keeps_unknown_eta_nullable():
     assert 'action === "register_machine"' in function
     assert '.from("machine_registry").select("machine_name")' in function
     assert "机器尚未注册" in function
+    assert 'platform === "S2B" ? /^[A-Z0-9]{12}$/ : /^\\d{12}$/' in function
+    assert 'platform === "S2B" ? batch.toUpperCase() : batch' in function
 
 
 def test_submit_command_sends_target_batches_and_settings(monkeypatch):

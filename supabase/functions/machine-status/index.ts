@@ -429,8 +429,13 @@ function commandPayload(value: unknown) {
   if (!Array.isArray(payload.batch_numbers) || !payload.batch_numbers.length || payload.batch_numbers.length > 20) {
     throw new ClientError("Invalid batch_numbers", 400);
   }
-  const batches = payload.batch_numbers.map(item => String(item).trim());
-  if (batches.some(item => !/^\d{12}$/.test(item)) || new Set(batches).size !== batches.length) {
+  const normalizeBatch = (value: unknown) => {
+    const batch = String(value).trim();
+    return platform === "S2B" ? batch.toUpperCase() : batch;
+  };
+  const batches = payload.batch_numbers.map(normalizeBatch);
+  const batchPattern = platform === "S2B" ? /^[A-Z0-9]{12}$/ : /^\d{12}$/;
+  if (batches.some(item => !batchPattern.test(item)) || new Set(batches).size !== batches.length) {
     throw new ClientError("Invalid batch number", 400);
   }
   const layout = object(payload.layout_settings);
@@ -441,7 +446,7 @@ function commandPayload(value: unknown) {
   }
   const details = rawDetails.map((value) => {
     const detail = object(value);
-    const batch = text(detail.batch_number, "batch_number", 12);
+    const batch = normalizeBatch(text(detail.batch_number, "batch_number", 12));
     if (!batches.includes(batch)) throw new ClientError("Unknown batch detail", 400);
     return {
       batch_number: batch,

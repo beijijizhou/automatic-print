@@ -93,7 +93,7 @@ def test_completed_plan_tab_is_available_on_every_erp_platform(tmp_path, platfor
     assert page.platform_name == platform_name
     assert workbench.main_tabs.tabText(1) == '批次生成'
     assert workbench.open_playwright_button.text() == (
-        f'打开 {platform_name} Playwright 浏览器'
+        '打开 Playwright 浏览器（提前登录）'
     )
     assert workbench.generation_sections.tabText(
         workbench.generation_sections.indexOf(page)

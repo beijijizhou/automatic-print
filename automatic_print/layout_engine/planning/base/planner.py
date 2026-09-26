@@ -33,7 +33,25 @@ def _measured_plan(paths, settings, progress, analysis_ready):
     analysis = analyze_batch(paths, settings, progress, analysis_ready)
     analysis['width_adjustments'] = settings.width_adjustments
     try:
-        result = _plan_layout(paths, settings, progress, analysis, analysis_ready)
+        result = _plan_layout(
+            paths,
+            settings,
+            progress,
+            analysis,
+            None if settings.counting_accuracy_layout else analysis_ready,
+        )
+        if settings.counting_accuracy_layout:
+            for _attempt in range(4):
+                sequence = _layout_sequence_numbers(result[0])
+                if dict(sequence) == dict(settings.sequence_numbers):
+                    break
+                settings = replace(settings, sequence_numbers=sequence)
+                result = _plan_layout(paths, settings, progress, analysis, None)
+            if dict(_layout_sequence_numbers(result[0])) != dict(settings.sequence_numbers):
+                raise ValueError('排版序号在多次安全复核后仍不稳定，请保留当前预览并调整参数。')
+            if progress:
+                progress('排版序号复核', len(paths), len(paths),
+                         '已按画布从上到下、同排从左到右编号')
     except ValueError as error:
         from automatic_print.layout_engine.planning.rotation.whole_rotation import recover_normal_width
         result = recover_normal_width(paths,settings,progress,error)
@@ -82,6 +100,9 @@ def _measured_plan(paths, settings, progress, analysis_ready):
     return result
 def _plan_layout(paths, settings, progress, analysis, analysis_ready):
     if settings.cutter_mode != "free":
+        if settings.counting_accuracy_layout and settings.cutter_mode == 'dual':
+            from automatic_print.layout_engine.planning.columns.adaptive_knife import plan_adaptive_knife_zones
+            return plan_adaptive_knife_zones(paths, settings, progress)
         if settings.strict_fixed_knife:
             from automatic_print.layout_engine.planning.columns.adaptive_knife import plan_adaptive_knife_zones
             return plan_adaptive_knife_zones(paths, settings, progress)
@@ -150,6 +171,22 @@ def _plan_layout(paths, settings, progress, analysis, analysis_ready):
     )
     used_width = min(canvas_width, used_canvas_width(planned))
     return planned, labels, used_width, canvas_height, baseline_height
+
+
+def _layout_sequence_numbers(planned):
+    ordered = sorted(
+        planned,
+        key=lambda row: (
+            row[1].row_y_px,
+            row[1].x_px,
+            row[1].y_px,
+            row[1].source,
+        ),
+    )
+    return tuple(
+        (resolved_name(path), index)
+        for index, (path, _placement) in enumerate(ordered, 1)
+    )
 
 
 def _baseline_choice(choices, usable_width):

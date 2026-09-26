@@ -12,6 +12,7 @@ from urllib.request import urlopen
 
 DEBUG_PORT = 9222
 CDP_URL = f"http://127.0.0.1:{DEBUG_PORT}"
+STARTUP_LOCK = "chrome-starting.lock"
 
 
 def _chrome_candidates() -> tuple[Path, ...]:
@@ -67,25 +68,63 @@ def ensure_debug_chrome(start_url: str, check_cancel=None, progress=None) -> Non
     check()
     report("正在检查 Chrome 自动化连接…")
     if chrome_is_connectable():
-        report("Chrome 自动化连接可用。")
+        report("Playwright Chrome 已启动；正在复用现有浏览器。")
         return
-    report("未检测到自动化浏览器，正在启动 Chrome…")
     profile = _profile_dir()
     profile.mkdir(parents=True, exist_ok=True)
-    subprocess.Popen(
-        [
-            str(find_chrome()), f"--remote-debugging-port={DEBUG_PORT}",
-            "--remote-debugging-address=127.0.0.1",
-            f"--user-data-dir={profile}", "--no-first-run",
-            "--no-default-browser-check", start_url,
-        ],
-        stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL,
-        stderr=subprocess.DEVNULL, start_new_session=True,
-    )
-    for _ in range(150):
-        check()
+    lock_path = profile / STARTUP_LOCK
+    lock_handle = _acquire_startup_lock(lock_path, check, report)
+    if lock_handle is None:
+        return
+    try:
         if chrome_is_connectable():
-            report("Chrome 已启动，自动化端口可以连接。")
+            report("Playwright Chrome 已启动；正在复用现有浏览器。")
             return
-        time.sleep(0.1)
-    raise TimeoutError("Chrome 启动超时。")
+        report("本机尚未启动 Playwright Chrome；正在启动唯一实例…")
+        subprocess.Popen(
+            [
+                str(find_chrome()), f"--remote-debugging-port={DEBUG_PORT}",
+                "--remote-debugging-address=127.0.0.1",
+                f"--user-data-dir={profile}", "--no-first-run",
+                "--no-default-browser-check", start_url,
+            ],
+            stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL, start_new_session=True,
+        )
+        for _ in range(150):
+            check()
+            if chrome_is_connectable():
+                report("Playwright Chrome 已启动；后续任务将复用这个实例。")
+                return
+            time.sleep(0.1)
+        raise TimeoutError("Playwright Chrome 启动超时。")
+    finally:
+        os.close(lock_handle)
+        lock_path.unlink(missing_ok=True)
+
+
+def _acquire_startup_lock(lock_path: Path, check, report):
+    """Serialize Chrome startup across UI and remote worker processes."""
+    deadline = time.monotonic() + 20
+    waiting_reported = False
+    while True:
+        check()
+        try:
+            return os.open(lock_path, os.O_CREAT | os.O_EXCL | os.O_WRONLY)
+        except FileExistsError:
+            if chrome_is_connectable():
+                report("Playwright Chrome 已启动；正在复用现有浏览器。")
+                return None
+            try:
+                stale = time.time() - lock_path.stat().st_mtime > 30
+            except FileNotFoundError:
+                continue
+            if stale:
+                lock_path.unlink(missing_ok=True)
+                continue
+            if not waiting_reported:
+                report("Playwright Chrome 正在启动；等待并复用同一实例…")
+                waiting_reported = True
+            if time.monotonic() >= deadline:
+                raise TimeoutError("等待本机 Playwright Chrome 启动超时。")
+            time.sleep(0.1)

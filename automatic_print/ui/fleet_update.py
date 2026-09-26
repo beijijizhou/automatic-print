@@ -39,10 +39,8 @@ class FleetUpdatePanel(QGroupBox):
         self.summary.setWordWrap(True)
         self.versions = QComboBox()
         self.versions.setMinimumWidth(260)
-        current = SourceVersion(
-            "", __version__, __release_date__, __release_iteration__, __release_notes__,
-            __command_protocol__, __command_capabilities__,
-        )
+        current = SourceVersion("", __version__, __release_date__, __release_iteration__,
+                                __release_notes__, __command_protocol__, __command_capabilities__)
         self.versions.addItem(current.display_version, current)
         self.versions.currentIndexChanged.connect(self._target_changed)
         self.reload_button = QPushButton("刷新版本")
@@ -94,8 +92,7 @@ class FleetUpdatePanel(QGroupBox):
         self.versions.clear()
         for version in versions:
             self.versions.addItem(version.display_version, version)
-        index = next((i for i, item in enumerate(versions)
-                      if item.version == selected_version), 0)
+        index = next((i for i, item in enumerate(versions) if item.version == selected_version), 0)
         if versions:
             self.versions.setCurrentIndex(index)
         self.versions.blockSignals(False)
@@ -177,8 +174,8 @@ class FleetUpdatePanel(QGroupBox):
                                    for item in targets)
         self.button.setText(f"{'回滚' if rollbacks else '切换'}已选电脑（{len(targets)}）")
         ready = targets and source_install() and target and target.revision
-        self.button.setEnabled(bool(ready) and not self.submitter.lock.locked()
-                               and not self.has_active_updates())
+        self.button.setEnabled(bool(ready) and not self.submitter.lock.locked() and
+                               not self.has_active_updates())
 
     def has_active_updates(self):
         return self.verifier.lock.locked() or any(
@@ -203,9 +200,9 @@ class FleetUpdatePanel(QGroupBox):
 
     def _completed(self, result):
         sent, failures = result["sent"], result["failures"]
+        detail = "；".join(f"{i['machine']}：{i['error']}" for i in failures)
         self.summary.setText(f"已下发 {len(sent)} 台 · 失败 {len(failures)} 台；正在等待目标机回执。"
-                             + (" " + "；".join(f"{i['machine']}：{i['error']}" for i in failures)
-                                if failures else ""))
+                             + (" " + detail if detail else ""))
         self.commands_submitted.emit()
 
     def _verification_submitted(self, result):

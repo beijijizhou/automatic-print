@@ -96,10 +96,7 @@ class ThreadActionsMixin:
             self, getattr(self, "_task_step_text", "处理完成") or "处理完成",
         )
         if result.get('type') == 'browser_opened':
-            text = (
-                f"{result['platform']} Playwright 浏览器已打开。"
-                "登录后可直接点击读取预览。"
-            )
+            text = "Playwright 浏览器已打开；可提前登录所需网站。"
             self.loading_label.setText(text)
             self.log.appendPlainText(text)
             return

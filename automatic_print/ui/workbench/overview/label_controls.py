@@ -80,7 +80,7 @@ def build_label_controls(panel, label, block, window):
     panel.platform.setCurrentText(label.platform.currentText())
     panel.platform.currentTextChanged.connect(label.platform.setCurrentText)
     label.platform.currentTextChanged.connect(panel.platform.setCurrentText)
-    panel.platform.setStyleSheet("QComboBox { font-size: 20px; font-weight: bold; }")
+    panel.platform.setStyleSheet("QComboBox { font-size: 15pt; font-weight: bold; }")
     panel.platform_enabled = mirrored_checkbox(
         '平台＋尺码标签', label.platform_enabled
     )

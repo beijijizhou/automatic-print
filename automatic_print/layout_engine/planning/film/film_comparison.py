@@ -150,6 +150,7 @@ def _production_key(production, settings):
     film = settings.media_width_mm + settings.riin_left_mm + settings.riin_right_mm
     rotation = bool(
         settings.cutter_rotation_zone or settings.cutter_majority_two_zone
+        or settings.counting_accuracy_layout
         or settings.cutter_tail_rotation or any(p.rotation_degrees for _, p in planned)
     )
     return film, rotation

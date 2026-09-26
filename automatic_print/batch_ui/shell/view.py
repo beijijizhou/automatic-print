@@ -6,6 +6,7 @@ from PySide6.QtWidgets import (
     QComboBox, QHBoxLayout, QLabel, QLineEdit, QPlainTextEdit, QProgressBar,
     QPushButton, QScrollArea, QVBoxLayout, QWidget,
 )
+from ...automation.providers.registry import ERP_PLATFORMS
 
 
 def build_controls(owner) -> None:
@@ -13,6 +14,15 @@ def build_controls(owner) -> None:
     for name in owner.platform_names:
         owner.platform.addItem(name, name)
     owner.platform.setCurrentText(owner.platform_names[0])
+    if any(name in ERP_PLATFORMS for name in owner.platform_names):
+        owner.open_playwright_button = QPushButton(
+            '打开 Playwright 浏览器（提前登录）'
+        )
+        owner.open_playwright_button.setToolTip(
+            "手动启动或显示本机唯一的 Playwright Chrome；"
+            "可自行打开并提前登录所需网站，后续读取和下载会复用同一浏览器。"
+        )
+        owner.open_playwright_button.clicked.connect(owner.open_playwright_browser)
     default = (Path(QStandardPaths.writableLocation(
         QStandardPaths.DesktopLocation)) / 'AutomaticPrintDownloads')
     owner.output = QLineEdit(owner.preferences.value(
@@ -51,6 +61,8 @@ def build_layout(owner) -> None:
     if not owner.local_only:
         layout.addWidget(QLabel('生产平台'))
         layout.addWidget(owner.platform)
+        if hasattr(owner, 'open_playwright_button'):
+            layout.addWidget(owner.open_playwright_button)
     layout.addWidget(owner.loading_panel)
     if hasattr(owner, 'batch_tools'):
         layout.addWidget(owner.batch_tools)

@@ -2,15 +2,20 @@
 
 from .updates.versioning import release_display
 
-__version__ = "0.1.425"
+__version__ = "0.1.426"
 __release_date__ = "2026-09-26"
-__release_iteration__ = 12
+__release_iteration__ = 13
 __command_protocol__ = 1
 __command_capabilities__ = (
     "probe", "printer_history", "source_update", "launch_app",
     "download_layout", "start_print", "pause_print", "clean_resume",
 )
 __release_notes__ = (
+    "远程批次任务支持S2B的12位字母数字批次号，不再误报批次号无效。",
+    "Realtime全机测试为重启后的机器等待最多90秒，并提供一键发布最新版本更新指令。",
+    "Playwright浏览器改为每台电脑唯一实例，并提供统一的提前登录入口。",
+    "主工作台适配较矮屏幕并统一使用点数字号，减少界面被挤出可视区域。",
+    "新增开发者计数排版试验，并固定从左到右的编号顺序。",
     "切膜标签优先写入真实二维码同行的空白卡面，并随图片一起旋转。",
     "修复部分电脑源码更新后后台监控未能自动重新启动的问题。",
     "重启时只结束旧监控进程，不再结束承载重启辅助程序的计划任务。",

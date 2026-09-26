@@ -247,4 +247,4 @@ def test_board_exposes_one_click_machine_signal_test():
         }],
     })
     assert page.signal_button.isEnabled()
-    assert "实时响应 1 / 1" in page.signal_result.text()
+    assert "已响应 1 / 1" in page.signal_result.text()
