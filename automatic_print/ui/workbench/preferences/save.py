@@ -55,6 +55,16 @@ def save_layout_preferences(window, *, notify=True) -> None:
     }
     for key, value in values.items():
         window.preferences.setValue(key, value)
+    from ....history.layout_settings import save_layout_settings
+    from ...layout_values import settings_from_window
+    try:
+        current = settings_from_window(window)
+    except ValueError:
+        # Keep the last complete, valid snapshot while the user is editing an
+        # invalid intermediate value. Individual controls remain persisted.
+        pass
+    else:
+        save_layout_settings(window.preferences, current)
     window.preferences.sync()
     if notify:
         QMessageBox.information(

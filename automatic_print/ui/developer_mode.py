@@ -10,11 +10,13 @@ from PySide6.QtWidgets import (
     QTreeWidgetItem,
     QVBoxLayout,
 )
+from .full_test_runner import install_full_test_control
 
 EXPERIMENTAL_PLATFORMS = ('莆田',)
 
 DEVELOPER_FEATURES = (
     ('诊断与记录', (
+        ('完整测试', '运行完整自动测试和本机真实批次跨平台回归，不生成PRN'),
         ('排版历史', '查看历史批次的膜方案、面积、占位率和耗时'),
         ('批量分析文件夹', '比较多个批次的用膜数据，不生成打印文件'),
         ('标签位置安全短测', '用小样本验证外置标签、方向、侧别和刀位安全坐标'),
@@ -117,6 +119,7 @@ def developer_task_active(window):
         or (erp and erp.thread is not None)
         or (benchmark and benchmark.is_running())
         or (label_test and label_test.is_running())
+        or (getattr(window, 'full_test_controller', None) and window.full_test_controller.is_running())
     )
 
 
@@ -132,18 +135,19 @@ def bind_developer_tab_visibility(window, tabs, page, index):
     sync()
 
 
-def build_developer_mode(window, footer):
+def build_developer_mode(window, menu):
     window.developer_features_dialog = DeveloperFeatureListDialog(window)
     feature_list = QPushButton('查看开发者功能')
     feature_list.setToolTip('查看开发者模式额外开放的全部功能。')
     feature_list.clicked.connect(lambda: show_developer_features(window))
     window.developer_features_button = feature_list
-    footer.addWidget(feature_list)
+    menu.addWidget(feature_list)
     checkbox = QCheckBox('开发者模式')
     checkbox.setToolTip('显示算法开销、排版历史和尚未开放给普通用户的实验排版功能。')
     window.developer_mode_checkbox = checkbox
     checkbox.setChecked(window.preferences.value('developer/enabled', False, bool))
-    footer.addWidget(checkbox)
+    menu.addWidget(checkbox)
+    install_full_test_control(window, menu)
 
     def changed(enabled):
         if not enabled and developer_task_active(window):
@@ -157,15 +161,12 @@ def build_developer_mode(window, footer):
             sync_experimental_platforms(window, enabled)
             cutting = window.cutter_settings.mode.currentData() != 'free'
             window.quick_header_gap_group.setVisible(cutting)
-            window.cutter_rules_form.setRowVisible(
-                window.membrane_gap_enabled, cutting)
+            window.cutter_rules_form.setRowVisible(window.membrane_gap_enabled, cutting)
             window.cutter_rules_form.setRowVisible(window.membrane_gap, cutting)
-            window.layout_rules_form.setRowVisible(
-                window.cutter_settings.two_zone, True)
+            window.layout_rules_form.setRowVisible(window.cutter_settings.two_zone, True)
             window.cutter_settings.set_developer_mode(enabled)
             if not enabled:
-                window.output_format.setCurrentIndex(
-                    max(0, window.output_format.findData('png')))
+                window.output_format.setCurrentIndex(max(0, window.output_format.findData('png')))
             window.quick_output_format_group.setVisible(enabled)
             window.output_parallel_form.setRowVisible(window.output_format, enabled)
             panel = window.automation_home.label_quick_panel
@@ -176,11 +177,9 @@ def build_developer_mode(window, footer):
             panel.source_order.setVisible(enabled)
             panel.source_order_control.setVisible(enabled)
             panel.reference_films_label.setVisible(enabled and cutting)
-            window.automation_home.batch_tools.setVisible(enabled)
             panel.summary.film_table.set_reference_mode(enabled)
             window.label_settings.form.setRowVisible(window.label_settings.source_order, enabled)
-            window.cutter_settings.compare_films.setText(
-                '比较45/60厘米：常规与旋转（不自动切换）')
+            window.cutter_settings.compare_films.setText('比较45/60厘米：常规与旋转（不自动切换）')
             details = panel.details_dialog
             for page in ('algorithm_page', 'history_page'):
                 widget = getattr(details, page, None)
@@ -192,6 +191,8 @@ def build_developer_mode(window, footer):
                 details.bulk_dialog.hide()
             window.preferences.setValue('developer/enabled', enabled)
             window.preferences.sync()
+            from .departments import sync_dtf_tool_visibility
+            sync_dtf_tool_visibility(window)
 
     checkbox.toggled.connect(changed)
     changed(checkbox.isChecked())

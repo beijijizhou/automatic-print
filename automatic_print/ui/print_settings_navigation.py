@@ -132,6 +132,9 @@ def build_settings_navigation(window, source):
     window.layout_rules_form = forms['自动排版']
     window.label_rules_form = forms['标签与文字']
     window.output_parallel_form = forms['输出与并行']
+    # The pinned banner above the tabs is the only visible production-mode
+    # selector. The canonical combo remains the state owner for all mirrors.
+    window.cutter_rules_form.setRowVisible(cutter.mode, False)
     def sync_cutter_only_rows(*_args):
         cutting = cutter.mode.currentData() != 'free'
         for control in (window.membrane_gap_enabled, window.membrane_gap):

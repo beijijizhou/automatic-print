@@ -88,11 +88,32 @@ def test_runner_launches_only_the_fixed_application_and_reports_receipt(monkeypa
     assert updates[-1][1]["result"]["launched"] is True
 
 
-def test_remote_settings_keep_target_machine_number():
-    preferences = SimpleNamespace(value=lambda key, default, value_type: "M8")
+def test_remote_settings_keep_target_machine_number(tmp_path):
+    from PySide6.QtCore import QSettings
+
+    preferences = QSettings(str(tmp_path / "target-number.ini"), QSettings.IniFormat)
+    preferences.setValue("layout/machine_number", "M8")
     settings = _layout_settings({"dpi": 200, "machine_number": "M1", "unknown": 3}, preferences)
 
     assert settings.dpi == 200
+    assert settings.machine_number == "M8"
+
+
+def test_remote_settings_use_target_machine_layout_snapshot(tmp_path):
+    from PySide6.QtCore import QSettings
+    from automatic_print.history.layout_settings import save_layout_settings
+    from automatic_print.layout_engine import LayoutSettings
+
+    preferences = QSettings(str(tmp_path / "target.ini"), QSettings.IniFormat)
+    save_layout_settings(preferences, LayoutSettings(
+        dpi=360, cutter_mode="single", machine_number="M8",
+    ))
+    settings = _layout_settings({
+        "dpi": 200, "cutter_mode": "dual", "machine_number": "M1", "unknown": 3,
+    }, preferences)
+
+    assert settings.dpi == 360
+    assert settings.cutter_mode == "single"
     assert settings.machine_number == "M8"
 
 

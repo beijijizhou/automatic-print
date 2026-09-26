@@ -58,7 +58,7 @@ def test_current_batch_preview_and_summary_are_visible_and_retained(tmp_path):
     panel.preview_tabs.setCurrentWidget(panel.actual_preview_page)
     app.processEvents()
     assert panel.preview_scroll.isVisible()
-    assert panel.preview_scroll.height() <= 720
+    assert panel.preview_scroll.height() <= 460
     assert panel.preview_scroll.verticalScrollBar().maximum() > 0
     controller.progress('保存图片', 0, 100, 'test.png')
     assert '保存图片' in panel.summary.progress.text()

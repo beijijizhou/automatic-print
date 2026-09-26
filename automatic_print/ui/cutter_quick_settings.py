@@ -82,7 +82,6 @@ def build_quick_cutter_settings(window, gap_control):
         gap_control.setVisible(cutting)
         status.setText(
             f'膜规格：{cutter.film.currentText()}　'
-            f'模式：{cutter.mode.currentText()}　'
             f'有效画布：{cutter.printable.usable_width():g} 毫米'
         )
 

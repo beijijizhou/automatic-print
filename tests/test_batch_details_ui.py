@@ -22,8 +22,14 @@ def test_removed_batch_details_leave_only_developer_pages(tmp_path):
     assert not hasattr(panel, 'details_button')
     assert details.tabs.count() == 0
     assert not details.isVisible() and not details.isModal()
-    for tool in (panel.summary, panel.timings, panel.preview_tabs):
+    for tool in (panel.summary, panel.timings):
         assert tool.isVisible()
+    assert panel.preview_empty.isVisible()
+    assert panel.preview_tabs.isHidden()
+    window.folder.setText(str(tmp_path/'待预览批次'))
+    panel.preview.analysis_started.emit()
+    APP.processEvents()
+    assert panel.preview_tabs.isVisible()
     assert not hasattr(window, 'batch_record')
     assert panel.preview_tabs.count() == 3
     assert panel.preview_tabs.tabText(0) == '文字排版预览（默认）'
@@ -39,4 +45,34 @@ def test_removed_batch_details_leave_only_developer_pages(tmp_path):
     details.close()
     assert panel.summary.isVisible()
     assert panel.preview_scroll.isVisible()
+    window.close()
+
+
+def test_empty_preview_is_compact_until_a_batch_is_selected(tmp_path):
+    window = MainWindow(QSettings(str(tmp_path/'empty-preview.ini'), QSettings.IniFormat))
+    window.department_selector.setCurrentIndex(window.department_selector.findData('dtf'))
+    WINDOWS.append(window)
+    window.startup_update_timer.stop()
+    window.show()
+    APP.processEvents()
+    panel = window.automation_home.label_quick_panel
+
+    assert panel.preview_empty.isVisibleTo(window)
+    assert panel.preview_tabs.isHidden()
+    assert panel.preview_group.maximumHeight() == 96
+    assert panel.preview_group.grab().save(str(tmp_path/'compact-empty-preview.png'))
+
+    window.folder.setText(str(tmp_path/'待处理批次'))
+    APP.processEvents()
+    assert panel.preview_tabs.isHidden()
+    panel.preview.analysis_started.emit()
+    APP.processEvents()
+    assert panel.preview_empty.isHidden()
+    assert panel.preview_tabs.isVisibleTo(window)
+    assert panel.preview_group.maximumHeight() == 560
+
+    window.folder.clear()
+    APP.processEvents()
+    assert panel.preview_tabs.isHidden()
+    assert panel.preview_group.maximumHeight() == 96
     window.close()

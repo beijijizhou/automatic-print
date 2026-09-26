@@ -1,7 +1,6 @@
-from time import monotonic
 from PySide6.QtCore import QThread, Qt, QUrl, Slot, QTimer
 from PySide6.QtGui import QDesktopServices
-from PySide6.QtWidgets import QMessageBox, QLabel, QProgressBar, QWidget, QVBoxLayout
+from PySide6.QtWidgets import QMessageBox
 
 from .. import __version__, __version_display__
 from ..updates.release import version_tuple
@@ -19,37 +18,10 @@ class UpdateActionsMixin:
         self.pending_source_update = None
         self.completed_source_check = None
         self.update_restart_pending = False
-        self.update_started = None
-        self.update_message = '源码安装可直接更新代码，无需下载安装包。' if source_install() else '当前使用安装包更新。'
-        panel = QWidget()
-        layout = QVBoxLayout(panel)
-        layout.setContentsMargins(0, 0, 0, 0)
-        self.update_status_label = QLabel(self.update_message)
-        self.update_status_label.setWordWrap(True)
-        self.update_status_label.setTextInteractionFlags(Qt.TextSelectableByMouse)
-        self.update_bar = QProgressBar()
-        self.update_bar.setRange(0, 0)
-        self.update_bar.setMaximumHeight(8)
-        self.update_bar.setTextVisible(False)
-        self.update_bar.hide()
-        layout.addWidget(self.update_status_label)
-        layout.addWidget(self.update_bar)
-        self.update_clock = QTimer(self)
-        self.update_clock.setInterval(1000)
-        self.update_clock.timeout.connect(self.refresh_update_status)
-        return panel
 
     @Slot(str)
-    def show_update_progress(self, text):
-        self.update_message = text
-        hub = getattr(self, "activity_hub", None)
-        if hub is not None:
-            hub.update("app-update", title="软件更新", message=text, new_step=True)
-        self.refresh_update_status()
-
-    def refresh_update_status(self):
-        elapsed = f' · 已用时 {int(monotonic()-self.update_started)} 秒' if self.update_started else ''
-        self.update_status_label.setText(self.update_message+elapsed)
+    def show_update_progress(self, _text):
+        """Keep update worker compatibility without exposing update steps in the UI."""
 
     def check_for_updates(self, silent: bool) -> None:
         if self.update_thread is not None and not discard_stopped_thread(self, 'update_thread', 'update_worker'):
@@ -59,16 +31,6 @@ class UpdateActionsMixin:
         self.start_update_worker(worker)
 
     def start_update_worker(self, worker):
-        self.check_update_button.setEnabled(False)
-        self.check_update_button.setText('正在更新…' if self.source_update_applying else '正在检查…')
-        self.update_started = monotonic()
-        self.activity_hub.begin(
-            "app-update", "软件更新",
-            "正在更新源码…" if self.source_update_applying else "正在检查更新…",
-        )
-        self.update_bar.show()
-        self.update_clock.start()
-        self.show_update_progress('正在更新源码…' if self.source_update_applying else '正在检查更新…')
         self.update_thread = QThread(self)
         self.update_worker = worker
         worker.moveToThread(self.update_thread)
@@ -104,7 +66,7 @@ class UpdateActionsMixin:
                     '源码已更新；当前任务完成后自动安全重启…' if source_code_changed()
                     else f'源码已是最新 · {update.display_version}')
             elif not self.update_is_silent and self.source_update_busy():
-                self.show_update_progress('发现新代码；请等待排版/保存完成，或停止后台预览，再点击检查更新。')
+                self.show_update_progress('发现新代码；当前生产任务结束后，下次启动会重新检查。')
             else:
                 self.show_update_progress(_source_update_message(update))
             return
@@ -127,7 +89,7 @@ class UpdateActionsMixin:
         if self.update_is_silent:
             return
         if self.source_update_busy():
-            self.show_update_progress('发现新代码；请等待排版/保存完成，或停止后台预览，再点击检查更新。')
+            self.show_update_progress('发现新代码；当前生产任务结束后，下次启动会重新检查。')
             return
         answer = QMessageBox.question(self, '发现源码更新',
             f'新版本：{update.display_version}\n当前版本：{__version_display__}\n\n'
@@ -143,7 +105,7 @@ class UpdateActionsMixin:
         if not info:
             return
         if self.source_update_busy():
-            self.show_update_progress('有任务正在执行，更新已暂停；任务完成后请重新检查更新。')
+            self.show_update_progress('有任务正在执行，更新已暂停；下次启动会重新检查。')
             return
         self.preference_autosave.flush()
         self.source_update_applying = True
@@ -155,23 +117,12 @@ class UpdateActionsMixin:
     def update_check_failed(self, message):
         self.pending_source_update = None
         self.completed_source_check = None
-        self.show_update_progress(f'更新未完成：{message}\n可重新点击检查更新重试；不会覆盖本地修改。')
-        self.activity_hub.finish("app-update", self.update_message, state="failed")
+        self.show_update_progress(f'更新未完成：{message}\n下次启动会自动重试；不会覆盖本地修改。')
         if not self.update_is_silent or self.source_update_applying:
             QMessageBox.warning(self, '更新未完成', message)
 
     @Slot()
     def clear_update_worker(self):
-        self.update_clock.stop()
-        self.update_started = None
-        self.update_bar.hide()
-        self.refresh_update_status()
-        record = next(
-            (item for item in self.activity_hub.snapshot()["activities"]
-             if item["key"] == "app-update"), None,
-        )
-        if record is not None and record["state"] == "running":
-            self.activity_hub.finish("app-update", self.update_message)
         defer_finished_thread_cleanup(self, 'update_thread', 'update_worker')
         QTimer.singleShot(30, self.update_cleanup_finished)
 
@@ -179,8 +130,6 @@ class UpdateActionsMixin:
         if self.update_thread is not None:
             QTimer.singleShot(30, self.update_cleanup_finished)
             return
-        self.check_update_button.setEnabled(True)
-        self.check_update_button.setText('检查更新')
         if self.update_restart_pending:
             self.update_restart_pending = False
             self.source_update_applying = False

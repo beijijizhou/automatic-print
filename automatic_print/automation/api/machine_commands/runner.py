@@ -164,7 +164,10 @@ def execute_download_layout(payload, progress):
     batch_types = {number: selected[number].batch_type for number in batches}
     files = download_selected_batches(platform, batches, output, progress)
     save_downloaded_batch_types(output, platform, batch_types)
-    settings = _layout_settings(payload.get("layout_settings") or {}, preferences)
+    settings = replace(
+        _layout_settings(payload.get("layout_settings") or {}, preferences),
+        platform_name=platform,
+    )
     progress("下载与解压完成；正在生成最终排版 PNG", force=True)
     processed = process_local_batches(
         output, platform, batches, batch_types, settings,
@@ -205,6 +208,6 @@ def _load_selected_records(platform, batches, progress):
 def _layout_settings(values, preferences):
     allowed = {field.name for field in fields(LayoutSettings)}
     clean = {key: value for key, value in dict(values).items() if key in allowed}
-    settings = LayoutSettings(**clean)
-    machine = preferences.value("layout/machine_number", settings.machine_number, str)
-    return replace(settings, machine_number=str(machine).upper())
+    fallback = LayoutSettings(**clean)
+    from ....history.layout_settings import load_layout_settings
+    return load_layout_settings(preferences, fallback)

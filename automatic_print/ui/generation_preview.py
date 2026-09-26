@@ -2,7 +2,6 @@ from PySide6.QtCore import QObject, Slot
 from pathlib import Path
 from .previews.runtime.snapshot import install_snapshot
 from ..layout_engine.orders.order_groups import detail_members
-
 class GenerationPreviewController(QObject):
     """GUI-thread-only presentation of immutable worker layout data."""
     def __init__(self, window):
@@ -30,6 +29,7 @@ class GenerationPreviewController(QObject):
     def start(self, mode='single'):
         from .busy_spinner import show_busy
         show_busy(self.window)
+        self.panel.show_preview_content(True)
         self.window.layout_activity.start(mode)
         self.panel.marker_examples.clear_batch()
         self.mode = mode

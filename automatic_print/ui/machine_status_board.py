@@ -29,6 +29,7 @@ from .machine_status_format import (
 from .machine_availability import MachineAvailabilityControl
 from .machine_status_layout import build_machine_status_layout
 from .fleet_update import FleetUpdatePanel
+from .machine_signal_test import install_machine_signal_control
 from .printer_history import PrinterHistoryPanel
 from .software_launch import SoftwareLaunchPanel
 
@@ -60,15 +61,23 @@ class MachineStatusLoader(QObject):
 
     def _run(self):
         try:
-            self.loaded.emit(self.fetch())
+            dashboard = self.fetch()
         except Exception as error:
-            self.failed.emit(str(error))
+            try:
+                self.failed.emit(str(error))
+            except RuntimeError:
+                pass  # The page was closed while the background read finished.
+        else:
+            try:
+                self.loaded.emit(dashboard)
+            except RuntimeError:
+                pass  # The page was closed while the background read finished.
         finally:
             self._lock.release()
 
 
 class MachineStatusPage(QWidget):
-    def __init__(self, parent=None, fetch=load_dashboard):
+    def __init__(self, parent=None, fetch=load_dashboard, signal_tester=None):
         super().__init__(parent)
         self._active = False
         self.loader = MachineStatusLoader(fetch, self)
@@ -97,6 +106,9 @@ class MachineStatusPage(QWidget):
         overview_layout = QVBoxLayout(overview)
         overview_layout.addLayout(header)
         overview_layout.addWidget(self.message)
+        self.signal_control = install_machine_signal_control(
+            self, header, overview_layout, signal_tester
+        )
 
         self.table = QTableWidget(EXPECTED_MACHINES, 9)
         self.table.setHorizontalHeaderLabels(
@@ -144,6 +156,7 @@ class MachineStatusPage(QWidget):
             dashboard = {"machines": dashboard, "commands": []}
         machines = dashboard.get("machines") or []
         commands = dashboard.get("commands") or []
+        self.signal_control.set_machines(machines)
         self.apply_machines(machines, commands)
         self.control_panel.set_data(machines)
         self.command_panel.set_data(machines, commands)

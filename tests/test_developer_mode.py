@@ -27,6 +27,10 @@ def test_default_shows_production_layout_but_hides_diagnostic_tools(tmp_path, mo
     monkeypatch.setattr(history, 'load_runs', lambda *_a: (_ for _ in ()).throw(AssertionError('history read')))
     owner = window(tmp_path/'prefs.ini')
     panel = owner.automation_home.label_quick_panel
+    assert owner.dtf_tools_bar.isAncestorOf(owner.automation_home.settings_button)
+    assert owner.dtf_tools_bar.isAncestorOf(owner.dtf_accounts_button)
+    assert owner.dtf_tools_bar.isAncestorOf(owner.developer_mode_checkbox)
+    assert owner.dtf_tools_bar.isAncestorOf(owner.automation_home.batch_tools)
     assert not owner.developer_mode_checkbox.isChecked()
     assert not owner.label_settings.form.isRowVisible(owner.label_settings.source_order)
     owner.label_settings.source_order.setChecked(True)
@@ -56,9 +60,10 @@ def test_default_shows_production_layout_but_hides_diagnostic_tools(tmp_path, mo
     panel.details_dialog.open_bulk_analysis()
     assert not hasattr(panel.details_dialog, 'history_page')
     assert not hasattr(panel.details_dialog, 'bulk_dialog')
-    assert panel.summary.isVisible() and panel.preview_tabs.isVisible()
+    assert panel.summary.isVisible() and not panel.preview_tabs.isVisible()
     assert owner.developer_mode_checkbox.isVisible()
     assert owner.developer_features_button.isVisible()
+    assert not owner.full_test_button.isVisible() and not owner.full_test_result.isVisible()
     owner.developer_features_button.click()
     APP.processEvents()
     feature_dialog = owner.developer_features_dialog
@@ -70,8 +75,7 @@ def test_default_shows_production_layout_but_hides_diagnostic_tools(tmp_path, mo
         for row in range(feature_dialog.tree.topLevelItem(group).childCount())
     ]
     assert features == [
-        '排版历史', '批量分析文件夹', '标签位置安全短测',
-        'DTF随机10批冷启动测试', '算法诊断',
+        '完整测试', '排版历史', '批量分析文件夹', '标签位置安全短测', 'DTF随机10批冷启动测试', '算法诊断',
         '整单归侧双排（仅本次任务）',
         '切膜刀码开关', '平台＋尺码标签开关', '批次顺序标注',
         'S2B 批次信息查询', '批次下载与自动化打印', '隆丰 ERP 下载', 'S2B 生产图下载',
@@ -82,7 +86,7 @@ def test_default_shows_production_layout_but_hides_diagnostic_tools(tmp_path, mo
     assert not hasattr(owner, 'riin_diagnostic_button')
     assert not hasattr(owner, 'riin_diagnostic_dialog')
     settings_button = owner.automation_home.settings_button
-    assert settings_button.parentWidget() is owner.centralWidget()
+    assert settings_button.parentWidget() is owner.dtf_tools_bar
     from PySide6.QtWidgets import QPushButton
     pauses = [b for b in owner.findChildren(QPushButton) if b.text() == '暂停批次']
     assert pauses == [owner.stop_generation_button]
@@ -115,6 +119,7 @@ def test_two_zone_layout_stays_visible_and_active_outside_developer_mode(tmp_pat
     owner = window(tmp_path/'two-zone.ini')
     control = owner.cutter_settings.two_zone
     owner.developer_mode_checkbox.setChecked(True)
+    assert owner.full_test_button.isVisible() and owner.full_test_result.isVisible()
     assert not hasattr(owner, 'riin_diagnostic_button')
     assert not owner.cutter_settings.force_small_pair.isHidden()
     assert not owner.cutter_settings.knife_change_gap.isHidden()

@@ -180,6 +180,7 @@ def test_main_page_examples_start_after_show_and_refresh_on_parameters(tmp_path,
     assert examples.worker is None
     assert window.automation_home.label_quick_panel.preview_tabs.currentIndex() == 0
     window.show()
+    window.automation_home.label_quick_panel.show_preview_content(True)
     window.automation_home.label_quick_panel.preview_tabs.setCurrentIndex(1)
     wait_for(lambda: len(examples.results) == 4 and examples.worker is None)
     assert examples.isVisible()

@@ -65,7 +65,9 @@ def test_department_change_keeps_running_dtf_task_visible(tmp_path):
 
 def test_shared_download_does_not_lock_department_navigation(tmp_path):
     owner = window(tmp_path/'shared-download.ini')
-    workbench = owner.production_platform_download_page.workbenches['隆丰']
+    page = owner.production_platform_download_page
+    page.select_platform('隆丰')
+    workbench = page.workbenches['隆丰']
     workbench.thread = object()
     owner.department_selector.setCurrentIndex(
         owner.department_selector.findData('dtf')

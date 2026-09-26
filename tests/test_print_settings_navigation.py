@@ -12,6 +12,7 @@ def test_settings_categories_reuse_controls_and_persist_parallelism(tmp_path, mo
     assert tabs.widget(0).isAncestorOf(owner.cutter_settings.film)
     assert tabs.widget(0).isAncestorOf(owner.cutter_settings.printable)
     assert tabs.widget(0).isAncestorOf(owner.cutter_settings.knife)
+    assert not owner.cutter_rules_form.isRowVisible(owner.cutter_settings.mode)
     assert tabs.widget(1).isAncestorOf(owner.cutter_settings.force_small_pair)
     assert tabs.widget(1).isAncestorOf(owner.cutter_settings.force_small_pair_sizes)
     assert tabs.widget(1).isAncestorOf(owner.cutter_settings.force_small_pair_limit)
@@ -78,6 +79,9 @@ def test_cutter_mode_is_pinned_above_every_main_and_settings_tab(tmp_path):
     APP.processEvents()
 
     main_banner = owner.global_cutter_mode
+    assert not hasattr(owner.automation_home.label_quick_panel.current_film, 'mode')
+    assert '机器 M1' in main_banner.production.text()
+    assert '有效画布 570 毫米' in main_banner.production.text()
     assert main_banner.isVisibleTo(owner)
     assert main_banner.mapTo(owner, main_banner.rect().topLeft()).y() < (
         owner.workspace_tabs.mapTo(owner, owner.workspace_tabs.rect().topLeft()).y())

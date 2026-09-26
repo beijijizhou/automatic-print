@@ -8,7 +8,6 @@ from PySide6.QtWidgets import (
     QGroupBox,
     QHBoxLayout,
     QLabel,
-    QPushButton,
     QStackedWidget,
     QVBoxLayout,
     QWidget,
@@ -38,18 +37,10 @@ def build_department_workspace(window, dtf_workspace):
     for department in DEPARTMENTS:
         selector.addItem(f"{department.label} 部门", department.key)
     status = QLabel()
-    accounts = QPushButton("DTF 平台账号")
     status.setTextInteractionFlags(Qt.TextSelectableByMouse)
     row.addWidget(QLabel("当前部门"))
     row.addWidget(selector)
     row.addWidget(status, 1)
-    row.addWidget(accounts)
-
-    def show_dtf_accounts():
-        from .dtf_accounts import DtfAccountDialog
-        DtfAccountDialog(window).exec()
-
-    accounts.clicked.connect(show_dtf_accounts)
 
     pages = QStackedWidget()
     page_indexes = {}
@@ -91,22 +82,13 @@ def build_department_workspace(window, dtf_workspace):
         window.preferences.setValue("department/current", department.key)
         window.setWindowTitle(f"{department.label} 自动化打印工作台")
         dtf_controls = department.key == "dtf"
-        accounts.setVisible(dtf_controls)
         if department.state == "existing":
             status.setText("当前：DTF · 现有自动化打印工作区")
         elif department.state == "development":
             status.setText("当前：UV · uvbranch 独立开发工作区")
         else:
             status.setText("当前：3D · 已建立部门分类，等待对应分支实现")
-        for control_name in (
-            "developer_features_button",
-            "developer_mode_checkbox",
-        ):
-            control = getattr(window, control_name)
-            control.setEnabled(dtf_controls)
-            control.setVisible(dtf_controls)
-        window.automation_home.settings_button.setEnabled(dtf_controls)
-        window.automation_home.settings_button.setVisible(dtf_controls)
+        sync_dtf_tool_visibility(window)
         sync_download = getattr(
             window, "sync_production_download_visibility", None
         )
@@ -117,6 +99,25 @@ def build_department_workspace(window, dtf_workspace):
     selector.setCurrentIndex(max(0, selector.findData(saved)))
     select_department()
     return navigation, pages
+
+
+def sync_dtf_tool_visibility(window):
+    """Keep the fixed DTF toolbar consistent across department and mode changes."""
+    dtf_controls = getattr(window, "department_key", "dtf") == "dtf"
+    developer = dtf_controls and bool(
+        getattr(window, "developer_mode_enabled", False)
+    )
+    for control in (
+        window.automation_home.settings_button,
+        window.dtf_accounts_button,
+        window.developer_features_button,
+        window.developer_mode_checkbox,
+    ):
+        control.setEnabled(dtf_controls)
+        control.setVisible(dtf_controls)
+    window.automation_home.batch_tools.setVisible(developer)
+    window.full_test_button.setVisible(developer)
+    window.full_test_result.setVisible(developer)
 
 
 def _placeholder(department):

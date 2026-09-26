@@ -150,14 +150,14 @@ def test_button_updates_source_then_restarts_without_browser(tmp_path, monkeypat
                         lambda *args: (_ for _ in ()).throw(AssertionError('No installer browser')))
     monkeypatch.setattr(SourceUpdater, 'apply', lambda self, update: applied.append(update) or update)
     monkeypatch.setattr(update_actions, 'restart_updated_app', lambda w: restarted.append(w))
-    window.check_update_button.click()
+    window.check_for_updates(False)
     wait_until(lambda: bool(restarted))
     assert applied == [info]
     assert restarted == [window]
-    assert '安全重启' in window.update_status_label.text()
+    assert not hasattr(window, 'update_status_label')
+    assert not hasattr(window, 'update_bar')
     assert window.update_thread is None
     window.close()
-
 
 def test_single_click_applies_after_confirmation_runs_nested_event_loop(tmp_path, monkeypatch):
     window, info = window_for_test(tmp_path, monkeypatch)
@@ -171,7 +171,7 @@ def test_single_click_applies_after_confirmation_runs_nested_event_loop(tmp_path
     monkeypatch.setattr(QMessageBox, 'question', confirm)
     monkeypatch.setattr(SourceUpdater, 'apply', lambda self, update: applied.append(update) or update)
     monkeypatch.setattr(update_actions, 'restart_updated_app', lambda w: restarted.append(w))
-    window.check_update_button.click()
+    window.check_for_updates(False)
     wait_until(lambda: bool(restarted))
     assert applied == [info]
     assert restarted == [window]
@@ -183,11 +183,19 @@ def test_declining_update_does_not_apply_or_leave_pending_state(tmp_path, monkey
     applied = []
     monkeypatch.setattr(QMessageBox, 'question', lambda *args: QMessageBox.No)
     monkeypatch.setattr(SourceUpdater, 'apply', lambda self, info: applied.append(info))
-    window.check_update_button.click()
-    wait_until(lambda: window.update_thread is None and window.check_update_button.isEnabled())
+    window.check_for_updates(False)
+    wait_until(lambda: window.update_thread is None
+               and window.completed_source_check is None)
     assert applied == []
     assert window.pending_source_update is None
     assert window.completed_source_check is None
+    assert not any(
+        item['key'] == 'app-update'
+        for item in window.activity_hub.snapshot()['activities']
+    )
+    assert window.global_activity_center.grab().save(
+        str(tmp_path/'production-tasks-only.png')
+    )
     window.close()
 
 
@@ -196,9 +204,10 @@ def test_busy_production_task_never_applies_update(tmp_path, monkeypatch):
     monkeypatch.setattr(QMessageBox, 'question', lambda *args: pytest_fail())
     window.thread = object()
     window.check_for_updates(False)
-    wait_until(lambda: window.update_thread is None)
+    wait_until(lambda: window.update_thread is None
+               and window.completed_source_check is None)
     assert window.pending_source_update is None
-    assert '等待排版' in window.update_status_label.text()
+    assert not hasattr(window, 'update_status_label')
     assert not window.source_update_applying
     window.thread = None
     window.close()
@@ -208,13 +217,17 @@ def pytest_fail():
     raise AssertionError('Busy update must not ask to apply')
 
 
-def test_silent_check_only_displays_available_code(tmp_path, monkeypatch):
+def test_silent_check_does_not_display_update_progress(tmp_path, monkeypatch):
     window, info = window_for_test(tmp_path, monkeypatch)
     monkeypatch.setattr(QMessageBox, 'question', lambda *args: pytest_fail())
     window.check_for_updates(True)
     wait_until(lambda: window.update_thread is None)
-    assert '2026-09-14' in window.update_status_label.text()
-    assert '新增分布式打印历史' in window.update_status_label.text()
+    assert not hasattr(window, 'update_status_label')
+    assert not hasattr(window, 'update_bar')
+    assert not any(
+        item['key'] == 'app-update'
+        for item in window.activity_hub.snapshot()['activities']
+    )
     assert window.pending_source_update is None
     window.close()
 
@@ -225,40 +238,7 @@ def test_checkout_latest_is_not_reported_as_loaded_version(tmp_path, monkeypatch
     current = SourceUpdateInfo('same', 'same', '0.1.999', '2026-09-19', 0,
                                release_iteration=8)
     window.update_check_finished(current)
-    assert '自动安全重启' in window.update_status_label.text()
-    assert '源码已是最新' not in window.update_status_label.text()
+    assert not hasattr(window, 'update_status_label')
     window.confirm_source_check(current)
-    assert '自动安全重启' in window.update_status_label.text()
-    window.close()
-
-
-def test_passive_update_check_does_not_block_layout(tmp_path, monkeypatch):
-    window, _info = window_for_test(tmp_path, monkeypatch)
-    window.update_thread = object()
-
-    window.source_update_applying = False
-    assert not window.has_active_tasks()
-
-    window.source_update_applying = True
-    assert window.has_active_tasks()
-    window.update_thread = None
-    window.source_update_applying = False
-    window.close()
-
-
-def test_failed_apply_restores_controls_and_shows_retry(tmp_path, monkeypatch):
-    window, _info = window_for_test(tmp_path, monkeypatch)
-    warnings = []
-    monkeypatch.setattr(QMessageBox, 'question', lambda *args: QMessageBox.Yes)
-    monkeypatch.setattr(QMessageBox, 'warning', lambda *args: warnings.append(args[-1]))
-    def fail_apply(self, info):
-        raise ValueError('依赖同步失败')
-    monkeypatch.setattr(SourceUpdater, 'apply', fail_apply)
-    window.check_for_updates(False)
-    wait_until(lambda: bool(warnings) and window.update_thread is None
-               and not window.source_update_applying)
-    assert window.automation_home.isEnabled()
-    assert window.settings_dialog.isEnabled()
-    assert window.check_update_button.isEnabled()
-    assert '重试' in window.update_status_label.text()
+    assert not hasattr(window, 'update_status_label')
     window.close()

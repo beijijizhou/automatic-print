@@ -20,16 +20,17 @@ def test_selected_film_and_current_child_are_highlighted_without_reading(tmp_pat
     assert badge.film.currentText() == '45 厘米膜'
     assert not panel.preview.refresh_timer.isActive()
     assert '点击开始排版' in panel.preview.detail
-    badge.mode.setCurrentIndex(badge.mode.findData('single'))
+    owner.global_cutter_mode.mode.setCurrentIndex(
+        owner.global_cutter_mode.mode.findData('single'))
     assert owner.cutter_settings.mode.currentData() == 'single'
-    assert '单列切膜' in badge.mode.currentText()
+    assert not hasattr(badge, 'mode')
     badge.film.setCurrentIndex(badge.film.findData('custom'))
     badge.custom_width.setValue(52.5)
     assert owner.cutter_settings.width_control.value() == 525
     assert badge.custom_width.value() == 52.5
     owner.cutter_settings.film.setCurrentIndex(0)
     assert '420 毫米' in badge.text()
-    assert '自动多列' in badge.mode.currentText()
+    assert '自动多列' in owner.global_cutter_mode.mode.currentText()
     owner.cutter_settings.printable.left.setValue(20)
     assert '415 毫米' in badge.text()
     assert '#dce4ef' in badge.styleSheet()

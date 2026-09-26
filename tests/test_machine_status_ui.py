@@ -2,6 +2,7 @@ import os
 
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
+from PySide6.QtCore import QObject, Signal
 from PySide6.QtWidgets import QApplication, QProgressBar
 
 from automatic_print.ui.machine_status_board import MachineStatusPage
@@ -9,6 +10,19 @@ from automatic_print.ui.machine_status_format import mark_local_machine
 
 
 APP = QApplication.instance() or QApplication([])
+
+
+class FakeSignalTester(QObject):
+    progress = Signal(str)
+    completed = Signal(object)
+
+    def __init__(self):
+        super().__init__()
+        self.started_with = None
+
+    def start(self, machines):
+        self.started_with = list(machines)
+        return True
 
 
 def test_board_keeps_eleven_slots_and_renders_live_machine():
@@ -210,3 +224,26 @@ def test_board_marks_the_current_machine_everywhere_by_machine_id():
     assert page.table.item(10, 0).text() == "M11（本机）"
     assert page.control_panel.target.findText("M11（本机）") >= 0
     assert page.availability_control.target.findText("M11（本机）") >= 0
+
+
+def test_board_exposes_one_click_machine_signal_test():
+    tester = FakeSignalTester()
+    page = MachineStatusPage(fetch=lambda: [], signal_tester=tester)
+    page.apply_dashboard({"machines": [{
+        "machine_id": "machine-4", "machine_name": "M4",
+        "app_version": "0.1.411",
+    }], "commands": []})
+
+    page.signal_button.click()
+
+    assert page.signal_button.text() == "测试机器信号"
+    assert tester.started_with[0]["machine_name"] == "M4"
+    assert not page.signal_button.isEnabled()
+    tester.completed.emit({
+        "total": 1, "current_version": "0.1.411", "results": [{
+            "name": "M4", "state": "responded", "version": "0.1.411",
+            "stored_version": "0.1.411",
+        }],
+    })
+    assert page.signal_button.isEnabled()
+    assert "实时响应 1 / 1" in page.signal_result.text()
