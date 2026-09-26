@@ -1,7 +1,6 @@
-from time import monotonic
 from PySide6.QtCore import QThread, Qt, QUrl, Slot, QTimer
 from PySide6.QtGui import QDesktopServices
-from PySide6.QtWidgets import QMessageBox, QLabel, QProgressBar, QWidget, QVBoxLayout
+from PySide6.QtWidgets import QMessageBox
 
 from .. import __version__, __version_display__
 from ..updates.release import version_tuple
@@ -19,34 +18,10 @@ class UpdateActionsMixin:
         self.pending_source_update = None
         self.completed_source_check = None
         self.update_restart_pending = False
-        self.update_started = None
-        self.update_message = '源码安装可直接更新代码，无需下载安装包。' if source_install() else '当前使用安装包更新。'
-        panel = QWidget()
-        layout = QVBoxLayout(panel)
-        layout.setContentsMargins(0, 0, 0, 0)
-        self.update_status_label = QLabel(self.update_message)
-        self.update_status_label.setWordWrap(True)
-        self.update_status_label.setTextInteractionFlags(Qt.TextSelectableByMouse)
-        self.update_bar = QProgressBar()
-        self.update_bar.setRange(0, 0)
-        self.update_bar.setMaximumHeight(8)
-        self.update_bar.setTextVisible(False)
-        self.update_bar.hide()
-        layout.addWidget(self.update_status_label)
-        layout.addWidget(self.update_bar)
-        self.update_clock = QTimer(self)
-        self.update_clock.setInterval(1000)
-        self.update_clock.timeout.connect(self.refresh_update_status)
-        return panel
 
     @Slot(str)
-    def show_update_progress(self, text):
-        self.update_message = text
-        self.refresh_update_status()
-
-    def refresh_update_status(self):
-        elapsed = f' · 已用时 {int(monotonic()-self.update_started)} 秒' if self.update_started else ''
-        self.update_status_label.setText(self.update_message+elapsed)
+    def show_update_progress(self, _text):
+        """Keep update worker compatibility without exposing update steps in the UI."""
 
     def check_for_updates(self, silent: bool) -> None:
         if self.update_thread is not None and not discard_stopped_thread(self, 'update_thread', 'update_worker'):
@@ -56,10 +31,6 @@ class UpdateActionsMixin:
         self.start_update_worker(worker)
 
     def start_update_worker(self, worker):
-        self.update_started = monotonic()
-        self.update_bar.show()
-        self.update_clock.start()
-        self.show_update_progress('正在更新源码…' if self.source_update_applying else '正在检查更新…')
         self.update_thread = QThread(self)
         self.update_worker = worker
         worker.moveToThread(self.update_thread)
@@ -151,10 +122,6 @@ class UpdateActionsMixin:
 
     @Slot()
     def clear_update_worker(self):
-        self.update_clock.stop()
-        self.update_started = None
-        self.update_bar.hide()
-        self.refresh_update_status()
         defer_finished_thread_cleanup(self, 'update_thread', 'update_worker')
         QTimer.singleShot(30, self.update_cleanup_finished)
 

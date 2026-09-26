@@ -151,7 +151,8 @@ def test_button_updates_source_then_restarts_without_browser(tmp_path, monkeypat
     wait_until(lambda: bool(restarted))
     assert applied == [info]
     assert restarted == [window]
-    assert '安全重启' in window.update_status_label.text()
+    assert not hasattr(window, 'update_status_label')
+    assert not hasattr(window, 'update_bar')
     assert window.update_thread is None
     window.close()
 
@@ -203,7 +204,7 @@ def test_busy_production_task_never_applies_update(tmp_path, monkeypatch):
     wait_until(lambda: window.update_thread is None
                and window.completed_source_check is None)
     assert window.pending_source_update is None
-    assert '生产任务结束后' in window.update_status_label.text()
+    assert not hasattr(window, 'update_status_label')
     assert not window.source_update_applying
     window.thread = None
     window.close()
@@ -213,12 +214,13 @@ def pytest_fail():
     raise AssertionError('Busy update must not ask to apply')
 
 
-def test_silent_check_only_displays_available_code(tmp_path, monkeypatch):
+def test_silent_check_does_not_display_update_progress(tmp_path, monkeypatch):
     window, info = window_for_test(tmp_path, monkeypatch)
     monkeypatch.setattr(QMessageBox, 'question', lambda *args: pytest_fail())
     window.check_for_updates(True)
     wait_until(lambda: window.update_thread is None)
-    assert '2026-09-14' in window.update_status_label.text()
+    assert not hasattr(window, 'update_status_label')
+    assert not hasattr(window, 'update_bar')
     assert not any(
         item['key'] == 'app-update'
         for item in window.activity_hub.snapshot()['activities']
@@ -233,8 +235,7 @@ def test_checkout_latest_is_not_reported_as_loaded_version(tmp_path, monkeypatch
     current = SourceUpdateInfo('same', 'same', '0.1.999', '2026-09-19', 0,
                                release_iteration=8)
     window.update_check_finished(current)
-    assert '自动安全重启' in window.update_status_label.text()
-    assert '源码已是最新' not in window.update_status_label.text()
+    assert not hasattr(window, 'update_status_label')
     window.confirm_source_check(current)
-    assert '自动安全重启' in window.update_status_label.text()
+    assert not hasattr(window, 'update_status_label')
     window.close()

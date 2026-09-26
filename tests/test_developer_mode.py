@@ -27,6 +27,10 @@ def test_default_shows_production_layout_but_hides_diagnostic_tools(tmp_path, mo
     monkeypatch.setattr(history, 'load_runs', lambda *_a: (_ for _ in ()).throw(AssertionError('history read')))
     owner = window(tmp_path/'prefs.ini')
     panel = owner.automation_home.label_quick_panel
+    assert owner.dtf_tools_bar.isAncestorOf(owner.automation_home.settings_button)
+    assert owner.dtf_tools_bar.isAncestorOf(owner.dtf_accounts_button)
+    assert owner.dtf_tools_bar.isAncestorOf(owner.developer_mode_checkbox)
+    assert owner.dtf_tools_bar.isAncestorOf(owner.automation_home.batch_tools)
     assert not owner.developer_mode_checkbox.isChecked()
     assert not owner.label_settings.form.isRowVisible(owner.label_settings.source_order)
     owner.label_settings.source_order.setChecked(True)
@@ -82,7 +86,7 @@ def test_default_shows_production_layout_but_hides_diagnostic_tools(tmp_path, mo
     assert not hasattr(owner, 'riin_diagnostic_button')
     assert not hasattr(owner, 'riin_diagnostic_dialog')
     settings_button = owner.automation_home.settings_button
-    assert settings_button.parentWidget() is owner.centralWidget()
+    assert settings_button.parentWidget() is owner.dtf_tools_bar
     from PySide6.QtWidgets import QPushButton
     pauses = [b for b in owner.findChildren(QPushButton) if b.text() == '暂停批次']
     assert pauses == [owner.stop_generation_button]

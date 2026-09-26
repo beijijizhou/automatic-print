@@ -60,8 +60,10 @@ def test_dtf_dialog_distinguishes_configured_and_login_verified(monkeypatch):
 
 def test_account_entry_is_visible_only_in_dtf_department(tmp_path):
     owner = window(tmp_path / "prefs.ini")
-    button = next(button for button in owner.findChildren(QPushButton)
-                  if button.text() == "DTF 平台账号")
+    button = owner.dtf_accounts_button
+    assert owner.dtf_tools_bar.isAncestorOf(button)
+    assert len([candidate for candidate in owner.findChildren(QPushButton)
+                if candidate.text() == "DTF 平台账号"]) == 1
     owner.department_selector.setCurrentIndex(
         owner.department_selector.findData("uv"))
     assert not button.isVisible()

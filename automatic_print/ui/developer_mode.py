@@ -177,9 +177,6 @@ def build_developer_mode(window, menu):
             panel.source_order.setVisible(enabled)
             panel.source_order_control.setVisible(enabled)
             panel.reference_films_label.setVisible(enabled and cutting)
-            window.automation_home.batch_tools.setVisible(enabled)
-            window.full_test_button.setVisible(enabled)
-            window.full_test_result.setVisible(enabled)
             panel.summary.film_table.set_reference_mode(enabled)
             window.label_settings.form.setRowVisible(window.label_settings.source_order, enabled)
             window.cutter_settings.compare_films.setText('比较45/60厘米：常规与旋转（不自动切换）')
@@ -194,6 +191,8 @@ def build_developer_mode(window, menu):
                 details.bulk_dialog.hide()
             window.preferences.setValue('developer/enabled', enabled)
             window.preferences.sync()
+            from .departments import sync_dtf_tool_visibility
+            sync_dtf_tool_visibility(window)
 
     checkbox.toggled.connect(changed)
     changed(checkbox.isChecked())

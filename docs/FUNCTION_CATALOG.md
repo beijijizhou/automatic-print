@@ -6,6 +6,7 @@
 | 能力 | 规范所有者 | 复用规则 |
 | --- | --- | --- |
 | 顶层生产部门分类 | `ui/departments.py`, `ui/workbench/home.py` | `DTF / UV / 3D` 是排版、参数、批次任务和历史的共同父级；既有工作区只属于 DTF，UV 工作区独立建立且不得借用 DTF 状态，3D 使用隔离占位页。生产平台下载位于部门工作区之外共享。运行中部门任务保持可见且不因切换请求被停止。 |
+| 主窗口固定菜单与静默更新 | `ui/workbench/home.py`, `ui/departments.py`, `ui/developer_mode.py`, `ui/update_actions.py` | 版本、打印参数、DTF平台账号和开发者入口只在滚动区外的固定菜单装配；部门切换和开发者模式共同控制可见性。软件更新保留后台检查、应用和安全重启生命周期，但不得创建界面状态标签、进度条或生产任务记录。 |
 | 统一版本身份 | `automatic_print/__init__.py`, `updates/versioning.py`, `updates/source.py`, `updates/release.py`, `ui/workbench/home.py` | 所有用户可见版本统一显示“语义版本 · 发布日期 · 当日更新次数”；源码更新、Release更新和主窗口不得各自拼接或省略语义版本。 |
 | UV材质固定画布 | `layout_engine/uv/sheet.py`, `layout_engine/uv/material_codes.py`, `layout_engine/uv/render.py`, `controllers/uv_generation.py`, `ui/uv_workspace.py` | 材质目录唯一维护11种成品尺寸和方向，`uv_sheet_capacity`供排版、界面和亿点万象分组共用；已知 UV SKU 唯一映射材质，不按平台名或批次尾数猜测。全部固定2500×1300毫米RGBA画布、右下起排、同行向左、满行向上，界面按材质联动展示尺寸和容量。后台生成一张并行分块原子BigTIFF并复核真实输出，不复用DTF卷材规划。 |
 | 亿点万象批次下载（当前 UV 优先） | `supabase/functions/ydwx-production/`, `automation/api/ydwx/credentials.py`, `gateway.py`, `batches.py`, `downloads.py`, `archive_split.py`, `archive/verification.py`, `ui/ydwx_download.py` | Edge Function 使用服务端 Secret 登录 SDS，桌面端不持有平台 token。正式构建沿用受限客户端密钥；公开源码从工厂共享盘读取独立受限密钥并缓存到当前用户配置目录。平台同时有 UV 和 DTF 订单，不得按平台名推断批次部门；读取按日期分组的批次，以 ID、编号、名称、稿件总数重新校验勾选项；保留已校验 ZIP，以唯一 UV 材质 SKU 对应的画布容量按 ZIP 实际图片数原子发布“序号-图片数”分组，已识别的同订单编号图片不跨组，单订单超容量不猜测拆法。ZIP 重复图片路径不发布，已有分组逐文件按原 ZIP CRC 复核；原路径、批次快照与数量保存在清单。中途失败只清理本次未发布分组、保留原 ZIP 供重试，清理失败报告路径；未知材质保留原 ZIP，不自动排版。新增稿件与完整稿件分开标识。 |
