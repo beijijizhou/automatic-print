@@ -1,5 +1,6 @@
 """One-shot fleet signal test used by the machine status page."""
 
+from collections import Counter
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from threading import Lock, Thread
 from time import monotonic, sleep
@@ -80,33 +81,24 @@ def run_machine_signal_test(machines, *, probe=probe_machine, progress=None):
 def signal_result_text(report):
     results = report.get("results") or []
     total = int(report.get("total") or 0)
-    current = str(report.get("current_version") or "")
     responded = [item for item in results if item.get("state") == "responded"]
-    current_count = sum(
-        (item.get("version") or item.get("stored_version")) == current for item in results
-    )
-    old = [
-        item for item in results
-        if (item.get("version") or item.get("stored_version"))
-        and (item.get("version") or item.get("stored_version")) != current
-    ]
     missed = [item for item in results if item.get("state") != "responded"]
+    versions = Counter(item.get("version") or "版本未知" for item in responded)
     lines = [
-        f"Realtime 测试完成：实时响应 {len(responded)} / {total} · 当前版本 {current_count}"
-        f" · 待更新 {len(old)}"
+        f"Realtime 测试完成：已响应 {len(responded)} / {total} · 未响应 {len(missed)}"
     ]
+    if versions:
+        lines.append("实时版本分布：" + " · ".join(
+            f"{version}（{count} 台）" for version, count in versions.most_common()
+        ))
     if responded:
-        lines.append("已响应：" + "、".join(
+        lines.append("已响应机器：\n" + "　".join(
             f"{item['name']} {item.get('version') or '版本未知'}" for item in responded
         ))
-    if old:
-        lines.append("待更新：" + "、".join(
-            f"{item['name']} {item.get('version') or item.get('stored_version')}" for item in old
-        ))
     if missed:
-        lines.append("未实时响应：" + "、".join(
-            f"{item['name']}（{item.get('detail') or '未知原因'}，上次版本 "
-            f"{item.get('stored_version') or '未知'}）" for item in missed
+        lines.append("未响应机器：\n" + "　".join(
+            f"{item['name']} · {item.get('detail') or '未知原因'}"
+            f" · 上次 {item.get('stored_version') or '版本未知'}" for item in missed
         ))
     return "\n".join(lines)
 
@@ -177,11 +169,26 @@ class MachineSignalControl(QObject):
 def install_machine_signal_control(page, header, overview_layout, tester=None):
     page.signal_button = QPushButton("Realtime 全机信号测试")
     page.signal_button.setToolTip("绕过局域网 UDP，只使用 Supabase Realtime Broadcast 测试 M1–M11。")
+    page.signal_update_button = QPushButton("发布最新版本更新指令")
+    page.signal_update_button.clicked.connect(lambda: _start_latest_update(page))
     page.signal_result = QLabel("按按钮可绕过 UDP，通过 Realtime 检测全部已登记机器并核对版本。")
     page.signal_result.setWordWrap(True)
     page.signal_result.setTextInteractionFlags(Qt.TextSelectableByMouse)
+    page.signal_result.setStyleSheet("padding:10px;border:1px solid #cbd5e1;background:#f8fafc;")
     header.addWidget(page.signal_button)
+    header.addWidget(page.signal_update_button)
     overview_layout.addWidget(page.signal_result)
     return MachineSignalControl(
         page.signal_button, page.signal_result, page, tester=tester,
     )
+
+
+def _start_latest_update(page):
+    page.sections.setCurrentWidget(page.update_section)
+    panel = page.update_panel
+    if panel.loader.lock.locked() or not panel.versions.count():
+        panel.summary.setText("正在读取最新版本，请稍后再次点击发布更新指令。")
+        return
+    panel.versions.setCurrentIndex(0)
+    panel._select(True)
+    panel.start_all()
