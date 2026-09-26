@@ -11,6 +11,7 @@ from ....batch_ui.task.automatic_print import save_downloaded_batch_types
 from ...browser.batches import (
     download_selected_batches, load_batch_records, load_batch_records_between,
 )
+from ...batches.naming import selected_batch_metadata
 from ..machine_status.commands import get_command, update_command
 from .lifecycle import CommandLifecycle, CommandProgress
 
@@ -161,7 +162,14 @@ def execute_download_layout(payload, progress):
     pending = [number for number, record in selected.items() if not record.production_images_ready]
     if pending:
         raise RuntimeError("生产图尚未生成完成：" + "、".join(pending))
-    batch_types = {number: selected[number].batch_type for number in batches}
+    batch_types, current_labels = selected_batch_metadata(
+        selected.values(), batches,
+    )
+    _types, requested_labels = selected_batch_metadata(
+        payload.get("batch_details") or [], batches,
+    )
+    batch_labels = {number: requested_labels.get(number) or current_labels.get(number, "")
+                    for number in batches}
     files = download_selected_batches(platform, batches, output, progress)
     save_downloaded_batch_types(output, platform, batch_types)
     settings = replace(
@@ -172,6 +180,7 @@ def execute_download_layout(payload, progress):
     processed = process_local_batches(
         output, platform, batches, batch_types, settings,
         sample_limit=None, merge_batches=False, progress=progress, preview_only=False,
+        batch_labels=batch_labels,
     )
     printed, errors, skipped = [], [], []
     if payload.get("generate_prn", True):

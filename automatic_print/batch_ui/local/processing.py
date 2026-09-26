@@ -30,6 +30,7 @@ def process_local_batches(
     preview_only: bool = False,
     shared_knife: bool = False,
     order_side: bool = False,
+    batch_labels: dict[str, str] | None = None,
 ) -> dict:
     platform_root = output / platform_name
     progress(f"正在扫描 {platform_name} 的本地批次目录…")
@@ -70,8 +71,10 @@ def process_local_batches(
     if shared_knife:
         progress("正在进入跨批次固定刀位排版…")
         from ...automation.workflows.shared_knife_batches import render_shared_knife_batches
-        return render_shared_knife_batches(platform_root, platform_name, prepared,
-                                           settings, progress, order_side=order_side)
+        return render_shared_knife_batches(
+            platform_root, platform_name, prepared, settings, progress,
+            order_side=order_side, batch_labels=batch_labels,
+        )
     if merge_batches:
         progress("正在进入合并批次排版…")
         completed = _render_merged(
@@ -94,6 +97,7 @@ def process_local_batches(
         "test": bool(sample_limit),
         "preview_only": preview_only,
         "output_folder": str(destination_root),
+        "batch_labels": dict(batch_labels or {}),
     }
 
 

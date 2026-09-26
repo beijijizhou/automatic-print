@@ -11,15 +11,19 @@ ACTIVE_STATUSES = {"claimed", "running"}
 def selected_batch_details(records, batch_numbers):
     """Keep the platform's authoritative item/piece counts with a command."""
     selected = set(map(str, batch_numbers))
-    return [
-        {
+    details = []
+    for record in records:
+        if str(getattr(record, "batch_number", "")) not in selected:
+            continue
+        detail = {
             "batch_number": str(record.batch_number),
             "item_count": max(0, int(record.item_count or 0)),
             "piece_count": max(0, int(record.piece_count or 0)),
         }
-        for record in records
-        if str(getattr(record, "batch_number", "")) in selected
-    ]
+        if label := str(getattr(record, "batch_label", "") or "").strip():
+            detail["batch_label"] = label
+        details.append(detail)
+    return details
 
 
 def selection_text(details, batch_numbers):

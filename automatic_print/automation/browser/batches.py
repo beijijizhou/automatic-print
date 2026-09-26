@@ -57,6 +57,7 @@ def load_batch_records(
                 " · ".join(filter(None, (record.name, record.personnel_label))),
                 record.created_at,
                 True,
+                record.name,
             )
             for record in source
         ]

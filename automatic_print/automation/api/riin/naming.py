@@ -44,8 +44,12 @@ def group_piece_count(result, names):
 def prn_stem(processed, batch, result, names):
     platform = str(processed.get("platform") or result.get("platform_name")
                    or "未设置平台").strip()
+    labels = processed.get("batch_labels") or {}
     batches = processed.get("merged_batches") or []
-    batch_number = "_".join(map(str, batches)) if batch == "合并批次" and batches else batch
+    batch_number = (
+        "_".join(str(labels.get(number) or number) for number in batches)
+        if batch == "合并批次" and batches else str(labels.get(batch) or batch)
+    )
     pieces = group_piece_count(result, names)
     count = f"{pieces}件" if pieces is not None else "件数待核对"
     platform = Path(label_output_name(platform, extension=".prn")).stem

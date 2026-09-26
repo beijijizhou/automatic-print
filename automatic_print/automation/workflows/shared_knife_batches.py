@@ -63,7 +63,7 @@ def _route_parts(result, locked, root, run_name, force_rotation=False):
 
 
 def render_shared_knife_batches(platform_root, platform_name, prepared, settings, progress,
-                                order_side=False):
+                                order_side=False, batch_labels=None):
     """Keep batches separate while all unattended files inherit one knife setting."""
     # This operator workflow prioritizes unchanged knife setup and fast output,
     # not a second four-film optimization pass.
@@ -132,4 +132,4 @@ def render_shared_knife_batches(platform_root, platform_name, prepared, settings
     return {'type': 'processed', 'platform': platform_name, 'batches': completed,
             'batch_routes': routes, 'layout_errors': errors, 'merged_batches': [],
             'test': False, 'preview_only': False, 'shared_knife_mm': locked.cutter_knife_mm,
-            'output_folder': str(root)}
+            'output_folder': str(root), 'batch_labels': dict(batch_labels or {})}
