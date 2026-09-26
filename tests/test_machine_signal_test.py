@@ -1,3 +1,5 @@
+from automatic_print.automation.api.machine_status import commands
+from automatic_print.ui import machine_signal_test
 from automatic_print.ui.machine_signal_test import (
     probe_machine, run_machine_signal_test, signal_result_text,
 )
@@ -8,6 +10,26 @@ def machine(number, version="0.1.411"):
         "machine_id": f"id-{number}", "machine_name": f"M{number}",
         "app_version": version,
     }
+
+
+def test_realtime_only_probe_bypasses_lan(monkeypatch):
+    cloud = []
+    monkeypatch.setattr(
+        commands, "notify_machine",
+        lambda *_args, **_options: (_ for _ in ()).throw(AssertionError("LAN used")),
+    )
+    monkeypatch.setattr(
+        commands, "notify_machine_via_cloud",
+        lambda target, **options: cloud.append((target, options)) or True,
+    )
+    monkeypatch.setattr(
+        commands, "_call", lambda *_args, **_options: {"command": {"id": "probe-cloud"}},
+    )
+
+    result = commands.submit_probe("machine-8", realtime_only=True)
+
+    assert result["id"] == "probe-cloud"
+    assert cloud == [("machine-8", {"command_id": "probe-cloud"})]
 
 
 def test_probe_accepts_matching_live_identity():
@@ -24,6 +46,24 @@ def test_probe_accepts_matching_live_identity():
         "name": "M2", "stored_version": "0.1.411", "state": "responded",
         "version": "0.1.411", "automation_enabled": True, "source_online": False,
     }
+
+
+def test_button_probe_defaults_to_realtime_only(monkeypatch):
+    submitted = {}
+    monkeypatch.setattr(
+        machine_signal_test, "submit_probe",
+        lambda target, **options: submitted.update(target=target, **options)
+        or {"id": "probe-2"},
+    )
+
+    result = probe_machine(
+        machine(2), fetch=lambda _command: {"status": "succeeded", "result": {
+            "machine_id": "id-2", "machine_name": "M2", "app_version": "0.1.419",
+        }},
+    )
+
+    assert result["state"] == "responded"
+    assert submitted == {"target": "id-2", "realtime_only": True}
 
 
 def test_fleet_signal_test_continues_when_one_machine_does_not_respond():
@@ -43,7 +83,7 @@ def test_fleet_signal_test_continues_when_one_machine_does_not_respond():
     text = signal_result_text(report)
 
     assert [item["name"] for item in report["results"]] == ["M1", "M3"]
-    assert "实时响应 1 / 2 · 当前版本 1 · 待更新 1" in text
+    assert "Realtime 测试完成：实时响应 1 / 2 · 当前版本 1 · 待更新 1" in text
     assert "M1 0.1.410" in text
     assert "待更新：M1 0.1.410" in text
     assert "M3（12 秒内未回应，上次版本 0.1.411）" in text

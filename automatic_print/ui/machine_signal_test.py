@@ -17,7 +17,7 @@ TERMINAL_FAILURES = {"failed", "cancelled", "expired"}
 
 
 def probe_machine(
-    machine, *, submit=submit_probe, fetch=get_command, deadline_seconds=12,
+    machine, *, submit=None, fetch=get_command, deadline_seconds=12,
     poll_seconds=0.5, clock=monotonic, wait=sleep,
 ):
     name = str(machine.get("machine_name") or "未知")
@@ -26,7 +26,10 @@ def probe_machine(
     if not target:
         return {**base, "state": "error", "detail": "缺少机器 ID"}
     try:
-        command = submit(target)
+        command = (
+            submit(target) if submit is not None
+            else submit_probe(target, realtime_only=True)
+        )
         command_id = str(command.get("id") or "")
         if not command_id:
             raise RuntimeError("探测请求没有返回指令编号")
@@ -89,7 +92,7 @@ def signal_result_text(report):
     ]
     missed = [item for item in results if item.get("state") != "responded"]
     lines = [
-        f"信号测试完成：实时响应 {len(responded)} / {total} · 当前版本 {current_count}"
+        f"Realtime 测试完成：实时响应 {len(responded)} / {total} · 当前版本 {current_count}"
         f" · 待更新 {len(old)}"
     ]
     if responded:
@@ -137,7 +140,7 @@ class MachineSignalTester(QObject):
 
     def _show_progress(self, finished, total, result):
         self.progress.emit(
-            f"正在测试机器信号：{finished} / {total} · {result.get('name', '未知')}"
+            f"正在通过 Realtime 测试机器：{finished} / {total} · {result.get('name', '未知')}"
         )
 
 
@@ -157,23 +160,24 @@ class MachineSignalControl(QObject):
 
     def start(self):
         if not self.machines:
-            self.result.setText("没有已登记的 M1–M11，无法测试机器信号。")
+            self.result.setText("没有已登记的 M1–M11，无法测试 Realtime 信号。")
             return
         if self.tester.start(self.machines):
             self.button.setEnabled(False)
-            self.result.setText("正在向已登记机器发送一次性信号测试…")
+            self.result.setText("正在绕过 UDP，通过 Supabase Realtime 测试全部已登记机器…")
 
     def show_result(self, report):
         self.button.setEnabled(True)
         if report.get("error"):
-            self.result.setText(f"机器信号测试失败：{report['error']}；可再次测试。")
+            self.result.setText(f"Realtime 信号测试失败：{report['error']}；可再次测试。")
             return
         self.result.setText(signal_result_text(report))
 
 
 def install_machine_signal_control(page, header, overview_layout, tester=None):
-    page.signal_button = QPushButton("测试机器信号")
-    page.signal_result = QLabel("按“测试机器信号”可立即检测已登记机器，并核对当前版本。")
+    page.signal_button = QPushButton("Realtime 全机信号测试")
+    page.signal_button.setToolTip("绕过局域网 UDP，只使用 Supabase Realtime Broadcast 测试 M1–M11。")
+    page.signal_result = QLabel("按按钮可绕过 UDP，通过 Realtime 检测全部已登记机器并核对版本。")
     page.signal_result.setWordWrap(True)
     page.signal_result.setTextInteractionFlags(Qt.TextSelectableByMouse)
     header.addWidget(page.signal_button)
