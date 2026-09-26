@@ -79,7 +79,7 @@ def submit_application_launch(target_machine_id, *, expires_minutes=2, timeout=8
     return _notify_target(command, target_machine_id)
 
 
-def submit_probe(target_machine_id, *, expires_minutes=1, timeout=8):
+def submit_probe(target_machine_id, *, expires_minutes=1, timeout=8, realtime_only=False):
     command = _call(
         {
             "action": "send_control",
@@ -92,7 +92,7 @@ def submit_probe(target_machine_id, *, expires_minutes=1, timeout=8):
         },
         timeout=timeout,
     )["command"]
-    return _notify_target(command, target_machine_id)
+    return _notify_target(command, target_machine_id, lan_first=not realtime_only)
 
 
 def submit_history_request(target_machine_id, *, limit=500, days=2, expires_minutes=1, timeout=8):
@@ -135,11 +135,11 @@ def submit_source_update(
     return _notify_target(command, target_machine_id)
 
 
-def _notify_target(command, target_machine_id):
+def _notify_target(command, target_machine_id, *, lan_first=True):
     command_id = str(command.get("id") or "")
     try:
         try:
-            acknowledged = notify_machine(target_machine_id, command_id=command_id)
+            acknowledged = lan_first and notify_machine(target_machine_id, command_id=command_id)
         except OSError:
             acknowledged = False
         if acknowledged:

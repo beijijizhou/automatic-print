@@ -236,7 +236,8 @@ def test_board_exposes_one_click_machine_signal_test():
 
     page.signal_button.click()
 
-    assert page.signal_button.text() == "测试机器信号"
+    assert page.signal_button.text() == "Realtime 全机信号测试"
+    assert "绕过局域网 UDP" in page.signal_button.toolTip()
     assert tester.started_with[0]["machine_name"] == "M4"
     assert not page.signal_button.isEnabled()
     tester.completed.emit({
