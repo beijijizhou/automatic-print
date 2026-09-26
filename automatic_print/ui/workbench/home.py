@@ -29,6 +29,12 @@ def build_home(window) -> None:
     fixed_menu = QVBoxLayout(window.dtf_tools_bar)
     top_menu = QHBoxLayout()
     top_menu.addWidget(window.version_label)
+    window.check_update_button = QPushButton("检查更新")
+    window.check_update_button.setMinimumHeight(36)
+    window.check_update_button.clicked.connect(
+        lambda: window.check_for_updates(False)
+    )
+    top_menu.addWidget(window.check_update_button)
     top_menu.addStretch()
     window.automation_home.settings_button.setMinimumHeight(36)
     top_menu.addWidget(window.automation_home.settings_button)
