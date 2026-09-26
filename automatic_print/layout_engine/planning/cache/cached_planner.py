@@ -13,10 +13,11 @@ def checked_plan(paths, settings, result, knife):
         validate_order_side_placements(paths, result[0], mm_to_px(knife, settings.dpi))
     else:
         validate_order_placements(paths, result[0])
-    validate_cut_corridor(
-        result[0], replace(settings, cutter_knife_mm=knife), result[2],
-        canvas_height=result[3],
-    )
+    if settings.cutter_mode != 'free':
+        validate_cut_corridor(
+            result[0], replace(settings, cutter_knife_mm=knife), result[2],
+            canvas_height=result[3],
+        )
 
 
 def plan_with_cache(make, paths, settings, progress, analysis_ready, session):

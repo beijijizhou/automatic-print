@@ -1,6 +1,8 @@
 from PIL import Image
 import pytest
 from automatic_print.layout_engine import LayoutSettings,generate_layout
+from automatic_print.layout_engine.pipeline.validation import validate_plan
+from automatic_print.layout_engine.planning.base.planner import plan_layout
 
 
 @pytest.mark.parametrize('engine',['pillow','libvips'])
@@ -59,3 +61,27 @@ def test_non_width_errors_are_not_recovered():
     error=ValueError('订单被拆散')
     with pytest.raises(ValueError,match='订单被拆散'):
         recover_normal_width([],LayoutSettings(cutter_mode='dual',cutter_compare_whole_rotation=True),None,error)
+
+
+def test_free_layout_without_markers_uses_full_width_rotation_recovery(tmp_path):
+    path = tmp_path/'B1-1-T-Black-5XL-NO1-1.png'
+    Image.new('RGBA', (563, 234), 'blue').save(path, dpi=(25.4, 25.4))
+    settings = LayoutSettings(
+        dpi=25.4, media_width_mm=430, cutter_mode='free',
+        color_block_enabled=False, number_images=False, platform_name='',
+        allow_rotation=False, auto_fit_width=True,
+    )
+
+    result = plan_layout([path], settings, None)
+    placement = result[0][0][1]
+    warning, order_check, cut_check = validate_plan(
+        [path], result[0], settings, result[2], result[3], False,
+    )
+
+    assert placement.rotation_degrees == 90
+    assert placement.cut_knife_x_px is None
+    assert placement.cut_knife_xs_px == ()
+    assert placement.cut_column_count == 1
+    assert warning == ''
+    assert order_check
+    assert cut_check == {}

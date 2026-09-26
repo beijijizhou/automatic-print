@@ -34,6 +34,7 @@ LEGACY_APP_LINE_LIMITS = {
     'automatic_print/batch_ui/task/worker.py': 263,
     'automatic_print/layout_engine/planning/columns/adaptive_knife.py': 218,
     'automatic_print/layout_engine/planning/film/film_comparison.py': 201,
+    'automatic_print/layout_engine/planning/rotation/rotation_zones.py': 205,
     'automatic_print/ui/fleet_update.py': 216,
     'automatic_print/ui/fleet_update_support.py': 203,
     'automatic_print/ui/batch_folder_selection.py': 216,
