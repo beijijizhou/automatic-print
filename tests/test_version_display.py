@@ -18,7 +18,7 @@ OWNERS = []
 
 
 def test_version_is_date_and_fixed_daily_iteration(tmp_path):
-    assert __version_display__ == '0.1.415 · 2026-09-26 · 第02次更新'
+    assert __version_display__ == '0.1.416 · 2026-09-26 · 第03次更新'
     prefs = QSettings(str(tmp_path/'version.ini'), QSettings.IniFormat)
     for _ in range(2):
         window = MainWindow(prefs)
@@ -30,6 +30,7 @@ def test_version_is_date_and_fixed_daily_iteration(tmp_path):
         window.close()
     assert release_display('0.1.1', '2026-09-14', 1) == '0.1.1 · 2026-09-14 · 第01次更新'
     assert any('后台监控未能自动重新启动' in item for item in __release_notes__)
+    assert any('恢复“检查更新”按钮' in item for item in __release_notes__)
 
 
 def test_loading_isolated_preferences_does_not_replace_machine_identity(

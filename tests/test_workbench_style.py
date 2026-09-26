@@ -26,7 +26,13 @@ def test_workbench_action_hierarchy_and_icons(tmp_path):
     assert start.isVisible() and start.isEnabled()
     assert window.stop_generation_button.property('importance') == 'danger'
     assert not window.stop_generation_button.isEnabled()
-    assert not hasattr(window, 'check_update_button')
+    assert window.check_update_button.isVisible()
+    assert window.check_update_button.text() == '检查更新'
+    assert window.check_update_button.property('importance') == 'secondary'
+    update_calls = []
+    window.check_for_updates = lambda silent: update_calls.append(silent)
+    window.check_update_button.click()
+    assert update_calls == [False]
     menu_y = window.automation_home.settings_button.mapTo(
         window, window.automation_home.settings_button.rect().topLeft()).y()
     production_y = window.global_cutter_mode.mapTo(
@@ -34,6 +40,8 @@ def test_workbench_action_hierarchy_and_icons(tmp_path):
     assert menu_y < production_y
     assert window.version_label.mapTo(
         window, window.version_label.rect().topLeft()).y() < production_y
+    assert window.check_update_button.mapTo(
+        window, window.check_update_button.rect().topLeft()).y() < production_y
     assert not window.settings_dialog.isVisible()
     assert window.grab().save(str(tmp_path/'automatic-print-ui.png'))
     window.close()
